@@ -80,10 +80,24 @@ export async function registerDoctor(formData: FormData) {
   }
 
   if (data.user) {
-    // Create doctor record using admin client because the user
-    // doesn't have an active session yet (email confirmation pending),
-    // so auth.uid() is null and RLS INSERT policy would fail.
+    // Use admin client because user has no active session yet
+    // (email confirmation pending), so RLS policies would block.
     const adminSupabase = createAdminClient();
+
+    // Ensure profile exists — the handle_new_user() trigger may not
+    // have committed yet due to Supabase's async auth architecture.
+    // Use upsert so it's safe if the trigger already created it.
+    await adminSupabase.from("profiles").upsert(
+      {
+        id: data.user.id,
+        role: "doctor",
+        first_name: firstName,
+        last_name: lastName,
+        email,
+      },
+      { onConflict: "id", ignoreDuplicates: true }
+    );
+
     const slug =
       `dr-${firstName}-${lastName}`
         .toLowerCase()
