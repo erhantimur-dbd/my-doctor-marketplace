@@ -23,6 +23,8 @@ export default function LoginPage() {
   const t = useTranslations("auth");
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "";
+  const verified = searchParams.get("verified") === "true";
+  const callbackError = searchParams.get("error") === "auth_callback_error";
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -45,6 +47,16 @@ export default function LoginPage() {
       </CardHeader>
       <CardContent>
         <form action={handleSubmit} className="space-y-4">
+          {verified && (
+            <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
+              Email verified successfully! You can now sign in.
+            </div>
+          )}
+          {callbackError && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              Email verification failed or link expired. Please try signing up again.
+            </div>
+          )}
           {error && (
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
               {error}

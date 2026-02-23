@@ -42,6 +42,7 @@ export async function register(formData: FormData) {
         last_name: lastName,
         role: "patient",
       },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/en/callback`,
     },
   });
 
@@ -70,6 +71,7 @@ export async function registerDoctor(formData: FormData) {
         last_name: lastName,
         role: "doctor",
       },
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/en/callback`,
     },
   });
 
