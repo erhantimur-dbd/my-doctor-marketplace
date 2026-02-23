@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -77,7 +78,10 @@ export async function registerDoctor(formData: FormData) {
   }
 
   if (data.user) {
-    // Create doctor profile
+    // Create doctor record using admin client because the user
+    // doesn't have an active session yet (email confirmation pending),
+    // so auth.uid() is null and RLS INSERT policy would fail.
+    const adminSupabase = createAdminClient();
     const slug =
       `dr-${firstName}-${lastName}`
         .toLowerCase()
@@ -86,7 +90,7 @@ export async function registerDoctor(formData: FormData) {
       "-" +
       Math.random().toString(36).substring(2, 6);
 
-    const { error: doctorError } = await supabase.from("doctors").insert({
+    const { error: doctorError } = await adminSupabase.from("doctors").insert({
       profile_id: data.user.id,
       slug,
       consultation_fee_cents: 0,
