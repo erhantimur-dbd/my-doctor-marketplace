@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { stripe } from "@/lib/stripe/client";
+import { getStripe } from "@/lib/stripe/client";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -45,7 +45,7 @@ export default async function BookingConfirmationPage({
   // Retrieve the Stripe Checkout Session to get the booking_id
   let stripeSession;
   try {
-    stripeSession = await stripe.checkout.sessions.retrieve(session_id);
+    stripeSession = await getStripe().checkout.sessions.retrieve(session_id);
   } catch {
     redirect("/en");
   }

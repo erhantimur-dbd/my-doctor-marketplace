@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { stripe } from "@/lib/stripe/client";
+import { getStripe } from "@/lib/stripe/client";
 import { revalidatePath } from "next/cache";
 import {
   createBookingSchema,
@@ -126,7 +126,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         : "In-Person Consultation";
 
     // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       line_items: [
         {
@@ -247,7 +247,7 @@ export async function cancelBooking(input: CancelBookingInput) {
         (booking.total_amount_cents * refundPercent) / 100
       );
 
-      await stripe.refunds.create({
+      await getStripe().refunds.create({
         payment_intent: booking.stripe_payment_intent_id,
         amount: refundAmount,
         reverse_transfer: true,
