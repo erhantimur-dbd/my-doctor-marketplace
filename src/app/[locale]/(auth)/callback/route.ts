@@ -14,6 +14,18 @@ export async function GET(request: Request) {
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Check if this is a signup email confirmation (user just verified)
+      // by looking at whether 'next' is the default — email confirmations
+      // don't set a custom 'next' param.
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user && next === "/en") {
+        // Redirect to the email-verified page
+        return NextResponse.redirect(`${origin}/en/email-verified`);
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }
@@ -26,7 +38,7 @@ export async function GET(request: Request) {
     });
     if (!error) {
       if (type === "signup" || type === "email") {
-        return NextResponse.redirect(`${origin}/en/login?verified=true`);
+        return NextResponse.redirect(`${origin}/en/email-verified`);
       }
       if (type === "recovery") {
         return NextResponse.redirect(`${origin}/en/reset-password`);
