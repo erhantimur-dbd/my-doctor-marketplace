@@ -1,0 +1,60 @@
+-- Seed specialties
+INSERT INTO public.specialties (name_key, slug, icon, display_order) VALUES
+  ('specialty.general_practice', 'general-practice', 'Stethoscope', 1),
+  ('specialty.cardiology', 'cardiology', 'Heart', 2),
+  ('specialty.dermatology', 'dermatology', 'Sparkles', 3),
+  ('specialty.orthopedics', 'orthopedics', 'Bone', 4),
+  ('specialty.neurology', 'neurology', 'Brain', 5),
+  ('specialty.psychiatry', 'psychiatry', 'Brain', 6),
+  ('specialty.psychology', 'psychology', 'HeartHandshake', 7),
+  ('specialty.ophthalmology', 'ophthalmology', 'Eye', 8),
+  ('specialty.ent', 'ent', 'Ear', 9),
+  ('specialty.gynecology', 'gynecology', 'Baby', 10),
+  ('specialty.urology', 'urology', 'Activity', 11),
+  ('specialty.gastroenterology', 'gastroenterology', 'Apple', 12),
+  ('specialty.endocrinology', 'endocrinology', 'Droplets', 13),
+  ('specialty.pulmonology', 'pulmonology', 'Wind', 14),
+  ('specialty.oncology', 'oncology', 'Shield', 15),
+  ('specialty.pediatrics', 'pediatrics', 'Baby', 16),
+  ('specialty.dentistry', 'dentistry', 'Smile', 17),
+  ('specialty.aesthetic_medicine', 'aesthetic-medicine', 'Sparkles', 18),
+  ('specialty.physiotherapy', 'physiotherapy', 'Activity', 19),
+  ('specialty.radiology', 'radiology', 'Scan', 20),
+  ('specialty.nutrition', 'nutrition', 'Apple', 21),
+  ('specialty.allergy', 'allergy', 'Flower', 22),
+  ('specialty.rheumatology', 'rheumatology', 'Bone', 23),
+  ('specialty.nephrology', 'nephrology', 'Droplets', 24);
+
+-- Seed locations
+INSERT INTO public.locations (country_code, city, slug, latitude, longitude, timezone) VALUES
+  ('DE', 'Berlin', 'berlin-germany', 52.52000660, 13.40495400, 'Europe/Berlin'),
+  ('DE', 'Munich', 'munich-germany', 48.13512530, 11.58198050, 'Europe/Berlin'),
+  ('DE', 'Hamburg', 'hamburg-germany', 53.55108460, 9.99368200, 'Europe/Berlin'),
+  ('DE', 'Frankfurt', 'frankfurt-germany', 50.11092200, 8.68212700, 'Europe/Berlin'),
+  ('TR', 'Istanbul', 'istanbul-turkey', 41.00823200, 28.97835900, 'Europe/Istanbul'),
+  ('TR', 'Ankara', 'ankara-turkey', 39.92077000, 32.85410700, 'Europe/Istanbul'),
+  ('TR', 'Izmir', 'izmir-turkey', 38.42369200, 27.14285700, 'Europe/Istanbul'),
+  ('TR', 'Antalya', 'antalya-turkey', 36.89689000, 30.71327800, 'Europe/Istanbul'),
+  ('GB', 'London', 'london-uk', 51.50735090, -0.12775830, 'Europe/London'),
+  ('GB', 'Manchester', 'manchester-uk', 53.48075930, -2.24263050, 'Europe/London'),
+  ('GB', 'Birmingham', 'birmingham-uk', 52.48624800, -1.89031000, 'Europe/London'),
+  ('GB', 'Edinburgh', 'edinburgh-uk', 55.95325200, -3.18826700, 'Europe/London'),
+  ('FR', 'Paris', 'paris-france', 48.85661400, 2.35222190, 'Europe/Paris'),
+  ('FR', 'Lyon', 'lyon-france', 45.76404200, 4.83565700, 'Europe/Paris'),
+  ('FR', 'Marseille', 'marseille-france', 43.29648200, 5.36978000, 'Europe/Paris'),
+  ('NL', 'Amsterdam', 'amsterdam-netherlands', 52.37021570, 4.89516780, 'Europe/Amsterdam'),
+  ('AT', 'Vienna', 'vienna-austria', 48.20817400, 16.37381900, 'Europe/Vienna'),
+  ('CH', 'Zurich', 'zurich-switzerland', 47.37688600, 8.54169400, 'Europe/Zurich'),
+  ('ES', 'Barcelona', 'barcelona-spain', 41.38506390, 2.17340350, 'Europe/Madrid'),
+  ('ES', 'Madrid', 'madrid-spain', 40.41676900, -3.70379200, 'Europe/Madrid'),
+  ('IT', 'Rome', 'rome-italy', 41.90278300, 12.49636500, 'Europe/Rome'),
+  ('IT', 'Milan', 'milan-italy', 45.46427040, 9.18951430, 'Europe/Rome'),
+  ('BE', 'Brussels', 'brussels-belgium', 50.85034000, 4.35171000, 'Europe/Brussels');
+
+-- Seed platform settings
+INSERT INTO public.platform_settings (key, value) VALUES
+  ('commission_rate', '0.15'),
+  ('platform_fee_type', '"percentage"'),
+  ('booking_expiry_minutes', '15'),
+  ('default_slot_duration', '30'),
+  ('max_booking_days_ahead', '90');
