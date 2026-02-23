@@ -84,19 +84,45 @@ export async function registerDoctor(formData: FormData) {
     // (email confirmation pending), so RLS policies would block.
     const adminSupabase = createAdminClient();
 
-    // Ensure profile exists — the handle_new_user() trigger may not
-    // have committed yet due to Supabase's async auth architecture.
-    // Use upsert so it's safe if the trigger already created it.
-    await adminSupabase.from("profiles").upsert(
-      {
-        id: data.user.id,
-        role: "doctor",
-        first_name: firstName,
-        last_name: lastName,
-        email,
-      },
-      { onConflict: "id", ignoreDuplicates: true }
-    );
+    // Wait for auth.users + profiles trigger to commit.
+    // Supabase's GoTrue may return before the DB transaction is visible
+    // to PostgREST, so we poll until the profile row appears.
+    let profileReady = false;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const { data: profile } = await adminSupabase
+        .from("profiles")
+        .select("id")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        profileReady = true;
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    // If trigger still hasn't fired after 5s, create profile manually
+    if (!profileReady) {
+      const { error: profileError } = await adminSupabase
+        .from("profiles")
+        .insert({
+          id: data.user.id,
+          role: "doctor",
+          first_name: firstName,
+          last_name: lastName,
+          email,
+        });
+
+      if (profileError) {
+        console.error("Profile creation failed:", profileError);
+        return {
+          error:
+            "Account created but profile setup is still processing. Please wait a moment and log in.",
+        };
+      }
+    }
 
     const slug =
       `dr-${firstName}-${lastName}`
@@ -106,13 +132,16 @@ export async function registerDoctor(formData: FormData) {
       "-" +
       Math.random().toString(36).substring(2, 6);
 
-    const { error: doctorError } = await adminSupabase.from("doctors").insert({
-      profile_id: data.user.id,
-      slug,
-      consultation_fee_cents: 0,
-    });
+    const { error: doctorError } = await adminSupabase
+      .from("doctors")
+      .insert({
+        profile_id: data.user.id,
+        slug,
+        consultation_fee_cents: 0,
+      });
 
     if (doctorError) {
+      console.error("Doctor creation failed:", doctorError);
       return { error: doctorError.message };
     }
   }
