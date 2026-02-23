@@ -90,32 +90,41 @@ export default function SubscriptionPage() {
     if (!doctorId) return;
     setActionLoading(true);
 
-    // In a real app, this would redirect to Stripe Checkout or call a server action
     const supabase = createSupabase();
 
     if (subscription) {
-      // Update existing subscription
-      await supabase
+      const { error } = await supabase
         .from("doctor_subscriptions")
         .update({
           plan_id: planId,
           cancel_at_period_end: false,
         })
         .eq("id", subscription.id);
+
+      if (error) {
+        console.error("Subscription update failed:", error);
+        alert("Failed to update subscription. Please try again.");
+      }
     } else {
-      // Create new subscription (trial)
       const now = new Date();
       const trialEnd = new Date();
       trialEnd.setDate(trialEnd.getDate() + 14);
 
-      await supabase.from("doctor_subscriptions").insert({
+      const { error } = await supabase.from("doctor_subscriptions").insert({
         doctor_id: doctorId,
         plan_id: planId,
         status: "trialing",
+        stripe_subscription_id: null,
+        stripe_customer_id: null,
         current_period_start: now.toISOString(),
         current_period_end: trialEnd.toISOString(),
         cancel_at_period_end: false,
       });
+
+      if (error) {
+        console.error("Subscription creation failed:", error);
+        alert("Failed to start trial. Please try again.");
+      }
     }
 
     await loadData();
@@ -127,10 +136,15 @@ export default function SubscriptionPage() {
     setActionLoading(true);
 
     const supabase = createSupabase();
-    await supabase
+    const { error } = await supabase
       .from("doctor_subscriptions")
       .update({ cancel_at_period_end: true })
       .eq("id", subscription.id);
+
+    if (error) {
+      console.error("Cancel failed:", error);
+      alert("Failed to cancel subscription. Please try again.");
+    }
 
     setCancelDialogOpen(false);
     await loadData();

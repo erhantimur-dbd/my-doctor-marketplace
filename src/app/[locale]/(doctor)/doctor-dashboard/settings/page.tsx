@@ -113,7 +113,7 @@ export default function SettingsPage() {
     setSavedPersonal(false);
 
     const supabase = createSupabase();
-    await supabase
+    const { error } = await supabase
       .from("profiles")
       .update({
         first_name: firstName,
@@ -123,6 +123,11 @@ export default function SettingsPage() {
       .eq("id", userId);
 
     setSavingPersonal(false);
+    if (error) {
+      console.error("Save personal info failed:", error);
+      alert("Failed to save. Please try again.");
+      return;
+    }
     setSavedPersonal(true);
     setTimeout(() => setSavedPersonal(false), 3000);
   }
@@ -180,10 +185,17 @@ export default function SettingsPage() {
 
     const newStatus = !isActive;
     const supabase = createSupabase();
-    await supabase
+    const { error } = await supabase
       .from("doctors")
       .update({ is_active: newStatus })
       .eq("id", doctorId);
+
+    if (error) {
+      console.error("Toggle active failed:", error);
+      alert("Failed to update profile status. Please try again.");
+      setSavingAccount(false);
+      return;
+    }
 
     setIsActive(newStatus);
     setDeactivateDialogOpen(false);
