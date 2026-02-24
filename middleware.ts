@@ -10,12 +10,12 @@ const protectedDoctorRoutes = ["/doctor-dashboard"];
 const protectedAdminRoutes = ["/admin"];
 
 function getPathnameWithoutLocale(pathname: string): string {
-  const localePattern = /^\/(en|de|tr|fr|it|es|pt)(\/|$)/;
+  const localePattern = /^\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/;
   return pathname.replace(localePattern, "/");
 }
 
 function getLocaleFromPathname(pathname: string): string {
-  const match = pathname.match(/^\/(en|de|tr|fr|it|es|pt)(\/|$)/);
+  const match = pathname.match(/^\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/);
   return match ? match[1] : "en";
 }
 
