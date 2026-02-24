@@ -57,7 +57,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     .select(
       `
       *,
-      profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url, email),
+      profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
       location:locations(city, country_code, slug, timezone),
       specialties:doctor_specialties(
         specialty:specialties(id, name_key, slug),
@@ -411,18 +411,21 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                 </p>
 
                 {/* Clinic info */}
-                {(doctor.clinic_name || doctor.address) && (
+                {(doctor.clinic_name || doctor.location) && (
                   <>
                     <Separator className="my-4" />
                     <div className="space-y-2 text-sm">
                       {doctor.clinic_name && (
                         <p className="font-medium">{doctor.clinic_name}</p>
                       )}
-                      {doctor.address && (
+                      {doctor.location && (
                         <p className="text-muted-foreground">
-                          {doctor.address}
+                          {doctor.location.city}, {doctor.location.country_code}
                         </p>
                       )}
+                      <p className="text-xs italic text-muted-foreground">
+                        Exact address provided upon booking
+                      </p>
                     </div>
                   </>
                 )}

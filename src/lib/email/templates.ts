@@ -94,6 +94,8 @@ interface BookingConfirmationParams {
   amount: number;
   currency: string;
   videoRoomUrl?: string | null;
+  clinicName?: string | null;
+  address?: string | null;
 }
 
 export function bookingConfirmationEmail({
@@ -106,6 +108,8 @@ export function bookingConfirmationEmail({
   amount,
   currency,
   videoRoomUrl,
+  clinicName,
+  address,
 }: BookingConfirmationParams): { subject: string; html: string } {
   const subject = `Booking Confirmed - ${bookingNumber}`;
 
@@ -126,7 +130,7 @@ export function bookingConfirmationEmail({
     : `
     <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
       <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
-        Please arrive 5 minutes before your scheduled time. If you need to reschedule or cancel, please do so at least 24 hours in advance.
+        Please arrive 5 minutes before your scheduled time.${address ? ` Your appointment is at <strong>${address}</strong>.` : ""} If you need to reschedule or cancel, please do so at least 24 hours in advance.
       </p>
     </div>`;
 
@@ -145,6 +149,7 @@ export function bookingConfirmationEmail({
             ${infoRow("Date", date)}
             ${infoRow("Time", time)}
             ${infoRow("Consultation", consultationType)}
+            ${!videoRoomUrl && clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
             ${infoRow("Amount Paid", `${currency} ${amount.toFixed(2)}`)}
           </table>
         </td>
@@ -240,6 +245,8 @@ interface BookingReminderParams {
   bookingNumber: string;
   videoRoomUrl?: string | null;
   minutesBefore?: number;
+  clinicName?: string | null;
+  address?: string | null;
 }
 
 export function bookingReminderEmail({
@@ -251,6 +258,8 @@ export function bookingReminderEmail({
   bookingNumber,
   videoRoomUrl,
   minutesBefore,
+  clinicName,
+  address,
 }: BookingReminderParams): { subject: string; html: string } {
   // Dynamic subject line based on how far before the appointment
   let timeLabel = "Tomorrow";
@@ -293,6 +302,7 @@ export function bookingReminderEmail({
             ${infoRow("Date", date)}
             ${infoRow("Time", time)}
             ${infoRow("Consultation", consultationType)}
+            ${!videoRoomUrl && clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
           </table>
         </td>
       </tr>
@@ -305,7 +315,7 @@ export function bookingReminderEmail({
         <strong>Preparation Tips:</strong><br />
         &bull; Have your medical records or previous reports ready if applicable.<br />
         &bull; Prepare a list of questions or symptoms you want to discuss.<br />
-        ${videoRoomUrl ? "&bull; Ensure you have a stable internet connection and a working camera/microphone." : "&bull; Please arrive 5 minutes before your scheduled time."}
+        ${videoRoomUrl ? "&bull; Ensure you have a stable internet connection and a working camera/microphone." : `&bull; Please arrive 5 minutes before your scheduled time.${address ? ` Your appointment is at ${address}.` : ""}`}
       </p>
     </div>
 

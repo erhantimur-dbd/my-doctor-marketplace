@@ -287,6 +287,12 @@ export default async function BookingDetailPage({
                       {doctor.clinic_name}
                     </p>
                   )}
+                  {!isVideo && doctor.address && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      <MapPin className="mr-1 inline h-3.5 w-3.5" />
+                      {doctor.address}
+                    </p>
+                  )}
                 </div>
               </div>
             </CardContent>

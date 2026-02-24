@@ -253,9 +253,12 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
                     {doctor.clinic_name && (
                       <p className="mt-2 text-sm text-muted-foreground">
                         {doctor.clinic_name}
-                        {doctor.address && ` - ${doctor.address}`}
+                        {doctor.location && ` — ${doctor.location.city}`}
                       </p>
                     )}
+                    <p className="mt-1 text-xs italic text-muted-foreground">
+                      Full address provided after booking
+                    </p>
                     <p className="mt-2 text-lg font-semibold">
                       {formatCurrency(
                         doctor.consultation_fee_cents,

@@ -40,6 +40,8 @@ export async function GET(request: NextRequest) {
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
       doctor:doctors!inner(
         id,
+        clinic_name,
+        address,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
       )
     `)
@@ -144,6 +146,8 @@ export async function GET(request: NextRequest) {
           bookingNumber: booking.booking_number,
           videoRoomUrl: booking.video_room_url,
           minutesBefore: pref.minutes_before,
+          clinicName: doctor.clinic_name,
+          address: doctor.address,
         });
 
         await sendEmail({ to: patient.email, subject, html });

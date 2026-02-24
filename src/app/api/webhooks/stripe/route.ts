@@ -64,6 +64,8 @@ export async function POST(request: NextRequest) {
             patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
             doctor:doctors!inner(
               id,
+              clinic_name,
+              address,
               profile:profiles!doctors_profile_id_fkey(first_name, last_name)
             )
           `)
@@ -138,6 +140,8 @@ export async function POST(request: NextRequest) {
               amount: booking.total_amount_cents / 100,
               currency: booking.currency.toUpperCase(),
               videoRoomUrl,
+              clinicName: doctor.clinic_name,
+              address: doctor.address,
             });
 
             sendEmail({ to: patient.email, subject, html }).catch((err) =>
