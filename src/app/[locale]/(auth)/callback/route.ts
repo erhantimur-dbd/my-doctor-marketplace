@@ -1,14 +1,50 @@
-import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { type NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");
   const next = searchParams.get("next") ?? "/en";
 
-  const supabase = await createClient();
+  // Helper: create a redirect response and copy all auth cookies onto it.
+  // This is critical — using `cookies()` from next/headers sets cookies on
+  // Next.js's internal response, but NextResponse.redirect() creates a NEW
+  // response that doesn't include them. By writing cookies directly onto the
+  // redirect response, the browser actually receives the session tokens.
+  function createRedirectWithCookies(url: string) {
+    const response = NextResponse.redirect(new URL(url, origin));
+    // Copy auth cookies from the pending response onto the redirect
+    for (const cookie of pendingCookies) {
+      response.cookies.set(cookie.name, cookie.value, cookie.options);
+    }
+    return response;
+  }
+
+  // Collect cookies that Supabase wants to set
+  const pendingCookies: Array<{
+    name: string;
+    value: string;
+    options: Record<string, unknown>;
+  }> = [];
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            pendingCookies.push({ name, value, options: options as Record<string, unknown> });
+          });
+        },
+      },
+    }
+  );
 
   // Handle PKCE flow (OAuth + email confirmation with code)
   if (code) {
@@ -63,16 +99,14 @@ export async function GET(request: Request) {
         }
 
         if (next === "/en") {
-          // For email confirmations (no custom 'next'), show the verified page.
-          // For OAuth, redirect to dashboard directly.
           if (isOAuth) {
-            return NextResponse.redirect(`${origin}/en`);
+            return createRedirectWithCookies("/en");
           }
-          return NextResponse.redirect(`${origin}/en/email-verified`);
+          return createRedirectWithCookies("/en/email-verified");
         }
       }
 
-      return NextResponse.redirect(`${origin}${next}`);
+      return createRedirectWithCookies(next);
     }
   }
 
@@ -84,14 +118,16 @@ export async function GET(request: Request) {
     });
     if (!error) {
       if (type === "signup" || type === "email") {
-        return NextResponse.redirect(`${origin}/en/email-verified`);
+        return createRedirectWithCookies("/en/email-verified");
       }
       if (type === "recovery") {
-        return NextResponse.redirect(`${origin}/en/reset-password`);
+        return createRedirectWithCookies("/en/reset-password");
       }
-      return NextResponse.redirect(`${origin}${next}`);
+      return createRedirectWithCookies(next);
     }
   }
 
-  return NextResponse.redirect(`${origin}/en/login?error=auth_callback_error`);
+  return NextResponse.redirect(
+    new URL("/en/login?error=auth_callback_error", origin)
+  );
 }
