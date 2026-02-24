@@ -4,6 +4,17 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+
+/** Derive the app origin from incoming request headers (works on localhost,
+ *  Vercel preview deploys, and production). Falls back to env var. */
+async function getOrigin(): Promise<string> {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "";
+  const proto = h.get("x-forwarded-proto") || "https";
+  if (host) return `${proto}://${host}`;
+  return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+}
 
 export async function login(formData: FormData) {
   const supabase = await createClient();
@@ -27,6 +38,7 @@ export async function login(formData: FormData) {
 
 export async function register(formData: FormData) {
   const supabase = await createClient();
+  const origin = await getOrigin();
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -42,7 +54,7 @@ export async function register(formData: FormData) {
         last_name: lastName,
         role: "patient",
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/en/callback`,
+      emailRedirectTo: `${origin}/en/callback`,
     },
   });
 
@@ -56,6 +68,7 @@ export async function register(formData: FormData) {
 
 export async function registerDoctor(formData: FormData) {
   const supabase = await createClient();
+  const origin = await getOrigin();
 
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
@@ -71,7 +84,7 @@ export async function registerDoctor(formData: FormData) {
         last_name: lastName,
         role: "doctor",
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/en/callback`,
+      emailRedirectTo: `${origin}/en/callback`,
     },
   });
 
@@ -155,8 +168,10 @@ export async function forgotPassword(formData: FormData) {
 
   const email = formData.get("email") as string;
 
+  const origin = await getOrigin();
+
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/en/reset-password`,
+    redirectTo: `${origin}/en/reset-password`,
   });
 
   if (error) {
@@ -192,11 +207,12 @@ export async function logout() {
 
 export async function signInWithGoogle(locale: string = "en") {
   const supabase = await createClient();
+  const origin = await getOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/callback`,
+      redirectTo: `${origin}/${locale}/callback`,
     },
   });
 
@@ -211,11 +227,12 @@ export async function signInWithGoogle(locale: string = "en") {
 
 export async function signInWithApple(locale: string = "en") {
   const supabase = await createClient();
+  const origin = await getOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "apple",
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/callback`,
+      redirectTo: `${origin}/${locale}/callback`,
     },
   });
 
