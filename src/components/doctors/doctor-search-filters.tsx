@@ -12,7 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { X, Clock } from "lucide-react";
 import { useCallback } from "react";
 
 interface FilterProps {
@@ -69,6 +70,20 @@ export function DoctorSearchFilters({
         )}
       </CardHeader>
       <CardContent className="space-y-5">
+        {/* Available Today */}
+        <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
+          <Label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+            <Clock className="h-4 w-4 text-green-600" />
+            {t("available_today")}
+          </Label>
+          <Switch
+            checked={currentFilters.availableToday === "true"}
+            onCheckedChange={(checked) =>
+              updateFilter("availableToday", checked ? "true" : undefined)
+            }
+          />
+        </div>
+
         {/* Specialty */}
         <div className="space-y-2">
           <Label className="text-sm">{t("specialty")}</Label>

@@ -25,7 +25,17 @@ import {
   Loader2,
   CheckCircle2,
   AlertTriangle,
+  Calendar,
+  RefreshCw,
+  Unlink,
+  ExternalLink,
 } from "lucide-react";
+import {
+  getCalendarConnection,
+  disconnectCalendar,
+  triggerCalendarSync,
+  toggleCalendarSync,
+} from "@/actions/calendar";
 
 function createSupabase() {
   return createBrowserClient(
@@ -61,6 +71,13 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
   const [savedPassword, setSavedPassword] = useState(false);
+
+  // Calendar
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [calendarSyncEnabled, setCalendarSyncEnabled] = useState(true);
+  const [calendarLastSynced, setCalendarLastSynced] = useState<string | null>(null);
+  const [syncingCalendar, setSyncingCalendar] = useState(false);
+  const [disconnectingCalendar, setDisconnectingCalendar] = useState(false);
 
   // Account
   const [isActive, setIsActive] = useState(true);
@@ -102,6 +119,23 @@ export default function SettingsPage() {
     if (doctor) {
       setDoctorId(doctor.id);
       setIsActive(doctor.is_active);
+    }
+
+    // Load calendar connection
+    const calConn = await getCalendarConnection();
+    if (calConn) {
+      setCalendarConnected(true);
+      setCalendarSyncEnabled(calConn.sync_enabled);
+      setCalendarLastSynced(calConn.last_synced_at);
+    }
+
+    // Check URL params for calendar connection result
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("calendar_connected") === "true") {
+      setCalendarConnected(true);
+      setCalendarSyncEnabled(true);
+      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname);
     }
 
     setLoading(false);
@@ -406,6 +440,131 @@ export default function SettingsPage() {
               {savedPassword ? "Password Updated" : "Update Password"}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Calendar Integration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Calendar Integration
+          </CardTitle>
+          <CardDescription>
+            Connect your Google Calendar to automatically sync your availability.
+            External calendar events will block platform time slots.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {calendarConnected ? (
+            <>
+              {/* Connected state */}
+              <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div className="flex-1">
+                  <p className="font-medium text-green-800 dark:text-green-200">
+                    Google Calendar Connected
+                  </p>
+                  {calendarLastSynced && (
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      Last synced: {new Date(calendarLastSynced).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Sync toggle */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Auto-sync</p>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically import calendar events as blocked times
+                  </p>
+                </div>
+                <Switch
+                  checked={calendarSyncEnabled}
+                  onCheckedChange={async (checked) => {
+                    setCalendarSyncEnabled(checked);
+                    await toggleCalendarSync(checked);
+                  }}
+                />
+              </div>
+
+              <Separator />
+
+              {/* Actions */}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={syncingCalendar}
+                  onClick={async () => {
+                    setSyncingCalendar(true);
+                    const result = await triggerCalendarSync();
+                    if (result.success) {
+                      setCalendarLastSynced(new Date().toISOString());
+                    } else {
+                      alert(result.error || "Sync failed");
+                    }
+                    setSyncingCalendar(false);
+                  }}
+                >
+                  {syncingCalendar ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Sync Now
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={disconnectingCalendar}
+                  onClick={async () => {
+                    if (!confirm("Disconnect Google Calendar? Synced blocked times will be removed.")) return;
+                    setDisconnectingCalendar(true);
+                    const result = await disconnectCalendar();
+                    if (result.success) {
+                      setCalendarConnected(false);
+                      setCalendarLastSynced(null);
+                    } else {
+                      alert(result.error || "Failed to disconnect");
+                    }
+                    setDisconnectingCalendar(false);
+                  }}
+                >
+                  {disconnectingCalendar ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Unlink className="mr-2 h-4 w-4" />
+                  )}
+                  Disconnect
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Disconnected state */}
+              <div className="rounded-lg border border-dashed p-6 text-center">
+                <Calendar className="mx-auto h-10 w-10 text-muted-foreground" />
+                <h3 className="mt-3 font-medium">
+                  Connect Google Calendar
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Import your Google Calendar events to automatically block
+                  unavailable times. Confirmed bookings will also appear in your
+                  Google Calendar.
+                </p>
+                <Button className="mt-4" asChild>
+                  <a href="/api/calendar/google/connect">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Connect Google Calendar
+                  </a>
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

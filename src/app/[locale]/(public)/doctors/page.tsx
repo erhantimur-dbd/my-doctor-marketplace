@@ -33,6 +33,7 @@ export default async function DoctorsPage({
       query: sp.query,
       sort: sp.sort || "featured",
       page: sp.page ? Number(sp.page) : 1,
+      availableToday: sp.availableToday === "true",
     }),
     getSpecialties(),
     getLocations(),

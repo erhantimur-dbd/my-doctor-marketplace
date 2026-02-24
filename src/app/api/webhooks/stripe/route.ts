@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exportBookingToGoogleCalendar } from "@/lib/google/sync";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -57,6 +58,11 @@ export async function POST(request: NextRequest) {
             amount_cents: booking.data.platform_fee_cents,
             currency: booking.data.currency,
           });
+
+          // Export confirmed booking to doctor's Google Calendar (non-blocking)
+          exportBookingToGoogleCalendar(bookingId).catch((err) =>
+            console.error("Google Calendar export error:", err)
+          );
         }
       }
       break;

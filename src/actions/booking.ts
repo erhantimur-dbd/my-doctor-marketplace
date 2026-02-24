@@ -11,6 +11,7 @@ import {
 } from "@/lib/validators/booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import type { AvailableSlot } from "@/types/index";
+import { removeBookingFromGoogleCalendar } from "@/lib/google/sync";
 
 const PLATFORM_FEE_PERCENT = 15;
 
@@ -269,6 +270,11 @@ export async function cancelBooking(input: CancelBookingInput) {
       console.error("Booking cancellation update error:", updateError);
       return { error: "Failed to update booking status." };
     }
+
+    // Remove event from doctor's Google Calendar (non-blocking)
+    removeBookingFromGoogleCalendar(booking.id).catch((err) =>
+      console.error("Google Calendar removal error:", err)
+    );
 
     revalidatePath("/", "layout");
     return {

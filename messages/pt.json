@@ -58,7 +58,10 @@
     "search_name_placeholder": "Nome do médico ou palavra-chave...",
     "search_specialty_placeholder": "Todas as especialidades",
     "search_location_placeholder": "Todas as localizações",
-    "search_button": "Pesquisar"
+    "search_button": "Pesquisar",
+    "same_day_title": "Consultas disponíveis hoje",
+    "same_day_subtitle": "{count, plural, one {# médico está} other {# médicos estão}} disponíveis para consultas hoje",
+    "same_day_cta": "Agendar para hoje"
   },
   "doctor": {
     "verified": "Médico Verificado",
@@ -101,7 +104,8 @@
     "any_specialty": "Qualquer Especialidade",
     "any_location": "Qualquer Localização",
     "any_language": "Qualquer Idioma",
-    "all_types": "Todos os Tipos"
+    "all_types": "Todos os Tipos",
+    "available_today": "Disponível hoje"
   },
   "booking": {
     "select_date": "Selecionar Data",

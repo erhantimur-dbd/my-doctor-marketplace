@@ -58,7 +58,10 @@
     "search_name_placeholder": "Nom du medecin ou mot-cle...",
     "search_specialty_placeholder": "Toutes specialites",
     "search_location_placeholder": "Tous les lieux",
-    "search_button": "Rechercher"
+    "search_button": "Rechercher",
+    "same_day_title": "Rendez-vous disponibles aujourd'hui",
+    "same_day_subtitle": "{count, plural, one {# médecin est} other {# médecins sont}} disponible(s) pour des rendez-vous aujourd'hui",
+    "same_day_cta": "Réserver pour aujourd'hui"
   },
   "auth": {
     "login_title": "Bon Retour",
@@ -127,7 +130,8 @@
     "any_specialty": "Toutes les specialites",
     "any_location": "Tous les lieux",
     "any_language": "Toutes les langues",
-    "all_types": "Tous les types"
+    "all_types": "Tous les types",
+    "available_today": "Disponible aujourd'hui"
   },
   "booking": {
     "select_date": "Choisir une date",

@@ -13,6 +13,7 @@ export interface SearchFilters {
   query?: string;
   sort?: string;
   page?: number;
+  availableToday?: boolean;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -35,6 +36,25 @@ export async function searchDoctors(filters: SearchFilters) {
     )
     .eq("verification_status", "verified")
     .eq("is_active", true);
+
+  // Same-day availability filter
+  if (filters.availableToday) {
+    const { data: doctorIds, error: rpcError } = await supabase.rpc(
+      "get_doctor_ids_available_today"
+    );
+
+    if (rpcError) {
+      console.error("Same-day availability RPC error:", rpcError);
+      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+    }
+
+    const ids = (doctorIds as string[]) || [];
+    if (ids.length === 0) {
+      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+    }
+
+    query = query.in("id", ids);
+  }
 
   // Apply filters
   if (filters.minPrice) {
@@ -111,4 +131,11 @@ export async function getLocations() {
     .eq("is_active", true)
     .order("city");
   return data || [];
+}
+
+export async function getSameDayAvailabilityCount(): Promise<number> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("get_doctor_ids_available_today");
+  if (error || !data) return 0;
+  return (data as string[]).length;
 }

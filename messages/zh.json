@@ -58,7 +58,10 @@
     "search_name_placeholder": "医生姓名或关键词...",
     "search_specialty_placeholder": "所有专科",
     "search_location_placeholder": "所有地区",
-    "search_button": "搜索"
+    "search_button": "搜索",
+    "same_day_title": "今日可预约",
+    "same_day_subtitle": "{count} 位医生今日有空余预约时段",
+    "same_day_cta": "预约今日就诊"
   },
   "doctor": {
     "verified": "认证医生",
@@ -101,7 +104,8 @@
     "any_specialty": "所有专科",
     "any_location": "所有地区",
     "any_language": "所有语言",
-    "all_types": "所有方式"
+    "all_types": "所有方式",
+    "available_today": "今日可预约"
   },
   "booking": {
     "select_date": "选择日期",

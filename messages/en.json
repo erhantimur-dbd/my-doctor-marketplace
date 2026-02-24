@@ -58,7 +58,10 @@
     "search_name_placeholder": "Doctor name or keyword...",
     "search_specialty_placeholder": "Any specialty",
     "search_location_placeholder": "Any location",
-    "search_button": "Search"
+    "search_button": "Search",
+    "same_day_title": "Same-Day Appointments Available",
+    "same_day_subtitle": "{count, plural, one {# doctor is} other {# doctors are}} available for appointments today",
+    "same_day_cta": "Book for Today"
   },
   "doctor": {
     "verified": "Verified Doctor",
@@ -101,7 +104,8 @@
     "any_specialty": "Any Specialty",
     "any_location": "Any Location",
     "any_language": "Any Language",
-    "all_types": "All Types"
+    "all_types": "All Types",
+    "available_today": "Available Today"
   },
   "booking": {
     "select_date": "Select Date",

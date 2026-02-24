@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search, Clock } from "lucide-react";
 
 interface HomeSearchBarProps {
   specialties: { id: string; name_key: string; slug: string }[];
@@ -25,12 +26,14 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const [query, setQuery] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [location, setLocation] = useState("");
+  const [availableToday, setAvailableToday] = useState(false);
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (query.trim()) params.set("query", query.trim());
     if (specialty && specialty !== "all") params.set("specialty", specialty);
     if (location && location !== "all") params.set("location", location);
+    if (availableToday) params.set("availableToday", "true");
 
     const qs = params.toString();
     router.push(`/doctors${qs ? `?${qs}` : ""}`);
@@ -100,6 +103,21 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           </Select>
         </div>
 
+        {/* Divider */}
+        <div className="h-8 w-px bg-border" />
+
+        {/* Available Today */}
+        <label className="flex items-center gap-2 px-3 cursor-pointer select-none">
+          <Checkbox
+            checked={availableToday}
+            onCheckedChange={(c) => setAvailableToday(c === true)}
+          />
+          <Clock className="h-3.5 w-3.5 text-green-600" />
+          <span className="text-xs font-medium whitespace-nowrap">
+            {t("available_today")}
+          </span>
+        </label>
+
         {/* Search button */}
         <div className="pr-2">
           <Button
@@ -160,6 +178,16 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Available Today */}
+        <label className="flex items-center gap-2 cursor-pointer select-none px-1">
+          <Checkbox
+            checked={availableToday}
+            onCheckedChange={(c) => setAvailableToday(c === true)}
+          />
+          <Clock className="h-3.5 w-3.5 text-green-600" />
+          <span className="text-sm">{t("available_today")}</span>
+        </label>
 
         {/* Search button */}
         <Button className="h-11 w-full rounded-lg" onClick={handleSearch}>

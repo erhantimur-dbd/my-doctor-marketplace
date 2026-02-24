@@ -58,7 +58,10 @@
     "search_name_placeholder": "医師名またはキーワード...",
     "search_specialty_placeholder": "すべての診療科",
     "search_location_placeholder": "すべての地域",
-    "search_button": "検索"
+    "search_button": "検索",
+    "same_day_title": "本日予約可能",
+    "same_day_subtitle": "{count}人の医師が本日予約可能です",
+    "same_day_cta": "本日の予約をする"
   },
   "doctor": {
     "verified": "認証済み医師",
@@ -101,7 +104,8 @@
     "any_specialty": "すべての診療科",
     "any_location": "すべての地域",
     "any_language": "すべての言語",
-    "all_types": "すべてのタイプ"
+    "all_types": "すべてのタイプ",
+    "available_today": "本日予約可能"
   },
   "booking": {
     "select_date": "日付を選択",
