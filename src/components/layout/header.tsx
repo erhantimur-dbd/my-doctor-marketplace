@@ -76,7 +76,7 @@ export function Header() {
         <div className="flex items-center gap-3">
           <LocaleSwitcher />
 
-          {!loading && !user && (
+          {!user && (
             <div className="hidden items-center gap-2 md:flex">
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/login">{t("login")}</Link>
@@ -87,7 +87,7 @@ export function Header() {
             </div>
           )}
 
-          {!loading && user && profile && (
+          {user && profile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
