@@ -14,8 +14,11 @@ import { Globe } from "lucide-react";
 const locales = [
   { code: "en", label: "English" },
   { code: "de", label: "Deutsch" },
-  { code: "tr", label: "Turkce" },
-  { code: "fr", label: "Francais" },
+  { code: "tr", label: "Türkçe" },
+  { code: "fr", label: "Français" },
+  { code: "it", label: "Italiano" },
+  { code: "es", label: "Español" },
+  { code: "pt", label: "Português" },
 ] as const;
 
 export function LocaleSwitcher() {

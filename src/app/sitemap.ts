@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { MetadataRoute } from "next";
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctor.com";
-const locales = ["en", "de", "tr", "fr"];
+const locales = ["en", "de", "tr", "fr", "it", "es", "pt"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const supabase = createAdminClient();
