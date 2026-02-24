@@ -208,3 +208,22 @@ export async function signInWithGoogle(locale: string = "en") {
     redirect(data.url);
   }
 }
+
+export async function signInWithApple(locale: string = "en") {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "apple",
+    options: {
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/${locale}/callback`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (data.url) {
+    redirect(data.url);
+  }
+}
