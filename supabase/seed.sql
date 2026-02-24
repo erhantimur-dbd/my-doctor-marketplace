@@ -33,6 +33,7 @@ DELETE FROM public.doctor_documents WHERE doctor_id IN (
 );
 DELETE FROM public.doctors WHERE id::TEXT LIKE 'e0000000-0000-0000-0000-%';
 DELETE FROM public.profiles WHERE id::TEXT LIKE 'c0000000-0000-0000-0000-%' OR id::TEXT LIKE 'd0000000-0000-0000-0000-%';
+DELETE FROM auth.identities WHERE user_id::TEXT LIKE 'c0000000-0000-0000-0000-%' OR user_id::TEXT LIKE 'd0000000-0000-0000-0000-%';
 DELETE FROM auth.users WHERE id::TEXT LIKE 'c0000000-0000-0000-0000-%' OR id::TEXT LIKE 'd0000000-0000-0000-0000-%';
 
 -- ============================================================================
@@ -161,6 +162,38 @@ VALUES
    '{"first_name":"Kenji","last_name":"Tanaka","role":"doctor"}',
    NOW(), NOW(), '', '')
 ON CONFLICT (id) DO NOTHING;
+
+-- Auth identities (required for Supabase email/password login)
+INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+VALUES
+  ('c0000000-0000-0000-0000-000000000001', 'c0000000-0000-0000-0000-000000000001',
+   '{"sub":"c0000000-0000-0000-0000-000000000001","email":"sarah.johnson@example.com"}',
+   'email', 'c0000000-0000-0000-0000-000000000001', NOW(), NOW(), NOW()),
+  ('c0000000-0000-0000-0000-000000000002', 'c0000000-0000-0000-0000-000000000002',
+   '{"sub":"c0000000-0000-0000-0000-000000000002","email":"michael.chen@example.com"}',
+   'email', 'c0000000-0000-0000-0000-000000000002', NOW(), NOW(), NOW()),
+  ('c0000000-0000-0000-0000-000000000003', 'c0000000-0000-0000-0000-000000000003',
+   '{"sub":"c0000000-0000-0000-0000-000000000003","email":"emma.wilson@example.com"}',
+   'email', 'c0000000-0000-0000-0000-000000000003', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-000000000001', 'd0000000-0000-0000-0000-000000000001',
+   '{"sub":"d0000000-0000-0000-0000-000000000001","email":"hans.mueller@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000001', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-000000000002',
+   '{"sub":"d0000000-0000-0000-0000-000000000002","email":"ayse.yilmaz@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000002', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-000000000003', 'd0000000-0000-0000-0000-000000000003',
+   '{"sub":"d0000000-0000-0000-0000-000000000003","email":"james.thompson@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000003', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-000000000004', 'd0000000-0000-0000-0000-000000000004',
+   '{"sub":"d0000000-0000-0000-0000-000000000004","email":"marie.dubois@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000004', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-000000000005', 'd0000000-0000-0000-0000-000000000005',
+   '{"sub":"d0000000-0000-0000-0000-000000000005","email":"lisa.vanberg@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000005', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-000000000006', 'd0000000-0000-0000-0000-000000000006',
+   '{"sub":"d0000000-0000-0000-0000-000000000006","email":"kenji.tanaka@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000006', NOW(), NOW(), NOW())
+ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- 5. UPDATE PROFILES (trigger auto-created them)
