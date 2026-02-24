@@ -54,7 +54,11 @@
     "step_3_desc": "Nehmen Sie Ihren Termin vor Ort oder per Video wahr",
     "for_doctors_title": "Sind Sie Arzt?",
     "for_doctors_desc": "Treten Sie unserem Premium-Marktplatz bei und erweitern Sie Ihre Praxis mit leistungsstarken Buchungstools.",
-    "for_doctors_cta": "Als Arzt beitreten"
+    "for_doctors_cta": "Als Arzt beitreten",
+    "search_name_placeholder": "Arztname oder Stichwort...",
+    "search_specialty_placeholder": "Alle Fachgebiete",
+    "search_location_placeholder": "Alle Standorte",
+    "search_button": "Suchen"
   },
   "auth": {
     "login_title": "Willkommen zuruck",

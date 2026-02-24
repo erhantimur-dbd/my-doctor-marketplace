@@ -54,7 +54,11 @@
     "step_3_desc": "Assistez a votre rendez-vous en personne ou par video",
     "for_doctors_title": "Vous etes Medecin ?",
     "for_doctors_desc": "Rejoignez notre marketplace premium et developpez votre cabinet avec des outils de reservation puissants.",
-    "for_doctors_cta": "Rejoindre en tant que Medecin"
+    "for_doctors_cta": "Rejoindre en tant que Medecin",
+    "search_name_placeholder": "Nom du medecin ou mot-cle...",
+    "search_specialty_placeholder": "Toutes specialites",
+    "search_location_placeholder": "Tous les lieux",
+    "search_button": "Rechercher"
   },
   "auth": {
     "login_title": "Bon Retour",

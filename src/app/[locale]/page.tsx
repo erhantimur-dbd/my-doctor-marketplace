@@ -1,11 +1,12 @@
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { HomeSearchBar } from "@/components/search/home-search-bar";
+import { getSpecialties, getLocations } from "@/actions/search";
 import {
-  Search,
   Calendar,
   Video,
   Shield,
@@ -19,6 +20,7 @@ import {
   Sparkles,
   Baby,
   Activity,
+  Search,
 } from "lucide-react";
 
 const specialtyIcons: Record<string, React.ElementType> = {
@@ -43,9 +45,14 @@ const popularSpecialties = [
   { slug: "physiotherapy", icon: "Activity", key: "physiotherapy" },
 ];
 
-export default function HomePage() {
-  const t = useTranslations("home");
-  const ts = useTranslations("specialty");
+export default async function HomePage() {
+  const t = await getTranslations("home");
+  const ts = await getTranslations("specialty");
+
+  const [specialties, locations] = await Promise.all([
+    getSpecialties(),
+    getLocations(),
+  ]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -61,19 +68,9 @@ export default function HomePage() {
             {t("hero_subtitle")}
           </p>
 
-          {/* Search bar */}
-          <div className="mx-auto mt-10 max-w-2xl">
-            <Link href="/doctors">
-              <div className="flex h-14 items-center gap-3 rounded-full border bg-background px-6 shadow-lg transition-shadow hover:shadow-xl">
-                <Search className="h-5 w-5 text-muted-foreground" />
-                <span className="text-muted-foreground">
-                  {t("search_placeholder")}
-                </span>
-                <Button size="sm" className="ml-auto rounded-full">
-                  {t.rich("step_1_title", {})}
-                </Button>
-              </div>
-            </Link>
+          {/* Real search bar */}
+          <div className="mt-10">
+            <HomeSearchBar specialties={specialties} locations={locations} />
           </div>
 
           {/* Trust indicators */}

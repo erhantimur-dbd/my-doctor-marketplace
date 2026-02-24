@@ -55,6 +55,9 @@ export async function searchDoctors(filters: SearchFilters) {
   if (filters.location) {
     query = query.eq("location.slug", filters.location);
   }
+  if (filters.query) {
+    query = query.ilike("bio", `%${filters.query}%`);
+  }
 
   // Sort
   switch (filters.sort) {
