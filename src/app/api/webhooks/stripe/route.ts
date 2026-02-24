@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exportBookingToGoogleCalendar } from "@/lib/google/sync";
+import { createRoom } from "@/lib/daily/client";
+import { sendEmail } from "@/lib/email/client";
+import { bookingConfirmationEmail } from "@/lib/email/templates";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -43,26 +46,104 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", bookingId);
 
-        // Record platform fee
-        const booking = await supabase
+        // Fetch full booking with patient + doctor details for email & video room
+        const { data: booking } = await supabase
           .from("bookings")
-          .select("doctor_id, platform_fee_cents, currency")
+          .select(`
+            id,
+            booking_number,
+            doctor_id,
+            appointment_date,
+            start_time,
+            end_time,
+            consultation_type,
+            consultation_fee_cents,
+            platform_fee_cents,
+            total_amount_cents,
+            currency,
+            patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+            doctor:doctors!inner(
+              id,
+              profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+            )
+          `)
           .eq("id", bookingId)
           .single();
 
-        if (booking.data) {
+        if (booking) {
+          // Record platform fee
           await supabase.from("platform_fees").insert({
             booking_id: bookingId,
-            doctor_id: booking.data.doctor_id,
+            doctor_id: booking.doctor_id,
             fee_type: "commission",
-            amount_cents: booking.data.platform_fee_cents,
-            currency: booking.data.currency,
+            amount_cents: booking.platform_fee_cents,
+            currency: booking.currency,
           });
 
           // Export confirmed booking to doctor's Google Calendar (non-blocking)
           exportBookingToGoogleCalendar(bookingId).catch((err) =>
             console.error("Google Calendar export error:", err)
           );
+
+          // Create Daily.co video room for video consultations
+          let videoRoomUrl: string | null = null;
+          if (booking.consultation_type === "video") {
+            try {
+              const roomName = `md-${booking.booking_number.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+              const endTime = new Date(`${booking.appointment_date}T${booking.end_time}`);
+              const expiresAt = Math.floor(endTime.getTime() / 1000) + 3600; // end_time + 1 hour
+
+              const room = await createRoom({
+                name: roomName,
+                expiresAt,
+                maxParticipants: 2,
+              });
+
+              videoRoomUrl = room.url;
+
+              await supabase
+                .from("bookings")
+                .update({
+                  video_room_url: room.url,
+                  daily_room_name: room.name,
+                })
+                .eq("id", bookingId);
+            } catch (err) {
+              console.error("Daily.co room creation error:", err);
+              // Non-fatal: booking is still confirmed, just no video room yet
+            }
+          }
+
+          // Send confirmation email (non-blocking)
+          const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
+          const doctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
+          const doctorProfile: any = doctor?.profile
+            ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
+            : null;
+
+          if (patient?.email && doctorProfile) {
+            const consultationLabel = booking.consultation_type === "video"
+              ? "Video Consultation"
+              : booking.consultation_type === "phone"
+                ? "Phone Consultation"
+                : "In-Person Consultation";
+
+            const { subject, html } = bookingConfirmationEmail({
+              patientName: patient.first_name || "Patient",
+              doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+              date: booking.appointment_date,
+              time: booking.start_time,
+              consultationType: consultationLabel,
+              bookingNumber: booking.booking_number,
+              amount: booking.total_amount_cents / 100,
+              currency: booking.currency.toUpperCase(),
+              videoRoomUrl,
+            });
+
+            sendEmail({ to: patient.email, subject, html }).catch((err) =>
+              console.error("Confirmation email error:", err)
+            );
+          }
         }
       }
       break;

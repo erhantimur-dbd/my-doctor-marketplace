@@ -101,7 +101,7 @@ export default function BookingsPage() {
     const { data } = await supabase
       .from("bookings")
       .select(
-        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
+        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
       )
       .eq("doctor_id", doctor.id)
       .order("appointment_date", { ascending: false })
@@ -158,7 +158,16 @@ export default function BookingsPage() {
       (["confirmed", "approved"].includes(b.status) && b.appointment_date < today)
   );
 
-  function renderBookingTable(rows: BookingRow[], showActions: boolean) {
+  function isVideoJoinEnabled(booking: BookingRow): boolean {
+    if (booking.consultation_type !== "video" || !booking.video_room_url) return false;
+    const now = new Date();
+    const start = new Date(`${booking.appointment_date}T${booking.start_time}`);
+    const minsBefore = (start.getTime() - now.getTime()) / 60000;
+    // Enabled from 10 min before start to 60 min after start
+    return minsBefore <= 10 && minsBefore >= -60;
+  }
+
+  function renderBookingTable(rows: BookingRow[], showActions: boolean, showVideoButton: boolean = false) {
     if (rows.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -179,6 +188,7 @@ export default function BookingsPage() {
             <TableHead>Type</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Amount</TableHead>
+            {showVideoButton && <TableHead>Appointment</TableHead>}
             {showActions && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
@@ -231,6 +241,23 @@ export default function BookingsPage() {
                   booking.currency || doctorCurrency
                 )}
               </TableCell>
+              {showVideoButton && (
+                <TableCell>
+                  {booking.consultation_type === "video" && booking.video_room_url ? (
+                    <Button
+                      size="sm"
+                      className="gap-1.5"
+                      disabled={!isVideoJoinEnabled(booking)}
+                      onClick={() => window.open(booking.video_room_url, "_blank")}
+                    >
+                      <Video className="h-3.5 w-3.5" />
+                      Start Appointment
+                    </Button>
+                  ) : booking.consultation_type === "video" ? (
+                    <span className="text-xs text-muted-foreground">Setting up...</span>
+                  ) : null}
+                </TableCell>
+              )}
               {showActions && (
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
@@ -348,7 +375,7 @@ export default function BookingsPage() {
         <TabsContent value="upcoming" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              {renderBookingTable(upcomingBookings, false)}
+              {renderBookingTable(upcomingBookings, false, true)}
             </CardContent>
           </Card>
         </TabsContent>

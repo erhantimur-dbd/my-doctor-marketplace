@@ -17,6 +17,13 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   User,
   Bell,
   Lock,
@@ -29,6 +36,9 @@ import {
   RefreshCw,
   Unlink,
   ExternalLink,
+  Clock,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import {
   getCalendarConnection,
@@ -36,6 +46,28 @@ import {
   triggerCalendarSync,
   toggleCalendarSync,
 } from "@/actions/calendar";
+import {
+  getDoctorReminderPreferences,
+  saveDoctorReminderPreferences,
+  type ReminderPreference,
+} from "@/actions/doctor";
+
+const REMINDER_TIME_PRESETS = [
+  { value: 15, label: "15 minutes before" },
+  { value: 30, label: "30 minutes before" },
+  { value: 60, label: "1 hour before" },
+  { value: 120, label: "2 hours before" },
+  { value: 240, label: "4 hours before" },
+  { value: 720, label: "12 hours before" },
+  { value: 1440, label: "24 hours before" },
+  { value: 2880, label: "48 hours before" },
+];
+
+const DEFAULT_REMINDERS: ReminderPreference[] = [
+  { minutes_before: 1440, channel: "email", is_enabled: true },
+  { minutes_before: 60, channel: "email", is_enabled: true },
+  { minutes_before: 60, channel: "in_app", is_enabled: true },
+];
 
 function createSupabase() {
   return createBrowserClient(
@@ -78,6 +110,15 @@ export default function SettingsPage() {
   const [calendarLastSynced, setCalendarLastSynced] = useState<string | null>(null);
   const [syncingCalendar, setSyncingCalendar] = useState(false);
   const [disconnectingCalendar, setDisconnectingCalendar] = useState(false);
+
+  // Reminders
+  const [reminders, setReminders] = useState<ReminderPreference[]>([]);
+  const [remindersLoaded, setRemindersLoaded] = useState(false);
+  const [savingReminders, setSavingReminders] = useState(false);
+  const [savedReminders, setSavedReminders] = useState(false);
+  const [addReminderDialogOpen, setAddReminderDialogOpen] = useState(false);
+  const [newReminderMinutes, setNewReminderMinutes] = useState("60");
+  const [newReminderChannel, setNewReminderChannel] = useState<"email" | "in_app">("email");
 
   // Account
   const [isActive, setIsActive] = useState(true);
@@ -136,6 +177,13 @@ export default function SettingsPage() {
       setCalendarSyncEnabled(true);
       // Clean URL
       window.history.replaceState({}, "", window.location.pathname);
+    }
+
+    // Load reminder preferences
+    const reminderResult = await getDoctorReminderPreferences();
+    if (reminderResult.data) {
+      setReminders(reminderResult.data.length > 0 ? reminderResult.data : DEFAULT_REMINDERS);
+      setRemindersLoaded(true);
     }
 
     setLoading(false);
@@ -234,6 +282,54 @@ export default function SettingsPage() {
     setIsActive(newStatus);
     setDeactivateDialogOpen(false);
     setSavingAccount(false);
+  }
+
+  async function saveReminders() {
+    setSavingReminders(true);
+    setSavedReminders(false);
+    const result = await saveDoctorReminderPreferences(reminders);
+    setSavingReminders(false);
+    if (result.error) {
+      alert("Failed to save reminders: " + result.error);
+      return;
+    }
+    setSavedReminders(true);
+    setTimeout(() => setSavedReminders(false), 3000);
+  }
+
+  function addReminder() {
+    const minutes = parseInt(newReminderMinutes, 10);
+    // Check for duplicate
+    const exists = reminders.some(
+      (r) => r.minutes_before === minutes && r.channel === newReminderChannel
+    );
+    if (exists) {
+      alert("This reminder already exists.");
+      return;
+    }
+    setReminders((prev) =>
+      [...prev, { minutes_before: minutes, channel: newReminderChannel, is_enabled: true }]
+        .sort((a, b) => b.minutes_before - a.minutes_before)
+    );
+    setAddReminderDialogOpen(false);
+  }
+
+  function removeReminder(index: number) {
+    setReminders((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function toggleReminder(index: number) {
+    setReminders((prev) =>
+      prev.map((r, i) => (i === index ? { ...r, is_enabled: !r.is_enabled } : r))
+    );
+  }
+
+  function formatReminderTime(minutes: number): string {
+    if (minutes < 60) return `${minutes} minutes before`;
+    if (minutes === 60) return "1 hour before";
+    if (minutes < 1440) return `${minutes / 60} hours before`;
+    if (minutes === 1440) return "24 hours before";
+    return `${minutes / 1440} days before`;
   }
 
   if (loading) {
@@ -379,6 +475,130 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Appointment Reminders */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Appointment Reminders
+          </CardTitle>
+          <CardDescription>
+            Configure when and how patients receive appointment reminders.
+            These reminders are sent automatically before each appointment.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {reminders.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <Clock className="mx-auto h-10 w-10 text-muted-foreground" />
+              <p className="mt-2 text-sm text-muted-foreground">
+                No reminders configured. Add a reminder to get started.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reminders.map((reminder, index) => (
+                <div
+                  key={`${reminder.minutes_before}-${reminder.channel}-${index}`}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      checked={reminder.is_enabled}
+                      onCheckedChange={() => toggleReminder(index)}
+                    />
+                    <div>
+                      <p className={`text-sm font-medium ${!reminder.is_enabled ? "text-muted-foreground" : ""}`}>
+                        {formatReminderTime(reminder.minutes_before)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        via {reminder.channel === "email" ? "Email" : "In-App Notification"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeReminder(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddReminderDialogOpen(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Reminder
+            </Button>
+            <Button onClick={saveReminders} disabled={savingReminders}>
+              {savingReminders ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : savedReminders ? (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {savedReminders ? "Saved" : "Save Reminders"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Add Reminder Dialog */}
+      <Dialog open={addReminderDialogOpen} onOpenChange={setAddReminderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Reminder</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>When</Label>
+              <Select value={newReminderMinutes} onValueChange={setNewReminderMinutes}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REMINDER_TIME_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={String(preset.value)}>
+                      {preset.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Channel</Label>
+              <Select value={newReminderChannel} onValueChange={(v) => setNewReminderChannel(v as "email" | "in_app")}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="in_app">In-App Notification</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button onClick={addReminder}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Reminder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Change Password */}
       <Card>

@@ -93,6 +93,7 @@ interface BookingConfirmationParams {
   bookingNumber: string;
   amount: number;
   currency: string;
+  videoRoomUrl?: string | null;
 }
 
 export function bookingConfirmationEmail({
@@ -104,8 +105,30 @@ export function bookingConfirmationEmail({
   bookingNumber,
   amount,
   currency,
+  videoRoomUrl,
 }: BookingConfirmationParams): { subject: string; html: string } {
   const subject = `Booking Confirmed - ${bookingNumber}`;
+
+  const videoBlock = videoRoomUrl
+    ? `
+    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #1e40af;">
+        Video Call Information
+      </p>
+      <p style="margin: 0 0 12px; font-size: 13px; color: #1e40af; line-height: 1.5;">
+        Your appointment will take place via video call. Click the button below to join when your appointment begins.
+      </p>
+      ${button("Join Video Call", videoRoomUrl)}
+      <p style="margin: 8px 0 0; font-size: 11px; color: #6b7280; line-height: 1.5; word-break: break-all;">
+        Or copy this link: ${videoRoomUrl}
+      </p>
+    </div>`
+    : `
+    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
+        Please arrive 5 minutes before your scheduled time. If you need to reschedule or cancel, please do so at least 24 hours in advance.
+      </p>
+    </div>`;
 
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Booking Confirmed</h2>
@@ -128,11 +151,7 @@ export function bookingConfirmationEmail({
       </tr>
     </table>
 
-    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
-      <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
-        Please arrive 5 minutes before your scheduled time. If you need to reschedule or cancel, please do so at least 24 hours in advance.
-      </p>
-    </div>
+    ${videoBlock}
 
     ${button("View Booking Details")}
   `);
@@ -219,6 +238,8 @@ interface BookingReminderParams {
   time: string;
   consultationType: string;
   bookingNumber: string;
+  videoRoomUrl?: string | null;
+  minutesBefore?: number;
 }
 
 export function bookingReminderEmail({
@@ -228,13 +249,39 @@ export function bookingReminderEmail({
   time,
   consultationType,
   bookingNumber,
+  videoRoomUrl,
+  minutesBefore,
 }: BookingReminderParams): { subject: string; html: string } {
-  const subject = `Appointment Reminder - Tomorrow with Dr. ${doctorName}`;
+  // Dynamic subject line based on how far before the appointment
+  let timeLabel = "Tomorrow";
+  if (minutesBefore !== undefined) {
+    if (minutesBefore <= 60) timeLabel = `in ${minutesBefore} minutes`;
+    else if (minutesBefore <= 120) timeLabel = "in 2 hours";
+    else if (minutesBefore < 1440) timeLabel = `in ${Math.round(minutesBefore / 60)} hours`;
+    else if (minutesBefore >= 2880) timeLabel = `in ${Math.round(minutesBefore / 1440)} days`;
+  }
+  const subject = `Appointment Reminder - ${timeLabel} with Dr. ${doctorName}`;
+
+  const videoBlock = videoRoomUrl
+    ? `
+    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #1e40af;">
+        Join Your Video Call
+      </p>
+      <p style="margin: 0 0 12px; font-size: 13px; color: #1e40af; line-height: 1.5;">
+        Your appointment is via video call. Click below to join when it's time.
+      </p>
+      ${button("Join Video Call", videoRoomUrl)}
+      <p style="margin: 8px 0 0; font-size: 11px; color: #6b7280; line-height: 1.5; word-break: break-all;">
+        Or copy this link: ${videoRoomUrl}
+      </p>
+    </div>`
+    : "";
 
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Appointment Reminder</h2>
     <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
-      Hi ${patientName}, this is a friendly reminder that your appointment is coming up tomorrow.
+      Hi ${patientName}, this is a friendly reminder that your appointment is coming up ${timeLabel.toLowerCase()}.
     </p>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
@@ -251,12 +298,14 @@ export function bookingReminderEmail({
       </tr>
     </table>
 
+    ${videoBlock}
+
     <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
       <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
         <strong>Preparation Tips:</strong><br />
         &bull; Have your medical records or previous reports ready if applicable.<br />
         &bull; Prepare a list of questions or symptoms you want to discuss.<br />
-        &bull; For video consultations, ensure you have a stable internet connection.
+        ${videoRoomUrl ? "&bull; Ensure you have a stable internet connection and a working camera/microphone." : "&bull; Please arrive 5 minutes before your scheduled time."}
       </p>
     </div>
 

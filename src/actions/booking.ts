@@ -12,6 +12,9 @@ import {
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import type { AvailableSlot } from "@/types/index";
 import { removeBookingFromGoogleCalendar } from "@/lib/google/sync";
+import { deleteRoom } from "@/lib/daily/client";
+import { sendEmail } from "@/lib/email/client";
+import { bookingCancellationEmail } from "@/lib/email/templates";
 
 const PLATFORM_FEE_PERCENT = 15;
 
@@ -179,16 +182,18 @@ export async function cancelBooking(input: CancelBookingInput) {
       return { error: "You must be logged in to cancel a booking." };
     }
 
-    // Fetch booking
+    // Fetch booking with doctor + patient details for cancellation email
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .select(
         `
         *,
+        patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
         doctor:doctors!inner(
           cancellation_policy,
           cancellation_hours,
-          stripe_account_id
+          stripe_account_id,
+          profile:profiles!doctors_profile_id_fkey(first_name, last_name)
         )
       `
       )
@@ -275,6 +280,40 @@ export async function cancelBooking(input: CancelBookingInput) {
     removeBookingFromGoogleCalendar(booking.id).catch((err) =>
       console.error("Google Calendar removal error:", err)
     );
+
+    // Delete Daily.co video room if one was created (non-blocking)
+    if (booking.daily_room_name) {
+      deleteRoom(booking.daily_room_name).catch((err) =>
+        console.error("Daily.co room deletion error:", err)
+      );
+    }
+
+    // Send cancellation email to patient (non-blocking)
+    const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
+    const doctor: any = booking.doctor;
+    const doctorProfile: any = doctor?.profile
+      ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
+      : null;
+
+    if (patient?.email && doctorProfile) {
+      const refundAmount = refundPercent > 0
+        ? (booking.total_amount_cents * refundPercent) / 100 / 100
+        : 0;
+
+      const { subject, html } = bookingCancellationEmail({
+        patientName: patient.first_name || "Patient",
+        doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+        date: booking.appointment_date,
+        time: booking.start_time,
+        bookingNumber: booking.booking_number,
+        refundAmount,
+        currency: booking.currency.toUpperCase(),
+      });
+
+      sendEmail({ to: patient.email, subject, html }).catch((err) =>
+        console.error("Cancellation email error:", err)
+      );
+    }
 
     revalidatePath("/", "layout");
     return {

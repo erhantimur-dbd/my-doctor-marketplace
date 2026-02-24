@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Users, Star, DollarSign } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { StartAppointmentButton } from "@/components/booking/start-appointment-button";
 
 export default async function DoctorDashboard() {
   const supabase = await createClient();
@@ -37,6 +38,8 @@ export default async function DoctorDashboard() {
     .eq("appointment_date", today)
     .in("status", ["confirmed", "approved"])
     .order("start_time");
+
+  const now = new Date();
 
   // Get monthly stats
   const startOfMonth = new Date(
@@ -124,35 +127,44 @@ export default async function DoctorDashboard() {
           ) : (
             <div className="space-y-3">
               {todayBookings.map(
-                (booking: any) => (
-                  <div
-                    key={booking.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
-                  >
-                    <div>
-                      <p className="font-medium">
-                        {booking.patient.first_name}{" "}
-                        {booking.patient.last_name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {new Date(booking.start_time).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}{" "}
-                        -{" "}
-                        {new Date(booking.end_time).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
+                (booking: any) => {
+                  const startDt = new Date(`${booking.appointment_date}T${booking.start_time}`);
+                  const minsBefore = (startDt.getTime() - now.getTime()) / 60000;
+                  const joinEnabled = booking.consultation_type === "video" &&
+                    booking.video_room_url &&
+                    minsBefore <= 10 && minsBefore >= -60;
+
+                  return (
+                    <div
+                      key={booking.id}
+                      className="flex items-center justify-between rounded-lg border p-4"
+                    >
+                      <div>
+                        <p className="font-medium">
+                          {booking.patient.first_name}{" "}
+                          {booking.patient.last_name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {booking.consultation_type === "video" && booking.video_room_url && (
+                          <StartAppointmentButton
+                            videoRoomUrl={booking.video_room_url}
+                            appointmentDate={booking.appointment_date}
+                            startTime={booking.start_time}
+                          />
+                        )}
+                        <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                          {booking.consultation_type === "video"
+                            ? "Video"
+                            : "In Person"}
+                        </span>
+                      </div>
                     </div>
-                    <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                      {booking.consultation_type === "video"
-                        ? "Video"
-                        : "In Person"}
-                    </span>
-                  </div>
-                )
+                  );
+                }
               )}
             </div>
           )}

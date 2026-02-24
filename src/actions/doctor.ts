@@ -201,6 +201,67 @@ export async function connectStripeAccount() {
   return { url: accountLink.url };
 }
 
+// ---------------------------------------------------------------------------
+// Reminder Preferences
+// ---------------------------------------------------------------------------
+
+export interface ReminderPreference {
+  id?: string;
+  minutes_before: number;
+  channel: "email" | "in_app";
+  is_enabled: boolean;
+}
+
+export async function getDoctorReminderPreferences(): Promise<{
+  data?: ReminderPreference[];
+  error?: string;
+}> {
+  const { error: authError, supabase, doctor } = await requireDoctor();
+  if (authError || !supabase || !doctor) return { error: authError || "Not authorized" };
+
+  const { data, error } = await supabase
+    .from("doctor_reminder_preferences")
+    .select("id, minutes_before, channel, is_enabled")
+    .eq("doctor_id", doctor.id)
+    .order("minutes_before", { ascending: false });
+
+  if (error) return { error: error.message };
+  return { data: data as ReminderPreference[] };
+}
+
+export async function saveDoctorReminderPreferences(
+  prefs: ReminderPreference[]
+): Promise<{ success?: boolean; error?: string }> {
+  const { error: authError, supabase, doctor } = await requireDoctor();
+  if (authError || !supabase || !doctor) return { error: authError || "Not authorized" };
+
+  // Delete existing preferences and re-insert (atomic replace)
+  const { error: deleteError } = await supabase
+    .from("doctor_reminder_preferences")
+    .delete()
+    .eq("doctor_id", doctor.id);
+
+  if (deleteError) return { error: deleteError.message };
+
+  if (prefs.length > 0) {
+    const rows = prefs.map((p) => ({
+      doctor_id: doctor.id,
+      minutes_before: p.minutes_before,
+      channel: p.channel,
+      is_enabled: p.is_enabled,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("doctor_reminder_preferences")
+      .insert(rows);
+
+    if (insertError) return { error: insertError.message };
+  }
+
+  revalidatePath("/doctor-dashboard/settings");
+  return { success: true };
+}
+
 export async function createSubscriptionCheckout(priceId: string) {
   const { error: authError, supabase, doctor } = await requireDoctor();
   if (authError || !supabase || !doctor) return { error: authError };
