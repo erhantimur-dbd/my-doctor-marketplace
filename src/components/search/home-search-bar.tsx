@@ -420,7 +420,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
             placeholder={t("search_name_placeholder")}
-            className="h-11 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="h-11 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
             autoComplete="off"
           />
         </div>
