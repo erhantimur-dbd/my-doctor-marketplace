@@ -59,6 +59,7 @@
     "search_specialty_placeholder": "すべての診療科",
     "search_location_placeholder": "すべての地域",
     "search_button": "検索",
+    "use_my_location": "現在地を使用",
     "same_day_title": "本日予約可能",
     "same_day_subtitle": "{count}人の医師が本日予約可能です",
     "same_day_cta": "本日の予約をする"
@@ -105,7 +106,9 @@
     "any_location": "すべての地域",
     "any_language": "すべての言語",
     "all_types": "すべてのタイプ",
-    "available_today": "本日予約可能"
+    "available_today": "本日予約可能",
+    "use_my_location": "現在地を使用",
+    "detecting_location": "検出中..."
   },
   "booking": {
     "select_date": "日付を選択",

@@ -59,6 +59,7 @@
     "search_specialty_placeholder": "Tum uzmanliklar",
     "search_location_placeholder": "Tum konumlar",
     "search_button": "Ara",
+    "use_my_location": "Konumumu kullan",
     "same_day_title": "Bugün İçin Randevu Mevcut",
     "same_day_subtitle": "{count, plural, one {# doktor} other {# doktor}} bugün randevu için müsait",
     "same_day_cta": "Bugün İçin Randevu Al"
@@ -135,7 +136,9 @@
     "any_location": "Tum Konumlar",
     "any_language": "Tum Diller",
     "all_types": "Tum Turler",
-    "available_today": "Bugün Müsait"
+    "available_today": "Bugün Müsait",
+    "use_my_location": "Konumumu kullan",
+    "detecting_location": "Algılanıyor..."
   },
   "booking": {
     "select_date": "Tarih Secin",

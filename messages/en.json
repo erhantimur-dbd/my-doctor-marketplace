@@ -59,6 +59,7 @@
     "search_specialty_placeholder": "Any specialty",
     "search_location_placeholder": "Any location",
     "search_button": "Search",
+    "use_my_location": "Use my location",
     "same_day_title": "Same-Day Appointments Available",
     "same_day_subtitle": "{count, plural, one {# doctor is} other {# doctors are}} available for appointments today",
     "same_day_cta": "Book for Today"
@@ -105,7 +106,9 @@
     "any_location": "Any Location",
     "any_language": "Any Language",
     "all_types": "All Types",
-    "available_today": "Available Today"
+    "available_today": "Available Today",
+    "use_my_location": "Use my location",
+    "detecting_location": "Detecting..."
   },
   "booking": {
     "select_date": "Select Date",

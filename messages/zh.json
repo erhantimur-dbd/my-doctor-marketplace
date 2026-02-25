@@ -59,6 +59,7 @@
     "search_specialty_placeholder": "所有专科",
     "search_location_placeholder": "所有地区",
     "search_button": "搜索",
+    "use_my_location": "使用我的位置",
     "same_day_title": "今日可预约",
     "same_day_subtitle": "{count} 位医生今日有空余预约时段",
     "same_day_cta": "预约今日就诊"
@@ -105,7 +106,9 @@
     "any_location": "所有地区",
     "any_language": "所有语言",
     "all_types": "所有方式",
-    "available_today": "今日可预约"
+    "available_today": "今日可预约",
+    "use_my_location": "使用我的位置",
+    "detecting_location": "定位中..."
   },
   "booking": {
     "select_date": "选择日期",

@@ -59,6 +59,7 @@
     "search_specialty_placeholder": "Tutte le specialità",
     "search_location_placeholder": "Tutte le località",
     "search_button": "Cerca",
+    "use_my_location": "Usa la mia posizione",
     "same_day_title": "Appuntamenti disponibili oggi",
     "same_day_subtitle": "{count, plural, one {# medico è} other {# medici sono}} disponibili per appuntamenti oggi",
     "same_day_cta": "Prenota per oggi"
@@ -105,7 +106,9 @@
     "any_location": "Qualsiasi Località",
     "any_language": "Qualsiasi Lingua",
     "all_types": "Tutti i Tipi",
-    "available_today": "Disponibile oggi"
+    "available_today": "Disponibile oggi",
+    "use_my_location": "Usa la mia posizione",
+    "detecting_location": "Rilevamento..."
   },
   "booking": {
     "select_date": "Seleziona Data",

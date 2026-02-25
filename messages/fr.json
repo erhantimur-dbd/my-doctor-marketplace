@@ -59,6 +59,7 @@
     "search_specialty_placeholder": "Toutes specialites",
     "search_location_placeholder": "Tous les lieux",
     "search_button": "Rechercher",
+    "use_my_location": "Utiliser ma position",
     "same_day_title": "Rendez-vous disponibles aujourd'hui",
     "same_day_subtitle": "{count, plural, one {# médecin est} other {# médecins sont}} disponible(s) pour des rendez-vous aujourd'hui",
     "same_day_cta": "Réserver pour aujourd'hui"
@@ -135,7 +136,9 @@
     "any_location": "Tous les lieux",
     "any_language": "Toutes les langues",
     "all_types": "Tous les types",
-    "available_today": "Disponible aujourd'hui"
+    "available_today": "Disponible aujourd'hui",
+    "use_my_location": "Utiliser ma position",
+    "detecting_location": "Detection..."
   },
   "booking": {
     "select_date": "Choisir une date",

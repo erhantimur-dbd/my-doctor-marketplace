@@ -13,12 +13,21 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { X, Clock } from "lucide-react";
-import { useCallback } from "react";
+import { X, Clock, MapPin, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef } from "react";
+import { useGeolocation } from "@/hooks/use-geolocation";
+import { findNearestLocation } from "@/lib/utils/geo";
 
 interface FilterProps {
   specialties: { id: string; name_key: string; slug: string }[];
-  locations: { id: string; city: string; country_code: string; slug: string }[];
+  locations: {
+    id: string;
+    city: string;
+    country_code: string;
+    slug: string;
+    latitude: number | null;
+    longitude: number | null;
+  }[];
   currentFilters: Record<string, string | undefined>;
 }
 
@@ -30,6 +39,7 @@ export function DoctorSearchFilters({
   const t = useTranslations("search");
   const router = useRouter();
   const pathname = usePathname();
+  const geo = useGeolocation("manual");
 
   const updateFilter = useCallback(
     (key: string, value: string | undefined) => {
@@ -57,6 +67,46 @@ export function DoctorSearchFilters({
   const hasFilters = Object.entries(currentFilters).some(
     ([k, v]) => v && k !== "sort" && k !== "page"
   );
+
+  // Track whether the user clicked "Use my location" to apply coords when they arrive
+  const pendingGeoRef = useRef(false);
+
+  const handleUseMyLocation = () => {
+    // If we already have cached coords, use them immediately
+    if (geo.latitude !== null && geo.longitude !== null) {
+      const nearest = findNearestLocation(
+        { latitude: geo.latitude, longitude: geo.longitude },
+        locations
+      );
+      if (nearest) {
+        updateFilter("location", nearest);
+      }
+      return;
+    }
+
+    // Otherwise, flag that we're waiting and request position
+    pendingGeoRef.current = true;
+    geo.requestPosition();
+  };
+
+  // When coords arrive after clicking "Use my location", apply the filter
+  useEffect(() => {
+    if (
+      pendingGeoRef.current &&
+      geo.latitude !== null &&
+      geo.longitude !== null &&
+      !geo.loading
+    ) {
+      pendingGeoRef.current = false;
+      const nearest = findNearestLocation(
+        { latitude: geo.latitude, longitude: geo.longitude },
+        locations
+      );
+      if (nearest) {
+        updateFilter("location", nearest);
+      }
+    }
+  }, [geo.latitude, geo.longitude, geo.loading, locations, updateFilter]);
 
   return (
     <Card>
@@ -110,7 +160,24 @@ export function DoctorSearchFilters({
 
         {/* Location */}
         <div className="space-y-2">
-          <Label className="text-sm">{t("location")}</Label>
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">{t("location")}</Label>
+            {geo.supported && (
+              <button
+                type="button"
+                onClick={handleUseMyLocation}
+                disabled={geo.loading}
+                className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80 disabled:opacity-50"
+              >
+                {geo.loading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <MapPin className="h-3 w-3" />
+                )}
+                {geo.loading ? t("detecting_location") : t("use_my_location")}
+              </button>
+            )}
+          </div>
           <Select
             value={currentFilters.location || "all"}
             onValueChange={(v) => updateFilter("location", v)}

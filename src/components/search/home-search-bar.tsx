@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Search, MapPin, Loader2 } from "lucide-react";
+import { useGeolocation } from "@/hooks/use-geolocation";
+import { findNearestLocation } from "@/lib/utils/geo";
 
 interface HomeSearchBarProps {
   specialties: { id: string; name_key: string; slug: string }[];
-  locations: { id: string; city: string; country_code: string; slug: string }[];
+  locations: {
+    id: string;
+    city: string;
+    country_code: string;
+    slug: string;
+    latitude: number | null;
+    longitude: number | null;
+  }[];
 }
 
 export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
@@ -25,6 +34,37 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const [query, setQuery] = useState("");
   const [specialty, setSpecialty] = useState("");
   const [location, setLocation] = useState("");
+  const [hasManuallySelected, setHasManuallySelected] = useState(false);
+
+  const geo = useGeolocation("auto");
+
+  // Auto-select nearest location when GPS coords arrive (only if user hasn't picked manually)
+  useEffect(() => {
+    if (
+      geo.latitude !== null &&
+      geo.longitude !== null &&
+      !hasManuallySelected &&
+      !location
+    ) {
+      const nearest = findNearestLocation(
+        { latitude: geo.latitude, longitude: geo.longitude },
+        locations
+      );
+      if (nearest) {
+        setLocation(nearest);
+      }
+    }
+  }, [geo.latitude, geo.longitude, hasManuallySelected, location, locations]);
+
+  const handleLocationChange = (value: string) => {
+    setHasManuallySelected(true);
+    setLocation(value);
+  };
+
+  const handleLocateClick = () => {
+    setHasManuallySelected(false);
+    geo.requestPosition();
+  };
 
   const handleSearch = () => {
     const params = new URLSearchParams();
@@ -84,20 +124,37 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
         <div className="h-8 w-px bg-border" />
 
         {/* Location */}
-        <div className="w-44">
-          <Select value={location} onValueChange={setLocation}>
-            <SelectTrigger className="h-14 border-0 shadow-none rounded-none focus:ring-0 text-sm">
-              <SelectValue placeholder={t("search_location_placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("search_location_placeholder")}</SelectItem>
-              {locations.map((l) => (
-                <SelectItem key={l.id} value={l.slug}>
-                  {l.city}, {l.country_code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex w-52 items-center">
+          <div className="flex-1">
+            <Select value={location} onValueChange={handleLocationChange}>
+              <SelectTrigger className="h-14 border-0 shadow-none rounded-none focus:ring-0 text-sm">
+                <SelectValue placeholder={t("search_location_placeholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("search_location_placeholder")}</SelectItem>
+                {locations.map((l) => (
+                  <SelectItem key={l.id} value={l.slug}>
+                    {l.city}, {l.country_code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {geo.supported && (
+            <button
+              type="button"
+              onClick={handleLocateClick}
+              disabled={geo.loading}
+              className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-50"
+              title={t("use_my_location")}
+            >
+              {geo.loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MapPin className="h-4 w-4" />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Search button */}
@@ -146,20 +203,41 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           </SelectContent>
         </Select>
 
-        {/* Location */}
-        <Select value={location} onValueChange={setLocation}>
-          <SelectTrigger className="h-11">
-            <SelectValue placeholder={t("search_location_placeholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("search_location_placeholder")}</SelectItem>
-            {locations.map((l) => (
-              <SelectItem key={l.id} value={l.slug}>
-                {l.city}, {l.country_code}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {/* Location with locate button */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <Select value={location} onValueChange={handleLocationChange}>
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder={t("search_location_placeholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t("search_location_placeholder")}</SelectItem>
+                {locations.map((l) => (
+                  <SelectItem key={l.id} value={l.slug}>
+                    {l.city}, {l.country_code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {geo.supported && (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-11 w-11 shrink-0"
+              onClick={handleLocateClick}
+              disabled={geo.loading}
+              title={t("use_my_location")}
+            >
+              {geo.loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MapPin className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+        </div>
 
         {/* Search button */}
         <Button className="h-11 w-full rounded-lg" onClick={handleSearch}>

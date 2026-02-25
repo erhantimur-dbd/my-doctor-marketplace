@@ -59,6 +59,7 @@
     "search_specialty_placeholder": "Alle Fachgebiete",
     "search_location_placeholder": "Alle Standorte",
     "search_button": "Suchen",
+    "use_my_location": "Meinen Standort verwenden",
     "same_day_title": "Termine noch heute verfügbar",
     "same_day_subtitle": "{count, plural, one {# Arzt ist} other {# Ärzte sind}} heute noch für Termine verfügbar",
     "same_day_cta": "Heute buchen"
@@ -149,7 +150,9 @@
     "any_location": "Alle Orte",
     "any_language": "Alle Sprachen",
     "all_types": "Alle Typen",
-    "available_today": "Heute verfügbar"
+    "available_today": "Heute verfügbar",
+    "use_my_location": "Meinen Standort verwenden",
+    "detecting_location": "Erkennung..."
   },
   "booking": {
     "select_date": "Datum wahlen",
