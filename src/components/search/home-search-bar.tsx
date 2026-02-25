@@ -16,7 +16,6 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
 
 interface HomeSearchBarProps {
-  specialties: { id: string; name_key: string; slug: string }[];
   locations: {
     id: string;
     city: string;
@@ -27,12 +26,11 @@ interface HomeSearchBarProps {
   }[];
 }
 
-export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
+export function HomeSearchBar({ locations }: HomeSearchBarProps) {
   const t = useTranslations("home");
   const router = useRouter();
 
   const [query, setQuery] = useState("");
-  const [specialty, setSpecialty] = useState("");
   const [location, setLocation] = useState("");
   const [hasManuallySelected, setHasManuallySelected] = useState(false);
 
@@ -69,7 +67,6 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (query.trim()) params.set("query", query.trim());
-    if (specialty && specialty !== "all") params.set("specialty", specialty);
     if (location && location !== "all") params.set("location", location);
 
     const qs = params.toString();
@@ -95,29 +92,6 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
             placeholder={t("search_name_placeholder")}
             className="h-14 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
-        </div>
-
-        {/* Divider */}
-        <div className="h-8 w-px bg-border" />
-
-        {/* Specialty */}
-        <div className="w-44">
-          <Select value={specialty} onValueChange={setSpecialty}>
-            <SelectTrigger className="h-14 border-0 shadow-none rounded-none focus:ring-0 text-sm">
-              <SelectValue placeholder={t("search_specialty_placeholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("search_specialty_placeholder")}</SelectItem>
-              {specialties.map((s) => (
-                <SelectItem key={s.id} value={s.slug}>
-                  {s.name_key
-                    .replace("specialty.", "")
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Divider */}
@@ -184,24 +158,6 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
             className="h-11 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </div>
-
-        {/* Specialty */}
-        <Select value={specialty} onValueChange={setSpecialty}>
-          <SelectTrigger className="h-11">
-            <SelectValue placeholder={t("search_specialty_placeholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("search_specialty_placeholder")}</SelectItem>
-            {specialties.map((s) => (
-              <SelectItem key={s.id} value={s.slug}>
-                {s.name_key
-                  .replace("specialty.", "")
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         {/* Location with locate button */}
         <div className="flex items-center gap-2">

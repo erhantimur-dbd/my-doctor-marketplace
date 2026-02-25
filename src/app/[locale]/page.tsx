@@ -70,7 +70,7 @@ export default async function HomePage() {
 
           {/* Real search bar */}
           <div className="mt-10">
-            <HomeSearchBar specialties={specialties} locations={locations} />
+            <HomeSearchBar locations={locations} />
           </div>
 
           {/* Trust indicators */}
