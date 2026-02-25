@@ -113,54 +113,56 @@ ON CONFLICT (key) DO NOTHING;
 ALTER TABLE public.bookings DISABLE TRIGGER trg_generate_booking_number;
 
 -- Patients
-INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token)
+-- NOTE: GoTrue (Go) scans email_change, phone_change, phone_change_token etc. into
+-- Go string types which cannot be NULL. All these columns MUST be empty strings.
+INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new, email_change_token_current, email_change_confirm_status, phone_change, phone_change_token, reauthentication_token, is_sso_user)
 VALUES
   ('c0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'sarah.johnson@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"Sarah","last_name":"Johnson","role":"patient"}',
-   NOW(), NOW(), '', ''),
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
   ('c0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'michael.chen@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"Michael","last_name":"Chen","role":"patient"}',
-   NOW(), NOW(), '', ''),
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
   ('c0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'emma.wilson@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"Emma","last_name":"Wilson","role":"patient"}',
-   NOW(), NOW(), '', ''),
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
   -- Doctors
   ('d0000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'hans.mueller@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"Hans","last_name":"Mueller","role":"doctor"}',
-   NOW(), NOW(), '', ''),
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
   ('d0000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'ayse.yilmaz@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"Ayşe","last_name":"Yılmaz","role":"doctor"}',
-   NOW(), NOW(), '', ''),
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
   ('d0000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'james.thompson@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"James","last_name":"Thompson","role":"doctor"}',
-   NOW(), NOW(), '', ''),
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
   ('d0000000-0000-0000-0000-000000000004', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'marie.dubois@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"Marie","last_name":"Dubois","role":"doctor"}',
-   NOW(), NOW(), '', ''),
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
   ('d0000000-0000-0000-0000-000000000005', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'lisa.vanberg@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"Lisa","last_name":"van Berg","role":"doctor"}',
-   NOW(), NOW(), '', ''),
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
   ('d0000000-0000-0000-0000-000000000006', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
    'kenji.tanaka@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
    '{"provider":"email","providers":["email"]}',
    '{"first_name":"Kenji","last_name":"Tanaka","role":"doctor"}',
-   NOW(), NOW(), '', '')
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE)
 ON CONFLICT (id) DO NOTHING;
 
 -- Auth identities (required for Supabase email/password login)
