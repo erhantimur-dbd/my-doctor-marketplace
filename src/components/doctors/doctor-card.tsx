@@ -1,3 +1,5 @@
+"use client";
+
 import { forwardRef } from "react";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
