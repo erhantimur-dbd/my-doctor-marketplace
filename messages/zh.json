@@ -112,7 +112,9 @@
     "all_types": "所有方式",
     "available_today": "今日可预约",
     "use_my_location": "使用我的位置",
-    "detecting_location": "定位中..."
+    "detecting_location": "定位中...",
+    "sort_nearest": "最近",
+    "show_results": "显示结果"
   },
   "booking": {
     "select_date": "选择日期",

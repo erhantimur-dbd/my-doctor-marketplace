@@ -17,6 +17,7 @@ import { X, Clock, MapPin, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
+import { MobileFilterBar } from "./mobile-filter-bar";
 
 interface FilterProps {
   specialties: { id: string; name_key: string; slug: string }[];
@@ -60,19 +61,68 @@ export function DoctorSearchFilters({
     [currentFilters, pathname, router]
   );
 
+  // Handle sort change — when "nearest" is selected, attach lat/lng
+  const handleSortChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams();
+      Object.entries(currentFilters).forEach(([k, v]) => {
+        if (v && k !== "page") params.set(k, v);
+      });
+
+      if (value && value !== "all") {
+        params.set("sort", value);
+      } else {
+        params.delete("sort");
+      }
+
+      // If switching to "nearest", attach geo coords if available
+      if (value === "nearest") {
+        if (geo.latitude != null && geo.longitude != null) {
+          params.set("lat", geo.latitude.toFixed(6));
+          params.set("lng", geo.longitude.toFixed(6));
+        } else {
+          // Request geolocation — coords will be applied via the effect below
+          pendingNearestRef.current = true;
+          geo.requestPosition();
+        }
+      } else {
+        // Remove lat/lng when switching away from nearest
+        params.delete("lat");
+        params.delete("lng");
+      }
+
+      params.delete("page");
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [currentFilters, pathname, router, geo]
+  );
+
   const clearAll = () => {
     router.push(pathname);
   };
 
   const hasFilters = Object.entries(currentFilters).some(
-    ([k, v]) => v && k !== "sort" && k !== "page"
+    ([k, v]) => v && k !== "sort" && k !== "page" && k !== "lat" && k !== "lng"
   );
+
+  // Count active filters (excluding sort, page, lat, lng, availableToday — since that has its own chip)
+  const activeFilterCount = Object.entries(currentFilters).filter(
+    ([k, v]) =>
+      v &&
+      k !== "sort" &&
+      k !== "page" &&
+      k !== "lat" &&
+      k !== "lng" &&
+      k !== "availableToday" &&
+      k !== "query"
+  ).length;
 
   // Track whether the user clicked "Use my location" to apply coords when they arrive
   const pendingGeoRef = useRef(false);
+  // Track whether the user selected "nearest" sort and we're waiting for coords
+  const pendingNearestRef = useRef(false);
 
   const handleUseMyLocation = () => {
-    // If we already have cached coords, use them immediately
     if (geo.latitude !== null && geo.longitude !== null) {
       const nearest = findNearestLocation(
         { latitude: geo.latitude, longitude: geo.longitude },
@@ -84,19 +134,16 @@ export function DoctorSearchFilters({
       return;
     }
 
-    // Otherwise, flag that we're waiting and request position
     pendingGeoRef.current = true;
     geo.requestPosition();
   };
 
-  // When coords arrive after clicking "Use my location", apply the filter
+  // When coords arrive after clicking "Use my location" OR selecting "nearest" sort
   useEffect(() => {
-    if (
-      pendingGeoRef.current &&
-      geo.latitude !== null &&
-      geo.longitude !== null &&
-      !geo.loading
-    ) {
+    if (geo.latitude === null || geo.longitude === null || geo.loading) return;
+
+    // Handle pending "Use my location"
+    if (pendingGeoRef.current) {
       pendingGeoRef.current = false;
       const nearest = findNearestLocation(
         { latitude: geo.latitude, longitude: geo.longitude },
@@ -106,153 +153,221 @@ export function DoctorSearchFilters({
         updateFilter("location", nearest);
       }
     }
-  }, [geo.latitude, geo.longitude, geo.loading, locations, updateFilter]);
+
+    // Handle pending "nearest" sort
+    if (pendingNearestRef.current) {
+      pendingNearestRef.current = false;
+      const params = new URLSearchParams();
+      Object.entries(currentFilters).forEach(([k, v]) => {
+        if (v && k !== "page") params.set(k, v);
+      });
+      params.set("sort", "nearest");
+      params.set("lat", geo.latitude.toFixed(6));
+      params.set("lng", geo.longitude.toFixed(6));
+      params.delete("page");
+      router.push(`${pathname}?${params.toString()}`);
+    }
+  }, [
+    geo.latitude,
+    geo.longitude,
+    geo.loading,
+    locations,
+    updateFilter,
+    currentFilters,
+    pathname,
+    router,
+  ]);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-3">
-        <CardTitle className="text-base">{t("filters")}</CardTitle>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={clearAll} className="h-8">
-            <X className="mr-1 h-3 w-3" />
-            {t("clear_filters")}
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {/* Available Today */}
-        <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
-          <Label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
-            <Clock className="h-4 w-4 text-green-600" />
-            {t("available_today")}
-          </Label>
-          <Switch
-            checked={currentFilters.availableToday === "true"}
-            onCheckedChange={(checked) =>
-              updateFilter("availableToday", checked ? "true" : undefined)
+    <>
+      {/* Mobile: compact horizontal bar */}
+      <div className="lg:hidden">
+        <MobileFilterBar
+          specialties={specialties}
+          locations={locations}
+          currentFilters={currentFilters}
+          updateFilter={(key, value) => {
+            if (key === "sort") {
+              handleSortChange(value || "featured");
+            } else {
+              updateFilter(key, value);
             }
-          />
-        </div>
+          }}
+          clearAll={clearAll}
+          hasFilters={hasFilters}
+          activeFilterCount={activeFilterCount}
+          geoSupported={geo.supported}
+          geoLoading={geo.loading}
+          onUseMyLocation={handleUseMyLocation}
+          detectingLocation={t("detecting_location")}
+          useMyLocationLabel={t("use_my_location")}
+        />
+      </div>
 
-        {/* Specialty */}
-        <div className="space-y-2">
-          <Label className="text-sm">{t("specialty")}</Label>
-          <Select
-            value={currentFilters.specialty || "all"}
-            onValueChange={(v) => updateFilter("specialty", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={t("any_specialty")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("any_specialty")}</SelectItem>
-              {specialties.map((s) => (
-                <SelectItem key={s.id} value={s.slug}>
-                  {s.name_key
-                    .replace("specialty.", "")
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Location */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm">{t("location")}</Label>
-            {geo.supported && (
-              <button
-                type="button"
-                onClick={handleUseMyLocation}
-                disabled={geo.loading}
-                className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80 disabled:opacity-50"
+      {/* Desktop: existing sidebar card */}
+      <div className="hidden lg:block">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <CardTitle className="text-base">{t("filters")}</CardTitle>
+            {hasFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAll}
+                className="h-8"
               >
-                {geo.loading ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <MapPin className="h-3 w-3" />
-                )}
-                {geo.loading ? t("detecting_location") : t("use_my_location")}
-              </button>
+                <X className="mr-1 h-3 w-3" />
+                {t("clear_filters")}
+              </Button>
             )}
-          </div>
-          <Select
-            value={currentFilters.location || "all"}
-            onValueChange={(v) => updateFilter("location", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={t("any_location")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("any_location")}</SelectItem>
-              {locations.map((l) => (
-                <SelectItem key={l.id} value={l.slug}>
-                  {l.city}, {l.country_code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* Available Today */}
+            <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900 dark:bg-green-950/30">
+              <Label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                <Clock className="h-4 w-4 text-green-600" />
+                {t("available_today")}
+              </Label>
+              <Switch
+                checked={currentFilters.availableToday === "true"}
+                onCheckedChange={(checked) =>
+                  updateFilter("availableToday", checked ? "true" : undefined)
+                }
+              />
+            </div>
 
-        {/* Consultation Type */}
-        <div className="space-y-2">
-          <Label className="text-sm">{t("consultation_type")}</Label>
-          <Select
-            value={currentFilters.consultationType || "all"}
-            onValueChange={(v) => updateFilter("consultationType", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={t("all_types")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t("all_types")}</SelectItem>
-              <SelectItem value="in_person">In Person</SelectItem>
-              <SelectItem value="video">Video Call</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            {/* Specialty */}
+            <div className="space-y-2">
+              <Label className="text-sm">{t("specialty")}</Label>
+              <Select
+                value={currentFilters.specialty || "all"}
+                onValueChange={(v) => updateFilter("specialty", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("any_specialty")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("any_specialty")}</SelectItem>
+                  {specialties.map((s) => (
+                    <SelectItem key={s.id} value={s.slug}>
+                      {s.name_key
+                        .replace("specialty.", "")
+                        .replace(/_/g, " ")
+                        .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Minimum Rating */}
-        <div className="space-y-2">
-          <Label className="text-sm">{t("min_rating")}</Label>
-          <Select
-            value={currentFilters.minRating || "all"}
-            onValueChange={(v) => updateFilter("minRating", v)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Any" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any</SelectItem>
-              <SelectItem value="4.5">4.5+</SelectItem>
-              <SelectItem value="4">4.0+</SelectItem>
-              <SelectItem value="3.5">3.5+</SelectItem>
-              <SelectItem value="3">3.0+</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            {/* Location */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">{t("location")}</Label>
+                {geo.supported && (
+                  <button
+                    type="button"
+                    onClick={handleUseMyLocation}
+                    disabled={geo.loading}
+                    className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80 disabled:opacity-50"
+                  >
+                    {geo.loading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <MapPin className="h-3 w-3" />
+                    )}
+                    {geo.loading
+                      ? t("detecting_location")
+                      : t("use_my_location")}
+                  </button>
+                )}
+              </div>
+              <Select
+                value={currentFilters.location || "all"}
+                onValueChange={(v) => updateFilter("location", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("any_location")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("any_location")}</SelectItem>
+                  {locations.map((l) => (
+                    <SelectItem key={l.id} value={l.slug}>
+                      {l.city}, {l.country_code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Sort */}
-        <div className="space-y-2">
-          <Label className="text-sm">{t("sort_by")}</Label>
-          <Select
-            value={currentFilters.sort || "featured"}
-            onValueChange={(v) => updateFilter("sort", v)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="featured">{t("sort_featured")}</SelectItem>
-              <SelectItem value="rating">{t("sort_rating")}</SelectItem>
-              <SelectItem value="price_asc">{t("sort_price_asc")}</SelectItem>
-              <SelectItem value="price_desc">{t("sort_price_desc")}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardContent>
-    </Card>
+            {/* Consultation Type */}
+            <div className="space-y-2">
+              <Label className="text-sm">{t("consultation_type")}</Label>
+              <Select
+                value={currentFilters.consultationType || "all"}
+                onValueChange={(v) => updateFilter("consultationType", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("all_types")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_types")}</SelectItem>
+                  <SelectItem value="in_person">In Person</SelectItem>
+                  <SelectItem value="video">Video Call</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Minimum Rating */}
+            <div className="space-y-2">
+              <Label className="text-sm">{t("min_rating")}</Label>
+              <Select
+                value={currentFilters.minRating || "all"}
+                onValueChange={(v) => updateFilter("minRating", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Any</SelectItem>
+                  <SelectItem value="4.5">4.5+</SelectItem>
+                  <SelectItem value="4">4.0+</SelectItem>
+                  <SelectItem value="3.5">3.5+</SelectItem>
+                  <SelectItem value="3">3.0+</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Sort */}
+            <div className="space-y-2">
+              <Label className="text-sm">{t("sort_by")}</Label>
+              <Select
+                value={currentFilters.sort || "featured"}
+                onValueChange={handleSortChange}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="featured">
+                    {t("sort_featured")}
+                  </SelectItem>
+                  <SelectItem value="nearest">
+                    {t("sort_nearest")}
+                  </SelectItem>
+                  <SelectItem value="rating">{t("sort_rating")}</SelectItem>
+                  <SelectItem value="price_asc">
+                    {t("sort_price_asc")}
+                  </SelectItem>
+                  <SelectItem value="price_desc">
+                    {t("sort_price_desc")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </>
   );
 }

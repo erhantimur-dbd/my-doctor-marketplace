@@ -112,7 +112,9 @@
     "all_types": "Tutti i Tipi",
     "available_today": "Disponibile oggi",
     "use_my_location": "Usa la mia posizione",
-    "detecting_location": "Rilevamento..."
+    "detecting_location": "Rilevamento...",
+    "sort_nearest": "Più vicino",
+    "show_results": "Mostra risultati"
   },
   "booking": {
     "select_date": "Seleziona Data",

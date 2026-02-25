@@ -112,7 +112,9 @@
     "all_types": "All Types",
     "available_today": "Available Today",
     "use_my_location": "Use my location",
-    "detecting_location": "Detecting..."
+    "detecting_location": "Detecting...",
+    "sort_nearest": "Nearest",
+    "show_results": "Show Results"
   },
   "booking": {
     "select_date": "Select Date",

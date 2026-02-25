@@ -112,7 +112,9 @@
     "all_types": "すべてのタイプ",
     "available_today": "本日予約可能",
     "use_my_location": "現在地を使用",
-    "detecting_location": "検出中..."
+    "detecting_location": "検出中...",
+    "sort_nearest": "最寄り",
+    "show_results": "結果を表示"
   },
   "booking": {
     "select_date": "日付を選択",

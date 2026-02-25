@@ -156,7 +156,9 @@
     "all_types": "Alle Typen",
     "available_today": "Heute verfügbar",
     "use_my_location": "Meinen Standort verwenden",
-    "detecting_location": "Erkennung..."
+    "detecting_location": "Erkennung...",
+    "sort_nearest": "Nächste",
+    "show_results": "Ergebnisse anzeigen"
   },
   "booking": {
     "select_date": "Datum wahlen",

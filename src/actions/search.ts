@@ -14,6 +14,8 @@ export interface SearchFilters {
   sort?: string;
   page?: number;
   availableToday?: boolean;
+  userLat?: number;
+  userLng?: number;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -79,29 +81,85 @@ export async function searchDoctors(filters: SearchFilters) {
     query = query.ilike("bio", `%${filters.query}%`);
   }
 
-  // Sort
-  switch (filters.sort) {
-    case "rating":
-      query = query.order("avg_rating", { ascending: false });
-      break;
-    case "price_asc":
-      query = query.order("consultation_fee_cents", { ascending: true });
-      break;
-    case "price_desc":
-      query = query.order("consultation_fee_cents", { ascending: false });
-      break;
-    case "featured":
-    default:
-      query = query
-        .order("is_featured", { ascending: false })
-        .order("avg_rating", { ascending: false });
-      break;
-  }
-
   // Pagination
   const page = filters.page || 1;
   const perPage = 12;
-  query = query.range((page - 1) * perPage, page * perPage - 1);
+
+  // "Nearest" sort uses a two-pass approach: RPC for ordered IDs, then fetch page slice
+  if (
+    filters.sort === "nearest" &&
+    filters.userLat != null &&
+    filters.userLng != null
+  ) {
+    const { data: ordered, error: rpcError } = await supabase.rpc(
+      "sort_doctors_by_distance",
+      { p_lat: filters.userLat, p_lng: filters.userLng }
+    );
+
+    if (rpcError) {
+      console.error("Distance sort RPC error:", rpcError);
+      // Fallback to featured
+      query = query
+        .order("is_featured", { ascending: false })
+        .order("avg_rating", { ascending: false })
+        .range((page - 1) * perPage, page * perPage - 1);
+    } else {
+      const orderedIds = (
+        ordered as { doctor_id: string; distance_km: number }[]
+      ).map((r) => r.doctor_id);
+      const total = orderedIds.length;
+      const pageIds = orderedIds.slice(
+        (page - 1) * perPage,
+        page * perPage
+      );
+
+      if (pageIds.length === 0) {
+        return { doctors: [], total, page, perPage };
+      }
+
+      query = query.in("id", pageIds);
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Search error:", error);
+        return { doctors: [], total: 0, page, perPage };
+      }
+
+      // Re-sort to match distance order (Supabase .in() doesn't preserve order)
+      const idIndexMap = new Map(
+        pageIds.map((id, i) => [id, i])
+      );
+      const sorted = (data || []).sort(
+        (a: Record<string, unknown>, b: Record<string, unknown>) =>
+          (idIndexMap.get(a.id as string) ?? Infinity) -
+          (idIndexMap.get(b.id as string) ?? Infinity)
+      );
+
+      return { doctors: sorted, total, page, perPage };
+    }
+  } else {
+    // Standard sort
+    switch (filters.sort) {
+      case "rating":
+        query = query.order("avg_rating", { ascending: false });
+        break;
+      case "price_asc":
+        query = query.order("consultation_fee_cents", { ascending: true });
+        break;
+      case "price_desc":
+        query = query.order("consultation_fee_cents", { ascending: false });
+        break;
+      case "featured":
+      default:
+        query = query
+          .order("is_featured", { ascending: false })
+          .order("avg_rating", { ascending: false });
+        break;
+    }
+
+    query = query.range((page - 1) * perPage, page * perPage - 1);
+  }
 
   const { data, count, error } = await query;
 

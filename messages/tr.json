@@ -142,7 +142,9 @@
     "all_types": "Tum Turler",
     "available_today": "Bugün Müsait",
     "use_my_location": "Konumumu kullan",
-    "detecting_location": "Algılanıyor..."
+    "detecting_location": "Algılanıyor...",
+    "sort_nearest": "En Yakın",
+    "show_results": "Sonuçları Göster"
   },
   "booking": {
     "select_date": "Tarih Secin",

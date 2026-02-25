@@ -34,16 +34,18 @@ export default async function DoctorsPage({
       sort: sp.sort || "featured",
       page: sp.page ? Number(sp.page) : 1,
       availableToday: sp.availableToday === "true",
+      userLat: sp.lat ? Number(sp.lat) : undefined,
+      userLng: sp.lng ? Number(sp.lng) : undefined,
     }),
     getSpecialties(),
     getLocations(),
   ]);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-6 text-3xl font-bold">{t("title")}</h1>
+    <div className="container mx-auto px-4 py-4 lg:py-8">
+      <h1 className="mb-3 text-2xl font-bold lg:mb-6 lg:text-3xl">{t("title")}</h1>
 
-      <div className="flex flex-col gap-8 lg:flex-row">
+      <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
         {/* Filters sidebar */}
         <aside className="w-full shrink-0 lg:w-72">
           <DoctorSearchFilters
