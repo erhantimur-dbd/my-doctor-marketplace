@@ -38,11 +38,14 @@ export function Header() {
     await logout(locale);
   };
 
+  const isPatient = profile?.role === "patient";
+
   const navLinks = [
     { href: "/doctors", label: t("find_doctor") },
     { href: "/specialties", label: t("specialties") },
     { href: "/how-it-works", label: t("how_it_works") },
-    { href: "/pricing", label: t("for_doctors") },
+    // Hide "For Doctors" when a patient is logged in to keep focus on patient experience
+    ...(!isPatient ? [{ href: "/pricing", label: t("for_doctors") }] : []),
   ];
 
   return (
