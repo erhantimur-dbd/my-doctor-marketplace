@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { login, signInWithGoogle, signInWithApple } from "@/actions/auth";
 import { useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const redirectTo = searchParams.get("redirect") || "";
   const verified = searchParams.get("verified") === "true";
   const callbackError = searchParams.get("error") === "auth_callback_error";
+  const locale = useLocale();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -110,7 +112,8 @@ export default function LoginPage() {
         <div className="space-y-3">
           <form
             action={async () => {
-              await signInWithGoogle();
+              const result = await signInWithGoogle(locale);
+              if (result?.error) setError(result.error);
             }}
           >
             <Button variant="outline" className="w-full" type="submit">
@@ -138,7 +141,8 @@ export default function LoginPage() {
 
           <form
             action={async () => {
-              await signInWithApple();
+              const result = await signInWithApple(locale);
+              if (result?.error) setError(result.error);
             }}
           >
             <Button variant="outline" className="w-full" type="submit">

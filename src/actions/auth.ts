@@ -220,9 +220,11 @@ export async function signInWithGoogle(locale: string = "en") {
     return { error: error.message };
   }
 
-  if (data.url) {
-    redirect(data.url);
+  if (!data.url) {
+    return { error: "Google sign-in is not configured. Please try another method." };
   }
+
+  redirect(data.url);
 }
 
 export async function signInWithApple(locale: string = "en") {
@@ -240,7 +242,9 @@ export async function signInWithApple(locale: string = "en") {
     return { error: error.message };
   }
 
-  if (data.url) {
-    redirect(data.url);
+  if (!data.url) {
+    return { error: "Apple sign-in is not configured. Please try another method." };
   }
+
+  redirect(data.url);
 }
