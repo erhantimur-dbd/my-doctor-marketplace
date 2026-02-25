@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useMemo, useState } from "react";
+import {
+  APIProvider,
+  Map,
+  AdvancedMarker,
+  InfoWindow,
+  useMap,
+} from "@vis.gl/react-google-maps";
 
 export interface MapDoctor {
   id: string;
@@ -21,68 +25,103 @@ interface DoctorMapProps {
   onClickDoctor: (id: string) => void;
 }
 
-// Custom SVG marker icons
-function createMarkerIcon(color: string, size: number) {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size * 1.4}" viewBox="0 0 24 34">
-    <path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 22 12 22s12-13 12-22C24 5.4 18.6 0 12 0z" fill="${color}" stroke="#fff" stroke-width="1.5"/>
-    <circle cx="12" cy="12" r="5" fill="#fff"/>
-  </svg>`;
-  return L.divIcon({
-    html: svg,
-    className: "custom-marker",
-    iconSize: [size, size * 1.4],
-    iconAnchor: [size / 2, size * 1.4],
-    popupAnchor: [0, -(size * 1.4)],
-  });
-}
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-const defaultIcon = createMarkerIcon("#3b82f6", 28);
-const highlightIcon = createMarkerIcon("#f97316", 36);
-
-// Component to auto-fit map bounds when doctors change
+/* ── Auto-fit bounds when doctors change ── */
 function FitBounds({ doctors }: { doctors: MapDoctor[] }) {
   const map = useMap();
 
   useEffect(() => {
-    if (doctors.length === 0) return;
+    if (!map || doctors.length === 0) return;
 
-    const bounds = L.latLngBounds(
-      doctors.map((d) => [d.lat, d.lng] as [number, number])
-    );
-
-    if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
-    }
+    const bounds = new google.maps.LatLngBounds();
+    doctors.forEach((d) => bounds.extend({ lat: d.lat, lng: d.lng }));
+    map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
   }, [doctors, map]);
 
   return null;
 }
 
+/* ── Custom SVG pin marker ── */
+function PinMarker({
+  doctor,
+  isHovered,
+  onHover,
+  onClick,
+}: {
+  doctor: MapDoctor;
+  isHovered: boolean;
+  onHover: (id: string | null) => void;
+  onClick: (id: string) => void;
+}) {
+  const size = isHovered ? 36 : 28;
+  const height = Math.round(size * 1.4);
+  const fill = isHovered ? "#f97316" : "#4285F4";
+  const stroke = isHovered ? "#ea580c" : "#2563eb";
+
+  return (
+    <AdvancedMarker
+      position={{ lat: doctor.lat, lng: doctor.lng }}
+      zIndex={isHovered ? 1000 : 0}
+    >
+      <div
+        onMouseEnter={() => onHover(doctor.id)}
+        onMouseLeave={() => onHover(null)}
+        onClick={() => onClick(doctor.id)}
+        style={{ cursor: "pointer", transform: "translate(-50%, -100%)" }}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={size}
+          height={height}
+          viewBox="0 0 24 34"
+          style={{
+            filter: isHovered
+              ? "drop-shadow(0 2px 6px rgba(0,0,0,0.4))"
+              : "drop-shadow(0 1px 3px rgba(0,0,0,0.3))",
+            transition: "all 0.15s ease",
+          }}
+        >
+          <path
+            d="M12 0C5.4 0 0 5.4 0 12c0 9 12 22 12 22s12-13 12-22C24 5.4 18.6 0 12 0z"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth="0.5"
+          />
+          <circle cx="12" cy="12" r="5" fill="#fff" />
+        </svg>
+      </div>
+    </AdvancedMarker>
+  );
+}
+
+/* ── Main map component ── */
 export function DoctorMap({
   doctors,
   hoveredDoctorId,
   onHoverDoctor,
   onClickDoctor,
 }: DoctorMapProps) {
-  const markerRefs = useRef<Map<string, L.Marker>>(new Map());
+  const [infoDoctor, setInfoDoctor] = useState<MapDoctor | null>(null);
 
-  // Default center (Europe) in case no doctors
-  const center = useMemo<[number, number]>(() => {
-    if (doctors.length === 0) return [48.8566, 2.3522];
-    const avgLat = doctors.reduce((sum, d) => sum + d.lat, 0) / doctors.length;
-    const avgLng = doctors.reduce((sum, d) => sum + d.lng, 0) / doctors.length;
-    return [avgLat, avgLng];
+  const center = useMemo(() => {
+    if (doctors.length === 0) return { lat: 48.8566, lng: 2.3522 };
+    const avgLat =
+      doctors.reduce((sum, d) => sum + d.lat, 0) / doctors.length;
+    const avgLng =
+      doctors.reduce((sum, d) => sum + d.lng, 0) / doctors.length;
+    return { lat: avgLat, lng: avgLng };
   }, [doctors]);
 
-  // Open popup on highlighted marker
+  // Show info window on hover
   useEffect(() => {
     if (hoveredDoctorId) {
-      const marker = markerRefs.current.get(hoveredDoctorId);
-      if (marker) marker.openPopup();
+      const doc = doctors.find((d) => d.id === hoveredDoctorId);
+      if (doc) setInfoDoctor(doc);
     } else {
-      markerRefs.current.forEach((marker) => marker.closePopup());
+      setInfoDoctor(null);
     }
-  }, [hoveredDoctorId]);
+  }, [hoveredDoctorId, doctors]);
 
   if (doctors.length === 0) {
     return (
@@ -93,46 +132,47 @@ export function DoctorMap({
   }
 
   return (
-    <MapContainer
-      center={center}
-      zoom={10}
-      scrollWheelZoom={true}
-      className="h-full w-full"
-      style={{ minHeight: "400px" }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <FitBounds doctors={doctors} />
-      {doctors.map((doctor) => (
-        <Marker
-          key={doctor.id}
-          position={[doctor.lat, doctor.lng]}
-          icon={
-            hoveredDoctorId === doctor.id ? highlightIcon : defaultIcon
-          }
-          ref={(ref) => {
-            if (ref) {
-              markerRefs.current.set(doctor.id, ref);
-            }
-          }}
-          eventHandlers={{
-            mouseover: () => onHoverDoctor(doctor.id),
-            mouseout: () => onHoverDoctor(null),
-            click: () => onClickDoctor(doctor.id),
-          }}
-        >
-          <Popup>
-            <div className="text-sm">
-              <p className="font-semibold">{doctor.name}</p>
-              {doctor.specialty && (
-                <p className="text-muted-foreground">{doctor.specialty}</p>
+    <APIProvider apiKey={API_KEY}>
+      <Map
+        defaultCenter={center}
+        defaultZoom={10}
+        mapId="doctor-search-map"
+        gestureHandling="greedy"
+        disableDefaultUI={false}
+        mapTypeControl={false}
+        streetViewControl={false}
+        fullscreenControl={false}
+        className="h-full w-full"
+        style={{ minHeight: "400px" }}
+      >
+        <FitBounds doctors={doctors} />
+
+        {doctors.map((doctor) => (
+          <PinMarker
+            key={doctor.id}
+            doctor={doctor}
+            isHovered={hoveredDoctorId === doctor.id}
+            onHover={onHoverDoctor}
+            onClick={onClickDoctor}
+          />
+        ))}
+
+        {infoDoctor && (
+          <InfoWindow
+            position={{ lat: infoDoctor.lat, lng: infoDoctor.lng }}
+            pixelOffset={[0, -45]}
+            onCloseClick={() => setInfoDoctor(null)}
+            headerDisabled
+          >
+            <div className="text-sm" style={{ minWidth: 120 }}>
+              <p className="font-semibold">{infoDoctor.name}</p>
+              {infoDoctor.specialty && (
+                <p className="text-xs text-gray-500">{infoDoctor.specialty}</p>
               )}
             </div>
-          </Popup>
-        </Marker>
-      ))}
-    </MapContainer>
+          </InfoWindow>
+        )}
+      </Map>
+    </APIProvider>
   );
 }

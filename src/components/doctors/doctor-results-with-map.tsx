@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { DoctorCard } from "./doctor-card";
 import type { MapDoctor } from "@/components/maps/doctor-map";
 
-// Dynamic import — Leaflet requires window
+// Dynamic import — Google Maps requires window
 const DoctorMap = dynamic(
   () => import("@/components/maps/doctor-map").then((mod) => mod.DoctorMap),
   { ssr: false, loading: () => <MapSkeleton /> }
