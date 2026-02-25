@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
 import { Link } from "@/i18n/navigation";
 import {
@@ -8,6 +9,7 @@ import {
   Star,
   LayoutDashboard,
 } from "lucide-react";
+import { UnreadBadge } from "@/components/shared/unread-badge";
 
 const sidebarLinks = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
@@ -37,6 +39,11 @@ export default function PatientLayout({
               >
                 <link.icon className="h-4 w-4" />
                 {link.label}
+                {link.href === "/dashboard/messages" && (
+                  <Suspense fallback={null}>
+                    <UnreadBadge />
+                  </Suspense>
+                )}
               </Link>
             ))}
           </nav>

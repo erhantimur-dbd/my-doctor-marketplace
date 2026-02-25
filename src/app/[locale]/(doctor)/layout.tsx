@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Header } from "@/components/layout/header";
 import { Link } from "@/i18n/navigation";
 import {
@@ -12,7 +13,9 @@ import {
   FileText,
   Crown,
   Clock,
+  MessageSquare,
 } from "lucide-react";
+import { UnreadBadge } from "@/components/shared/unread-badge";
 
 const sidebarLinks = [
   { href: "/doctor-dashboard", icon: LayoutDashboard, label: "Overview" },
@@ -28,6 +31,11 @@ const sidebarLinks = [
     href: "/doctor-dashboard/subscription",
     icon: Crown,
     label: "Subscription",
+  },
+  {
+    href: "/doctor-dashboard/messages",
+    icon: MessageSquare,
+    label: "Messages",
   },
   { href: "/doctor-dashboard/settings", icon: Settings, label: "Settings" },
 ];
@@ -51,6 +59,11 @@ export default function DoctorLayout({
               >
                 <link.icon className="h-4 w-4" />
                 {link.label}
+                {link.href.endsWith("/messages") && (
+                  <Suspense fallback={null}>
+                    <UnreadBadge />
+                  </Suspense>
+                )}
               </Link>
             ))}
           </nav>

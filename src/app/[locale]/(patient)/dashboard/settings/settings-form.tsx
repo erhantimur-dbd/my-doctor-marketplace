@@ -29,12 +29,20 @@ import {
   changePassword,
   updateNotifications,
 } from "./actions";
+import { AvatarUpload } from "./avatar-upload";
 
 interface ProfileData {
   id: string;
   first_name: string;
   last_name: string;
   phone: string | null;
+  avatar_url: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
   preferred_locale: string | null;
   preferred_currency: string | null;
   notification_email: boolean | null;
@@ -50,6 +58,11 @@ interface SettingsFormProps {
 export function SettingsForm({ profile, userEmail }: SettingsFormProps) {
   return (
     <div className="space-y-6">
+      <AvatarUpload
+        avatarUrl={profile.avatar_url}
+        firstName={profile.first_name}
+        lastName={profile.last_name}
+      />
       <PersonalInfoSection profile={profile} userEmail={userEmail} />
       <PreferencesSection profile={profile} />
       <ChangePasswordSection />
@@ -66,23 +79,26 @@ function PersonalInfoSection({
   profile: ProfileData;
   userEmail: string;
 }) {
-  const [firstName, setFirstName] = useState(profile.first_name || "");
-  const [lastName, setLastName] = useState(profile.last_name || "");
   const [phone, setPhone] = useState(profile.phone || "");
+  const [addressLine1, setAddressLine1] = useState(profile.address_line1 || "");
+  const [addressLine2, setAddressLine2] = useState(profile.address_line2 || "");
+  const [city, setCity] = useState(profile.city || "");
+  const [state, setState] = useState(profile.state || "");
+  const [postalCode, setPostalCode] = useState(profile.postal_code || "");
+  const [country, setCountry] = useState(profile.country || "");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   function handleSave() {
-    if (!firstName.trim() || !lastName.trim()) {
-      toast.error("First name and last name are required.");
-      return;
-    }
-
     startTransition(async () => {
       const result = await updatePersonalInfo({
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
         phone: phone.trim() || null,
+        address_line1: addressLine1.trim() || null,
+        address_line2: addressLine2.trim() || null,
+        city: city.trim() || null,
+        state: state.trim() || null,
+        postal_code: postalCode.trim() || null,
+        country: country.trim() || null,
       });
 
       if (result.error) {
@@ -123,23 +139,24 @@ function PersonalInfoSection({
             <Label htmlFor="first-name">First Name</Label>
             <Input
               id="first-name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Enter your first name"
-              className="mt-1.5"
+              value={profile.first_name || ""}
+              disabled
+              className="mt-1.5 bg-muted"
             />
           </div>
           <div>
             <Label htmlFor="last-name">Last Name</Label>
             <Input
               id="last-name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              placeholder="Enter your last name"
-              className="mt-1.5"
+              value={profile.last_name || ""}
+              disabled
+              className="mt-1.5 bg-muted"
             />
           </div>
         </div>
+        <p className="text-xs text-muted-foreground">
+          Name is set during registration and cannot be changed.
+        </p>
 
         <div>
           <Label htmlFor="phone">Phone Number</Label>
@@ -151,6 +168,76 @@ function PersonalInfoSection({
             placeholder="+1 234 567 8900"
             className="mt-1.5"
           />
+        </div>
+
+        <Separator />
+
+        <div>
+          <Label htmlFor="address-line1">Address Line 1</Label>
+          <Input
+            id="address-line1"
+            value={addressLine1}
+            onChange={(e) => setAddressLine1(e.target.value)}
+            placeholder="Street address"
+            className="mt-1.5"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="address-line2">Address Line 2</Label>
+          <Input
+            id="address-line2"
+            value={addressLine2}
+            onChange={(e) => setAddressLine2(e.target.value)}
+            placeholder="Apartment, suite, etc. (optional)"
+            className="mt-1.5"
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="city">City</Label>
+            <Input
+              id="city"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="City"
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label htmlFor="state">State / Province</Label>
+            <Input
+              id="state"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              placeholder="State or province"
+              className="mt-1.5"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="postal-code">Postal Code</Label>
+            <Input
+              id="postal-code"
+              value={postalCode}
+              onChange={(e) => setPostalCode(e.target.value)}
+              placeholder="Postal code"
+              className="mt-1.5"
+            />
+          </div>
+          <div>
+            <Label htmlFor="country">Country</Label>
+            <Input
+              id="country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              placeholder="Country"
+              className="mt-1.5"
+            />
+          </div>
         </div>
 
         <div className="flex justify-end">

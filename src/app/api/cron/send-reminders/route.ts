@@ -164,9 +164,9 @@ export async function GET(request: NextRequest) {
           user_id: booking.patient_id,
           type: "booking_reminder",
           title: `Appointment ${timeLabel}`,
-          message: `Your appointment with Dr. ${doctorProfile?.first_name || ""} ${doctorProfile?.last_name || ""} is ${timeLabel}.${booking.video_room_url ? " Click to join the video call." : ""}`,
-          channels: ["in_app"],
-          metadata: {
+          body: `Your appointment with Dr. ${doctorProfile?.first_name || ""} ${doctorProfile?.last_name || ""} is ${timeLabel}.${booking.video_room_url ? " Click to join the video call." : ""}`,
+          channel: "in_app",
+          data: {
             booking_id: booking.id,
             video_room_url: booking.video_room_url,
           },

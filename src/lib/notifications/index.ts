@@ -24,14 +24,14 @@ export async function createNotification({
 }: CreateNotificationParams) {
   const supabase = createAdminClient();
 
-  // Insert in-app notification
+  // Insert in-app notification (columns: body, data, channel per migration 00009)
   const { error } = await supabase.from("notifications").insert({
     user_id: userId,
     type,
     title,
-    message,
-    channels,
-    metadata,
+    body: message,
+    data: metadata || {},
+    channel: channels[0] || "in_app",
   });
 
   if (error) {

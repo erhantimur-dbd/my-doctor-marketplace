@@ -4,9 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function updatePersonalInfo(input: {
-  firstName: string;
-  lastName: string;
   phone: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
 }): Promise<{ error?: string }> {
   const supabase = await createClient();
   const {
@@ -17,16 +21,16 @@ export async function updatePersonalInfo(input: {
     return { error: "You must be logged in." };
   }
 
-  if (!input.firstName.trim() || !input.lastName.trim()) {
-    return { error: "First name and last name are required." };
-  }
-
   const { error } = await supabase
     .from("profiles")
     .update({
-      first_name: input.firstName.trim(),
-      last_name: input.lastName.trim(),
       phone: input.phone?.trim() || null,
+      address_line1: input.address_line1?.trim() || null,
+      address_line2: input.address_line2?.trim() || null,
+      city: input.city?.trim() || null,
+      state: input.state?.trim() || null,
+      postal_code: input.postal_code?.trim() || null,
+      country: input.country?.trim() || null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", user.id);
@@ -117,6 +121,50 @@ export async function changePassword(input: {
   }
 
   return {};
+}
+
+export async function uploadAvatar(
+  formData: FormData
+): Promise<{ error?: string; avatarUrl?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "You must be logged in." };
+
+  const file = formData.get("avatar") as File;
+  if (!file || file.size === 0) return { error: "No file provided." };
+  if (file.size > 5 * 1024 * 1024) return { error: "File too large (max 5MB)." };
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowedTypes.includes(file.type)) {
+    return { error: "Only JPEG, PNG, and WebP images are allowed." };
+  }
+
+  const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+  const filePath = `${user.id}/avatar.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("avatars")
+    .upload(filePath, file, { upsert: true, contentType: file.type });
+
+  if (uploadError) return { error: "Failed to upload image." };
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+  const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+
+  if (updateError) return { error: "Failed to update profile." };
+
+  revalidatePath("/dashboard/settings");
+  return { avatarUrl };
 }
 
 export async function updateNotifications(input: {
