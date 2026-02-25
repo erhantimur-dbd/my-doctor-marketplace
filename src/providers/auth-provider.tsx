@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   useRef,
+  useCallback,
   ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
@@ -18,12 +19,14 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  signOut: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -39,24 +42,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   const supabase = supabaseRef.current;
 
+  // Fetch profile helper — reusable by both effects
+  const fetchProfile = useCallback(
+    async (userId: string) => {
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single();
+        setProfile(data);
+      } catch {
+        setProfile(null);
+      }
+    },
+    [supabase]
+  );
+
   // Re-check session on every route change so the header stays in sync
   // after server-action redirects (login, logout, etc.)
+  // Uses getSession() which reads from local storage — NO NavigatorLock needed.
+  // (getUser() acquires an exclusive lock and makes a network call, causing
+  // contention when multiple calls overlap.)
   useEffect(() => {
     const syncSession = async () => {
       try {
         const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
+          data: { session },
+        } = await supabase.auth.getSession();
 
-        setUser(authUser);
+        const sessionUser = session?.user ?? null;
+        setUser(sessionUser);
 
-        if (authUser) {
-          const { data } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", authUser.id)
-            .single();
-          setProfile(data);
+        if (sessionUser) {
+          await fetchProfile(sessionUser.id);
         } else {
           setProfile(null);
         }
@@ -70,23 +89,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     syncSession();
-  }, [supabase, pathname]);
+  }, [supabase, pathname, fetchProfile]);
 
-  // Also listen for real-time auth changes (e.g. token refresh, sign-out in another tab)
+  // Listen for real-time auth changes (token refresh, sign-out in another tab).
+  // The callback already receives the session — no extra getUser() call needed.
   useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       try {
-        setUser(session?.user ?? null);
+        const sessionUser = session?.user ?? null;
+        setUser(sessionUser);
 
-        if (session?.user) {
-          const { data } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .single();
-          setProfile(data);
+        if (sessionUser) {
+          await fetchProfile(sessionUser.id);
         } else {
           setProfile(null);
         }
@@ -100,10 +116,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
+  }, [supabase, fetchProfile]);
+
+  // Shared signOut so consumers don't need their own Supabase client
+  const handleSignOut = useCallback(async () => {
+    await supabase.auth.signOut();
   }, [supabase]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading }}>
+    <AuthContext.Provider
+      value={{ user, profile, loading, signOut: handleSignOut }}
+    >
       {children}
     </AuthContext.Provider>
   );

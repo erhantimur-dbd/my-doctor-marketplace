@@ -20,28 +20,19 @@ import {
   Settings,
   Stethoscope,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "@/i18n/navigation";
-import { useState, useRef } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { useState } from "react";
 import { LocaleSwitcher } from "./locale-switcher";
 
 export function Header() {
   const t = useTranslations("nav");
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Stable reference — avoid re-creating Supabase client on every render
-  const supabaseRef = useRef<SupabaseClient | null>(null);
-  if (!supabaseRef.current) {
-    supabaseRef.current = createClient();
-  }
-  const supabase = supabaseRef.current;
-
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     router.push("/");
     router.refresh();
   };
