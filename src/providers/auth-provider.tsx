@@ -8,6 +8,7 @@ import {
   useRef,
   ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -29,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
 
   // Stable reference to supabase client — avoid re-creating on every render
   const supabaseRef = useRef<SupabaseClient | null>(null);
@@ -37,12 +39,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   const supabase = supabaseRef.current;
 
+  // Re-check session on every route change so the header stays in sync
+  // after server-action redirects (login, logout, etc.)
   useEffect(() => {
-    const getSession = async () => {
+    const syncSession = async () => {
       try {
         const {
           data: { user: authUser },
         } = await supabase.auth.getUser();
+
         setUser(authUser);
 
         if (authUser) {
@@ -52,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .eq("id", authUser.id)
             .single();
           setProfile(data);
+        } else {
+          setProfile(null);
         }
       } catch (err) {
         console.error("Auth session error:", err);
@@ -62,8 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    getSession();
+    syncSession();
+  }, [supabase, pathname]);
 
+  // Also listen for real-time auth changes (e.g. token refresh, sign-out in another tab)
+  useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
