@@ -27,7 +27,7 @@ export async function searchDoctors(filters: SearchFilters) {
       `
       *,
       profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
-      location:locations(city, country_code, slug),
+      location:locations(city, country_code, slug, latitude, longitude),
       specialties:doctor_specialties(
         specialty:specialties(id, name_key, slug),
         is_primary

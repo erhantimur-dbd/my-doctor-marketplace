@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { ProfileMapWrapper } from "@/components/maps/profile-map-wrapper";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
       `
       *,
       profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
-      location:locations(city, country_code, slug, timezone),
+      location:locations(city, country_code, slug, timezone, latitude, longitude),
       specialties:doctor_specialties(
         specialty:specialties(id, name_key, slug),
         is_primary
@@ -360,7 +361,31 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
 
         {/* Sidebar - Booking CTA */}
         <div className="lg:col-span-1">
-          <div className="sticky top-24">
+          <div className="sticky top-24 space-y-4">
+            {/* Location map */}
+            {doctor.location?.latitude && doctor.location?.longitude && (
+              <Card className="overflow-hidden">
+                <CardContent className="p-0">
+                  <ProfileMapWrapper
+                    lat={Number(doctor.location.latitude)}
+                    lng={Number(doctor.location.longitude)}
+                    label={doctor.clinic_name || doctor.location.city}
+                  />
+                  <div className="p-4">
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">
+                        {doctor.clinic_name || doctor.location.city}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 pl-5.5 text-sm text-muted-foreground">
+                      {doctor.location.city}, {doctor.location.country_code}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardContent className="p-6">
                 <div className="text-center">

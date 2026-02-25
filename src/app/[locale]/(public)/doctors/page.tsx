@@ -1,6 +1,7 @@
 import { searchDoctors, getSpecialties, getLocations } from "@/actions/search";
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
+import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -41,9 +42,15 @@ export default async function DoctorsPage({
     getLocations(),
   ]);
 
+  const typedDoctors = result.doctors as unknown as Parameters<
+    typeof DoctorCard
+  >[0]["doctor"][];
+
   return (
     <div className="container mx-auto px-4 py-4 lg:py-8">
-      <h1 className="mb-3 text-2xl font-bold lg:mb-6 lg:text-3xl">{t("title")}</h1>
+      <h1 className="mb-3 text-2xl font-bold lg:mb-6 lg:text-3xl">
+        {t("title")}
+      </h1>
 
       <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
         {/* Filters sidebar */}
@@ -71,15 +78,26 @@ export default async function DoctorsPage({
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {result.doctors.map((doctor: Record<string, unknown>) => (
-                <DoctorCard
-                  key={doctor.id as string}
-                  doctor={doctor as unknown as Parameters<typeof DoctorCard>[0]["doctor"]}
+            <>
+              {/* Desktop: list + map split view */}
+              <div className="hidden lg:block">
+                <DoctorResultsWithMap
+                  doctors={typedDoctors}
                   locale={locale}
                 />
-              ))}
-            </div>
+              </div>
+
+              {/* Mobile: regular grid (no map) */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:hidden">
+                {typedDoctors.map((doctor) => (
+                  <DoctorCard
+                    key={doctor.id}
+                    doctor={doctor}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            </>
           )}
 
           {/* Pagination */}

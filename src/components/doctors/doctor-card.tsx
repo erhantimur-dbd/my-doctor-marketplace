@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Star, MapPin, Shield, Video, User } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { cn } from "@/lib/utils";
 
 interface DoctorCardProps {
   doctor: {
@@ -38,111 +40,133 @@ interface DoctorCardProps {
     }[];
   };
   locale?: string;
+  isHighlighted?: boolean;
+  onHover?: (id: string | null) => void;
 }
 
-export function DoctorCard({ doctor, locale = "en" }: DoctorCardProps) {
-  const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
-    ?.specialty || doctor.specialties?.[0]?.specialty;
+export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
+  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover }, ref) {
+    const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
+      ?.specialty || doctor.specialties?.[0]?.specialty;
 
-  return (
-    <Link href={`/doctors/${doctor.slug}`}>
-      <Card className="group h-full transition-all hover:border-primary/50 hover:shadow-lg">
-        <CardContent className="p-5">
-          <div className="flex gap-4">
-            {/* Avatar */}
-            <Avatar className="h-16 w-16 shrink-0">
-              {doctor.profile.avatar_url ? (
-                <AvatarImage
-                  src={doctor.profile.avatar_url}
-                  alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
-                />
-              ) : null}
-              <AvatarFallback className="text-lg">
-                <User className="h-6 w-6" />
-              </AvatarFallback>
-            </Avatar>
+    return (
+      <div
+        ref={ref}
+        onMouseEnter={() => onHover?.(doctor.id)}
+        onMouseLeave={() => onHover?.(null)}
+      >
+        <Link href={`/doctors/${doctor.slug}`}>
+          <Card
+            className={cn(
+              "group h-full transition-all hover:border-primary/50 hover:shadow-lg",
+              isHighlighted && "border-primary ring-2 ring-primary/20 shadow-lg"
+            )}
+          >
+            <CardContent className="p-5">
+              <div className="flex gap-4">
+                {/* Avatar */}
+                <Avatar className="h-16 w-16 shrink-0">
+                  {doctor.profile.avatar_url ? (
+                    <AvatarImage
+                      src={doctor.profile.avatar_url}
+                      alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
+                    />
+                  ) : null}
+                  <AvatarFallback className="text-lg">
+                    <User className="h-6 w-6" />
+                  </AvatarFallback>
+                </Avatar>
 
-            {/* Info */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-semibold group-hover:text-primary">
-                    {doctor.title} {doctor.profile.first_name}{" "}
-                    {doctor.profile.last_name}
-                  </h3>
-                  {primarySpecialty && (
-                    <p className="text-sm text-muted-foreground">
-                      {primarySpecialty.name_key
-                        .replace("specialty.", "")
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                    </p>
+                {/* Info */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold group-hover:text-primary">
+                        {doctor.title} {doctor.profile.first_name}{" "}
+                        {doctor.profile.last_name}
+                      </h3>
+                      {primarySpecialty && (
+                        <p className="text-sm text-muted-foreground">
+                          {primarySpecialty.name_key
+                            .replace("specialty.", "")
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        </p>
+                      )}
+                    </div>
+                    {doctor.is_featured && (
+                      <Badge variant="secondary" className="shrink-0 text-xs">
+                        Featured
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Location */}
+                  {doctor.location && (
+                    <div className="mt-1.5 flex items-center gap-1 text-sm text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5" />
+                      <span>
+                        {doctor.location.city}, {doctor.location.country_code}
+                      </span>
+                    </div>
                   )}
+
+                  {/* Rating & Reviews */}
+                  <div className="mt-2 flex items-center gap-3">
+                    {doctor.avg_rating > 0 && (
+                      <div className="flex items-center gap-1">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium">
+                          {Number(doctor.avg_rating).toFixed(1)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({doctor.total_reviews})
+                        </span>
+                      </div>
+                    )}
+                    {doctor.verification_status === "verified" && (
+                      <div className="flex items-center gap-1 text-green-600">
+                        <Shield className="h-3.5 w-3.5" />
+                        <span className="text-xs">Verified</span>
+                      </div>
+                    )}
+                    {doctor.consultation_types?.includes("video") && (
+                      <div className="flex items-center gap-1 text-purple-600">
+                        <Video className="h-3.5 w-3.5" />
+                        <span className="text-xs">Video</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {doctor.is_featured && (
-                  <Badge variant="secondary" className="shrink-0 text-xs">
-                    Featured
-                  </Badge>
-                )}
               </div>
 
-              {/* Location */}
-              {doctor.location && (
-                <div className="mt-1.5 flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  <span>
-                    {doctor.location.city}, {doctor.location.country_code}
+              {/* Footer */}
+              <div className="mt-4 flex items-center justify-between border-t pt-3">
+                <div>
+                  <span className="text-lg font-bold">
+                    {formatCurrency(
+                      doctor.consultation_fee_cents,
+                      doctor.base_currency,
+                      locale
+                    )}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {" "}
+                    / session
                   </span>
                 </div>
-              )}
-
-              {/* Rating & Reviews */}
-              <div className="mt-2 flex items-center gap-3">
-                {doctor.avg_rating > 0 && (
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium">
-                      {Number(doctor.avg_rating).toFixed(1)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      ({doctor.total_reviews})
-                    </span>
-                  </div>
-                )}
-                {doctor.verification_status === "verified" && (
-                  <div className="flex items-center gap-1 text-green-600">
-                    <Shield className="h-3.5 w-3.5" />
-                    <span className="text-xs">Verified</span>
-                  </div>
-                )}
-                {doctor.consultation_types?.includes("video") && (
-                  <div className="flex items-center gap-1 text-purple-600">
-                    <Video className="h-3.5 w-3.5" />
-                    <span className="text-xs">Video</span>
-                  </div>
-                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="group-hover:bg-primary group-hover:text-primary-foreground"
+                >
+                  Book Now
+                </Button>
               </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-4 flex items-center justify-between border-t pt-3">
-            <div>
-              <span className="text-lg font-bold">
-                {formatCurrency(
-                  doctor.consultation_fee_cents,
-                  doctor.base_currency,
-                  locale
-                )}
-              </span>
-              <span className="text-xs text-muted-foreground"> / session</span>
-            </div>
-            <Button size="sm" variant="outline" className="group-hover:bg-primary group-hover:text-primary-foreground">
-              Book Now
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+    );
+  }
+);
