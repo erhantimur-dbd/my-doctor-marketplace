@@ -34,6 +34,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     formData.append("redirect", redirectTo);
+    formData.append("locale", locale);
     const result = await login(formData);
     if (result?.error) {
       setError(result.error);

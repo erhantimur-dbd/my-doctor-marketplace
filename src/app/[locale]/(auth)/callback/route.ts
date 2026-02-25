@@ -1,12 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ locale: string }> }
+) {
+  const { locale } = await params;
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = searchParams.get("next") ?? "/en";
+  const next = searchParams.get("next") ?? `/${locale}`;
 
   // Helper: create a redirect response and copy all auth cookies onto it.
   // This is critical — using `cookies()` from next/headers sets cookies on
@@ -98,11 +102,21 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        if (next === "/en") {
+        if (next === `/${locale}`) {
           if (isOAuth) {
-            return createRedirectWithCookies("/en");
+            // Send OAuth users to their role-specific dashboard
+            const role = (meta.role ||
+              user.app_metadata?.role ||
+              "patient") as string;
+            if (role === "doctor") {
+              return createRedirectWithCookies(`/${locale}/doctor-dashboard`);
+            } else if (role === "admin") {
+              return createRedirectWithCookies(`/${locale}/admin`);
+            } else {
+              return createRedirectWithCookies(`/${locale}/dashboard`);
+            }
           }
-          return createRedirectWithCookies("/en/email-verified");
+          return createRedirectWithCookies(`/${locale}/email-verified`);
         }
       }
 
@@ -118,16 +132,16 @@ export async function GET(request: NextRequest) {
     });
     if (!error) {
       if (type === "signup" || type === "email") {
-        return createRedirectWithCookies("/en/email-verified");
+        return createRedirectWithCookies(`/${locale}/email-verified`);
       }
       if (type === "recovery") {
-        return createRedirectWithCookies("/en/reset-password");
+        return createRedirectWithCookies(`/${locale}/reset-password`);
       }
       return createRedirectWithCookies(next);
     }
   }
 
   return NextResponse.redirect(
-    new URL("/en/login?error=auth_callback_error", origin)
+    new URL(`/${locale}/login?error=auth_callback_error`, origin)
   );
 }

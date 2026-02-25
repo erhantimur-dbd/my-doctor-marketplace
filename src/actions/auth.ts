@@ -22,8 +22,9 @@ export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const redirectTo = formData.get("redirect") as string;
+  const locale = (formData.get("locale") as string) || "en";
 
-  const { error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
@@ -33,7 +34,21 @@ export async function login(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect(redirectTo || "/en");
+
+  // If there's an explicit redirect (e.g. from middleware), honour it
+  if (redirectTo) {
+    redirect(redirectTo);
+  }
+
+  // Otherwise send the user to their role-specific dashboard
+  const role = data.user?.user_metadata?.role as string | undefined;
+  if (role === "doctor") {
+    redirect(`/${locale}/doctor-dashboard`);
+  } else if (role === "admin") {
+    redirect(`/${locale}/admin`);
+  } else {
+    redirect(`/${locale}/dashboard`);
+  }
 }
 
 export async function register(formData: FormData) {
