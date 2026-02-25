@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,18 +23,19 @@ import {
 import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 import { LocaleSwitcher } from "./locale-switcher";
+import { logout } from "@/actions/auth";
 
 export function Header() {
   const t = useTranslations("nav");
-  const { user, profile, loading, signOut } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const locale = useLocale();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
-    await signOut();
-    router.push("/");
-    router.refresh();
+    // Use server action — avoids client-side NavigatorLock contention
+    await logout(locale);
   };
 
   const navLinks = [

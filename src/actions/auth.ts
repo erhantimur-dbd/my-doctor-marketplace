@@ -213,11 +213,11 @@ export async function resetPassword(formData: FormData) {
   redirect("/en/login");
 }
 
-export async function logout() {
+export async function logout(locale: string = "en") {
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
-  redirect("/en");
+  redirect(`/${locale}`);
 }
 
 export async function signInWithGoogle(locale: string = "en") {
