@@ -30,6 +30,7 @@ import {
   updateNotifications,
 } from "./actions";
 import { AvatarUpload } from "./avatar-upload";
+import { AddressAutocomplete } from "./address-autocomplete";
 
 interface ProfileData {
   id: string;
@@ -174,12 +175,17 @@ function PersonalInfoSection({
 
         <div>
           <Label htmlFor="address-line1">Address Line 1</Label>
-          <Input
-            id="address-line1"
+          <AddressAutocomplete
             value={addressLine1}
-            onChange={(e) => setAddressLine1(e.target.value)}
-            placeholder="Street address"
-            className="mt-1.5"
+            onChange={setAddressLine1}
+            placeholder="Start typing your address..."
+            onPlaceSelect={(addr) => {
+              setAddressLine1(addr.addressLine1);
+              if (addr.city) setCity(addr.city);
+              if (addr.state) setState(addr.state);
+              if (addr.postalCode) setPostalCode(addr.postalCode);
+              if (addr.country) setCountry(addr.country);
+            }}
           />
         </div>
 
