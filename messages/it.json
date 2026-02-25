@@ -60,6 +60,9 @@
     "search_location_placeholder": "Tutte le località",
     "search_button": "Cerca",
     "use_my_location": "Usa la mia posizione",
+    "suggestions_specialties": "Specialita",
+    "suggestions_doctors": "Medici",
+    "suggestions_searching": "Ricerca...",
     "same_day_title": "Appuntamenti disponibili oggi",
     "same_day_subtitle": "{count, plural, one {# medico è} other {# medici sono}} disponibili per appuntamenti oggi",
     "same_day_cta": "Prenota per oggi"

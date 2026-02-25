@@ -60,6 +60,9 @@
     "search_location_placeholder": "Tous les lieux",
     "search_button": "Rechercher",
     "use_my_location": "Utiliser ma position",
+    "suggestions_specialties": "Specialites",
+    "suggestions_doctors": "Medecins",
+    "suggestions_searching": "Recherche...",
     "same_day_title": "Rendez-vous disponibles aujourd'hui",
     "same_day_subtitle": "{count, plural, one {# médecin est} other {# médecins sont}} disponible(s) pour des rendez-vous aujourd'hui",
     "same_day_cta": "Réserver pour aujourd'hui"

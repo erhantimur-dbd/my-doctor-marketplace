@@ -60,6 +60,9 @@
     "search_location_placeholder": "Todas as localizações",
     "search_button": "Pesquisar",
     "use_my_location": "Usar minha localizacao",
+    "suggestions_specialties": "Especialidades",
+    "suggestions_doctors": "Medicos",
+    "suggestions_searching": "Pesquisando...",
     "same_day_title": "Consultas disponíveis hoje",
     "same_day_subtitle": "{count, plural, one {# médico está} other {# médicos estão}} disponíveis para consultas hoje",
     "same_day_cta": "Agendar para hoje"

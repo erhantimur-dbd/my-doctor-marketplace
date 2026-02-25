@@ -60,6 +60,9 @@
     "search_location_placeholder": "Tum konumlar",
     "search_button": "Ara",
     "use_my_location": "Konumumu kullan",
+    "suggestions_specialties": "Uzmanliklar",
+    "suggestions_doctors": "Doktorlar",
+    "suggestions_searching": "Araniyor...",
     "same_day_title": "Bugün İçin Randevu Mevcut",
     "same_day_subtitle": "{count, plural, one {# doktor} other {# doktor}} bugün randevu için müsait",
     "same_day_cta": "Bugün İçin Randevu Al"

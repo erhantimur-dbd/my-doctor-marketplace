@@ -60,6 +60,9 @@
     "search_location_placeholder": "所有地区",
     "search_button": "搜索",
     "use_my_location": "使用我的位置",
+    "suggestions_specialties": "专科",
+    "suggestions_doctors": "医生",
+    "suggestions_searching": "搜索中...",
     "same_day_title": "今日可预约",
     "same_day_subtitle": "{count} 位医生今日有空余预约时段",
     "same_day_cta": "预约今日就诊"

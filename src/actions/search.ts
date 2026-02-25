@@ -133,6 +133,69 @@ export async function getLocations() {
   return data || [];
 }
 
+export interface DoctorSuggestion {
+  name: string;
+  slug: string;
+  specialty: string;
+}
+
+export async function searchSuggestions(
+  query: string
+): Promise<DoctorSuggestion[]> {
+  if (!query || query.trim().length < 2) return [];
+
+  const supabase = createAdminClient();
+  const term = query.trim();
+
+  const { data, error } = await supabase
+    .from("doctors")
+    .select(
+      `
+      slug,
+      profile:profiles!doctors_profile_id_fkey(first_name, last_name),
+      specialties:doctor_specialties(
+        specialty:specialties(name_key),
+        is_primary
+      )
+    `
+    )
+    .eq("verification_status", "verified")
+    .eq("is_active", true)
+    .or(
+      `profile.first_name.ilike.%${term}%,profile.last_name.ilike.%${term}%`
+    )
+    .limit(5);
+
+  if (error || !data) return [];
+
+  return data.map((d: Record<string, unknown>) => {
+    const profile: Record<string, unknown> = Array.isArray(d.profile)
+      ? d.profile[0]
+      : (d.profile as Record<string, unknown>);
+    const specs = d.specialties as Array<{
+      specialty: { name_key: string } | { name_key: string }[];
+      is_primary: boolean;
+    }>;
+    const primarySpec = specs?.find((s) => s.is_primary);
+    const spec = primarySpec || specs?.[0];
+    const specData = spec?.specialty;
+    const nameKey = Array.isArray(specData)
+      ? specData[0]?.name_key
+      : specData?.name_key;
+
+    return {
+      name: `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim(),
+      slug: d.slug as string,
+      specialty: nameKey
+        ? nameKey
+            .replace("specialty.", "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l: string) => l.toUpperCase())
+        : "",
+    };
+  });
+}
+
 export async function getSameDayAvailabilityCount(): Promise<number> {
   const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("get_doctor_ids_available_today");

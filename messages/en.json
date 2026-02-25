@@ -60,6 +60,9 @@
     "search_location_placeholder": "Any location",
     "search_button": "Search",
     "use_my_location": "Use my location",
+    "suggestions_specialties": "Specialties",
+    "suggestions_doctors": "Doctors",
+    "suggestions_searching": "Searching...",
     "same_day_title": "Same-Day Appointments Available",
     "same_day_subtitle": "{count, plural, one {# doctor is} other {# doctors are}} available for appointments today",
     "same_day_cta": "Book for Today"
