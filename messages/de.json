@@ -63,6 +63,7 @@
     "suggestions_specialties": "Fachgebiete",
     "suggestions_doctors": "Arzte",
     "suggestions_searching": "Suche...",
+    "suggestions_popular": "Beliebt",
     "same_day_title": "Termine noch heute verfügbar",
     "same_day_subtitle": "{count, plural, one {# Arzt ist} other {# Ärzte sind}} heute noch für Termine verfügbar",
     "same_day_cta": "Heute buchen"

@@ -63,6 +63,7 @@
     "suggestions_specialties": "診療科",
     "suggestions_doctors": "医師",
     "suggestions_searching": "検索中...",
+    "suggestions_popular": "人気",
     "same_day_title": "本日予約可能",
     "same_day_subtitle": "{count}人の医師が本日予約可能です",
     "same_day_cta": "本日の予約をする"

@@ -63,6 +63,7 @@
     "suggestions_specialties": "Especialidades",
     "suggestions_doctors": "Medicos",
     "suggestions_searching": "Buscando...",
+    "suggestions_popular": "Popular",
     "same_day_title": "Citas disponibles hoy",
     "same_day_subtitle": "{count, plural, one {# médico está} other {# médicos están}} disponibles para citas hoy",
     "same_day_cta": "Reservar para hoy"

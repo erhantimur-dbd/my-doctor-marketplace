@@ -63,6 +63,7 @@
     "suggestions_specialties": "Specialties",
     "suggestions_doctors": "Doctors",
     "suggestions_searching": "Searching...",
+    "suggestions_popular": "Popular",
     "same_day_title": "Same-Day Appointments Available",
     "same_day_subtitle": "{count, plural, one {# doctor is} other {# doctors are}} available for appointments today",
     "same_day_cta": "Book for Today"

@@ -63,6 +63,7 @@
     "suggestions_specialties": "专科",
     "suggestions_doctors": "医生",
     "suggestions_searching": "搜索中...",
+    "suggestions_popular": "热门",
     "same_day_title": "今日可预约",
     "same_day_subtitle": "{count} 位医生今日有空余预约时段",
     "same_day_cta": "预约今日就诊"

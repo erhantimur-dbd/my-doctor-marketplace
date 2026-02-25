@@ -29,6 +29,17 @@ interface HomeSearchBarProps {
   }[];
 }
 
+// Popular specialties shown on focus before typing
+const POPULAR_SLUGS = [
+  "general-practice",
+  "dentistry",
+  "gynecology",
+  "orthopedics",
+  "nutrition",
+  "psychology",
+  "ophthalmology",
+];
+
 export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const t = useTranslations("home");
   const router = useRouter();
@@ -46,6 +57,11 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
+
+  // Popular specialties (resolved from the specialties prop)
+  const popularSpecialties = POPULAR_SLUGS
+    .map((slug) => specialties.find((s) => s.slug === slug))
+    .filter(Boolean) as typeof specialties;
 
   const geo = useGeolocation("auto");
 
@@ -78,15 +94,17 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
         })
       : [];
 
+  // Whether we're in "popular" mode (empty input, just focused) vs "search" mode (typing)
+  const isSearchMode = query.trim().length >= 2;
+
   // Debounced doctor search
   useEffect(() => {
-    if (query.trim().length < 2) {
+    if (!isSearchMode) {
       setDoctorResults([]);
-      setShowSuggestions(false);
+      // Don't close suggestions here — popular list stays open on focus
       return;
     }
 
-    setShowSuggestions(true);
     setHighlightIndex(-1);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -100,7 +118,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query]);
+  }, [query, isSearchMode]);
 
   // Close on click outside
   useEffect(() => {
@@ -116,9 +134,14 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Which specialties to show in the dropdown
+  const displaySpecialties = isSearchMode
+    ? filteredSpecialties.slice(0, 5)
+    : popularSpecialties;
+
   // Build flat suggestion list for keyboard navigation
   const allSuggestions: { type: "specialty" | "doctor"; slug: string; label: string; sub?: string }[] = [
-    ...filteredSpecialties.slice(0, 5).map((s) => ({
+    ...displaySpecialties.map((s) => ({
       type: "specialty" as const,
       slug: s.slug,
       label: s.name_key
@@ -201,23 +224,26 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
 
   const hasSuggestions =
     showSuggestions &&
-    (filteredSpecialties.length > 0 || doctorResults.length > 0 || isPending);
+    (displaySpecialties.length > 0 || doctorResults.length > 0 || isPending);
 
   // Shared dropdown content
   const renderDropdown = () => {
     if (!hasSuggestions) return null;
 
     let itemIndex = -1;
+    const specialtiesHeading = isSearchMode
+      ? t("suggestions_specialties")
+      : t("suggestions_popular");
 
     return (
       <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border bg-background shadow-lg">
-        {/* Specialties group */}
-        {filteredSpecialties.length > 0 && (
+        {/* Specialties group (popular or filtered) */}
+        {displaySpecialties.length > 0 && (
           <div className="p-1">
             <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              {t("suggestions_specialties")}
+              {specialtiesHeading}
             </div>
-            {filteredSpecialties.slice(0, 5).map((s) => {
+            {displaySpecialties.map((s) => {
               itemIndex++;
               const idx = itemIndex;
               return (
@@ -252,10 +278,10 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           </div>
         )}
 
-        {/* Doctors group */}
-        {(doctorResults.length > 0 || isPending) && (
+        {/* Doctors group (only in search mode) */}
+        {isSearchMode && (doctorResults.length > 0 || isPending) && (
           <div className="p-1">
-            {filteredSpecialties.length > 0 && (
+            {displaySpecialties.length > 0 && (
               <div className="mx-2 border-t" />
             )}
             <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -319,9 +345,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => {
-                if (query.trim().length >= 2) setShowSuggestions(true);
-              }}
+              onFocus={() => setShowSuggestions(true)}
               onKeyDown={handleKeyDown}
               placeholder={t("search_name_placeholder")}
               className="h-14 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -393,9 +417,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => {
-              if (query.trim().length >= 2) setShowSuggestions(true);
-            }}
+            onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
             placeholder={t("search_name_placeholder")}
             className="h-11 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
@@ -406,13 +428,13 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
         {/* Autocomplete dropdown — mobile (positioned inside the card) */}
         {hasSuggestions && (
           <div className="overflow-hidden rounded-lg border bg-background shadow-sm">
-            {/* Specialties group */}
-            {filteredSpecialties.length > 0 && (
+            {/* Specialties group (popular or filtered) */}
+            {displaySpecialties.length > 0 && (
               <div className="p-1">
                 <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                  {t("suggestions_specialties")}
+                  {isSearchMode ? t("suggestions_specialties") : t("suggestions_popular")}
                 </div>
-                {filteredSpecialties.slice(0, 5).map((s) => (
+                {displaySpecialties.map((s) => (
                   <button
                     key={s.id}
                     type="button"
@@ -438,10 +460,10 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
               </div>
             )}
 
-            {/* Doctors group */}
-            {(doctorResults.length > 0 || isPending) && (
+            {/* Doctors group (only in search mode) */}
+            {isSearchMode && (doctorResults.length > 0 || isPending) && (
               <div className="p-1">
-                {filteredSpecialties.length > 0 && (
+                {displaySpecialties.length > 0 && (
                   <div className="mx-2 border-t" />
                 )}
                 <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
