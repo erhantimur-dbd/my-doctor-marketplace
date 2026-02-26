@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import type Stripe from "stripe";
 
 async function requireDoctor() {
   const supabase = await createClient();
@@ -292,14 +293,46 @@ export async function createSubscriptionCheckout(priceId: string) {
     customerId = customer.id;
   }
 
-  const session = await stripe.checkout.sessions.create({
+  // Check for referral discount
+  const { checkReferralDiscount, markReferredRewarded } = await import(
+    "@/actions/referral"
+  );
+  const { hasDiscount, referralId } = await checkReferralDiscount(doctor.id);
+
+  // Build checkout session options
+  const sessionOptions: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { doctor_id: doctor.id },
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/subscription?success=true`,
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/subscription`,
-  });
+  };
+
+  // Apply referral coupon if eligible
+  if (hasDiscount) {
+    try {
+      // Ensure coupon exists in Stripe
+      const stripeClient = (await import("@/lib/stripe/client")).getStripe();
+      try {
+        await stripeClient.coupons.retrieve("REFERRAL_1MO_FREE");
+      } catch {
+        await stripeClient.coupons.create({
+          id: "REFERRAL_1MO_FREE",
+          percent_off: 100,
+          duration: "once",
+          name: "Referral Program - 1 Month Free",
+        });
+      }
+      sessionOptions.discounts = [{ coupon: "REFERRAL_1MO_FREE" }];
+      // Mark the referred doctor's reward as applied
+      if (referralId) await markReferredRewarded(referralId);
+    } catch (err) {
+      console.error("[Referral] Failed to apply checkout discount:", err);
+    }
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionOptions);
 
   return { url: session.url };
 }

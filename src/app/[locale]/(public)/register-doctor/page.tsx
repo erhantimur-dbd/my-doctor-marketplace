@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Link } from "@/i18n/navigation";
 import { registerDoctor, signInWithGoogle, signInWithApple } from "@/actions/auth";
+import { validateReferralCode } from "@/actions/referral";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
 import { centsToAmount, amountToCents } from "@/lib/utils/currency";
@@ -36,6 +38,10 @@ import {
   Building,
   DollarSign,
   CheckCircle2,
+  UserPlus,
+  Gift,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 const STEPS = [
@@ -47,6 +53,7 @@ const STEPS = [
 ];
 
 export default function RegisterDoctorPage() {
+  const searchParams = useSearchParams();
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -57,6 +64,48 @@ export default function RegisterDoctorPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Referral code (from URL ?ref= or manual input)
+  const [referralCode, setReferralCode] = useState("");
+  const [referrerName, setReferrerName] = useState<string | null>(null);
+  const [validatingCode, setValidatingCode] = useState(false);
+
+  // Step 5: Invite a colleague (optional)
+  const [showInvite, setShowInvite] = useState(false);
+  const [colleagueName, setColleagueName] = useState("");
+  const [colleagueEmail, setColleagueEmail] = useState("");
+
+  // Auto-fill referral code from URL
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      setReferralCode(ref.toUpperCase());
+      // Validate immediately
+      setValidatingCode(true);
+      validateReferralCode(ref).then((result) => {
+        setValidatingCode(false);
+        if (result.valid) {
+          setReferrerName(result.referrerName);
+        }
+      });
+    }
+  }, [searchParams]);
+
+  // Validate referral code on blur
+  async function handleReferralCodeBlur() {
+    if (!referralCode || referralCode.length < 4) {
+      setReferrerName(null);
+      return;
+    }
+    setValidatingCode(true);
+    const result = await validateReferralCode(referralCode);
+    setValidatingCode(false);
+    if (result.valid) {
+      setReferrerName(result.referrerName);
+    } else {
+      setReferrerName(null);
+    }
+  }
 
   // Step 2: Professional info
   const [title, setTitle] = useState("Dr.");
@@ -143,6 +192,11 @@ export default function RegisterDoctorPage() {
     formData.set("last_name", lastName);
     formData.set("email", email);
     formData.set("password", password);
+
+    // Referral data
+    if (referralCode) formData.set("referral_code", referralCode);
+    if (colleagueName) formData.set("colleague_name", colleagueName);
+    if (colleagueEmail) formData.set("colleague_email", colleagueEmail);
 
     const result = await registerDoctor(formData);
     if (result?.error) {
@@ -328,6 +382,45 @@ export default function RegisterDoctorPage() {
                   minLength={8}
                   required
                 />
+              </div>
+
+              <Separator />
+
+              {/* Referral Code */}
+              <div className="space-y-2">
+                <Label htmlFor="referralCode" className="flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-emerald-600" />
+                  Referral Code
+                  <span className="text-xs text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                  id="referralCode"
+                  value={referralCode}
+                  onChange={(e) => {
+                    setReferralCode(e.target.value.toUpperCase());
+                    setReferrerName(null);
+                  }}
+                  onBlur={handleReferralCodeBlur}
+                  placeholder="e.g. AB1C2D3E"
+                  className="uppercase tracking-wider"
+                />
+                {validatingCode && (
+                  <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Checking code...
+                  </p>
+                )}
+                {referrerName && (
+                  <p className="flex items-center gap-1 text-xs text-emerald-600">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Referred by {referrerName} — you both get 1 month free!
+                  </p>
+                )}
+                {!referrerName && referralCode.length >= 4 && !validatingCode && (
+                  <p className="text-xs text-muted-foreground">
+                    Have a referral code from a colleague? Enter it above for 1 month free.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -634,6 +727,66 @@ export default function RegisterDoctorPage() {
                     {videoFee} {currency}
                   </div>
                 </div>
+              </div>
+
+              {/* Invite a Colleague */}
+              <div className="rounded-lg border p-4">
+                <button
+                  type="button"
+                  onClick={() => setShowInvite(!showInvite)}
+                  className="flex w-full items-center justify-between text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4 text-emerald-600" />
+                    <span className="text-sm font-medium">
+                      Invite a Colleague
+                    </span>
+                    <Badge variant="secondary" className="text-xs">
+                      <Gift className="mr-1 h-3 w-3" />
+                      Both get 1 month free
+                    </Badge>
+                  </div>
+                  {showInvite ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+                {showInvite && (
+                  <div className="mt-4 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Know a colleague who&apos;d benefit from MyDoctor? We&apos;ll
+                      send them a personal invitation with your referral code.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="colleagueName" className="text-xs">
+                          Colleague&apos;s Name
+                        </Label>
+                        <Input
+                          id="colleagueName"
+                          value={colleagueName}
+                          onChange={(e) => setColleagueName(e.target.value)}
+                          placeholder="Dr. Jane Doe"
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="colleagueEmail" className="text-xs">
+                          Colleague&apos;s Email
+                        </Label>
+                        <Input
+                          id="colleagueEmail"
+                          type="email"
+                          value={colleagueEmail}
+                          onChange={(e) => setColleagueEmail(e.target.value)}
+                          placeholder="jane@clinic.com"
+                          className="h-9 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">

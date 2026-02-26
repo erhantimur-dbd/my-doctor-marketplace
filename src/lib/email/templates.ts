@@ -503,3 +503,178 @@ export function reviewReceivedEmail({
 
   return { subject, html };
 }
+
+// ---------------------------------------------------------------------------
+// Doctor Referral Invitation Email
+// ---------------------------------------------------------------------------
+
+interface DoctorReferralInvitationParams {
+  referrerName: string;
+  colleagueName: string;
+  referralCode: string;
+  signUpUrl: string;
+}
+
+export function doctorReferralInvitationEmail({
+  referrerName,
+  colleagueName,
+  referralCode,
+  signUpUrl,
+}: DoctorReferralInvitationParams): { subject: string; html: string } {
+  const subject = `${referrerName} invited you to join ${BRAND_NAME} — Get 1 Month Free`;
+
+  const usps = [
+    {
+      icon: "&#x2705;",
+      title: "Verified Profile",
+      desc: "Build trust with a credential-verified doctor badge",
+    },
+    {
+      icon: "&#x1F4C5;",
+      title: "Instant Booking",
+      desc: "Patients book directly from your real-time calendar, 24/7",
+    },
+    {
+      icon: "&#x1F514;",
+      title: "Smart Reminders",
+      desc: "Reduce no-shows with automated email, SMS &amp; WhatsApp alerts",
+    },
+    {
+      icon: "&#x1F4B3;",
+      title: "Secure Payments",
+      desc: "Stripe-powered payments deposited directly to your bank",
+    },
+    {
+      icon: "&#x1F310;",
+      title: "Multi-Language",
+      desc: "Reach patients across Europe in 9+ languages",
+    },
+    {
+      icon: "&#x1F4CA;",
+      title: "Revenue Analytics",
+      desc: "Track your earnings, bookings &amp; practice growth",
+    },
+  ];
+
+  const uspRows = [];
+  for (let i = 0; i < usps.length; i += 2) {
+    const left = usps[i];
+    const right = usps[i + 1];
+    uspRows.push(`
+      <tr>
+        <td style="padding: 8px; width: 50%; vertical-align: top;">
+          <div style="background-color: #f9fafb; border-radius: 8px; padding: 16px;">
+            <p style="margin: 0 0 4px; font-size: 20px;">${left.icon}</p>
+            <p style="margin: 0 0 4px; font-size: 14px; font-weight: 600; color: #111827;">${left.title}</p>
+            <p style="margin: 0; font-size: 12px; color: #6b7280; line-height: 1.5;">${left.desc}</p>
+          </div>
+        </td>
+        ${right ? `
+        <td style="padding: 8px; width: 50%; vertical-align: top;">
+          <div style="background-color: #f9fafb; border-radius: 8px; padding: 16px;">
+            <p style="margin: 0 0 4px; font-size: 20px;">${right.icon}</p>
+            <p style="margin: 0 0 4px; font-size: 14px; font-weight: 600; color: #111827;">${right.title}</p>
+            <p style="margin: 0; font-size: 12px; color: #6b7280; line-height: 1.5;">${right.desc}</p>
+          </div>
+        </td>` : "<td></td>"}
+      </tr>`);
+  }
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">You've Been Invited!</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi${colleagueName ? ` ${colleagueName}` : ""}, your colleague <strong>${referrerName}</strong> thinks you'd be a great fit for ${BRAND_NAME} — the trusted marketplace connecting private doctors with patients across Europe.
+    </p>
+
+    <!-- 1 Month Free Offer Banner -->
+    <div style="background: linear-gradient(135deg, #059669, #0d9488); border-radius: 10px; padding: 24px; margin-bottom: 24px; text-align: center;">
+      <p style="margin: 0 0 4px; font-size: 28px;">&#x1F381;</p>
+      <p style="margin: 0 0 8px; font-size: 18px; font-weight: 700; color: #ffffff;">
+        Get 1 Month Free
+      </p>
+      <p style="margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.9); line-height: 1.5;">
+        As a special invitation from your colleague, enjoy your first month on ${BRAND_NAME} completely free. Plus, ${referrerName} gets a free month too!
+      </p>
+    </div>
+
+    <!-- Why Doctors Choose MyDoctor -->
+    <p style="margin: 0 0 16px; font-size: 16px; font-weight: 600; color: #111827;">
+      Why Doctors Choose ${BRAND_NAME}
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+      ${uspRows.join("")}
+    </table>
+
+    <!-- CTA Button -->
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 24px auto;" align="center">
+      <tr>
+        <td style="background: linear-gradient(135deg, #2563EB, #1d4ed8); border-radius: 8px;">
+          <a href="${signUpUrl}" target="_blank" style="display: inline-block; padding: 14px 32px; color: #ffffff; font-size: 15px; font-weight: 700; text-decoration: none;">
+            Join ${BRAND_NAME} &mdash; Get 1 Month Free &rarr;
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Referral Code Box -->
+    <div style="background-color: #f0f9ff; border: 2px dashed #93c5fd; border-radius: 8px; padding: 16px; margin: 24px 0; text-align: center;">
+      <p style="margin: 0 0 4px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">
+        Your Referral Code
+      </p>
+      <p style="margin: 0; font-size: 24px; font-weight: 700; color: ${BRAND_COLOR}; letter-spacing: 3px;">
+        ${referralCode}
+      </p>
+      <p style="margin: 8px 0 0; font-size: 12px; color: #6b7280;">
+        Enter this code during sign-up or use the button above
+      </p>
+    </div>
+
+    <p style="margin: 0; font-size: 12px; color: #9ca3af; text-align: center;">
+      This invitation expires in 90 days. Offer valid for new doctor accounts only.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
+// Referral Reward Notification Email
+// ---------------------------------------------------------------------------
+
+interface ReferralRewardParams {
+  doctorName: string;
+  referredDoctorName: string;
+}
+
+export function referralRewardEmail({
+  doctorName,
+  referredDoctorName,
+}: ReferralRewardParams): { subject: string; html: string } {
+  const subject = `Your colleague joined ${BRAND_NAME} — You earned 1 month free!`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Referral Reward Earned!</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Great news, Dr. ${doctorName}! Your colleague <strong>${referredDoctorName}</strong> has joined ${BRAND_NAME} and subscribed to a plan.
+    </p>
+
+    <div style="background: linear-gradient(135deg, #059669, #0d9488); border-radius: 10px; padding: 24px; margin-bottom: 24px; text-align: center;">
+      <p style="margin: 0 0 4px; font-size: 28px;">&#x1F389;</p>
+      <p style="margin: 0 0 8px; font-size: 18px; font-weight: 700; color: #ffffff;">
+        1 Month Free Applied!
+      </p>
+      <p style="margin: 0; font-size: 14px; color: rgba(255, 255, 255, 0.9); line-height: 1.5;">
+        Your reward of one free month has been applied to your subscription. Keep referring colleagues to earn more!
+      </p>
+    </div>
+
+    ${button("View Your Referrals")}
+
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      Thank you for spreading the word about ${BRAND_NAME}. Every referral helps build a better healthcare community.
+    </p>
+  `);
+
+  return { subject, html };
+}

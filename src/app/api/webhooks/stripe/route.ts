@@ -181,6 +181,18 @@ export async function POST(request: NextRequest) {
           },
           { onConflict: "stripe_subscription_id" }
         );
+
+        // Process referral rewards when subscription is first created
+        if (event.type === "customer.subscription.created") {
+          try {
+            const { processReferralReward } = await import(
+              "@/actions/referral"
+            );
+            await processReferralReward(doctorId);
+          } catch (err) {
+            console.error("[Webhook] Referral reward processing error:", err);
+          }
+        }
       }
       break;
     }

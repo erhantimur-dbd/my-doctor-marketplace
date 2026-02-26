@@ -14,6 +14,7 @@ import {
   Crown,
   Clock,
   MessageSquare,
+  UserPlus,
 } from "lucide-react";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 
@@ -31,6 +32,11 @@ const sidebarLinks = [
     href: "/doctor-dashboard/subscription",
     icon: Crown,
     label: "Subscription",
+  },
+  {
+    href: "/doctor-dashboard/referrals",
+    icon: UserPlus,
+    label: "Referrals",
   },
   {
     href: "/doctor-dashboard/messages",

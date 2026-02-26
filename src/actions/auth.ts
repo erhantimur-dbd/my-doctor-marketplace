@@ -89,6 +89,9 @@ export async function registerDoctor(formData: FormData) {
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
+  const referralCode = (formData.get("referral_code") as string)?.trim().toUpperCase() || "";
+  const colleagueName = (formData.get("colleague_name") as string)?.trim() || "";
+  const colleagueEmail = (formData.get("colleague_email") as string)?.trim().toLowerCase() || "";
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -160,17 +163,48 @@ export async function registerDoctor(formData: FormData) {
       "-" +
       Math.random().toString(36).substring(2, 6);
 
-    const { error: doctorError } = await adminSupabase
+    // Generate unique referral code for this new doctor
+    const newReferralCode = (
+      firstName.substring(0, 2) +
+      lastName.substring(0, 2) +
+      Math.random().toString(36).substring(2, 6)
+    ).toUpperCase();
+
+    const { error: doctorError, data: newDoctor } = await adminSupabase
       .from("doctors")
       .insert({
         profile_id: data.user.id,
         slug,
         consultation_fee_cents: 0,
-      });
+        referral_code: newReferralCode,
+      })
+      .select("id")
+      .single();
 
     if (doctorError) {
       console.error("Doctor creation failed:", doctorError);
       return { error: doctorError.message };
+    }
+
+    // Process referral code if provided (link this doctor as a referred signup)
+    if (referralCode && newDoctor) {
+      const { processReferralSignup } = await import("@/actions/referral");
+      await processReferralSignup(newDoctor.id, email);
+    }
+
+    // Send colleague invitation if provided
+    if (colleagueEmail && newDoctor) {
+      const { sendReferralInvitationAtRegistration } = await import(
+        "@/actions/referral"
+      );
+      const referrerName = `Dr. ${firstName} ${lastName}`;
+      await sendReferralInvitationAtRegistration(
+        newDoctor.id,
+        newReferralCode,
+        referrerName,
+        colleagueName,
+        colleagueEmail
+      );
     }
   }
 
