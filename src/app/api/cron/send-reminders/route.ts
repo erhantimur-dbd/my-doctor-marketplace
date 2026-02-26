@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { bookingReminderEmail } from "@/lib/email/templates";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
+import {
+  TEMPLATE_APPOINTMENT_REMINDER,
+  buildAppointmentReminderComponents,
+  mapLocaleToWhatsApp,
+} from "@/lib/whatsapp/templates";
 
 // Default reminders used when a doctor hasn't configured their own
 const DEFAULT_REMINDERS = [
@@ -37,7 +43,7 @@ export async function GET(request: NextRequest) {
       end_time,
       consultation_type,
       video_room_url,
-      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
       doctor:doctors!inner(
         id,
         clinic_name,
@@ -90,6 +96,7 @@ export async function GET(request: NextRequest) {
 
   let emailsSent = 0;
   let inAppSent = 0;
+  let whatsappSent = 0;
 
   for (const booking of bookings) {
     // Calculate minutes until appointment
@@ -172,6 +179,36 @@ export async function GET(request: NextRequest) {
           },
         });
         inAppSent++;
+      } else if (pref.channel === "whatsapp" && patient?.phone && doctorProfile) {
+        // Only send if patient has opted in to WhatsApp notifications
+        if (!patient.notification_whatsapp) continue;
+
+        let timeLabel = "tomorrow";
+        if (pref.minutes_before <= 60) timeLabel = `in ${pref.minutes_before} minutes`;
+        else if (pref.minutes_before <= 120) timeLabel = "in 2 hours";
+        else if (pref.minutes_before < 1440)
+          timeLabel = `in ${Math.round(pref.minutes_before / 60)} hours`;
+
+        const dateFormatted = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        });
+
+        const result = await sendWhatsAppTemplate({
+          to: patient.phone,
+          templateName: TEMPLATE_APPOINTMENT_REMINDER,
+          languageCode: mapLocaleToWhatsApp(patient.preferred_locale),
+          components: buildAppointmentReminderComponents({
+            patientName: patient.first_name || "there",
+            date: `${dateFormatted} (${timeLabel})`,
+            time: booking.start_time,
+            doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+            bookingNumber: booking.booking_number,
+          }),
+        });
+
+        if (result.success) whatsappSent++;
       }
 
       // Record that this reminder was sent
@@ -189,5 +226,6 @@ export async function GET(request: NextRequest) {
     bookings_checked: bookings.length,
     emails_sent: emailsSent,
     in_app_sent: inAppSent,
+    whatsapp_sent: whatsappSent,
   });
 }

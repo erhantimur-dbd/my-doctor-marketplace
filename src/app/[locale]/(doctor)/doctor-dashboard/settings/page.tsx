@@ -141,7 +141,7 @@ export default function SettingsPage() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("first_name, last_name, phone")
+      .select("first_name, last_name, phone, notification_whatsapp")
       .eq("id", user.id)
       .single();
 
@@ -149,6 +149,7 @@ export default function SettingsPage() {
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setPhone(profile.phone || "");
+      setWhatsappNotifications(profile.notification_whatsapp ?? false);
     }
 
     const { data: doctor } = await supabase
@@ -214,15 +215,32 @@ export default function SettingsPage() {
     setTimeout(() => setSavedPersonal(false), 3000);
   }
 
+  const hasValidPhone = phone?.startsWith("+") && phone.replace(/\s/g, "").length >= 8;
+
   async function saveNotificationPrefs() {
-    // In a real app, this would save to a notification_preferences table
+    if (whatsappNotifications && !hasValidPhone) {
+      alert(
+        "Please add your phone number with country code (e.g., +49 123 456 7890) in Personal Information to enable WhatsApp notifications."
+      );
+      return;
+    }
+
+    if (!userId) return;
     setSavingNotifications(true);
     setSavedNotifications(false);
 
-    // Simulate save
-    await new Promise((res) => setTimeout(res, 500));
+    const supabase = createSupabase();
+    const { error } = await supabase
+      .from("profiles")
+      .update({ notification_whatsapp: whatsappNotifications })
+      .eq("id", userId);
 
     setSavingNotifications(false);
+    if (error) {
+      console.error("Save notification prefs failed:", error);
+      alert("Failed to save. Please try again.");
+      return;
+    }
     setSavedNotifications(true);
     setTimeout(() => setSavedNotifications(false), 3000);
   }
@@ -453,7 +471,7 @@ export default function SettingsPage() {
             <div>
               <p className="font-medium">WhatsApp Notifications</p>
               <p className="text-sm text-muted-foreground">
-                Receive notifications through WhatsApp
+                Receive booking confirmations and reminders via WhatsApp
               </p>
             </div>
             <Switch
@@ -461,6 +479,14 @@ export default function SettingsPage() {
               onCheckedChange={setWhatsappNotifications}
             />
           </div>
+          {whatsappNotifications && !hasValidPhone && (
+            <div className="flex items-start gap-2 rounded-md bg-amber-50 p-3 dark:bg-amber-950/30">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                Please add your phone number with country code (e.g., +49 123 456 7890) in the Personal Information section above to enable WhatsApp notifications.
+              </p>
+            </div>
+          )}
           <div className="flex justify-end pt-2">
             <Button onClick={saveNotificationPrefs} disabled={savingNotifications}>
               {savingNotifications ? (

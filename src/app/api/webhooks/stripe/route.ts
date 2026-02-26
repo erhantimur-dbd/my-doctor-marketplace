@@ -5,6 +5,13 @@ import { exportBookingToGoogleCalendar } from "@/lib/google/sync";
 import { createRoom } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
+import {
+  TEMPLATE_BOOKING_CONFIRMATION,
+  buildBookingConfirmationComponents,
+  mapLocaleToWhatsApp,
+} from "@/lib/whatsapp/templates";
+import { formatCurrency } from "@/lib/utils/currency";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -61,7 +68,7 @@ export async function POST(request: NextRequest) {
             platform_fee_cents,
             total_amount_cents,
             currency,
-            patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+            patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
             doctor:doctors!inner(
               id,
               clinic_name,
@@ -147,6 +154,31 @@ export async function POST(request: NextRequest) {
             sendEmail({ to: patient.email, subject, html }).catch((err) =>
               console.error("Confirmation email error:", err)
             );
+
+            // Send WhatsApp booking confirmation if opted in
+            if (patient.notification_whatsapp && patient.phone) {
+              const dateFormatted = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+              });
+
+              sendWhatsAppTemplate({
+                to: patient.phone,
+                templateName: TEMPLATE_BOOKING_CONFIRMATION,
+                languageCode: mapLocaleToWhatsApp(patient.preferred_locale),
+                components: buildBookingConfirmationComponents({
+                  patientName: patient.first_name || "there",
+                  bookingNumber: booking.booking_number,
+                  date: dateFormatted,
+                  time: booking.start_time,
+                  doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+                  amount: formatCurrency(booking.total_amount_cents, booking.currency),
+                }),
+              }).catch((err) =>
+                console.error("WhatsApp confirmation error:", err)
+              );
+            }
           }
         }
       }

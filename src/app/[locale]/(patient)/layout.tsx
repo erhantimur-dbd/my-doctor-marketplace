@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import {
   Calendar,
   Heart,
+  HelpCircle,
   MessageSquare,
   Settings,
   Star,
@@ -18,6 +19,7 @@ const sidebarLinks = [
   { href: "/dashboard/reviews", icon: Star, label: "My Reviews" },
   { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+  { href: "/dashboard/support", icon: HelpCircle, label: "Support" },
 ];
 
 export default function PatientLayout({

@@ -15,6 +15,7 @@ import {
   Clock,
   MessageSquare,
   UserPlus,
+  HelpCircle,
 } from "lucide-react";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 
@@ -44,6 +45,11 @@ const sidebarLinks = [
     label: "Messages",
   },
   { href: "/doctor-dashboard/settings", icon: Settings, label: "Settings" },
+  {
+    href: "/doctor-dashboard/support",
+    icon: HelpCircle,
+    label: "Support",
+  },
 ];
 
 export default function DoctorLayout({

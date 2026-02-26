@@ -466,7 +466,18 @@ function NotificationsSection({ profile }: { profile: ProfileData }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  // Validate phone has country code for WhatsApp
+  const hasValidPhone = profile.phone?.startsWith("+") && (profile.phone?.length ?? 0) >= 8;
+  const showWhatsAppWarning = whatsapp && !hasValidPhone;
+
   function handleSave() {
+    if (whatsapp && !hasValidPhone) {
+      toast.error(
+        "Please add your phone number with country code (e.g., +49 123 456 7890) in Personal Information to enable WhatsApp notifications."
+      );
+      return;
+    }
+
     startTransition(async () => {
       const result = await updateNotifications({
         notificationEmail: email,
@@ -544,6 +555,11 @@ function NotificationsSection({ profile }: { profile: ProfileData }) {
               <p className="text-xs text-muted-foreground">
                 Receive updates and reminders via WhatsApp
               </p>
+              {showWhatsAppWarning && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Please add your phone number with country code (e.g., +49 123 456 7890) in Personal Information above to enable WhatsApp.
+                </p>
+              )}
             </div>
           </div>
         </div>

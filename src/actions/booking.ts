@@ -15,6 +15,12 @@ import { removeBookingFromGoogleCalendar } from "@/lib/google/sync";
 import { deleteRoom } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
 import { bookingCancellationEmail } from "@/lib/email/templates";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
+import {
+  TEMPLATE_BOOKING_CANCELLATION,
+  buildBookingCancellationComponents,
+  mapLocaleToWhatsApp,
+} from "@/lib/whatsapp/templates";
 
 const PLATFORM_FEE_PERCENT = 15;
 
@@ -188,7 +194,7 @@ export async function cancelBooking(input: CancelBookingInput) {
       .select(
         `
         *,
-        patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+        patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
         doctor:doctors!inner(
           cancellation_policy,
           cancellation_hours,
@@ -313,6 +319,27 @@ export async function cancelBooking(input: CancelBookingInput) {
       sendEmail({ to: patient.email, subject, html }).catch((err) =>
         console.error("Cancellation email error:", err)
       );
+
+      // Send WhatsApp cancellation notification if opted in
+      if (patient.notification_whatsapp && patient.phone) {
+        const refundInfo = refundPercent > 0
+          ? `A ${refundPercent}% refund has been initiated.`
+          : "No refund applicable per cancellation policy.";
+
+        sendWhatsAppTemplate({
+          to: patient.phone,
+          templateName: TEMPLATE_BOOKING_CANCELLATION,
+          languageCode: mapLocaleToWhatsApp(patient.preferred_locale),
+          components: buildBookingCancellationComponents({
+            patientName: patient.first_name || "there",
+            bookingNumber: booking.booking_number,
+            date: booking.appointment_date,
+            refundInfo,
+          }),
+        }).catch((err) =>
+          console.error("WhatsApp cancellation error:", err)
+        );
+      }
     }
 
     revalidatePath("/", "layout");

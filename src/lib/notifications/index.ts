@@ -3,6 +3,16 @@ import { sendEmail } from "@/lib/email/client";
 
 type NotificationChannel = "in_app" | "email" | "sms" | "whatsapp";
 
+interface WhatsAppNotification {
+  to: string;
+  templateName: string;
+  languageCode: string;
+  components?: Array<{
+    type: "body" | "header" | "button";
+    parameters: Array<{ type: "text"; text: string }>;
+  }>;
+}
+
 interface CreateNotificationParams {
   userId: string;
   type: string;
@@ -11,6 +21,7 @@ interface CreateNotificationParams {
   channels?: NotificationChannel[];
   metadata?: Record<string, any>;
   email?: { to: string; subject: string; html: string };
+  whatsapp?: WhatsAppNotification;
 }
 
 export async function createNotification({
@@ -21,6 +32,7 @@ export async function createNotification({
   channels = ["in_app"],
   metadata,
   email,
+  whatsapp,
 }: CreateNotificationParams) {
   const supabase = createAdminClient();
 
@@ -40,7 +52,21 @@ export async function createNotification({
 
   // Send email if provided
   if (email && channels.includes("email")) {
-    await sendEmail(email);
+    await sendEmail(email).catch((err) =>
+      console.error("[Notification] Email send failed:", err)
+    );
+  }
+
+  // Send WhatsApp template if provided
+  if (whatsapp && channels.includes("whatsapp")) {
+    try {
+      const { sendWhatsAppTemplate } = await import(
+        "@/lib/whatsapp/client"
+      );
+      await sendWhatsAppTemplate(whatsapp);
+    } catch (err) {
+      console.error("[Notification] WhatsApp send failed:", err);
+    }
   }
 
   return { success: !error };

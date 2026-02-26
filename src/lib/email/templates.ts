@@ -678,3 +678,128 @@ export function referralRewardEmail({
 
   return { subject, html };
 }
+
+// ============================================================
+// Support Ticket Emails
+// ============================================================
+
+export function supportTicketCreatedEmail(params: {
+  userName: string;
+  ticketNumber: string;
+  category: string;
+  ticketSubject: string;
+  dashboardUrl: string;
+}): { subject: string; html: string } {
+  const subject = `Support Ticket Created — #${params.ticketNumber}`;
+
+  const categoryLabel =
+    params.category.charAt(0).toUpperCase() + params.category.slice(1);
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #111827;">
+      Support Ticket Created
+    </h2>
+    <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">
+      Hi ${params.userName}, we've received your support request and will get back to you shortly.
+    </p>
+
+    <div style="background-color: #f0f9ff; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow("Ticket Number", `#${params.ticketNumber}`)}
+        ${infoRow("Category", categoryLabel)}
+        ${infoRow("Subject", params.ticketSubject)}
+        ${infoRow("Status", "Open")}
+      </table>
+    </div>
+
+    <div style="background-color: #fefce8; border-left: 4px solid #eab308; padding: 16px; border-radius: 0 8px 8px 0; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 14px; color: #854d0e; font-weight: 500;">
+        We typically respond within 24 hours
+      </p>
+      <p style="margin: 6px 0 0; font-size: 13px; color: #a16207;">
+        You can track the status and reply to your ticket from your dashboard at any time.
+      </p>
+    </div>
+
+    ${button("View Ticket", params.dashboardUrl)}
+
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If your issue is urgent, you can also reach us via WhatsApp or email at support@mydoctor.com.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+export function supportTicketReplyEmail(params: {
+  userName: string;
+  ticketNumber: string;
+  replyPreview: string;
+  dashboardUrl: string;
+}): { subject: string; html: string } {
+  const subject = `New Reply on Ticket #${params.ticketNumber}`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #111827;">
+      New Reply on Your Ticket
+    </h2>
+    <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">
+      Hi ${params.userName}, our support team has replied to your ticket #${params.ticketNumber}.
+    </p>
+
+    <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
+      <p style="margin: 0 0 8px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+        Reply Preview
+      </p>
+      <p style="margin: 0; font-size: 14px; color: #374151; line-height: 1.6;">
+        ${params.replyPreview}${params.replyPreview.length >= 200 ? "..." : ""}
+      </p>
+    </div>
+
+    ${button("View Full Conversation", params.dashboardUrl)}
+
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      You can reply directly from your dashboard to continue the conversation.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+export function supportTicketResolvedEmail(params: {
+  userName: string;
+  ticketNumber: string;
+  ticketSubject: string;
+  dashboardUrl: string;
+}): { subject: string; html: string } {
+  const subject = `Ticket Resolved — #${params.ticketNumber}`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; font-weight: 600; color: #111827;">
+      Your Ticket Has Been Resolved
+    </h2>
+    <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">
+      Hi ${params.userName}, your support ticket has been marked as resolved.
+    </p>
+
+    <div style="background-color: #f0fdf4; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow("Ticket Number", `#${params.ticketNumber}`)}
+        ${infoRow("Subject", params.ticketSubject)}
+        ${infoRow("Status", "Resolved")}
+      </table>
+    </div>
+
+    <p style="margin: 0 0 24px; font-size: 14px; color: #374151; line-height: 1.6;">
+      If you still need help or the issue persists, you can reply to your ticket to reopen it, or create a new support ticket.
+    </p>
+
+    ${button("View Ticket", params.dashboardUrl)}
+
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      Thank you for using ${BRAND_NAME}. We're here to help whenever you need us.
+    </p>
+  `);
+
+  return { subject, html };
+}

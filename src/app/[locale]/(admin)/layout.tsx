@@ -10,6 +10,7 @@ import {
   Crown,
   Settings,
   ShieldCheck,
+  HelpCircle,
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -20,6 +21,7 @@ const sidebarLinks = [
   { href: "/admin/reviews", icon: Star, label: "Reviews" },
   { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
   { href: "/admin/subscriptions", icon: Crown, label: "Subscriptions" },
+  { href: "/admin/support", icon: HelpCircle, label: "Support" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 
