@@ -19,12 +19,19 @@ function getLocaleFromPathname(pathname: string): string {
   return match ? match[1] : "en";
 }
 
+// Admin email allowlist — only these emails can access /admin routes
+// Set ADMIN_EMAILS in .env.local as comma-separated list: "you@example.com,other@example.com"
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 export async function middleware(request: NextRequest) {
   // Run intl middleware first
   const intlResponse = intlMiddleware(request);
 
   // Update Supabase session
-  const { user } = await updateSession(request, intlResponse);
+  const { supabase, user } = await updateSession(request, intlResponse);
 
   const pathname = request.nextUrl.pathname;
   const pathnameWithoutLocale = getPathnameWithoutLocale(pathname);
@@ -45,6 +52,25 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL(`/${locale}/login`, request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Admin routes: verify role AND email allowlist at the edge
+  if (isAdminRoute && user) {
+    // Check email allowlist first (fast, no DB query)
+    if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")) {
+      return NextResponse.redirect(new URL(`/${locale}`, request.url));
+    }
+
+    // Check admin role in database
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profile?.role !== "admin") {
+      return NextResponse.redirect(new URL(`/${locale}`, request.url));
+    }
   }
 
   return intlResponse;
