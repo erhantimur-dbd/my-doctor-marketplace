@@ -64,7 +64,7 @@ export default async function HomePage() {
       <Header />
 
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-20 md:py-32">
+      <section className="relative bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-20 md:py-32">
         <div className="container mx-auto text-center">
           <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
             {t("hero_title")}
@@ -74,7 +74,7 @@ export default async function HomePage() {
           </p>
 
           {/* Real search bar */}
-          <div className="mt-10">
+          <div className="relative z-20 mt-10">
             <HomeSearchBar specialties={specialties} locations={locations} />
           </div>
 
