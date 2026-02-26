@@ -46,17 +46,23 @@ export function AvatarUpload({
     formData.append("avatar", file);
 
     startTransition(async () => {
-      const result = await uploadAvatar(formData);
+      try {
+        const result = await uploadAvatar(formData);
 
-      if (result.error) {
-        toast.error(result.error);
+        if (result.error) {
+          toast.error(result.error);
+          setPreview(null);
+          return;
+        }
+
+        toast.success("Profile photo updated.");
         setPreview(null);
-        return;
+        router.refresh();
+      } catch (err) {
+        console.error("Avatar upload failed:", err);
+        toast.error("Failed to upload image. Please try again.");
+        setPreview(null);
       }
-
-      toast.success("Profile photo updated.");
-      setPreview(null);
-      router.refresh();
     });
   }
 

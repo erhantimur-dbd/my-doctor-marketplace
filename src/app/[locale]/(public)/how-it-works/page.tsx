@@ -30,6 +30,7 @@ const steps = [
       "View transparent pricing upfront",
       "Read verified patient reviews",
     ],
+    color: { step: "bg-blue-600", iconBg: "bg-blue-50", iconText: "text-blue-600", check: "text-blue-600" },
   },
   {
     step: "02",
@@ -43,6 +44,7 @@ const steps = [
       "Secure online payment via Stripe",
       "Instant booking confirmation",
     ],
+    color: { step: "bg-emerald-600", iconBg: "bg-emerald-50", iconText: "text-emerald-600", check: "text-emerald-600" },
   },
   {
     step: "03",
@@ -56,6 +58,7 @@ const steps = [
       "In-app notification center",
       "Calendar integration",
     ],
+    color: { step: "bg-amber-600", iconBg: "bg-amber-50", iconText: "text-amber-600", check: "text-amber-600" },
   },
   {
     step: "04",
@@ -69,6 +72,7 @@ const steps = [
       "Secure & private sessions",
       "Follow-up booking option",
     ],
+    color: { step: "bg-teal-600", iconBg: "bg-teal-50", iconText: "text-teal-600", check: "text-teal-600" },
   },
 ];
 
@@ -77,31 +81,37 @@ const benefits = [
     icon: Shield,
     title: "Verified Doctors",
     description: "Every doctor on our platform is credential-verified and licensed to practice in their country.",
+    color: { bg: "bg-emerald-50", text: "text-emerald-600" },
   },
   {
     icon: CreditCard,
     title: "Transparent Pricing",
     description: "See consultation fees upfront. No hidden charges, no surprises. Pay securely online.",
+    color: { bg: "bg-blue-50", text: "text-blue-600" },
   },
   {
     icon: Clock,
     title: "Instant Booking",
     description: "Book appointments 24/7 with real-time availability. No phone calls needed.",
+    color: { bg: "bg-amber-50", text: "text-amber-600" },
   },
   {
     icon: Globe,
     title: "Cross-Border Care",
     description: "Access top specialists across Europe. Book in your language, pay in your currency.",
+    color: { bg: "bg-teal-50", text: "text-teal-600" },
   },
   {
     icon: Star,
     title: "Patient Reviews",
     description: "Make informed decisions with honest reviews from verified patients.",
+    color: { bg: "bg-yellow-50", text: "text-yellow-600" },
   },
   {
     icon: MessageSquare,
     title: "Smart Reminders",
     description: "Never miss an appointment with automatic email, SMS, and WhatsApp reminders.",
+    color: { bg: "bg-violet-50", text: "text-violet-600" },
   },
 ];
 
@@ -133,7 +143,7 @@ export default function HowItWorksPage() {
               >
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+                    <span className={`flex h-8 w-8 items-center justify-center rounded-full ${step.color.step} text-sm font-bold text-white`}>
                       {step.step}
                     </span>
                     <h2 className="text-xl font-bold md:text-2xl">
@@ -146,7 +156,7 @@ export default function HowItWorksPage() {
                   <ul className="mt-4 space-y-2">
                     {step.features.map((feature) => (
                       <li key={feature} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                        <CheckCircle2 className={`h-4 w-4 shrink-0 ${step.color.check}`} />
                         {feature}
                       </li>
                     ))}
@@ -154,8 +164,8 @@ export default function HowItWorksPage() {
                 </div>
 
                 <div className="flex flex-1 items-center justify-center">
-                  <div className="flex h-32 w-32 items-center justify-center rounded-3xl bg-primary/10 md:h-40 md:w-40">
-                    <step.icon className="h-16 w-16 text-primary md:h-20 md:w-20" />
+                  <div className={`flex h-32 w-32 items-center justify-center rounded-3xl ${step.color.iconBg} md:h-40 md:w-40`}>
+                    <step.icon className={`h-16 w-16 ${step.color.iconText} md:h-20 md:w-20`} />
                   </div>
                 </div>
               </div>
@@ -177,8 +187,8 @@ export default function HowItWorksPage() {
             {benefits.map((benefit) => (
               <Card key={benefit.title}>
                 <CardContent className="flex flex-col items-center p-6 text-center">
-                  <div className="rounded-xl bg-primary/10 p-3">
-                    <benefit.icon className="h-6 w-6 text-primary" />
+                  <div className={`rounded-xl ${benefit.color.bg} p-3`}>
+                    <benefit.icon className={`h-6 w-6 ${benefit.color.text}`} />
                   </div>
                   <h3 className="mt-4 font-semibold">{benefit.title}</h3>
                   <p className="mt-2 text-sm text-muted-foreground">

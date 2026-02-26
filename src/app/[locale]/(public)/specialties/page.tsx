@@ -21,6 +21,7 @@ import {
   Scan,
   ArrowRight,
 } from "lucide-react";
+import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
 
 const iconMap: Record<string, React.ElementType> = {
   Stethoscope,
@@ -95,12 +96,13 @@ export default function SpecialtiesPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {allSpecialties.map((spec) => {
               const Icon = iconMap[spec.icon] || Stethoscope;
+              const c = getSpecialtyColor(spec.slug);
               return (
                 <Link key={spec.slug} href={`/doctors?specialty=${spec.slug}`}>
-                  <Card className="group h-full cursor-pointer transition-all hover:border-primary hover:shadow-md">
+                  <Card className={`group h-full cursor-pointer transition-all ${c.border} hover:shadow-md`}>
                     <CardContent className="flex items-start gap-4 p-5">
-                      <div className="shrink-0 rounded-xl bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
-                        <Icon className="h-6 w-6 text-primary" />
+                      <div className={`shrink-0 rounded-xl ${c.bg} p-3 transition-colors ${c.hoverBg}`}>
+                        <Icon className={`h-6 w-6 ${c.text}`} />
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-semibold">{t(spec.key)}</h3>

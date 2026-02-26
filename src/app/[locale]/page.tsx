@@ -21,7 +21,12 @@ import {
   Baby,
   Activity,
   Search,
+  Bell,
+  BarChart3,
+  CreditCard,
+  Globe,
 } from "lucide-react";
+import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
 
 const specialtyIcons: Record<string, React.ElementType> = {
   Stethoscope,
@@ -112,12 +117,13 @@ export default async function HomePage() {
           <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
             {popularSpecialties.map((spec) => {
               const Icon = specialtyIcons[spec.icon] || Stethoscope;
+              const c = getSpecialtyColor(spec.slug);
               return (
                 <Link key={spec.slug} href={`/specialties/${spec.slug}`}>
-                  <Card className="group cursor-pointer transition-all hover:border-primary hover:shadow-md">
+                  <Card className={`group cursor-pointer transition-all ${c.border} hover:shadow-md`}>
                     <CardContent className="flex flex-col items-center gap-3 p-4 text-center">
-                      <div className="rounded-full bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
-                        <Icon className="h-6 w-6 text-primary" />
+                      <div className={`rounded-full ${c.bg} p-3 transition-colors ${c.hoverBg}`}>
+                        <Icon className={`h-6 w-6 ${c.text}`} />
                       </div>
                       <span className="text-xs font-medium">
                         {ts(spec.key)}
@@ -145,26 +151,32 @@ export default async function HomePage() {
                 title: t("step_1_title"),
                 desc: t("step_1_desc"),
                 step: "01",
+                iconBg: "bg-gradient-to-br from-blue-500 to-blue-600",
+                badge: "bg-blue-900 text-blue-50",
               },
               {
                 icon: Calendar,
                 title: t("step_2_title"),
                 desc: t("step_2_desc"),
                 step: "02",
+                iconBg: "bg-gradient-to-br from-emerald-500 to-emerald-600",
+                badge: "bg-emerald-900 text-emerald-50",
               },
               {
                 icon: Video,
                 title: t("step_3_title"),
                 desc: t("step_3_desc"),
                 step: "03",
+                iconBg: "bg-gradient-to-br from-violet-500 to-violet-600",
+                badge: "bg-violet-900 text-violet-50",
               },
             ].map((step) => (
               <div key={step.step} className="flex flex-col items-center">
                 <div className="relative">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                  <div className={`flex h-16 w-16 items-center justify-center rounded-2xl ${step.iconBg} text-white shadow-lg`}>
                     <step.icon className="h-7 w-7" />
                   </div>
-                  <span className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">
+                  <span className={`absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full ${step.badge} text-xs font-bold`}>
                     {step.step}
                   </span>
                 </div>
@@ -181,25 +193,89 @@ export default async function HomePage() {
       {/* For Doctors CTA */}
       <section className="px-4 py-16 md:py-24">
         <div className="container mx-auto">
-          <Card className="overflow-hidden bg-gradient-to-br from-primary to-primary/80">
-            <CardContent className="flex flex-col items-center gap-6 p-8 text-center text-primary-foreground md:p-16">
-              <Stethoscope className="h-12 w-12" />
-              <h2 className="text-2xl font-bold md:text-3xl">
-                {t("for_doctors_title")}
-              </h2>
-              <p className="max-w-xl text-primary-foreground/80">
-                {t("for_doctors_desc")}
-              </p>
-              <Button
-                size="lg"
-                variant="secondary"
-                className="mt-2 rounded-full"
-                asChild
-              >
-                <Link href="/register-doctor">
-                  {t("for_doctors_cta")} <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+          <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
+            <CardContent className="p-8 md:p-14 lg:p-16">
+              <div className="mx-auto max-w-3xl text-center">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
+                  <Stethoscope className="h-7 w-7 text-teal-400" />
+                </div>
+                <h2 className="mt-5 text-2xl font-bold text-white md:text-3xl">
+                  {t("for_doctors_title")}
+                </h2>
+                <p className="mx-auto mt-3 max-w-xl text-white/70">
+                  {t("for_doctors_desc")}
+                </p>
+
+                {/* USP Feature Grid */}
+                <div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {[
+                    {
+                      icon: Calendar,
+                      title: "Smart Booking",
+                      desc: "Real-time calendar with instant patient booking",
+                      color: "text-teal-400",
+                    },
+                    {
+                      icon: Bell,
+                      title: "Auto Reminders",
+                      desc: "Reduce no-shows with email, SMS & WhatsApp",
+                      color: "text-amber-400",
+                    },
+                    {
+                      icon: BarChart3,
+                      title: "Revenue Analytics",
+                      desc: "Track earnings, bookings & growth metrics",
+                      color: "text-blue-400",
+                    },
+                    {
+                      icon: Shield,
+                      title: "Verified Profile",
+                      desc: "Build trust with a credential-verified badge",
+                      color: "text-emerald-400",
+                    },
+                    {
+                      icon: CreditCard,
+                      title: "Secure Payments",
+                      desc: "Stripe-powered payouts directly to your bank",
+                      color: "text-violet-400",
+                    },
+                    {
+                      icon: Globe,
+                      title: "Multi-Language",
+                      desc: "Reach patients across Europe in 4 languages",
+                      color: "text-rose-400",
+                    },
+                  ].map((feature) => (
+                    <div
+                      key={feature.title}
+                      className="flex items-start gap-3 rounded-xl bg-white/[0.06] p-4 text-left backdrop-blur-sm transition-colors hover:bg-white/[0.1]"
+                    >
+                      <feature.icon
+                        className={`mt-0.5 h-5 w-5 shrink-0 ${feature.color}`}
+                      />
+                      <div>
+                        <p className="text-sm font-semibold text-white">
+                          {feature.title}
+                        </p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-white/60">
+                          {feature.desc}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  size="lg"
+                  className="mt-10 rounded-full bg-white text-slate-900 hover:bg-white/90"
+                  asChild
+                >
+                  <Link href="/register-doctor">
+                    {t("for_doctors_cta")}{" "}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

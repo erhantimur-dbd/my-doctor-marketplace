@@ -126,45 +126,64 @@ export async function changePassword(input: {
 export async function uploadAvatar(
   formData: FormData
 ): Promise<{ error?: string; avatarUrl?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) return { error: "You must be logged in." };
+    if (!user) return { error: "You must be logged in." };
 
-  const file = formData.get("avatar") as File;
-  if (!file || file.size === 0) return { error: "No file provided." };
-  if (file.size > 5 * 1024 * 1024) return { error: "File too large (max 5MB)." };
+    const file = formData.get("avatar") as File | null;
+    if (!file || file.size === 0) return { error: "No file provided." };
+    if (file.size > 5 * 1024 * 1024)
+      return { error: "File too large (max 5MB)." };
 
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
-  if (!allowedTypes.includes(file.type)) {
-    return { error: "Only JPEG, PNG, and WebP images are allowed." };
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      return { error: "Only JPEG, PNG, and WebP images are allowed." };
+    }
+
+    // Convert File to ArrayBuffer for reliable server-side upload
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+    const filePath = `${user.id}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, buffer, {
+        upsert: true,
+        contentType: file.type,
+      });
+
+    if (uploadError) {
+      console.error("Storage upload error:", uploadError);
+      return { error: "Failed to upload image. Please try again." };
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+    const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
+      .eq("id", user.id);
+
+    if (updateError) {
+      console.error("Profile update error:", updateError);
+      return { error: "Failed to update profile." };
+    }
+
+    revalidatePath("/dashboard/settings");
+    return { avatarUrl };
+  } catch (err) {
+    console.error("Avatar upload unexpected error:", err);
+    return { error: "An unexpected error occurred. Please try again." };
   }
-
-  const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-  const filePath = `${user.id}/avatar.${ext}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(filePath, file, { upsert: true, contentType: file.type });
-
-  if (uploadError) return { error: "Failed to upload image." };
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("avatars").getPublicUrl(filePath);
-
-  const avatarUrl = `${publicUrl}?t=${Date.now()}`;
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ avatar_url: avatarUrl, updated_at: new Date().toISOString() })
-    .eq("id", user.id);
-
-  if (updateError) return { error: "Failed to update profile." };
-
-  revalidatePath("/dashboard/settings");
-  return { avatarUrl };
 }
 
 export async function updateNotifications(input: {
