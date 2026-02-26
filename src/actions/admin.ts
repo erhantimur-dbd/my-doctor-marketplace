@@ -92,7 +92,22 @@ export async function toggleDoctorFeatured(
   return { success: true };
 }
 
-export async function deleteReview(reviewId: string) {
+export async function approveReview(reviewId: string) {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError };
+
+  const { error } = await supabase
+    .from("reviews")
+    .update({ is_visible: true })
+    .eq("id", reviewId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/reviews");
+  return { success: true };
+}
+
+export async function hideReview(reviewId: string) {
   const { error: authError, supabase } = await requireAdmin();
   if (authError || !supabase) return { error: authError };
 
@@ -105,6 +120,11 @@ export async function deleteReview(reviewId: string) {
 
   revalidatePath("/admin/reviews");
   return { success: true };
+}
+
+/** @deprecated Use hideReview instead */
+export async function deleteReview(reviewId: string) {
+  return hideReview(reviewId);
 }
 
 export async function updatePlatformSetting(key: string, value: string) {
