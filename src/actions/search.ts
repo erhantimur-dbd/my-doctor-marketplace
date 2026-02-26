@@ -58,6 +58,30 @@ export async function searchDoctors(filters: SearchFilters) {
     query = query.in("id", ids);
   }
 
+  // Specialty filter — two-step: resolve slug → specialty ID → matching doctor IDs
+  if (filters.specialty) {
+    const { data: specRow } = await supabase
+      .from("specialties")
+      .select("id")
+      .eq("slug", filters.specialty)
+      .single();
+
+    if (specRow) {
+      const { data: matchRows } = await supabase
+        .from("doctor_specialties")
+        .select("doctor_id")
+        .eq("specialty_id", specRow.id);
+
+      const ids = (matchRows || []).map(
+        (r: { doctor_id: string }) => r.doctor_id
+      );
+      if (ids.length === 0) {
+        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      }
+      query = query.in("id", ids);
+    }
+  }
+
   // Apply filters
   if (filters.minPrice) {
     query = query.gte("consultation_fee_cents", filters.minPrice * 100);
@@ -259,4 +283,90 @@ export async function getSameDayAvailabilityCount(): Promise<number> {
   const { data, error } = await supabase.rpc("get_doctor_ids_available_today");
   if (error || !data) return 0;
   return (data as string[]).length;
+}
+
+export async function getSpecialtyBySlug(slug: string) {
+  const supabase = createAdminClient();
+
+  // Get the specialty record
+  const { data: specialty } = await supabase
+    .from("specialties")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .single();
+
+  if (!specialty) return null;
+
+  // Get doctor IDs for this specialty
+  const { data: junctionRows } = await supabase
+    .from("doctor_specialties")
+    .select("doctor_id")
+    .eq("specialty_id", specialty.id);
+
+  const doctorIds = (junctionRows || []).map(
+    (r: { doctor_id: string }) => r.doctor_id
+  );
+
+  if (doctorIds.length === 0) {
+    return {
+      specialty,
+      doctorCount: 0,
+      doctors: [],
+      priceRange: null,
+      avgRating: null,
+    };
+  }
+
+  // Get accurate count of verified doctors in this specialty
+  const { count } = await supabase
+    .from("doctors")
+    .select("id", { count: "exact", head: true })
+    .in("id", doctorIds)
+    .eq("verification_status", "verified")
+    .eq("is_active", true);
+
+  // Get top-rated verified doctors (limit 6 for the landing page)
+  const { data: doctors } = await supabase
+    .from("doctors")
+    .select(
+      `
+      *,
+      profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+      location:locations(city, country_code, slug),
+      specialties:doctor_specialties(
+        specialty:specialties(id, name_key, slug),
+        is_primary
+      ),
+      photos:doctor_photos(storage_path, alt_text, is_primary)
+    `
+    )
+    .in("id", doctorIds)
+    .eq("verification_status", "verified")
+    .eq("is_active", true)
+    .order("is_featured", { ascending: false })
+    .order("avg_rating", { ascending: false })
+    .limit(6);
+
+  const verifiedDoctors = doctors || [];
+
+  // Calculate price range and avg rating from fetched doctors
+  const fees = verifiedDoctors
+    .map((d: Record<string, unknown>) => d.consultation_fee_cents as number)
+    .filter(Boolean);
+  const ratings = verifiedDoctors
+    .map((d: Record<string, unknown>) => d.avg_rating as number)
+    .filter(Boolean);
+
+  return {
+    specialty,
+    doctorCount: count || 0,
+    doctors: verifiedDoctors,
+    priceRange: fees.length
+      ? { min: Math.min(...fees), max: Math.max(...fees) }
+      : null,
+    avgRating: ratings.length
+      ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+      : null,
+  };
 }
