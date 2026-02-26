@@ -98,7 +98,7 @@ export default function SpecialtiesPage() {
               const Icon = iconMap[spec.icon] || Stethoscope;
               const c = getSpecialtyColor(spec.slug);
               return (
-                <Link key={spec.slug} href={`/doctors?specialty=${spec.slug}`}>
+                <Link key={spec.slug} href={`/specialties/${spec.slug}`}>
                   <Card className={`group h-full cursor-pointer transition-all ${c.border} hover:shadow-md`}>
                     <CardContent className="flex items-start gap-4 p-5">
                       <div className={`shrink-0 rounded-xl ${c.bg} p-3 transition-colors ${c.hoverBg}`}>
@@ -129,7 +129,7 @@ export default function SpecialtiesPage() {
             Start with a General Practice consultation. Your GP can assess your condition and refer you to the right specialist if needed.
           </p>
           <Button size="lg" className="mt-8 rounded-full" asChild>
-            <Link href="/doctors?specialty=general-practice">
+            <Link href="/specialties/general-practice">
               Find a General Practitioner <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
