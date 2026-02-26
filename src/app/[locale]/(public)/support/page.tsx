@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -70,14 +70,14 @@ export default function SupportPage() {
         <div className="container mx-auto max-w-5xl">
           <div className="grid gap-6 md:grid-cols-3">
             {/* Email Support */}
-            <Card className="text-center">
-              <CardHeader className="items-center">
-                <div className="rounded-xl bg-blue-50 p-3">
-                  <Mail className="h-6 w-6 text-blue-600" />
-                </div>
-                <CardTitle className="mt-2 text-lg">Email Support</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col items-center gap-4">
+            <Card className="overflow-hidden text-center">
+              <div className="flex flex-col items-center gap-2 bg-blue-50 px-6 py-6 dark:bg-blue-950/30">
+                <Mail className="h-7 w-7 text-blue-600" />
+                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                  Email Support
+                </h3>
+              </div>
+              <CardContent className="flex flex-1 flex-col items-center gap-4 pt-6">
                 <p className="text-sm text-muted-foreground">
                   Send us an email and we&apos;ll respond within 24 hours.
                 </p>
@@ -91,14 +91,14 @@ export default function SupportPage() {
             </Card>
 
             {/* Support Tickets */}
-            <Card className="text-center">
-              <CardHeader className="items-center">
-                <div className="rounded-xl bg-emerald-50 p-3">
-                  <FileText className="h-6 w-6 text-emerald-600" />
-                </div>
-                <CardTitle className="mt-2 text-lg">Support Tickets</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col items-center gap-4">
+            <Card className="overflow-hidden text-center">
+              <div className="flex flex-col items-center gap-2 bg-emerald-50 px-6 py-6 dark:bg-emerald-950/30">
+                <FileText className="h-7 w-7 text-emerald-600" />
+                <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
+                  Support Tickets
+                </h3>
+              </div>
+              <CardContent className="flex flex-1 flex-col items-center gap-4 pt-6">
                 <p className="text-sm text-muted-foreground">
                   Create a ticket for the fastest response. Track status in
                   real-time from your dashboard.
@@ -114,14 +114,14 @@ export default function SupportPage() {
             </Card>
 
             {/* WhatsApp */}
-            <Card className="text-center">
-              <CardHeader className="items-center">
-                <div className="rounded-xl bg-green-50 p-3">
-                  <MessageCircle className="h-6 w-6 text-green-600" />
-                </div>
-                <CardTitle className="mt-2 text-lg">WhatsApp</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-1 flex-col items-center gap-4">
+            <Card className="overflow-hidden text-center">
+              <div className="flex flex-col items-center gap-2 bg-green-50 px-6 py-6 dark:bg-green-950/30">
+                <MessageCircle className="h-7 w-7 text-green-600" />
+                <h3 className="text-lg font-semibold text-green-900 dark:text-green-100">
+                  WhatsApp
+                </h3>
+              </div>
+              <CardContent className="flex flex-1 flex-col items-center gap-4 pt-6">
                 <p className="text-sm text-muted-foreground">
                   Chat with us on WhatsApp during business hours for quick
                   assistance.
