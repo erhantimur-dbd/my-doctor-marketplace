@@ -24,41 +24,57 @@ const platformFeatures = [
     icon: Globe,
     title: "Multi-Country Visibility",
     description: "Reach patients across Germany, UK, Turkey, France, and more EU countries.",
+    bg: "bg-blue-50 dark:bg-blue-950/30",
+    text: "text-blue-600",
   },
   {
     icon: Calendar,
     title: "Smart Scheduling",
     description: "Customizable availability calendar with recurring schedules and date overrides.",
+    bg: "bg-violet-50 dark:bg-violet-950/30",
+    text: "text-violet-600",
   },
   {
     icon: CreditCard,
     title: "Secure Payments",
     description: "Automatic payment collection via Stripe. Patients pay upfront, you get paid out to your bank.",
+    bg: "bg-emerald-50 dark:bg-emerald-950/30",
+    text: "text-emerald-600",
   },
   {
     icon: Video,
     title: "Video Consultations",
     description: "Offer telemedicine appointments with built-in HD video calling.",
+    bg: "bg-purple-50 dark:bg-purple-950/30",
+    text: "text-purple-600",
   },
   {
     icon: Bell,
     title: "Automated Reminders",
     description: "Reduce no-shows with automatic email, SMS, and WhatsApp appointment reminders.",
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+    text: "text-amber-600",
   },
   {
     icon: BarChart3,
     title: "Revenue Analytics",
     description: "Track your earnings, booking trends, and patient demographics in real-time.",
+    bg: "bg-cyan-50 dark:bg-cyan-950/30",
+    text: "text-cyan-600",
   },
   {
     icon: Users,
     title: "Patient CRM",
     description: "Manage patient records, visit history, and notes in one place.",
+    bg: "bg-rose-50 dark:bg-rose-950/30",
+    text: "text-rose-600",
   },
   {
     icon: Shield,
     title: "Verification Badge",
     description: "Get a verified badge on your profile after our credential verification process.",
+    bg: "bg-teal-50 dark:bg-teal-950/30",
+    text: "text-teal-600",
   },
 ];
 
@@ -168,8 +184,8 @@ export default function PricingPage() {
             {platformFeatures.map((feature) => (
               <Card key={feature.title}>
                 <CardContent className="p-5">
-                  <div className="rounded-xl bg-primary/10 p-2.5 w-fit">
-                    <feature.icon className="h-5 w-5 text-primary" />
+                  <div className={`rounded-xl ${feature.bg} p-2.5 w-fit`}>
+                    <feature.icon className={`h-5 w-5 ${feature.text}`} />
                   </div>
                   <h3 className="mt-3 font-semibold">{feature.title}</h3>
                   <p className="mt-1.5 text-sm text-muted-foreground">
@@ -195,31 +211,48 @@ export default function PricingPage() {
                 icon: Stethoscope,
                 title: "Create Your Profile",
                 desc: "Sign up and complete your doctor profile with credentials, specialties, and consultation fees.",
+                bg: "bg-teal-50 dark:bg-teal-950/30",
+                text: "text-teal-600",
+                ring: "ring-teal-200 dark:ring-teal-800",
               },
               {
                 step: "2",
                 icon: Shield,
                 title: "Get Verified",
                 desc: "Upload your medical license and certifications. Our team reviews and verifies within 24-48 hours.",
+                bg: "bg-blue-50 dark:bg-blue-950/30",
+                text: "text-blue-600",
+                ring: "ring-blue-200 dark:ring-blue-800",
               },
               {
                 step: "3",
                 icon: Calendar,
                 title: "Set Your Availability",
                 desc: "Configure your weekly schedule, set appointment durations, and manage availability overrides.",
+                bg: "bg-violet-50 dark:bg-violet-950/30",
+                text: "text-violet-600",
+                ring: "ring-violet-200 dark:ring-violet-800",
               },
               {
                 step: "4",
                 icon: Zap,
                 title: "Start Receiving Patients",
                 desc: "Your profile goes live and patients can discover, book, and pay for appointments instantly.",
+                bg: "bg-amber-50 dark:bg-amber-950/30",
+                text: "text-amber-600",
+                ring: "ring-amber-200 dark:ring-amber-800",
               },
             ].map((item) => (
               <div key={item.step} className="flex gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-                  {item.step}
+                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${item.bg} ring-1 ${item.ring}`}>
+                  <item.icon className={`h-6 w-6 ${item.text}`} />
                 </div>
                 <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold ${item.text}`}>
+                      Step {item.step}
+                    </span>
+                  </div>
                   <h3 className="font-semibold">{item.title}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {item.desc}
