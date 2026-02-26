@@ -11,11 +11,59 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MapPin, Loader2, Stethoscope, User } from "lucide-react";
+import {
+  Search,
+  MapPin,
+  Loader2,
+  Stethoscope,
+  User,
+  Heart,
+  Brain,
+  Eye,
+  Smile,
+  Baby,
+  Activity,
+  Wind,
+  Shield,
+  Apple,
+  Droplets,
+  Ear,
+  Flower,
+  Scan,
+} from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
 import { searchSuggestions } from "@/actions/search";
 import type { DoctorSuggestion } from "@/actions/search";
+import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
+
+/* ── Slug → Icon map (matches homepage + specialties page) ─ */
+const specialtyIconMap: Record<string, React.ElementType> = {
+  "general-practice": Stethoscope,
+  cardiology: Heart,
+  dermatology: Flower,
+  orthopedics: Activity,
+  neurology: Brain,
+  psychiatry: Brain,
+  psychology: Heart,
+  ophthalmology: Eye,
+  ent: Ear,
+  gynecology: Baby,
+  urology: Activity,
+  gastroenterology: Apple,
+  endocrinology: Droplets,
+  pulmonology: Wind,
+  oncology: Shield,
+  pediatrics: Baby,
+  dentistry: Smile,
+  "aesthetic-medicine": Flower,
+  physiotherapy: Activity,
+  radiology: Scan,
+  nutrition: Apple,
+  allergy: Flower,
+  rheumatology: Activity,
+  nephrology: Droplets,
+};
 
 interface HomeSearchBarProps {
   specialties: { id: string; name_key: string; slug: string }[];
@@ -246,11 +294,13 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
             {displaySpecialties.map((s) => {
               itemIndex++;
               const idx = itemIndex;
+              const SpecIcon = specialtyIconMap[s.slug] || Stethoscope;
+              const sc = getSpecialtyColor(s.slug);
               return (
                 <button
                   key={s.id}
                   type="button"
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                     highlightIndex === idx
                       ? "bg-accent text-accent-foreground"
                       : "hover:bg-accent/50"
@@ -265,7 +315,9 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                     });
                   }}
                 >
-                  <Stethoscope className="h-4 w-4 shrink-0 text-primary" />
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${sc.bg}`}>
+                    <SpecIcon className={`h-3.5 w-3.5 ${sc.text}`} />
+                  </span>
                   <span>
                     {s.name_key
                       .replace("specialty.", "")
@@ -434,29 +486,35 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                 <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
                   {isSearchMode ? t("suggestions_specialties") : t("suggestions_popular")}
                 </div>
-                {displaySpecialties.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm active:bg-accent/50"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelectSuggestion({
-                        type: "specialty",
-                        slug: s.slug,
-                        label: s.name_key,
-                      });
-                    }}
-                  >
-                    <Stethoscope className="h-4 w-4 shrink-0 text-primary" />
-                    <span>
-                      {s.name_key
-                        .replace("specialty.", "")
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                    </span>
-                  </button>
-                ))}
+                {displaySpecialties.map((s) => {
+                  const SpecIcon = specialtyIconMap[s.slug] || Stethoscope;
+                  const sc = getSpecialtyColor(s.slug);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm active:bg-accent/50"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectSuggestion({
+                          type: "specialty",
+                          slug: s.slug,
+                          label: s.name_key,
+                        });
+                      }}
+                    >
+                      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${sc.bg}`}>
+                        <SpecIcon className={`h-3.5 w-3.5 ${sc.text}`} />
+                      </span>
+                      <span>
+                        {s.name_key
+                          .replace("specialty.", "")
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
