@@ -803,3 +803,95 @@ export function supportTicketResolvedEmail(params: {
 
   return { subject, html };
 }
+
+/* ------------------------------------------------------------------ */
+/*  Contact Inquiry — Admin Notification                              */
+/* ------------------------------------------------------------------ */
+export function contactInquiryAdminEmail(params: {
+  name: string;
+  email: string;
+  inquiryType: string;
+  message: string;
+}): { subject: string; html: string } {
+  const typeLabels: Record<string, string> = {
+    doctor_onboarding: "Doctor Onboarding",
+    partnership: "Partnership",
+    press: "Press & Media",
+    general: "General Inquiry",
+  };
+
+  const typeLabel = typeLabels[params.inquiryType] || params.inquiryType;
+  const subject = `New Contact Inquiry — ${typeLabel}`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #111827;">
+      New Contact Form Inquiry
+    </h2>
+    <p style="margin: 0 0 24px; font-size: 14px; color: #6b7280;">
+      A new inquiry has been submitted through the contact page.
+    </p>
+
+    <div style="background-color: #f0f9ff; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${infoRow("Name", params.name)}
+        ${infoRow("Email", params.email)}
+        ${infoRow("Type", typeLabel)}
+      </table>
+    </div>
+
+    <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
+      <p style="margin: 0 0 8px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
+        Message
+      </p>
+      <p style="margin: 0; font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">
+        ${params.message}
+      </p>
+    </div>
+
+    ${button("Reply to Sender", `mailto:${params.email}?subject=Re: Your ${BRAND_NAME} Inquiry`)}
+  `);
+
+  return { subject, html };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Contact Inquiry — Auto-Reply to Sender                            */
+/* ------------------------------------------------------------------ */
+export function contactInquiryAutoReplyEmail(params: {
+  name: string;
+  inquiryType: string;
+}): { subject: string; html: string } {
+  const subject = `We've Received Your Inquiry — ${BRAND_NAME}`;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctor.com";
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #111827;">
+      Thank You for Reaching Out
+    </h2>
+    <p style="margin: 0 0 24px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Hi ${params.name}, thank you for contacting ${BRAND_NAME}. We've received your
+      inquiry and our team will get back to you shortly.
+    </p>
+
+    <div style="background-color: #fefce8; border-left: 4px solid #eab308; padding: 16px; border-radius: 0 8px 8px 0; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 14px; color: #854d0e;">
+        We typically respond within 24 hours during business days (Mon–Fri, 9:00–18:00 CET).
+      </p>
+    </div>
+
+    <p style="margin: 0 0 24px; font-size: 14px; color: #374151; line-height: 1.6;">
+      In the meantime, you might find these helpful:
+    </p>
+
+    ${button("View Pricing Plans", `${appUrl}/en/pricing`)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you're interested in joining as a doctor, you can
+      <a href="${appUrl}/en/register-doctor" style="color: ${BRAND_COLOR}; text-decoration: underline;">start your registration</a>
+      right away — it only takes a few minutes.
+    </p>
+  `);
+
+  return { subject, html };
+}
