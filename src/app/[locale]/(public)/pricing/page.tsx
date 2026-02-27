@@ -135,6 +135,9 @@ export default function PricingPage() {
                         {formatPrice(plan.priceMonthly)}
                       </span>
                       <span className="text-muted-foreground"> / month</span>
+                      <p className="mt-1.5 text-xs font-medium text-primary/70">
+                        Introductory pricing
+                      </p>
                     </div>
                   </CardHeader>
                   <Separator />
@@ -167,6 +170,9 @@ export default function PricingPage() {
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
             All plans include a 15% platform commission on each booking. Cancel anytime, no long-term contracts.
+          </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground/70">
+            These are introductory rates for early adopters. Lock in your price today — it stays the same for as long as you&apos;re subscribed.
           </p>
         </div>
       </section>

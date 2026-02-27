@@ -524,15 +524,351 @@ INSERT INTO public.doctor_reminder_preferences (doctor_id, minutes_before, chann
   ('e0000000-0000-0000-0000-000000000004', 30, 'in_app', TRUE)
 ON CONFLICT DO NOTHING;
 
+-- ============================================================================
+-- 14. UK EXPANSION — 6 additional UK doctors for nationwide testing
+-- ============================================================================
+
+-- Extra UK locations
+INSERT INTO public.locations (country_code, city, slug, latitude, longitude, timezone) VALUES
+  ('GB', 'Leeds', 'leeds-uk', 53.80076300, -1.54907740, 'Europe/London'),
+  ('GB', 'Bristol', 'bristol-uk', 51.45451300, -2.58791000, 'Europe/London'),
+  ('GB', 'Liverpool', 'liverpool-uk', 53.40840800, -2.99157400, 'Europe/London'),
+  ('GB', 'Glasgow', 'glasgow-uk', 55.86423700, -4.25180600, 'Europe/London')
+ON CONFLICT (slug) DO NOTHING;
+
+-- Auth users for new UK doctors (all password: Password123!)
+INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, recovery_token, email_change, email_change_token_new, email_change_token_current, email_change_confirm_status, phone_change, phone_change_token, reauthentication_token, is_sso_user)
+VALUES
+  ('d0000000-0000-0000-0000-000000000007', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+   'rachel.patel@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}',
+   '{"first_name":"Rachel","last_name":"Patel","role":"doctor"}',
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
+  ('d0000000-0000-0000-0000-000000000008', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+   'william.hughes@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}',
+   '{"first_name":"William","last_name":"Hughes","role":"doctor"}',
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
+  ('d0000000-0000-0000-0000-000000000009', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+   'fiona.campbell@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}',
+   '{"first_name":"Fiona","last_name":"Campbell","role":"doctor"}',
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
+  ('d0000000-0000-0000-0000-00000000000a', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+   'oliver.wright@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}',
+   '{"first_name":"Oliver","last_name":"Wright","role":"doctor"}',
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
+  ('d0000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+   'priya.sharma@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}',
+   '{"first_name":"Priya","last_name":"Sharma","role":"doctor"}',
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE),
+  ('d0000000-0000-0000-0000-00000000000c', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+   'david.evans@example.com', crypt('Password123!', gen_salt('bf')), NOW(),
+   '{"provider":"email","providers":["email"]}',
+   '{"first_name":"David","last_name":"Evans","role":"doctor"}',
+   NOW(), NOW(), '', '', '', '', '', 0, '', '', '', FALSE)
+ON CONFLICT (id) DO NOTHING;
+
+-- Auth identities
+INSERT INTO auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
+VALUES
+  ('d0000000-0000-0000-0000-000000000007', 'd0000000-0000-0000-0000-000000000007',
+   '{"sub":"d0000000-0000-0000-0000-000000000007","email":"rachel.patel@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000007', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-000000000008', 'd0000000-0000-0000-0000-000000000008',
+   '{"sub":"d0000000-0000-0000-0000-000000000008","email":"william.hughes@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000008', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-000000000009', 'd0000000-0000-0000-0000-000000000009',
+   '{"sub":"d0000000-0000-0000-0000-000000000009","email":"fiona.campbell@example.com"}',
+   'email', 'd0000000-0000-0000-0000-000000000009', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-00000000000a', 'd0000000-0000-0000-0000-00000000000a',
+   '{"sub":"d0000000-0000-0000-0000-00000000000a","email":"oliver.wright@example.com"}',
+   'email', 'd0000000-0000-0000-0000-00000000000a', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-00000000000b', 'd0000000-0000-0000-0000-00000000000b',
+   '{"sub":"d0000000-0000-0000-0000-00000000000b","email":"priya.sharma@example.com"}',
+   'email', 'd0000000-0000-0000-0000-00000000000b', NOW(), NOW(), NOW()),
+  ('d0000000-0000-0000-0000-00000000000c', 'd0000000-0000-0000-0000-00000000000c',
+   '{"sub":"d0000000-0000-0000-0000-00000000000c","email":"david.evans@example.com"}',
+   'email', 'd0000000-0000-0000-0000-00000000000c', NOW(), NOW(), NOW())
+ON CONFLICT DO NOTHING;
+
+-- Set doctor role on profiles
+UPDATE public.profiles SET role = 'doctor' WHERE id IN (
+  'd0000000-0000-0000-0000-000000000007', 'd0000000-0000-0000-0000-000000000008',
+  'd0000000-0000-0000-0000-000000000009', 'd0000000-0000-0000-0000-00000000000a',
+  'd0000000-0000-0000-0000-00000000000b', 'd0000000-0000-0000-0000-00000000000c'
+);
+
+-- UK Doctors
+INSERT INTO public.doctors (
+  id, profile_id, slug, title, bio, years_of_experience,
+  education, certifications, languages, consultation_types,
+  location_id, address, clinic_name, base_currency,
+  consultation_fee_cents, video_consultation_fee_cents,
+  verification_status, verified_at, is_active, is_featured,
+  cancellation_policy, cancellation_hours,
+  stripe_account_id, stripe_onboarding_complete, stripe_payouts_enabled
+) VALUES
+  -- Dr. Rachel Patel - Dermatologist, Manchester
+  (
+    'e0000000-0000-0000-0000-000000000007', 'd0000000-0000-0000-0000-000000000007',
+    'dr-rachel-patel', 'Dr.',
+    'Consultant dermatologist with a special interest in skin cancer, eczema management, and cosmetic dermatology. Trained at Manchester Royal Infirmary with additional fellowship in Mohs surgery. Passionate about accessible skincare for diverse skin types.',
+    14,
+    '[{"degree":"MBChB","institution":"University of Manchester","year":2010},{"degree":"MRCP Dermatology","institution":"Royal College of Physicians","year":2015}]',
+    '[{"name":"British Association of Dermatologists","issuer":"BAD","year":2015},{"name":"Diploma in Dermoscopy","issuer":"Cardiff University","year":2017}]',
+    '{English,Hindi,Gujarati}', '{in_person,video}',
+    (SELECT id FROM public.locations WHERE slug = 'manchester-uk'),
+    '82 King Street, Manchester M2 4WQ', 'Manchester Skin Clinic', 'GBP',
+    14000, 11000,
+    'verified', NOW() - INTERVAL '7 months', TRUE, TRUE,
+    'flexible', 24,
+    'acct_seed_patel', TRUE, TRUE
+  ),
+  -- Dr. William Hughes - Cardiologist, Birmingham
+  (
+    'e0000000-0000-0000-0000-000000000008', 'd0000000-0000-0000-0000-000000000008',
+    'dr-william-hughes', 'Dr.',
+    'Senior consultant cardiologist at Queen Elizabeth Hospital Birmingham. Expert in heart rhythm disorders, echocardiography, and cardiac rehabilitation. Actively involved in clinical research and patient education programmes across the West Midlands.',
+    20,
+    '[{"degree":"MBBS","institution":"University of Birmingham","year":2004},{"degree":"PhD Cardiovascular Medicine","institution":"University of Oxford","year":2010}]',
+    '[{"name":"Fellow of the Royal College of Physicians","issuer":"FRCP","year":2014},{"name":"European Heart Rhythm Association","issuer":"EHRA","year":2016}]',
+    '{English,Welsh}', '{in_person,video}',
+    (SELECT id FROM public.locations WHERE slug = 'birmingham-uk'),
+    '42 Harborne Road, Edgbaston, Birmingham B15 3HE', 'Birmingham Heart Centre', 'GBP',
+    18000, 15000,
+    'verified', NOW() - INTERVAL '10 months', TRUE, TRUE,
+    'moderate', 48,
+    'acct_seed_hughes', TRUE, TRUE
+  ),
+  -- Dr. Fiona Campbell - Neurologist, Edinburgh
+  (
+    'e0000000-0000-0000-0000-000000000009', 'd0000000-0000-0000-0000-000000000009',
+    'dr-fiona-campbell', 'Dr.',
+    'Consultant neurologist specialising in headache disorders, epilepsy, and multiple sclerosis. Based at the Royal Infirmary of Edinburgh with a holistic approach combining clinical excellence with compassionate care. Regular lecturer at the University of Edinburgh.',
+    12,
+    '[{"degree":"MBChB","institution":"University of Edinburgh","year":2012},{"degree":"MRCP Neurology","institution":"Royal College of Physicians Edinburgh","year":2017}]',
+    '[{"name":"Association of British Neurologists","issuer":"ABN","year":2017},{"name":"Headache Specialist Certification","issuer":"IHS","year":2019}]',
+    '{English,Scottish Gaelic}', '{in_person,video}',
+    (SELECT id FROM public.locations WHERE slug = 'edinburgh-uk'),
+    '1 Lauriston Place, Edinburgh EH3 9YW', 'Edinburgh Neuroscience Clinic', 'GBP',
+    16000, 13000,
+    'verified', NOW() - INTERVAL '5 months', TRUE, FALSE,
+    'moderate', 24,
+    'acct_seed_campbell', TRUE, TRUE
+  ),
+  -- Dr. Oliver Wright - Dentist, London
+  (
+    'e0000000-0000-0000-0000-00000000000a', 'd0000000-0000-0000-0000-00000000000a',
+    'dr-oliver-wright', 'Dr.',
+    'Award-winning cosmetic and general dentist with practices in Central London. Specialising in Invisalign, dental implants, and smile makeovers. Known for a gentle, anxiety-free approach using the latest digital dentistry technology.',
+    10,
+    '[{"degree":"BDS","institution":"King''s College London","year":2014},{"degree":"MSc Prosthodontics","institution":"UCL Eastman Dental Institute","year":2018}]',
+    '[{"name":"Royal College of Surgeons","issuer":"MJDF RCS","year":2016},{"name":"Invisalign Diamond Provider","issuer":"Align Technology","year":2020}]',
+    '{English,French}', '{in_person,video}',
+    (SELECT id FROM public.locations WHERE slug = 'london-uk'),
+    '58 Wimpole Street, London W1G 8YJ', 'Wimpole Dental Studio', 'GBP',
+    15000, 8000,
+    'verified', NOW() - INTERVAL '6 months', TRUE, TRUE,
+    'flexible', 24,
+    'acct_seed_wright', TRUE, TRUE
+  ),
+  -- Dr. Priya Sharma - Physiotherapist, Leeds
+  (
+    'e0000000-0000-0000-0000-00000000000b', 'd0000000-0000-0000-0000-00000000000b',
+    'dr-priya-sharma', 'Dr.',
+    'Chartered physiotherapist and sports injury specialist. Former physiotherapist for Yorkshire County Cricket Club. Expert in musculoskeletal rehabilitation, post-operative recovery, and chronic pain management using evidence-based techniques.',
+    9,
+    '[{"degree":"BSc Physiotherapy","institution":"University of Leeds","year":2015},{"degree":"MSc Sports Medicine","institution":"University of Bath","year":2018}]',
+    '[{"name":"Chartered Society of Physiotherapy","issuer":"CSP","year":2015},{"name":"Sports and Exercise Medicine","issuer":"BASEM","year":2019}]',
+    '{English,Hindi,Punjabi}', '{in_person,video}',
+    (SELECT id FROM public.locations WHERE slug = 'leeds-uk'),
+    '14 Park Square East, Leeds LS1 2LH', 'Leeds Sports Physio Centre', 'GBP',
+    9000, 7000,
+    'verified', NOW() - INTERVAL '4 months', TRUE, FALSE,
+    'flexible', 12,
+    'acct_seed_sharma', TRUE, TRUE
+  ),
+  -- Dr. David Evans - Psychiatrist, Bristol
+  (
+    'e0000000-0000-0000-0000-00000000000c', 'd0000000-0000-0000-0000-00000000000c',
+    'dr-david-evans', 'Dr.',
+    'Consultant psychiatrist specialising in adult ADHD, anxiety, and depression. Pioneer of digital mental health solutions in the South West. Combines medication management with practical coping strategies for lasting improvements.',
+    16,
+    '[{"degree":"MBBS","institution":"University of Bristol","year":2008},{"degree":"MRCPsych","institution":"Royal College of Psychiatrists","year":2013}]',
+    '[{"name":"Royal College of Psychiatrists","issuer":"MRCPsych","year":2013},{"name":"ADHD Foundation Clinical Fellow","issuer":"ADHD Foundation","year":2018}]',
+    '{English}', '{in_person,video}',
+    (SELECT id FROM public.locations WHERE slug = 'bristol-uk'),
+    '29 Queens Road, Clifton, Bristol BS8 1QE', 'Clifton Mind & Wellness', 'GBP',
+    17000, 14000,
+    'verified', NOW() - INTERVAL '9 months', TRUE, FALSE,
+    'moderate', 48,
+    'acct_seed_evans', TRUE, TRUE
+  )
+ON CONFLICT (slug) DO NOTHING;
+
+-- UK Doctor Specialties
+INSERT INTO public.doctor_specialties (doctor_id, specialty_id, is_primary) VALUES
+  ('e0000000-0000-0000-0000-000000000007', (SELECT id FROM specialties WHERE slug='dermatology'), TRUE),
+  ('e0000000-0000-0000-0000-000000000007', (SELECT id FROM specialties WHERE slug='aesthetic-medicine'), FALSE),
+  ('e0000000-0000-0000-0000-000000000008', (SELECT id FROM specialties WHERE slug='cardiology'), TRUE),
+  ('e0000000-0000-0000-0000-000000000008', (SELECT id FROM specialties WHERE slug='general-practice'), FALSE),
+  ('e0000000-0000-0000-0000-000000000009', (SELECT id FROM specialties WHERE slug='neurology'), TRUE),
+  ('e0000000-0000-0000-0000-000000000009', (SELECT id FROM specialties WHERE slug='psychiatry'), FALSE),
+  ('e0000000-0000-0000-0000-00000000000a', (SELECT id FROM specialties WHERE slug='dentistry'), TRUE),
+  ('e0000000-0000-0000-0000-00000000000a', (SELECT id FROM specialties WHERE slug='aesthetic-medicine'), FALSE),
+  ('e0000000-0000-0000-0000-00000000000b', (SELECT id FROM specialties WHERE slug='physiotherapy'), TRUE),
+  ('e0000000-0000-0000-0000-00000000000b', (SELECT id FROM specialties WHERE slug='orthopedics'), FALSE),
+  ('e0000000-0000-0000-0000-00000000000c', (SELECT id FROM specialties WHERE slug='psychiatry'), TRUE),
+  ('e0000000-0000-0000-0000-00000000000c', (SELECT id FROM specialties WHERE slug='psychology'), FALSE)
+ON CONFLICT DO NOTHING;
+
+-- UK Doctor Availability: ALL 7 DAYS, both in_person + video (for testing)
+-- day_of_week: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+
+-- Dr. Patel (Manchester) — 9-18 in-person, 9-18 video, 30min slots, 7 days
+INSERT INTO public.availability_schedules (doctor_id, day_of_week, start_time, end_time, slot_duration_minutes, consultation_type) VALUES
+  ('e0000000-0000-0000-0000-000000000007', 0, '10:00', '16:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000007', 0, '10:00', '16:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000007', 1, '09:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000007', 1, '09:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000007', 2, '09:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000007', 2, '09:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000007', 3, '09:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000007', 3, '09:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000007', 4, '09:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000007', 4, '09:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000007', 5, '09:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000007', 5, '09:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000007', 6, '10:00', '16:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000007', 6, '10:00', '16:00', 30, 'video');
+
+-- Dr. Hughes (Birmingham) — 8-17 in-person, 8-17 video, 30min slots, 7 days
+INSERT INTO public.availability_schedules (doctor_id, day_of_week, start_time, end_time, slot_duration_minutes, consultation_type) VALUES
+  ('e0000000-0000-0000-0000-000000000008', 0, '10:00', '15:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000008', 0, '10:00', '15:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000008', 1, '08:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000008', 1, '08:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000008', 2, '08:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000008', 2, '08:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000008', 3, '08:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000008', 3, '08:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000008', 4, '08:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000008', 4, '08:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000008', 5, '08:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000008', 5, '08:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000008', 6, '09:00', '14:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000008', 6, '09:00', '14:00', 30, 'video');
+
+-- Dr. Campbell (Edinburgh) — 9-17 in-person, 9-17 video, 30min slots, 7 days
+INSERT INTO public.availability_schedules (doctor_id, day_of_week, start_time, end_time, slot_duration_minutes, consultation_type) VALUES
+  ('e0000000-0000-0000-0000-000000000009', 0, '10:00', '15:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000009', 0, '10:00', '15:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000009', 1, '09:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000009', 1, '09:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000009', 2, '09:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000009', 2, '09:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000009', 3, '09:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000009', 3, '09:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000009', 4, '09:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000009', 4, '09:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000009', 5, '09:00', '17:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000009', 5, '09:00', '17:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-000000000009', 6, '10:00', '14:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000009', 6, '10:00', '14:00', 30, 'video');
+
+-- Dr. Wright (London) — 8-19 in-person, 8-19 video, 30min slots, 7 days
+INSERT INTO public.availability_schedules (doctor_id, day_of_week, start_time, end_time, slot_duration_minutes, consultation_type) VALUES
+  ('e0000000-0000-0000-0000-00000000000a', 0, '10:00', '16:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000a', 0, '10:00', '16:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000a', 1, '08:00', '19:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000a', 1, '08:00', '19:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000a', 2, '08:00', '19:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000a', 2, '08:00', '19:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000a', 3, '08:00', '19:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000a', 3, '08:00', '19:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000a', 4, '08:00', '19:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000a', 4, '08:00', '19:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000a', 5, '08:00', '19:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000a', 5, '08:00', '19:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000a', 6, '09:00', '15:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000a', 6, '09:00', '15:00', 30, 'video');
+
+-- Dr. Sharma (Leeds) — 8-18 in-person, 8-18 video, 30min slots, 7 days
+INSERT INTO public.availability_schedules (doctor_id, day_of_week, start_time, end_time, slot_duration_minutes, consultation_type) VALUES
+  ('e0000000-0000-0000-0000-00000000000b', 0, '10:00', '16:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000b', 0, '10:00', '16:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000b', 1, '08:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000b', 1, '08:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000b', 2, '08:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000b', 2, '08:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000b', 3, '08:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000b', 3, '08:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000b', 4, '08:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000b', 4, '08:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000b', 5, '08:00', '18:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000b', 5, '08:00', '18:00', 30, 'video'),
+  ('e0000000-0000-0000-0000-00000000000b', 6, '09:00', '14:00', 30, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000b', 6, '09:00', '14:00', 30, 'video');
+
+-- Dr. Evans (Bristol) — 9-18 in-person, 9-18 video, 50min therapy slots, 7 days
+INSERT INTO public.availability_schedules (doctor_id, day_of_week, start_time, end_time, slot_duration_minutes, consultation_type) VALUES
+  ('e0000000-0000-0000-0000-00000000000c', 0, '10:00', '16:00', 50, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000c', 0, '10:00', '16:00', 50, 'video'),
+  ('e0000000-0000-0000-0000-00000000000c', 1, '09:00', '18:00', 50, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000c', 1, '09:00', '18:00', 50, 'video'),
+  ('e0000000-0000-0000-0000-00000000000c', 2, '09:00', '18:00', 50, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000c', 2, '09:00', '18:00', 50, 'video'),
+  ('e0000000-0000-0000-0000-00000000000c', 3, '09:00', '18:00', 50, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000c', 3, '09:00', '18:00', 50, 'video'),
+  ('e0000000-0000-0000-0000-00000000000c', 4, '09:00', '18:00', 50, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000c', 4, '09:00', '18:00', 50, 'video'),
+  ('e0000000-0000-0000-0000-00000000000c', 5, '09:00', '18:00', 50, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000c', 5, '09:00', '18:00', 50, 'video'),
+  ('e0000000-0000-0000-0000-00000000000c', 6, '10:00', '15:00', 50, 'in_person'),
+  ('e0000000-0000-0000-0000-00000000000c', 6, '10:00', '15:00', 50, 'video');
+
+-- Also expand Dr. Thompson (existing UK GP) to 7-day availability for testing
+DELETE FROM public.availability_schedules WHERE doctor_id = 'e0000000-0000-0000-0000-000000000003';
+INSERT INTO public.availability_schedules (doctor_id, day_of_week, start_time, end_time, slot_duration_minutes, consultation_type) VALUES
+  ('e0000000-0000-0000-0000-000000000003', 0, '10:00', '16:00', 20, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000003', 0, '10:00', '16:00', 20, 'video'),
+  ('e0000000-0000-0000-0000-000000000003', 1, '08:00', '18:00', 20, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000003', 1, '08:00', '18:00', 20, 'video'),
+  ('e0000000-0000-0000-0000-000000000003', 2, '08:00', '18:00', 20, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000003', 2, '08:00', '18:00', 20, 'video'),
+  ('e0000000-0000-0000-0000-000000000003', 3, '08:00', '18:00', 20, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000003', 3, '08:00', '18:00', 20, 'video'),
+  ('e0000000-0000-0000-0000-000000000003', 4, '08:00', '18:00', 20, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000003', 4, '08:00', '18:00', 20, 'video'),
+  ('e0000000-0000-0000-0000-000000000003', 5, '08:00', '18:00', 20, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000003', 5, '08:00', '18:00', 20, 'video'),
+  ('e0000000-0000-0000-0000-000000000003', 6, '10:00', '15:00', 20, 'in_person'),
+  ('e0000000-0000-0000-0000-000000000003', 6, '10:00', '15:00', 20, 'video');
+
+-- Update booking counts for new doctors
+UPDATE public.doctors SET total_bookings = (
+  SELECT COUNT(*) FROM public.bookings b
+  WHERE b.doctor_id = doctors.id AND b.status IN ('completed', 'confirmed', 'approved')
+) WHERE id IN (
+  'e0000000-0000-0000-0000-000000000007', 'e0000000-0000-0000-0000-000000000008',
+  'e0000000-0000-0000-0000-000000000009', 'e0000000-0000-0000-0000-00000000000a',
+  'e0000000-0000-0000-0000-00000000000b', 'e0000000-0000-0000-0000-00000000000c'
+);
+
 -- Re-enable the booking number trigger
 ALTER TABLE public.bookings ENABLE TRIGGER trg_generate_booking_number;
 
 -- ============================================================================
 -- SUMMARY:
--- 23 locations | 24 specialties | 5 platform settings
+-- 27 locations | 24 specialties | 5 platform settings
 -- 3 patients:  sarah.johnson@example.com, michael.chen@example.com, emma.wilson@example.com
--- 6 doctors:   hans.mueller@, ayse.yilmaz@, james.thompson@, marie.dubois@, lisa.vanberg@, kenji.tanaka@
+-- 12 doctors:  hans.mueller@, ayse.yilmaz@, james.thompson@, marie.dubois@, lisa.vanberg@, kenji.tanaka@
+--              rachel.patel@, william.hughes@, fiona.campbell@, oliver.wright@, priya.sharma@, david.evans@
 -- All passwords: Password123!
 -- 11 bookings (8 completed, 3 upcoming) | 8 reviews | 6 favorites
--- Full availability schedules for all 6 doctors
+-- Full 7-day availability for all UK doctors (in_person + video) for testing
+-- UK doctors: London(2), Manchester(1), Birmingham(1), Edinburgh(1), Leeds(1), Bristol(1)
 -- ============================================================================
