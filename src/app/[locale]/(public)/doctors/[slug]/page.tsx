@@ -411,7 +411,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                       {availability.slots.slice(0, 4).map((slot: { start: string; end: string }) => (
                         <Link
                           key={slot.start}
-                          href={`/doctors/${doctor.slug}/book?date=${availability.date}&type=in_person`}
+                          href={`/doctors/${doctor.slug}/book?date=${availability.date}&type=${availability.consultationType || "in_person"}`}
                           className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
                         >
                           {formatSlotTime(slot.start)}

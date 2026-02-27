@@ -302,6 +302,7 @@ export interface NextAvailabilitySlot {
 export interface DoctorNextAvailability {
   date: string; // ISO date e.g. "2026-03-05"
   slots: NextAvailabilitySlot[];
+  consultationType: string; // "in_person" or "video" — used to build booking links
 }
 
 /**
@@ -331,6 +332,7 @@ export async function getNextAvailabilityBatch(
   }
 
   // Group flat rows by doctor_id
+  const usedType = consultationType || "in_person";
   const result: Record<string, DoctorNextAvailability> = {};
   for (const row of data as {
     doctor_id: string;
@@ -339,7 +341,7 @@ export async function getNextAvailabilityBatch(
     slot_end: string;
   }[]) {
     if (!result[row.doctor_id]) {
-      result[row.doctor_id] = { date: row.available_date, slots: [] };
+      result[row.doctor_id] = { date: row.available_date, slots: [], consultationType: usedType };
     }
     result[row.doctor_id].slots.push({
       start: row.slot_start,

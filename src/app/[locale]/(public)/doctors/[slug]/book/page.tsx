@@ -7,6 +7,7 @@ import type { Metadata } from "next";
 
 interface BookPageProps {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }
 
 export async function generateMetadata({
@@ -32,8 +33,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function BookAppointmentPage({ params }: BookPageProps) {
-  const { slug } = await params;
+export default async function BookAppointmentPage({ params, searchParams }: BookPageProps) {
+  const { slug, locale } = await params;
+  const sp = await searchParams;
   const supabase = await createClient();
 
   // Check authentication
@@ -42,7 +44,13 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/en/login?redirect=/en/doctors/${slug}/book`);
+    // Preserve date & type query params through the login redirect
+    const bookPath = `/${locale}/doctors/${slug}/book`;
+    const queryParts: string[] = [];
+    if (sp.date) queryParts.push(`date=${encodeURIComponent(sp.date)}`);
+    if (sp.type) queryParts.push(`type=${encodeURIComponent(sp.type)}`);
+    const bookUrl = queryParts.length > 0 ? `${bookPath}?${queryParts.join("&")}` : bookPath;
+    redirect(`/${locale}/login?redirect=${encodeURIComponent(bookUrl)}`);
   }
 
   // Fetch doctor with all needed relations

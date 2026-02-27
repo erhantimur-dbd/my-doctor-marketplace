@@ -160,7 +160,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         {availability.slots.slice(0, 4).map((slot) => (
                           <Link
                             key={slot.start}
-                            href={`/doctors/${doctor.slug}/book?date=${availability.date}&type=in_person`}
+                            href={`/doctors/${doctor.slug}/book?date=${availability.date}&type=${availability.consultationType || "in_person"}`}
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
                           >
