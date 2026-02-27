@@ -368,14 +368,15 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
         {/* Sidebar - Booking CTA */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 space-y-4">
-            {/* Location map */}
-            {doctor.location?.latitude && doctor.location?.longitude && (
+            {/* Location map — prefer clinic-level coords, fall back to city */}
+            {(doctor.clinic_latitude || doctor.location?.latitude) &&
+             (doctor.clinic_longitude || doctor.location?.longitude) && (
               <Card className="overflow-hidden">
                 <CardContent className="p-0">
                   <ProfileMapWrapper
-                    lat={Number(doctor.location.latitude)}
-                    lng={Number(doctor.location.longitude)}
-                    label={doctor.clinic_name || doctor.location.city}
+                    lat={Number(doctor.clinic_latitude ?? doctor.location.latitude)}
+                    lng={Number(doctor.clinic_longitude ?? doctor.location.longitude)}
+                    label={doctor.clinic_name || doctor.location?.city}
                   />
                   <div className="p-4">
                     <div className="flex items-center gap-1.5 text-sm">

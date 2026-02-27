@@ -40,22 +40,37 @@ export function DoctorResultsWithMap({
 
   // Build map-friendly data from doctors that have location with lat/lng.
   // Uses Array.isArray guard because Supabase nested joins may return arrays.
+  // Prefers clinic-level coordinates (clinic_latitude/longitude) over city-level
+  // for precise map pin placement; falls back to location table centroids.
   // All doctors with valid coords are included; `isLocal` flag controls visual
   // priority (local = same country as selected location, or all if no filter).
   const mapDoctors: MapDoctor[] = useMemo(() => {
     return doctors
       .filter((d) => {
+        const doc: any = d;
         const loc: any = Array.isArray(d.location) ? d.location[0] : d.location;
-        return loc && loc.latitude != null && loc.longitude != null;
+        // Has either clinic-level or city-level coordinates
+        return (
+          (doc.clinic_latitude != null && doc.clinic_longitude != null) ||
+          (loc && loc.latitude != null && loc.longitude != null)
+        );
       })
       .map((d) => {
+        const doc: any = d;
         const loc: any = Array.isArray(d.location) ? d.location[0] : d.location;
         const primarySpec =
           d.specialties?.find((s) => s.is_primary)?.specialty ||
           d.specialties?.[0]?.specialty;
         const isLocal = centerLocation?.countryCode
-          ? loc.country_code === centerLocation.countryCode
+          ? loc?.country_code === centerLocation.countryCode
           : true; // No location filter → all are "local"
+        // Prefer clinic-level coordinates; fall back to city centroid
+        const lat = doc.clinic_latitude != null
+          ? Number(doc.clinic_latitude)
+          : Number(loc.latitude);
+        const lng = doc.clinic_longitude != null
+          ? Number(doc.clinic_longitude)
+          : Number(loc.longitude);
         return {
           id: d.id,
           slug: d.slug,
@@ -66,8 +81,8 @@ export function DoctorResultsWithMap({
                 .replace(/_/g, " ")
                 .replace(/\b\w/g, (l: string) => l.toUpperCase())
             : "",
-          lat: Number(loc.latitude),
-          lng: Number(loc.longitude),
+          lat,
+          lng,
           isLocal,
         };
       });

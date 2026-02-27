@@ -858,6 +858,23 @@ UPDATE public.doctors SET total_bookings = (
   'e0000000-0000-0000-0000-00000000000b', 'e0000000-0000-0000-0000-00000000000c'
 );
 
+-- ============================================================================
+-- CLINIC COORDINATES (precise lat/lng for map pins)
+-- Requires migration 00028_doctor_clinic_coordinates.sql
+-- ============================================================================
+UPDATE public.doctors SET clinic_latitude = 52.52462400, clinic_longitude = 13.37821200 WHERE slug = 'dr-hans-mueller';        -- Charitéplatz 1, Berlin
+UPDATE public.doctors SET clinic_latitude = 40.98071500, clinic_longitude = 29.06389800 WHERE slug = 'dr-ayse-yilmaz';        -- Bağdat Caddesi, Kadıköy, Istanbul
+UPDATE public.doctors SET clinic_latitude = 51.51878900, clinic_longitude = -0.14842100 WHERE slug = 'dr-james-thompson';     -- 25 Harley St, London
+UPDATE public.doctors SET clinic_latitude = 48.86885200, clinic_longitude = 2.33069400 WHERE slug = 'dr-marie-dubois';        -- 15 Rue de la Paix, Paris
+UPDATE public.doctors SET clinic_latitude = 52.36361100, clinic_longitude = 4.88758500 WHERE slug = 'dr-lisa-van-berg';       -- Keizersgracht 452, Amsterdam
+UPDATE public.doctors SET clinic_latitude = 48.22007600, clinic_longitude = 16.35001400 WHERE slug = 'dr-kenji-tanaka';       -- Währinger Gürtel 18-20, Vienna
+UPDATE public.doctors SET clinic_latitude = 53.48008300, clinic_longitude = -2.24172300 WHERE slug = 'dr-rachel-patel';       -- 82 King St, Manchester
+UPDATE public.doctors SET clinic_latitude = 52.46461800, clinic_longitude = -1.92165900 WHERE slug = 'dr-william-hughes';     -- 42 Harborne Rd, Birmingham
+UPDATE public.doctors SET clinic_latitude = 55.94449800, clinic_longitude = -3.19183600 WHERE slug = 'dr-fiona-campbell';     -- 1 Lauriston Place, Edinburgh
+UPDATE public.doctors SET clinic_latitude = 51.51924600, clinic_longitude = -0.14865200 WHERE slug = 'dr-oliver-wright';      -- 58 Wimpole St, London
+UPDATE public.doctors SET clinic_latitude = 53.80082400, clinic_longitude = -1.54909100 WHERE slug = 'dr-priya-sharma';       -- 14 Park Square East, Leeds
+UPDATE public.doctors SET clinic_latitude = 51.45557900, clinic_longitude = -2.60411200 WHERE slug = 'dr-david-evans';        -- 29 Queens Rd, Bristol
+
 -- Re-enable the booking number trigger
 ALTER TABLE public.bookings ENABLE TRIGGER trg_generate_booking_number;
 
