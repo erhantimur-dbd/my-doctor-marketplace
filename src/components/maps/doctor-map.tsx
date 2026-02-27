@@ -60,6 +60,18 @@ function FitBounds({
     }
 
     map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+
+    // When a city is selected, clamp zoom to city-level (~3 mile radius)
+    // to keep surrounding context visible even if doctors are clustered tightly
+    if (centerLocation) {
+      const listener = google.maps.event.addListenerOnce(map, "idle", () => {
+        const currentZoom = map.getZoom();
+        if (currentZoom != null && currentZoom > 14) {
+          map.setZoom(14);
+        }
+      });
+      return () => google.maps.event.removeListener(listener);
+    }
   }, [doctors, map, centerLocation]);
 
   return null;

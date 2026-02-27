@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Clock, Star, MapPin, Shield, Video, User } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
+import { formatDateLabel, formatSlotTime } from "@/lib/utils/availability";
 import type { DoctorNextAvailability } from "@/actions/search";
 
 interface DoctorCardProps {
@@ -46,34 +47,6 @@ interface DoctorCardProps {
   isHighlighted?: boolean;
   onHover?: (id: string | null) => void;
   availability?: DoctorNextAvailability | null;
-}
-
-/* ── Availability helpers ────────────────────────────── */
-
-function formatDateLabel(dateStr: string): string {
-  const date = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  if (date.getTime() === today.getTime()) return "Available today";
-  if (date.getTime() === tomorrow.getTime()) return "Available tomorrow";
-
-  return `Available ${date.toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  })}`;
-}
-
-function formatSlotTime(timestamptz: string): string {
-  const d = new Date(timestamptz);
-  return d.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
@@ -187,7 +160,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         {availability.slots.slice(0, 4).map((slot) => (
                           <Link
                             key={slot.start}
-                            href={`/doctors/${doctor.slug}/book?date=${availability.date}`}
+                            href={`/doctors/${doctor.slug}/book?date=${availability.date}&type=in_person`}
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
                           >

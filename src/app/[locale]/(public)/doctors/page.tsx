@@ -60,7 +60,7 @@ export default async function DoctorsPage({
 
   // Resolve center location for the map when a location filter is active
   let centerLocation:
-    | { lat: number; lng: number; city: string }
+    | { lat: number; lng: number; city: string; countryCode?: string }
     | undefined;
   if (sp.location) {
     const loc = locations.find(
@@ -71,6 +71,7 @@ export default async function DoctorsPage({
         lat: Number(loc.latitude),
         lng: Number(loc.longitude),
         city: String(loc.city),
+        countryCode: String(loc.country_code),
       };
     }
   }

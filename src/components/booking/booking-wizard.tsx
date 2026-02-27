@@ -79,9 +79,19 @@ interface SlotSelection {
 export function BookingWizard({ doctor }: BookingWizardProps) {
   const searchParams = useSearchParams();
   const initialDate = searchParams.get("date"); // e.g. "2026-03-05" from availability chip
-  const [step, setStep] = useState(1);
+  const initialType = searchParams.get("type") as ConsultationType | null; // e.g. "in_person" or "video"
+
+  // Auto-select consultation type and skip to step 2 if valid type provided via URL
+  const validInitialType =
+    initialType &&
+    (initialType === "in_person" || initialType === "video") &&
+    doctor.consultation_types?.includes(initialType)
+      ? initialType
+      : null;
+
+  const [step, setStep] = useState(validInitialType ? 2 : 1);
   const [consultationType, setConsultationType] =
-    useState<ConsultationType | null>(null);
+    useState<ConsultationType | null>(validInitialType);
   const [slotSelection, setSlotSelection] = useState<SlotSelection | null>(
     null
   );

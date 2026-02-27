@@ -26,7 +26,7 @@ interface DoctorResultsWithMapProps {
   doctors: Doctor[];
   locale: string;
   availability?: Record<string, DoctorNextAvailability>;
-  centerLocation?: { lat: number; lng: number; city: string };
+  centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
 }
 
 export function DoctorResultsWithMap({
@@ -39,16 +39,18 @@ export function DoctorResultsWithMap({
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Build map-friendly data from doctors that have location with lat/lng
+  // Uses Array.isArray guard because Supabase nested joins may return arrays
   const mapDoctors: MapDoctor[] = useMemo(() => {
     return doctors
-      .filter(
-        (d) =>
-          d.location &&
-          (d.location as Record<string, unknown>).latitude != null &&
-          (d.location as Record<string, unknown>).longitude != null
-      )
+      .filter((d) => {
+        const loc: any = Array.isArray(d.location) ? d.location[0] : d.location;
+        if (!loc || loc.latitude == null || loc.longitude == null) return false;
+        // When a location filter is active, only show map pins from the same country
+        if (centerLocation?.countryCode && loc.country_code !== centerLocation.countryCode) return false;
+        return true;
+      })
       .map((d) => {
-        const loc = d.location as Record<string, unknown>;
+        const loc: any = Array.isArray(d.location) ? d.location[0] : d.location;
         const primarySpec =
           d.specialties?.find((s) => s.is_primary)?.specialty ||
           d.specialties?.[0]?.specialty;
@@ -66,7 +68,7 @@ export function DoctorResultsWithMap({
           lng: Number(loc.longitude),
         };
       });
-  }, [doctors]);
+  }, [doctors, centerLocation]);
 
   const handleClickDoctor = useCallback((id: string) => {
     const el = cardRefs.current.get(id);
