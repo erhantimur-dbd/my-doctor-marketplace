@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DoctorCard } from "@/components/doctors/doctor-card";
-import { getSpecialtyBySlug } from "@/actions/search";
+import { getSpecialtyBySlug, getNextAvailabilityBatch } from "@/actions/search";
 import { getSpecialtyMeta, SPECIALTIES } from "@/lib/constants/specialties";
 import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
 import {
@@ -94,6 +94,11 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
   const typedDoctors = (data?.doctors || []) as unknown as Parameters<
     typeof DoctorCard
   >[0]["doctor"][];
+
+  // Fetch next availability for featured doctors
+  const doctorIds = typedDoctors.map((d) => d.id);
+  const availability =
+    doctorIds.length > 0 ? await getNextAvailabilityBatch(doctorIds) : {};
 
   // Format price from cents
   const formatPrice = (cents: number) =>
@@ -202,7 +207,12 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
           {typedDoctors.length > 0 ? (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {typedDoctors.map((doctor) => (
-                <DoctorCard key={doctor.id} doctor={doctor} locale={locale} />
+                <DoctorCard
+                  key={doctor.id}
+                  doctor={doctor}
+                  locale={locale}
+                  availability={availability[doctor.id] || null}
+                />
               ))}
             </div>
           ) : (

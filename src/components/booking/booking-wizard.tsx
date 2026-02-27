@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -76,6 +77,8 @@ interface SlotSelection {
 }
 
 export function BookingWizard({ doctor }: BookingWizardProps) {
+  const searchParams = useSearchParams();
+  const initialDate = searchParams.get("date"); // e.g. "2026-03-05" from availability chip
   const [step, setStep] = useState(1);
   const [consultationType, setConsultationType] =
     useState<ConsultationType | null>(null);
@@ -325,6 +328,7 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
               doctorId={doctor.id}
               consultationType={consultationType}
               onSlotSelect={handleSlotSelect}
+              initialDate={initialDate || undefined}
             />
 
             {slotSelection && (

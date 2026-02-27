@@ -72,3 +72,31 @@ export function findNearestLocation(
 
   return nearestSlug;
 }
+
+/**
+ * Geocode a postcode or partial address using Google Geocoding API.
+ * Runs client-side (uses the same Maps API key).
+ * Returns lat/lng or null if no match.
+ */
+export async function geocodeAddress(
+  input: string
+): Promise<{ lat: number; lng: number } | null> {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return null;
+
+  try {
+    const encoded = encodeURIComponent(input);
+    const res = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encoded}&key=${apiKey}`
+    );
+    const json = await res.json();
+
+    if (json.status === "OK" && json.results?.length > 0) {
+      const loc = json.results[0].geometry.location;
+      return { lat: loc.lat, lng: loc.lng };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}

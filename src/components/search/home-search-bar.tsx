@@ -4,13 +4,7 @@ import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { LocationCombobox } from "@/components/search/location-combobox";
 import {
   Search,
   MapPin,
@@ -408,38 +402,20 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           {/* Divider */}
           <div className="h-8 w-px bg-border" />
 
-          {/* Location */}
-          <div className="flex w-52 items-center">
-            <div className="flex-1">
-              <Select value={location} onValueChange={handleLocationChange}>
-                <SelectTrigger className="h-14 border-0 shadow-none rounded-none focus:ring-0 text-sm">
-                  <SelectValue placeholder={t("search_location_placeholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("search_location_placeholder")}</SelectItem>
-                  {locations.map((l) => (
-                    <SelectItem key={l.id} value={l.slug}>
-                      {l.city}, {l.country_code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {geo.supported && (
-              <button
-                type="button"
-                onClick={handleLocateClick}
-                disabled={geo.loading}
-                className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary disabled:opacity-50"
-                title={t("use_my_location")}
-              >
-                {geo.loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <MapPin className="h-4 w-4" />
-                )}
-              </button>
-            )}
+          {/* Location — searchable combobox */}
+          <div className="w-56">
+            <LocationCombobox
+              locations={locations}
+              value={location}
+              onValueChange={handleLocationChange}
+              placeholder={t("search_location_placeholder")}
+              variant="inline"
+              geoSupported={geo.supported}
+              geoLoading={geo.loading}
+              onUseMyLocation={handleLocateClick}
+              useMyLocationLabel={t("use_my_location")}
+              detectingLabel={t("detecting_location") || "Detecting..."}
+            />
           </div>
 
           {/* Search button */}
@@ -562,41 +538,19 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           </div>
         )}
 
-        {/* Location with locate button */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            <Select value={location} onValueChange={handleLocationChange}>
-              <SelectTrigger className="h-11">
-                <SelectValue placeholder={t("search_location_placeholder")} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("search_location_placeholder")}</SelectItem>
-                {locations.map((l) => (
-                  <SelectItem key={l.id} value={l.slug}>
-                    {l.city}, {l.country_code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {geo.supported && (
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-11 w-11 shrink-0"
-              onClick={handleLocateClick}
-              disabled={geo.loading}
-              title={t("use_my_location")}
-            >
-              {geo.loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MapPin className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-        </div>
+        {/* Location — searchable combobox */}
+        <LocationCombobox
+          locations={locations}
+          value={location}
+          onValueChange={handleLocationChange}
+          placeholder={t("search_location_placeholder")}
+          variant="bordered"
+          geoSupported={geo.supported}
+          geoLoading={geo.loading}
+          onUseMyLocation={handleLocateClick}
+          useMyLocationLabel={t("use_my_location")}
+          detectingLabel={t("detecting_location") || "Detecting..."}
+        />
 
         {/* Search button */}
         <Button className="h-11 w-full rounded-lg" onClick={handleSearch}>

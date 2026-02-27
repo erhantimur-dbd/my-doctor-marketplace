@@ -23,21 +23,44 @@ interface DoctorMapProps {
   hoveredDoctorId: string | null;
   onHoverDoctor: (id: string | null) => void;
   onClickDoctor: (id: string) => void;
+  /** When a location filter is active, center the map on this city */
+  centerLocation?: { lat: number; lng: number; city: string };
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 /* ── Auto-fit bounds when doctors change ── */
-function FitBounds({ doctors }: { doctors: MapDoctor[] }) {
+function FitBounds({
+  doctors,
+  centerLocation,
+}: {
+  doctors: MapDoctor[];
+  centerLocation?: { lat: number; lng: number; city: string };
+}) {
   const map = useMap();
 
   useEffect(() => {
-    if (!map || doctors.length === 0) return;
+    if (!map) return;
+
+    if (doctors.length === 0 && centerLocation) {
+      // No doctors but we have a city — zoom to city level
+      map.setCenter({ lat: centerLocation.lat, lng: centerLocation.lng });
+      map.setZoom(12);
+      return;
+    }
+
+    if (doctors.length === 0) return;
 
     const bounds = new google.maps.LatLngBounds();
     doctors.forEach((d) => bounds.extend({ lat: d.lat, lng: d.lng }));
+
+    // If a center location is set, include it in bounds to keep the city in view
+    if (centerLocation) {
+      bounds.extend({ lat: centerLocation.lat, lng: centerLocation.lng });
+    }
+
     map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
-  }, [doctors, map]);
+  }, [doctors, map, centerLocation]);
 
   return null;
 }
@@ -101,17 +124,20 @@ export function DoctorMap({
   hoveredDoctorId,
   onHoverDoctor,
   onClickDoctor,
+  centerLocation,
 }: DoctorMapProps) {
   const [infoDoctor, setInfoDoctor] = useState<MapDoctor | null>(null);
 
   const center = useMemo(() => {
+    // Prefer explicit center when a location filter is active
+    if (centerLocation) return { lat: centerLocation.lat, lng: centerLocation.lng };
     if (doctors.length === 0) return { lat: 48.8566, lng: 2.3522 };
     const avgLat =
       doctors.reduce((sum, d) => sum + d.lat, 0) / doctors.length;
     const avgLng =
       doctors.reduce((sum, d) => sum + d.lng, 0) / doctors.length;
     return { lat: avgLat, lng: avgLng };
-  }, [doctors]);
+  }, [doctors, centerLocation]);
 
   // Show info window on hover
   useEffect(() => {
@@ -135,7 +161,7 @@ export function DoctorMap({
     <APIProvider apiKey={API_KEY}>
       <Map
         defaultCenter={center}
-        defaultZoom={10}
+        defaultZoom={centerLocation ? 12 : 10}
         mapId="doctor-search-map"
         gestureHandling="greedy"
         disableDefaultUI={false}
@@ -145,7 +171,7 @@ export function DoctorMap({
         className="h-full w-full"
         style={{ minHeight: "400px" }}
       >
-        <FitBounds doctors={doctors} />
+        <FitBounds doctors={doctors} centerLocation={centerLocation} />
 
         {doctors.map((doctor) => (
           <PinMarker

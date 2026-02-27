@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Star, MapPin, Shield, Video, User } from "lucide-react";
+import { Clock, Star, MapPin, Shield, Video, User } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
+import type { DoctorNextAvailability } from "@/actions/search";
 
 interface DoctorCardProps {
   doctor: {
@@ -44,10 +45,39 @@ interface DoctorCardProps {
   locale?: string;
   isHighlighted?: boolean;
   onHover?: (id: string | null) => void;
+  availability?: DoctorNextAvailability | null;
+}
+
+/* ── Availability helpers ────────────────────────────── */
+
+function formatDateLabel(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  if (date.getTime() === today.getTime()) return "Available today";
+  if (date.getTime() === tomorrow.getTime()) return "Available tomorrow";
+
+  return `Available ${date.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  })}`;
+}
+
+function formatSlotTime(timestamptz: string): string {
+  const d = new Date(timestamptz);
+  return d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
-  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover }, ref) {
+  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability }, ref) {
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
       ?.specialty || doctor.specialties?.[0]?.specialty;
 
@@ -141,6 +171,43 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   </div>
                 </div>
               </div>
+
+              {/* Next Availability */}
+              {availability !== undefined && (
+                <div className="mt-3 border-t pt-3">
+                  {availability && availability.slots.length > 0 ? (
+                    <div>
+                      <div className="mb-1.5 flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5 text-green-600" />
+                        <span className="text-xs font-medium text-green-700">
+                          {formatDateLabel(availability.date)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {availability.slots.slice(0, 4).map((slot) => (
+                          <Link
+                            key={slot.start}
+                            href={`/doctors/${doctor.slug}/book?date=${availability.date}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                          >
+                            {formatSlotTime(slot.start)}
+                          </Link>
+                        ))}
+                        {availability.slots.length > 4 && (
+                          <span className="inline-flex items-center px-1 py-1 text-xs text-muted-foreground">
+                            +{availability.slots.length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No availability in next 14 days
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Footer */}
               <div className="mt-4 flex items-center justify-between border-t pt-3">

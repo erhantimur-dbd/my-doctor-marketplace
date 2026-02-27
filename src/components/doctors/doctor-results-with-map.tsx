@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { DoctorCard } from "./doctor-card";
 import type { MapDoctor } from "@/components/maps/doctor-map";
+import type { DoctorNextAvailability } from "@/actions/search";
 
 // Dynamic import — Google Maps requires window
 const DoctorMap = dynamic(
@@ -24,11 +25,15 @@ type Doctor = Parameters<typeof DoctorCard>[0]["doctor"];
 interface DoctorResultsWithMapProps {
   doctors: Doctor[];
   locale: string;
+  availability?: Record<string, DoctorNextAvailability>;
+  centerLocation?: { lat: number; lng: number; city: string };
 }
 
 export function DoctorResultsWithMap({
   doctors,
   locale,
+  availability,
+  centerLocation,
 }: DoctorResultsWithMapProps) {
   const [hoveredDoctorId, setHoveredDoctorId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -104,6 +109,7 @@ export function DoctorResultsWithMap({
             locale={locale}
             isHighlighted={hoveredDoctorId === doctor.id}
             onHover={setHoveredDoctorId}
+            availability={availability ? (availability[doctor.id] || null) : undefined}
           />
         ))}
       </div>
@@ -117,6 +123,7 @@ export function DoctorResultsWithMap({
               hoveredDoctorId={hoveredDoctorId}
               onHoverDoctor={setHoveredDoctorId}
               onClickDoctor={handleClickDoctor}
+              centerLocation={centerLocation}
             />
           </div>
         </div>

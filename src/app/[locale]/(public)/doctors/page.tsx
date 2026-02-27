@@ -1,4 +1,9 @@
-import { searchDoctors, getSpecialties, getLocations } from "@/actions/search";
+import {
+  searchDoctors,
+  getSpecialties,
+  getLocations,
+  getNextAvailabilityBatch,
+} from "@/actions/search";
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
@@ -46,6 +51,30 @@ export default async function DoctorsPage({
     typeof DoctorCard
   >[0]["doctor"][];
 
+  // Fetch next availability for all returned doctors (single batch RPC)
+  const doctorIds = typedDoctors.map((d) => d.id);
+  const availability = await getNextAvailabilityBatch(
+    doctorIds,
+    sp.consultationType
+  );
+
+  // Resolve center location for the map when a location filter is active
+  let centerLocation:
+    | { lat: number; lng: number; city: string }
+    | undefined;
+  if (sp.location) {
+    const loc = locations.find(
+      (l: Record<string, unknown>) => l.slug === sp.location
+    );
+    if (loc && loc.latitude != null && loc.longitude != null) {
+      centerLocation = {
+        lat: Number(loc.latitude),
+        lng: Number(loc.longitude),
+        city: String(loc.city),
+      };
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-4 lg:py-8">
       <h1 className="mb-3 text-2xl font-bold lg:mb-6 lg:text-3xl">
@@ -84,6 +113,8 @@ export default async function DoctorsPage({
                 <DoctorResultsWithMap
                   doctors={typedDoctors}
                   locale={locale}
+                  availability={availability}
+                  centerLocation={centerLocation}
                 />
               </div>
 
@@ -94,6 +125,7 @@ export default async function DoctorsPage({
                     key={doctor.id}
                     doctor={doctor}
                     locale={locale}
+                    availability={availability[doctor.id] || null}
                   />
                 ))}
               </div>

@@ -14,14 +14,18 @@ interface SlotPickerProps {
   doctorId: string;
   consultationType: string;
   onSlotSelect: (date: string, startTime: string, endTime: string) => void;
+  initialDate?: string; // "YYYY-MM-DD" — auto-select this date on mount
 }
 
 export function SlotPicker({
   doctorId,
   consultationType,
   onSlotSelect,
+  initialDate,
 }: SlotPickerProps) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    initialDate ? new Date(initialDate + "T00:00:00") : undefined
+  );
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

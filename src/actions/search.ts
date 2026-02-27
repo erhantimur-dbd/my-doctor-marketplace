@@ -285,6 +285,64 @@ export async function getSameDayAvailabilityCount(): Promise<number> {
   return (data as string[]).length;
 }
 
+/* ── Batch next-availability for doctor cards ──────────────── */
+
+export interface NextAvailabilitySlot {
+  start: string; // TIMESTAMPTZ string
+  end: string;   // TIMESTAMPTZ string
+}
+
+export interface DoctorNextAvailability {
+  date: string; // ISO date e.g. "2026-03-05"
+  slots: NextAvailabilitySlot[];
+}
+
+/**
+ * For a list of doctor IDs, returns the next available day + up to 4 slots
+ * for each doctor. Single DB round-trip via the batch RPC function.
+ */
+export async function getNextAvailabilityBatch(
+  doctorIds: string[],
+  consultationType?: string
+): Promise<Record<string, DoctorNextAvailability>> {
+  if (doctorIds.length === 0) return {};
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc(
+    "get_next_available_slots_batch",
+    {
+      p_doctor_ids: doctorIds,
+      p_max_days: 14,
+      p_max_slots: 4,
+      p_consultation_type: consultationType || "in_person",
+    }
+  );
+
+  if (error || !data) {
+    console.error("Batch availability RPC error:", error);
+    return {};
+  }
+
+  // Group flat rows by doctor_id
+  const result: Record<string, DoctorNextAvailability> = {};
+  for (const row of data as {
+    doctor_id: string;
+    available_date: string;
+    slot_start: string;
+    slot_end: string;
+  }[]) {
+    if (!result[row.doctor_id]) {
+      result[row.doctor_id] = { date: row.available_date, slots: [] };
+    }
+    result[row.doctor_id].slots.push({
+      start: row.slot_start,
+      end: row.slot_end,
+    });
+  }
+
+  return result;
+}
+
 export async function getSpecialtyBySlug(slug: string) {
   const supabase = createAdminClient();
 

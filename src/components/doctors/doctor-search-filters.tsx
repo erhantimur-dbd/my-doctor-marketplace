@@ -13,11 +13,12 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { X, Clock, MapPin, Loader2 } from "lucide-react";
+import { X, Clock } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
 import { MobileFilterBar } from "./mobile-filter-bar";
+import { LocationCombobox } from "@/components/search/location-combobox";
 
 interface FilterProps {
   specialties: { id: string; name_key: string; slug: string }[];
@@ -260,44 +261,21 @@ export function DoctorSearchFilters({
               </Select>
             </div>
 
-            {/* Location */}
+            {/* Location — searchable combobox */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">{t("location")}</Label>
-                {geo.supported && (
-                  <button
-                    type="button"
-                    onClick={handleUseMyLocation}
-                    disabled={geo.loading}
-                    className="flex items-center gap-1 text-xs font-medium text-primary transition-colors hover:text-primary/80 disabled:opacity-50"
-                  >
-                    {geo.loading ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <MapPin className="h-3 w-3" />
-                    )}
-                    {geo.loading
-                      ? t("detecting_location")
-                      : t("use_my_location")}
-                  </button>
-                )}
-              </div>
-              <Select
-                value={currentFilters.location || "all"}
-                onValueChange={(v) => updateFilter("location", v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("any_location")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("any_location")}</SelectItem>
-                  {locations.map((l) => (
-                    <SelectItem key={l.id} value={l.slug}>
-                      {l.city}, {l.country_code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-sm">{t("location")}</Label>
+              <LocationCombobox
+                locations={locations}
+                value={currentFilters.location || ""}
+                onValueChange={(v) => updateFilter("location", v || undefined)}
+                placeholder={t("any_location")}
+                variant="bordered"
+                geoSupported={geo.supported}
+                geoLoading={geo.loading}
+                onUseMyLocation={handleUseMyLocation}
+                useMyLocationLabel={t("use_my_location")}
+                detectingLabel={t("detecting_location")}
+              />
             </div>
 
             {/* Consultation Type */}
