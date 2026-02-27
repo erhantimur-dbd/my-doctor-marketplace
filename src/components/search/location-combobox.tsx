@@ -27,6 +27,8 @@ interface LocationComboboxProps {
   useMyLocationLabel?: string;
   detectingLabel?: string;
   className?: string;
+  /** Called when Enter is pressed while the dropdown is closed or no item is highlighted */
+  onEnterKey?: () => void;
 }
 
 // Country code → emoji flag
@@ -56,6 +58,7 @@ export function LocationCombobox({
   useMyLocationLabel = "Use my location",
   detectingLabel = "Detecting...",
   className,
+  onEnterKey,
 }: LocationComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -170,9 +173,32 @@ export function LocationCombobox({
             setOpen(true);
             setSearch("");
           }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              // If geocode result is available, select it
+              if (geocodeResult) {
+                e.preventDefault();
+                handleSelect(geocodeResult);
+              } else if (filteredLocations.length === 1 && search.trim()) {
+                // Auto-select if exactly one match
+                e.preventDefault();
+                handleSelect(filteredLocations[0].slug);
+              } else if (!open || filteredLocations.length === 0) {
+                // Bubble up to parent search handler
+                if (onEnterKey) {
+                  e.preventDefault();
+                  setOpen(false);
+                  onEnterKey();
+                }
+              }
+            } else if (e.key === "Escape") {
+              setOpen(false);
+              inputRef.current?.blur();
+            }
+          }}
           placeholder={placeholder}
           className={cn(
-            "flex-1 bg-transparent outline-none placeholder:text-muted-foreground",
+            "flex-1 bg-transparent outline-none placeholder:text-muted-foreground min-w-0",
             isInline ? "text-sm" : "text-sm"
           )}
           autoComplete="off"
@@ -181,7 +207,10 @@ export function LocationCombobox({
           <button
             type="button"
             onClick={handleClear}
-            className="shrink-0 text-muted-foreground hover:text-foreground"
+            className={cn(
+              "shrink-0 text-muted-foreground hover:text-foreground",
+              isInline && "mr-1"
+            )}
           >
             ×
           </button>

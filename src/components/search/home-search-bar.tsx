@@ -415,6 +415,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
               onUseMyLocation={handleLocateClick}
               useMyLocationLabel={t("use_my_location")}
               detectingLabel={t("detecting_location") || "Detecting..."}
+              onEnterKey={handleSearch}
             />
           </div>
 
@@ -550,6 +551,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           onUseMyLocation={handleLocateClick}
           useMyLocationLabel={t("use_my_location")}
           detectingLabel={t("detecting_location") || "Detecting..."}
+          onEnterKey={handleSearch}
         />
 
         {/* Search button */}
