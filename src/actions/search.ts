@@ -21,13 +21,20 @@ export interface SearchFilters {
 export async function searchDoctors(filters: SearchFilters) {
   const supabase = createAdminClient();
 
+  // Use an inner join on locations when a location filter is active so that
+  // non-matching doctors are excluded from results (left join only filters the
+  // nested resource, leaving the parent row intact with location: null).
+  const locationJoin = filters.location
+    ? "location:locations!inner(city, country_code, slug, latitude, longitude)"
+    : "location:locations(city, country_code, slug, latitude, longitude)";
+
   let query = supabase
     .from("doctors")
     .select(
       `
       *,
       profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
-      location:locations(city, country_code, slug, latitude, longitude),
+      ${locationJoin},
       specialties:doctor_specialties(
         specialty:specialties(id, name_key, slug),
         is_primary

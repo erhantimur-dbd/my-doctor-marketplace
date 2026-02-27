@@ -16,6 +16,8 @@ export interface MapDoctor {
   specialty: string;
   lat: number;
   lng: number;
+  /** Whether the doctor is in the same country as the selected location filter */
+  isLocal: boolean;
 }
 
 interface DoctorMapProps {
@@ -24,7 +26,7 @@ interface DoctorMapProps {
   onHoverDoctor: (id: string | null) => void;
   onClickDoctor: (id: string) => void;
   /** When a location filter is active, center the map on this city */
-  centerLocation?: { lat: number; lng: number; city: string };
+  centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
@@ -42,17 +44,23 @@ function FitBounds({
   useEffect(() => {
     if (!map) return;
 
-    if (doctors.length === 0 && centerLocation) {
+    // When a location filter is active, fit bounds to LOCAL doctors only so
+    // the map opens centered on the relevant area. Distant pins are still
+    // rendered but only visible when the user zooms out.
+    const localDoctors = doctors.filter((d) => d.isLocal);
+    const docsForBounds = localDoctors.length > 0 ? localDoctors : doctors;
+
+    if (docsForBounds.length === 0 && centerLocation) {
       // No doctors but we have a city — zoom to city level
       map.setCenter({ lat: centerLocation.lat, lng: centerLocation.lng });
       map.setZoom(12);
       return;
     }
 
-    if (doctors.length === 0) return;
+    if (docsForBounds.length === 0) return;
 
     const bounds = new google.maps.LatLngBounds();
-    doctors.forEach((d) => bounds.extend({ lat: d.lat, lng: d.lng }));
+    docsForBounds.forEach((d) => bounds.extend({ lat: d.lat, lng: d.lng }));
 
     // If a center location is set, include it in bounds to keep the city in view
     if (centerLocation) {
@@ -89,15 +97,21 @@ function PinMarker({
   onHover: (id: string | null) => void;
   onClick: (id: string) => void;
 }) {
-  const size = isHovered ? 36 : 28;
+  const isLocal = doctor.isLocal;
+
+  // Distant doctors: smaller, muted gray pin; local: standard blue; hovered: orange
+  const size = isHovered ? 36 : isLocal ? 28 : 20;
   const height = Math.round(size * 1.4);
-  const fill = isHovered ? "#f97316" : "#4285F4";
-  const stroke = isHovered ? "#ea580c" : "#2563eb";
+  const fill = isHovered ? "#f97316" : isLocal ? "#4285F4" : "#9ca3af";
+  const stroke = isHovered ? "#ea580c" : isLocal ? "#2563eb" : "#6b7280";
+
+  // z-index: hovered > local > distant
+  const zIndex = isHovered ? 1000 : isLocal ? 1 : 0;
 
   return (
     <AdvancedMarker
       position={{ lat: doctor.lat, lng: doctor.lng }}
-      zIndex={isHovered ? 1000 : 0}
+      zIndex={zIndex}
     >
       <div
         onMouseEnter={() => onHover(doctor.id)}
@@ -113,8 +127,11 @@ function PinMarker({
           style={{
             filter: isHovered
               ? "drop-shadow(0 2px 6px rgba(0,0,0,0.4))"
-              : "drop-shadow(0 1px 3px rgba(0,0,0,0.3))",
+              : isLocal
+                ? "drop-shadow(0 1px 3px rgba(0,0,0,0.3))"
+                : "drop-shadow(0 1px 2px rgba(0,0,0,0.15))",
             transition: "all 0.15s ease",
+            opacity: isHovered ? 1 : isLocal ? 1 : 0.7,
           }}
         >
           <path

@@ -38,22 +38,24 @@ export function DoctorResultsWithMap({
   const [hoveredDoctorId, setHoveredDoctorId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
-  // Build map-friendly data from doctors that have location with lat/lng
-  // Uses Array.isArray guard because Supabase nested joins may return arrays
+  // Build map-friendly data from doctors that have location with lat/lng.
+  // Uses Array.isArray guard because Supabase nested joins may return arrays.
+  // All doctors with valid coords are included; `isLocal` flag controls visual
+  // priority (local = same country as selected location, or all if no filter).
   const mapDoctors: MapDoctor[] = useMemo(() => {
     return doctors
       .filter((d) => {
         const loc: any = Array.isArray(d.location) ? d.location[0] : d.location;
-        if (!loc || loc.latitude == null || loc.longitude == null) return false;
-        // When a location filter is active, only show map pins from the same country
-        if (centerLocation?.countryCode && loc.country_code !== centerLocation.countryCode) return false;
-        return true;
+        return loc && loc.latitude != null && loc.longitude != null;
       })
       .map((d) => {
         const loc: any = Array.isArray(d.location) ? d.location[0] : d.location;
         const primarySpec =
           d.specialties?.find((s) => s.is_primary)?.specialty ||
           d.specialties?.[0]?.specialty;
+        const isLocal = centerLocation?.countryCode
+          ? loc.country_code === centerLocation.countryCode
+          : true; // No location filter → all are "local"
         return {
           id: d.id,
           slug: d.slug,
@@ -66,6 +68,7 @@ export function DoctorResultsWithMap({
             : "",
           lat: Number(loc.latitude),
           lng: Number(loc.longitude),
+          isLocal,
         };
       });
   }, [doctors, centerLocation]);
