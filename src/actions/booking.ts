@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { revalidatePath } from "next/cache";
 import {
@@ -416,7 +417,9 @@ export async function getDoctorAvailableSlots(
   consultationType: string
 ): Promise<{ slots: AvailableSlot[]; error?: string }> {
   try {
-    const supabase = await createClient();
+    // Use admin client so the RPC is callable regardless of the user's role
+    // permissions (matches getNextAvailabilityBatch which also uses admin).
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase.rpc("get_available_slots", {
       p_doctor_id: doctorId,
