@@ -251,7 +251,7 @@ export default function SubscriptionPage() {
       )}
 
       {/* Plan Cards */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0).map((plan) => {
           const planIndex = SUBSCRIPTION_PLANS.findIndex((p) => p.id === plan.id);
           const isCurrent = currentPlanId === plan.id;

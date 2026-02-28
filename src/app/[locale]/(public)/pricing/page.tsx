@@ -105,36 +105,10 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Free Profile Note */}
-      <section className="px-4 pt-12 md:pt-20">
-        <div className="container mx-auto max-w-3xl">
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 px-6 py-5 text-center dark:border-emerald-900 dark:bg-emerald-950/20">
-            <div className="flex items-center justify-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">
-                Free Doctor Profile
-              </h3>
-            </div>
-            <p className="mx-auto mt-2 max-w-lg text-sm text-emerald-800/80 dark:text-emerald-200/70">
-              Every doctor starts with a free listing in our directory. Add your details, get discovered by patients, and upgrade to Professional or Premium when you&apos;re ready.
-            </p>
-            <Button
-              variant="link"
-              className="mt-1 text-emerald-700 dark:text-emerald-400"
-              asChild
-            >
-              <Link href="/register-doctor">
-                Create your free profile <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
       {/* Pricing Plans */}
       <section className="px-4 py-12 md:py-20">
-        <div className="container mx-auto max-w-4xl">
-          <div className="grid gap-6 md:grid-cols-2">
+        <div className="container mx-auto max-w-5xl">
+          <div className="grid gap-6 md:grid-cols-3">
             {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0).map((plan) => {
               const isPopular = "popular" in plan && plan.popular;
               return (
@@ -200,6 +174,28 @@ export default function PricingPage() {
           <p className="mt-2 text-center text-xs text-muted-foreground/70">
             These are introductory rates for early adopters. Lock in your price today — it stays the same for as long as you&apos;re subscribed.
           </p>
+
+          {/* Free Profile Note */}
+          <div className="mx-auto mt-10 max-w-xl rounded-xl border border-emerald-200 bg-emerald-50/50 px-6 py-5 text-center dark:border-emerald-900 dark:bg-emerald-950/20">
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">
+                Free Doctor Profile
+              </h3>
+            </div>
+            <p className="mx-auto mt-2 max-w-lg text-sm text-emerald-800/80 dark:text-emerald-200/70">
+              Every doctor starts with a free listing in our directory. Add your details, get discovered by patients, and upgrade to Professional or Premium when you&apos;re ready.
+            </p>
+            <Button
+              variant="link"
+              className="mt-1 text-emerald-700 dark:text-emerald-400"
+              asChild
+            >
+              <Link href="/register-doctor">
+                Create your free profile <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
