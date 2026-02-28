@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { createBookingAndCheckout } from "@/actions/booking";
 import { formatCurrency } from "@/lib/utils/currency";
+import { formatSlotTime } from "@/lib/utils/availability";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -182,11 +183,6 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
     });
   }
 
-  function formatTime(time: string): string {
-    const parts = time.split(":");
-    return `${parts[0]}:${parts[1]}`;
-  }
-
   return (
     <div className="mx-auto max-w-3xl">
       {/* Progress Indicator */}
@@ -346,8 +342,8 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
                 <p className="text-sm font-medium">Selected Appointment</p>
                 <p className="text-sm text-muted-foreground">
                   {formatDate(slotSelection.date)} at{" "}
-                  {formatTime(slotSelection.startTime)} -{" "}
-                  {formatTime(slotSelection.endTime)}
+                  {formatSlotTime(slotSelection.startTime)} -{" "}
+                  {formatSlotTime(slotSelection.endTime)}
                 </p>
               </div>
             )}
@@ -459,8 +455,8 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
                     <span className="text-muted-foreground">Time</span>
                   </div>
                   <p className="text-sm font-medium">
-                    {formatTime(slotSelection.startTime)} -{" "}
-                    {formatTime(slotSelection.endTime)}
+                    {formatSlotTime(slotSelection.startTime)} -{" "}
+                    {formatSlotTime(slotSelection.endTime)}
                   </p>
                 </div>
 
@@ -542,7 +538,7 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
                     <p className="font-medium">{fullName}</p>
                     <p className="text-sm text-muted-foreground">
                       {formatDate(slotSelection.date)} at{" "}
-                      {formatTime(slotSelection.startTime)}
+                      {formatSlotTime(slotSelection.startTime)}
                     </p>
                   </div>
                   <p className="text-xl font-bold">

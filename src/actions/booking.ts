@@ -35,6 +35,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
   try {
     const parsed = createBookingSchema.safeParse(input);
     if (!parsed.success) {
+      console.error("Booking validation errors:", JSON.stringify(parsed.error.issues, null, 2));
+      console.error("Booking input received:", JSON.stringify(input, null, 2));
       return { error: "Invalid booking data. Please check your input." };
     }
 

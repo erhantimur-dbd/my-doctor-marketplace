@@ -9,6 +9,7 @@ import { Clock, CalendarDays } from "lucide-react";
 import { format, isBefore, startOfDay } from "date-fns";
 import type { AvailableSlot } from "@/types/index";
 import { cn } from "@/lib/utils";
+import { formatSlotTime } from "@/lib/utils/availability";
 
 interface SlotPickerProps {
   doctorId: string;
@@ -80,12 +81,6 @@ export function SlotPicker({
         slot.slot_end
       );
     }
-  }
-
-  function formatTime(time: string): string {
-    // Handle both "HH:mm:ss" and "HH:mm" formats
-    const parts = time.split(":");
-    return `${parts[0]}:${parts[1]}`;
   }
 
   return (
@@ -167,7 +162,7 @@ export function SlotPicker({
                     )}
                     onClick={() => handleSlotClick(slot)}
                   >
-                    {formatTime(slot.slot_start)}
+                    {formatSlotTime(slot.slot_start)}
                   </Button>
                 );
               })}
