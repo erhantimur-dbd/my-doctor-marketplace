@@ -793,6 +793,20 @@ export default function RegisterDoctorPage() {
                 )}
               </div>
 
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                  <div className="text-sm text-emerald-800">
+                    <p className="font-medium">You&apos;re starting on the Free Plan</p>
+                    <p className="mt-1">
+                      Your profile will be live in our doctor directory immediately.
+                      To start accepting online bookings, manage appointments, and access
+                      analytics, upgrade to Professional or Premium from your dashboard.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <p className="text-sm text-blue-800">
                   By clicking &quot;Create Account&quot;, you agree to our Terms

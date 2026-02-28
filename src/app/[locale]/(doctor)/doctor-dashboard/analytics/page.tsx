@@ -20,6 +20,7 @@ import {
   Repeat,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 
 export default async function AnalyticsPage() {
   const supabase = await createClient();
@@ -38,6 +39,18 @@ export default async function AnalyticsPage() {
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
+
+  const { data: subscription } = await supabase
+    .from("doctor_subscriptions")
+    .select("id")
+    .eq("doctor_id", doctor.id)
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1)
+    .maybeSingle();
+
+  if (!subscription) {
+    return <UpgradePrompt feature="Analytics" />;
+  }
 
   const currency = doctor.base_currency || "EUR";
   const now = new Date();

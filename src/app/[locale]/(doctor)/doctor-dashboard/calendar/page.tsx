@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { SubscriptionGate } from "@/components/shared/subscription-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +91,14 @@ function createSupabase() {
 }
 
 export default function CalendarPage() {
+  return (
+    <SubscriptionGate feature="Calendar & Scheduling">
+      <CalendarContent />
+    </SubscriptionGate>
+  );
+}
+
+function CalendarContent() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [overrides, setOverrides] = useState<DateOverride[]>([]);
   const [doctorId, setDoctorId] = useState<string | null>(null);

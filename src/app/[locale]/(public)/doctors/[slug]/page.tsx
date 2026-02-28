@@ -94,6 +94,17 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
   const availabilityMap = await getNextAvailabilityBatch([doctor.id]);
   const availability = availabilityMap[doctor.id] || null;
 
+  // Check if doctor has an active subscription (for booking eligibility)
+  const { data: doctorSubscription } = await supabase
+    .from("doctor_subscriptions")
+    .select("id")
+    .eq("doctor_id", doctor.id)
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1)
+    .maybeSingle();
+
+  const hasActiveSubscription = !!doctorSubscription;
+
   const primarySpecialty =
     doctor.specialties?.find(
       (s: { is_primary: boolean }) => s.is_primary
@@ -466,20 +477,28 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
 
                 <Separator className="my-4" />
 
-                <Button className="w-full" size="lg" asChild>
-                  <Link href={`/doctors/${doctor.slug}/book`}>
-                    <Calendar className="mr-2 h-4 w-4" />
-                    Book Appointment
-                  </Link>
-                </Button>
+                {hasActiveSubscription ? (
+                  <>
+                    <Button className="w-full" size="lg" asChild>
+                      <Link href={`/doctors/${doctor.slug}/book`}>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Book Appointment
+                      </Link>
+                    </Button>
 
-                <p className="mt-3 text-center text-xs text-muted-foreground">
-                  {doctor.cancellation_policy === "flexible"
-                    ? "Free cancellation up to 2 hours before"
-                    : doctor.cancellation_policy === "moderate"
-                      ? "Free cancellation up to 24 hours before"
-                      : "Free cancellation up to 48 hours before"}
-                </p>
+                    <p className="mt-3 text-center text-xs text-muted-foreground">
+                      {doctor.cancellation_policy === "flexible"
+                        ? "Free cancellation up to 2 hours before"
+                        : doctor.cancellation_policy === "moderate"
+                          ? "Free cancellation up to 24 hours before"
+                          : "Free cancellation up to 48 hours before"}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground">
+                    This doctor is not currently accepting online bookings.
+                  </p>
+                )}
 
                 {/* Clinic info */}
                 {(doctor.clinic_name || doctor.location) && (

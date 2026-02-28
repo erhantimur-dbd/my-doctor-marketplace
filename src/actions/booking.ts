@@ -104,6 +104,22 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
+    // Check doctor has an active subscription (free tier cannot accept bookings)
+    const adminSupabase = createAdminClient();
+    const { data: doctorSubscription } = await adminSupabase
+      .from("doctor_subscriptions")
+      .select("id")
+      .eq("doctor_id", doctor.id)
+      .in("status", ["active", "trialing", "past_due"])
+      .limit(1)
+      .maybeSingle();
+
+    if (!doctorSubscription) {
+      return {
+        error: "This doctor is not currently accepting online bookings.",
+      };
+    }
+
     // Ensure the consultation type is supported
     if (!doctor.consultation_types?.includes(parsed.data.consultation_type)) {
       return {

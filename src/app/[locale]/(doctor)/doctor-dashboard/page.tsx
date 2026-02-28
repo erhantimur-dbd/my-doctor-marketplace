@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, Star, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Calendar, Users, Star, DollarSign, Crown, ArrowRight } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { StartAppointmentButton } from "@/components/booking/start-appointment-button";
+import { Link } from "@/i18n/navigation";
 
 export default async function DoctorDashboard() {
   const supabase = await createClient();
@@ -20,6 +22,17 @@ export default async function DoctorDashboard() {
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
+
+  // Check subscription status
+  const { data: subscription } = await supabase
+    .from("doctor_subscriptions")
+    .select("id, plan_id, status")
+    .eq("doctor_id", doctor.id)
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1)
+    .maybeSingle();
+
+  const isFreeTier = !subscription;
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -59,6 +72,31 @@ export default async function DoctorDashboard() {
       <h1 className="text-2xl font-bold">
         Welcome back, {profile?.first_name}
       </h1>
+
+      {isFreeTier && (
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardContent className="flex items-center justify-between p-5">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-amber-100 p-2.5 dark:bg-amber-900/50">
+                <Crown className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-amber-900 dark:text-amber-100">
+                  You&apos;re on the Free Plan
+                </p>
+                <p className="text-sm text-amber-800/80 dark:text-amber-200/70">
+                  Your profile is live in our directory. Upgrade to unlock bookings, calendar, analytics, and more.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" asChild>
+              <Link href="/doctor-dashboard/subscription">
+                Upgrade <ArrowRight className="ml-1 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

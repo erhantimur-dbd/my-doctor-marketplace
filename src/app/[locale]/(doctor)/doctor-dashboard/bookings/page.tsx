@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { SubscriptionGate } from "@/components/shared/subscription-gate";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +66,14 @@ function statusLabel(status: string): string {
 }
 
 export default function BookingsPage() {
+  return (
+    <SubscriptionGate feature="Bookings">
+      <BookingsContent />
+    </SubscriptionGate>
+  );
+}
+
+function BookingsContent() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [doctorCurrency, setDoctorCurrency] = useState("EUR");

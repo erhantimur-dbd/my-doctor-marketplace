@@ -21,6 +21,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 
 export default async function PaymentsPage() {
   const supabase = await createClient();
@@ -39,6 +40,18 @@ export default async function PaymentsPage() {
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
+
+  const { data: subscription } = await supabase
+    .from("doctor_subscriptions")
+    .select("id")
+    .eq("doctor_id", doctor.id)
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1)
+    .maybeSingle();
+
+  if (!subscription) {
+    return <UpgradePrompt feature="Payments" />;
+  }
 
   // Fetch completed/confirmed bookings with payments
   const { data: bookings } = await supabase
