@@ -131,13 +131,24 @@ export default function PricingPage() {
                       {plan.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold">
-                        {formatPrice(plan.priceMonthly)}
-                      </span>
-                      <span className="text-muted-foreground"> / month</span>
-                      <p className="mt-1.5 text-xs font-medium text-primary/70">
-                        Introductory pricing
-                      </p>
+                      {plan.priceMonthly === 0 ? (
+                        <>
+                          <span className="text-4xl font-bold">Free</span>
+                          <p className="mt-1.5 text-xs font-medium text-emerald-600">
+                            No credit card required
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-4xl font-bold">
+                            {formatPrice(plan.priceMonthly)}
+                          </span>
+                          <span className="text-muted-foreground"> / month</span>
+                          <p className="mt-1.5 text-xs font-medium text-primary/70">
+                            Introductory pricing
+                          </p>
+                        </>
+                      )}
                     </div>
                   </CardHeader>
                   <Separator />

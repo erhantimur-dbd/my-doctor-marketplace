@@ -1,16 +1,12 @@
 export const SUBSCRIPTION_PLANS = [
   {
-    id: "basic",
-    name: "Basic",
-    description: "Essential tools for private practice",
-    priceMonthly: 4900, // cents
+    id: "free",
+    name: "Free",
+    description: "Get started with your online presence",
+    priceMonthly: 0,
     currency: "EUR",
     features: [
       "Public doctor profile",
-      "Online booking calendar",
-      "Up to 50 bookings/month",
-      "Email reminders",
-      "Basic analytics",
     ],
   },
   {
@@ -20,11 +16,13 @@ export const SUBSCRIPTION_PLANS = [
     priceMonthly: 9900,
     currency: "EUR",
     features: [
-      "Everything in Basic",
+      "Everything in Free",
+      "Online booking calendar",
       "Unlimited bookings",
+      "Email reminders",
       "SMS & WhatsApp reminders",
       "Video consultations",
-      "Advanced analytics",
+      "Basic & advanced analytics",
       "Patient CRM",
       "Priority support",
     ],

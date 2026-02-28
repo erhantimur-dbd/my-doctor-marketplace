@@ -285,10 +285,21 @@ export default function SubscriptionPage() {
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="mb-6">
-                  <span className="text-3xl font-bold">
-                    {formatCurrency(plan.priceMonthly, plan.currency)}
-                  </span>
-                  <span className="text-muted-foreground"> / month</span>
+                  {plan.priceMonthly === 0 ? (
+                    <>
+                      <span className="text-3xl font-bold">Free</span>
+                      <p className="mt-1 text-xs text-emerald-600 font-medium">
+                        No credit card required
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-3xl font-bold">
+                        {formatCurrency(plan.priceMonthly, plan.currency)}
+                      </span>
+                      <span className="text-muted-foreground"> / month</span>
+                    </>
+                  )}
                 </div>
                 <ul className="space-y-2">
                   {plan.features.map((feature) => (
