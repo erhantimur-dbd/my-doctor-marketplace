@@ -14,6 +14,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Crown,
   Check,
@@ -23,6 +24,8 @@ import {
   Zap,
   ArrowUp,
   ArrowDown,
+  Tag,
+  X,
 } from "lucide-react";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -52,6 +55,17 @@ export default function SubscriptionPage() {
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponValidation, setCouponValidation] = useState<{
+    valid: boolean;
+    error?: string;
+    couponId?: string;
+    discount_type?: "percentage" | "fixed_amount";
+    discount_value?: number;
+    currency?: string;
+    name?: string;
+  } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -149,6 +163,34 @@ export default function SubscriptionPage() {
     setCancelDialogOpen(false);
     await loadData();
     setActionLoading(false);
+  }
+
+  async function handleValidateCoupon() {
+    if (!couponCode.trim()) return;
+    setValidatingCoupon(true);
+    setCouponValidation(null);
+    try {
+      const { validateCoupon } = await import("@/actions/coupon");
+      // Validate against "professional" as default; server checks plan applicability
+      const result = await validateCoupon(couponCode, "professional");
+      setCouponValidation(result as any);
+    } catch {
+      setCouponValidation({ valid: false, error: "Failed to validate coupon" });
+    }
+    setValidatingCoupon(false);
+  }
+
+  function clearCoupon() {
+    setCouponCode("");
+    setCouponValidation(null);
+  }
+
+  function calculateDiscountedPrice(priceInCents: number): number {
+    if (!couponValidation?.valid) return priceInCents;
+    if (couponValidation.discount_type === "percentage") {
+      return Math.round(priceInCents * (1 - (couponValidation.discount_value || 0) / 100));
+    }
+    return Math.max(0, priceInCents - (couponValidation.discount_value || 0));
   }
 
   function getPlanIndex(planId: string): number {
@@ -250,6 +292,60 @@ export default function SubscriptionPage() {
         </Card>
       )}
 
+      {/* Coupon Code Input */}
+      {!subscription && (
+        <Card>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Tag className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-medium">Have a coupon code?</p>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter coupon code"
+                value={couponCode}
+                onChange={(e) => {
+                  setCouponCode(e.target.value.toUpperCase());
+                  if (couponValidation) setCouponValidation(null);
+                }}
+                className="max-w-xs font-mono"
+              />
+              {couponValidation?.valid ? (
+                <Button variant="outline" size="sm" onClick={clearCoupon}>
+                  <X className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={handleValidateCoupon}
+                  disabled={validatingCoupon || !couponCode.trim()}
+                >
+                  {validatingCoupon ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Apply"
+                  )}
+                </Button>
+              )}
+            </div>
+            {couponValidation?.valid && (
+              <div className="mt-2 flex items-center gap-2 text-sm text-green-600">
+                <Check className="h-4 w-4" />
+                <span>
+                  {couponValidation.name} &mdash;{" "}
+                  {couponValidation.discount_type === "percentage"
+                    ? `${couponValidation.discount_value}% off`
+                    : `${formatCurrency(couponValidation.discount_value!, couponValidation.currency || "EUR")} off`}
+                </span>
+              </div>
+            )}
+            {couponValidation && !couponValidation.valid && (
+              <p className="mt-2 text-sm text-red-500">{couponValidation.error}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Plan Cards */}
       <div className="grid gap-6 lg:grid-cols-3">
         {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0).map((plan) => {
@@ -286,9 +382,20 @@ export default function SubscriptionPage() {
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="mb-6">
-                  <span className="text-3xl font-bold">
-                    {formatCurrency(plan.priceMonthly, plan.currency)}
-                  </span>
+                  {couponValidation?.valid && !subscription ? (
+                    <>
+                      <span className="text-lg line-through text-muted-foreground">
+                        {formatCurrency(plan.priceMonthly, plan.currency)}
+                      </span>
+                      <span className="ml-2 text-3xl font-bold text-green-600">
+                        {formatCurrency(calculateDiscountedPrice(plan.priceMonthly), plan.currency)}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-3xl font-bold">
+                      {formatCurrency(plan.priceMonthly, plan.currency)}
+                    </span>
+                  )}
                   <span className="text-muted-foreground"> / month</span>
                 </div>
                 <ul className="space-y-2">

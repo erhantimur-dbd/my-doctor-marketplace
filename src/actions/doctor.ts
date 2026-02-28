@@ -263,7 +263,7 @@ export async function saveDoctorReminderPreferences(
   return { success: true };
 }
 
-export async function createSubscriptionCheckout(priceId: string) {
+export async function createSubscriptionCheckout(priceId: string, couponCode?: string) {
   const { error: authError, supabase, doctor } = await requireDoctor();
   if (authError || !supabase || !doctor) return { error: authError };
 
@@ -309,8 +309,30 @@ export async function createSubscriptionCheckout(priceId: string) {
     cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/subscription`,
   };
 
-  // Apply referral coupon if eligible
-  if (hasDiscount) {
+  // Apply manual coupon code (if provided and no referral discount)
+  let appliedCouponId: string | null = null;
+
+  if (couponCode && !hasDiscount) {
+    const { validateCoupon } = await import("@/actions/coupon");
+    // Determine planId from priceId
+    const planId = priceId === process.env.STRIPE_PRICE_PROFESSIONAL
+      ? "professional"
+      : priceId === process.env.STRIPE_PRICE_PREMIUM
+        ? "premium"
+        : priceId === process.env.STRIPE_PRICE_CLINIC
+          ? "clinic"
+          : "unknown";
+
+    const validation = await validateCoupon(couponCode, planId);
+
+    if (validation.valid && validation.stripeCouponId) {
+      sessionOptions.discounts = [{ coupon: validation.stripeCouponId }];
+      appliedCouponId = validation.couponId;
+    }
+  }
+
+  // Apply referral coupon if eligible (and no manual coupon applied)
+  if (hasDiscount && !appliedCouponId) {
     try {
       // Ensure coupon exists in Stripe
       const stripeClient = (await import("@/lib/stripe/client")).getStripe();
@@ -333,6 +355,19 @@ export async function createSubscriptionCheckout(priceId: string) {
   }
 
   const session = await stripe.checkout.sessions.create(sessionOptions);
+
+  // Record coupon redemption if applied
+  if (appliedCouponId) {
+    const { recordCouponRedemption } = await import("@/actions/coupon");
+    const planId = priceId === process.env.STRIPE_PRICE_PROFESSIONAL
+      ? "professional"
+      : priceId === process.env.STRIPE_PRICE_PREMIUM
+        ? "premium"
+        : priceId === process.env.STRIPE_PRICE_CLINIC
+          ? "clinic"
+          : "unknown";
+    await recordCouponRedemption(appliedCouponId, doctor.id, planId, session.id);
+  }
 
   return { url: session.url };
 }

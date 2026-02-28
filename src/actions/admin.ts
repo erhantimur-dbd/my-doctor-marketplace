@@ -233,3 +233,163 @@ export async function sendUpgradeInvite(doctorId: string) {
   revalidatePath("/admin/doctors");
   return { success: true };
 }
+
+// ===================== Coupon Management =====================
+
+export async function createCoupon(data: {
+  code: string;
+  name: string;
+  description?: string;
+  discount_type: "percentage" | "fixed_amount";
+  discount_value: number;
+  currency?: string;
+  applicable_plans?: string[] | null;
+  duration?: "once" | "repeating" | "forever";
+  duration_in_months?: number;
+  max_uses?: number | null;
+  valid_from?: string;
+  expires_at?: string | null;
+}) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const code = data.code.toUpperCase().trim();
+  if (!code || code.length < 3) return { error: "Code must be at least 3 characters" };
+
+  if (data.discount_type === "percentage" && (data.discount_value < 1 || data.discount_value > 100)) {
+    return { error: "Percentage must be between 1 and 100" };
+  }
+  if (data.discount_type === "fixed_amount" && data.discount_value < 1) {
+    return { error: "Amount must be positive" };
+  }
+
+  // Check uniqueness
+  const { data: existing } = await supabase
+    .from("coupons")
+    .select("id")
+    .eq("code", code)
+    .maybeSingle();
+  if (existing) return { error: "A coupon with this code already exists" };
+
+  // Create Stripe coupon
+  const { getStripe } = await import("@/lib/stripe/client");
+  const stripe = getStripe();
+
+  const stripeCouponParams: Record<string, unknown> = {
+    name: data.name,
+    duration: data.duration || "once",
+  };
+  if (data.discount_type === "percentage") {
+    stripeCouponParams.percent_off = data.discount_value;
+  } else {
+    stripeCouponParams.amount_off = data.discount_value;
+    stripeCouponParams.currency = (data.currency || "eur").toLowerCase();
+  }
+  if (data.duration === "repeating" && data.duration_in_months) {
+    stripeCouponParams.duration_in_months = data.duration_in_months;
+  }
+  if (data.max_uses) {
+    stripeCouponParams.max_redemptions = data.max_uses;
+  }
+  if (data.expires_at) {
+    stripeCouponParams.redeem_by = Math.floor(new Date(data.expires_at).getTime() / 1000);
+  }
+
+  let stripeCoupon;
+  try {
+    stripeCoupon = await stripe.coupons.create(stripeCouponParams as any);
+  } catch (err: any) {
+    return { error: `Stripe error: ${err.message}` };
+  }
+
+  // Insert into DB
+  const { error: insertError } = await supabase.from("coupons").insert({
+    code,
+    name: data.name,
+    description: data.description || null,
+    discount_type: data.discount_type,
+    discount_value: data.discount_value,
+    currency: data.currency || "EUR",
+    applicable_plans: data.applicable_plans || null,
+    duration: data.duration || "once",
+    duration_in_months: data.duration_in_months || null,
+    max_uses: data.max_uses || null,
+    valid_from: data.valid_from || new Date().toISOString(),
+    expires_at: data.expires_at || null,
+    is_active: true,
+    stripe_coupon_id: stripeCoupon.id,
+    created_by: user.id,
+  });
+
+  if (insertError) return { error: insertError.message };
+
+  await logAdminAction(supabase, user.id, "coupon_created", "coupon", code, {
+    name: data.name,
+    discount_type: data.discount_type,
+    discount_value: data.discount_value,
+  });
+
+  revalidatePath("/admin/coupons");
+  return { success: true };
+}
+
+export async function toggleCouponActive(couponId: string, isActive: boolean) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { error } = await supabase
+    .from("coupons")
+    .update({ is_active: isActive })
+    .eq("id", couponId);
+
+  if (error) return { error: error.message };
+
+  await logAdminAction(
+    supabase,
+    user.id,
+    isActive ? "coupon_activated" : "coupon_deactivated",
+    "coupon",
+    couponId
+  );
+
+  revalidatePath("/admin/coupons");
+  return { success: true };
+}
+
+export async function deleteCoupon(couponId: string) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { data: coupon } = await supabase
+    .from("coupons")
+    .select("stripe_coupon_id, code")
+    .eq("id", couponId)
+    .single();
+
+  if (!coupon) return { error: "Coupon not found" };
+
+  // Delete from Stripe
+  if (coupon.stripe_coupon_id) {
+    try {
+      const { getStripe } = await import("@/lib/stripe/client");
+      await getStripe().coupons.del(coupon.stripe_coupon_id);
+    } catch (err) {
+      console.error("[Coupon] Failed to delete Stripe coupon:", err);
+    }
+  }
+
+  // Soft delete — deactivate to preserve redemption history
+  const { error } = await supabase
+    .from("coupons")
+    .update({ is_active: false })
+    .eq("id", couponId);
+
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, "coupon_deleted", "coupon", couponId, {
+    code: coupon.code,
+  });
+
+  revalidatePath("/admin/coupons");
+  return { success: true };
+}
