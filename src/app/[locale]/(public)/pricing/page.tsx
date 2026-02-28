@@ -121,7 +121,7 @@ export default function PricingPage() {
                   {isPopular && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <Badge className="bg-primary text-primary-foreground">
-                        Most Popular
+                        Most Doctors start here
                       </Badge>
                     </div>
                   )}

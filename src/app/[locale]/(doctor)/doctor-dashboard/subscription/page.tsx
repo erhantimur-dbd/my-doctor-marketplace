@@ -368,7 +368,7 @@ export default function SubscriptionPage() {
             >
               {isPopular && !isCurrent && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-primary px-3">Most Popular</Badge>
+                  <Badge className="bg-primary px-3">Most Doctors start here</Badge>
                 </div>
               )}
               {isCurrent && (

@@ -12,11 +12,11 @@ export const SUBSCRIPTION_PLANS = [
   {
     id: "professional",
     name: "Professional",
-    description: "Everything you need to grow your practice",
+    description: "Individual plans for Doctors",
     priceMonthly: 9900,
     currency: "EUR",
     features: [
-      "Doctor profile",
+      "1 User Doctor Profile",
       "Online booking calendar",
       "Unlimited bookings",
       "Email reminders",
@@ -26,12 +26,11 @@ export const SUBSCRIPTION_PLANS = [
       "Patient CRM",
       "Priority support",
     ],
-    popular: true,
   },
   {
     id: "premium",
     name: "Premium",
-    description: "Maximum visibility and advanced features",
+    description: "Individual plans for Doctors",
     priceMonthly: 19900,
     currency: "EUR",
     features: [
@@ -42,6 +41,7 @@ export const SUBSCRIPTION_PLANS = [
       "API access",
       "Dedicated account manager",
     ],
+    popular: true,
   },
   {
     id: "clinic",
@@ -51,9 +51,9 @@ export const SUBSCRIPTION_PLANS = [
     currency: "EUR",
     features: [
       "Everything in Professional & Premium",
+      "Up to 5 doctor profiles",
       "3 hours of dedicated onboarding",
       "Custom branding on your profile",
-      "Up to 5 doctor profiles",
       "Centralized clinic dashboard",
       "Multi-doctor scheduling",
       "Team performance analytics",
