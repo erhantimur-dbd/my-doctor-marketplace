@@ -251,12 +251,13 @@ export default function SubscriptionPage() {
       )}
 
       {/* Plan Cards */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {SUBSCRIPTION_PLANS.map((plan, index) => {
+      <div className="grid gap-6 lg:grid-cols-2">
+        {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0).map((plan) => {
+          const planIndex = SUBSCRIPTION_PLANS.findIndex((p) => p.id === plan.id);
           const isCurrent = currentPlanId === plan.id;
           const isPopular = "popular" in plan && plan.popular;
-          const isUpgrade = currentPlanIndex >= 0 && index > currentPlanIndex;
-          const isDowngrade = currentPlanIndex >= 0 && index < currentPlanIndex;
+          const isUpgrade = currentPlanIndex >= 0 && planIndex > currentPlanIndex;
+          const isDowngrade = currentPlanIndex >= 0 && planIndex < currentPlanIndex;
 
           return (
             <Card
@@ -285,21 +286,10 @@ export default function SubscriptionPage() {
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="mb-6">
-                  {plan.priceMonthly === 0 ? (
-                    <>
-                      <span className="text-3xl font-bold">Free</span>
-                      <p className="mt-1 text-xs text-emerald-600 font-medium">
-                        No credit card required
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-3xl font-bold">
-                        {formatCurrency(plan.priceMonthly, plan.currency)}
-                      </span>
-                      <span className="text-muted-foreground"> / month</span>
-                    </>
-                  )}
+                  <span className="text-3xl font-bold">
+                    {formatCurrency(plan.priceMonthly, plan.currency)}
+                  </span>
+                  <span className="text-muted-foreground"> / month</span>
                 </div>
                 <ul className="space-y-2">
                   {plan.features.map((feature) => (
@@ -343,6 +333,13 @@ export default function SubscriptionPage() {
           );
         })}
       </div>
+
+      {/* Free Profile Note */}
+      {!currentPlanId && (
+        <p className="text-center text-sm text-muted-foreground">
+          You&apos;re currently on the <span className="font-medium text-foreground">Free Profile</span> — your listing is live in our directory. Upgrade to unlock booking, reminders, analytics, and more.
+        </p>
+      )}
 
       {/* Cancel Dialog */}
       <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
