@@ -127,7 +127,14 @@
     "send_reset_link": "Reset-Link senden",
     "check_email": "Prufen Sie Ihre E-Mail auf einen Reset-Link",
     "new_password": "Neues Passwort",
-    "set_password": "Neues Passwort festlegen"
+    "set_password": "Neues Passwort festlegen",
+    "verify_title": "Check Your Email",
+    "verify_desc": "We've sent a verification link to",
+    "verify_check_spam": "If you don't see it, check your spam folder.",
+    "verify_resend": "Resend Verification Email",
+    "verify_resent": "Verification email sent!",
+    "verify_cooldown": "Resend available in {seconds}s",
+    "verify_wrong_email": "Wrong email? Sign up again"
   },
   "footer": {
     "about": "Uber uns",

@@ -54,6 +54,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Block unverified-email users from protected routes
+  if (user && !user.email_confirmed_at) {
+    if (isPatientRoute || isDoctorRoute || isAdminRoute) {
+      const verifyUrl = new URL(`/${locale}/verify-email`, request.url);
+      if (user.email) {
+        verifyUrl.searchParams.set("email", user.email);
+      }
+      return NextResponse.redirect(verifyUrl);
+    }
+  }
+
   // Admin routes: verify role AND email allowlist at the edge
   if (isAdminRoute && user) {
     // Check email allowlist first (fast, no DB query)

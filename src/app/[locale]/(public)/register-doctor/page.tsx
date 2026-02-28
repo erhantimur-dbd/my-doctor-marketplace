@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -54,6 +55,7 @@ const STEPS = [
 
 export default function RegisterDoctorPage() {
   const searchParams = useSearchParams();
+  const locale = useLocale();
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -192,6 +194,8 @@ export default function RegisterDoctorPage() {
     formData.set("last_name", lastName);
     formData.set("email", email);
     formData.set("password", password);
+
+    formData.set("locale", locale);
 
     // Referral data
     if (referralCode) formData.set("referral_code", referralCode);

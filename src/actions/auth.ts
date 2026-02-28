@@ -33,6 +33,15 @@ export async function login(formData: FormData) {
     return { error: error.message };
   }
 
+  // Block unverified users — sign them out and prompt to verify
+  if (data.user && !data.user.email_confirmed_at) {
+    await supabase.auth.signOut();
+    return {
+      error:
+        "Please verify your email address before signing in. Check your inbox for the verification link.",
+    };
+  }
+
   revalidatePath("/", "layout");
 
   // If there's an explicit redirect (e.g. from middleware), honour it
@@ -59,6 +68,7 @@ export async function register(formData: FormData) {
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
+  const locale = (formData.get("locale") as string) || "en";
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -69,7 +79,7 @@ export async function register(formData: FormData) {
         last_name: lastName,
         role: "patient",
       },
-      emailRedirectTo: `${origin}/en/callback`,
+      emailRedirectTo: `${origin}/${locale}/callback`,
     },
   });
 
@@ -78,7 +88,7 @@ export async function register(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/en/verify-email");
+  redirect(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
 }
 
 export async function registerDoctor(formData: FormData) {
@@ -90,6 +100,7 @@ export async function registerDoctor(formData: FormData) {
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
   const referralCode = (formData.get("referral_code") as string)?.trim().toUpperCase() || "";
+  const locale = (formData.get("locale") as string) || "en";
   const colleagueName = (formData.get("colleague_name") as string)?.trim() || "";
   const colleagueEmail = (formData.get("colleague_email") as string)?.trim().toLowerCase() || "";
 
@@ -102,7 +113,7 @@ export async function registerDoctor(formData: FormData) {
         last_name: lastName,
         role: "doctor",
       },
-      emailRedirectTo: `${origin}/en/callback`,
+      emailRedirectTo: `${origin}/${locale}/callback`,
     },
   });
 
@@ -209,7 +220,26 @@ export async function registerDoctor(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/en/verify-email");
+  redirect(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
+}
+
+export async function resendVerificationEmail(email: string, locale: string = "en") {
+  const supabase = await createClient();
+  const origin = await getOrigin();
+
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${origin}/${locale}/callback`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
 }
 
 export async function forgotPassword(formData: FormData) {

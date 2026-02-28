@@ -127,7 +127,14 @@
     "send_reset_link": "Sifirlama Baglantisi Gonder",
     "check_email": "Sifirlama baglantisi icin e-postanizi kontrol edin",
     "new_password": "Yeni Sifre",
-    "set_password": "Yeni Sifre Belirle"
+    "set_password": "Yeni Sifre Belirle",
+    "verify_title": "Check Your Email",
+    "verify_desc": "We've sent a verification link to",
+    "verify_check_spam": "If you don't see it, check your spam folder.",
+    "verify_resend": "Resend Verification Email",
+    "verify_resent": "Verification email sent!",
+    "verify_cooldown": "Resend available in {seconds}s",
+    "verify_wrong_email": "Wrong email? Sign up again"
   },
   "doctor": {
     "verified": "Dogrulanmis Doktor",
