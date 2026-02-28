@@ -187,35 +187,40 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
     <div className="mx-auto max-w-3xl">
       {/* Progress Indicator */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="relative flex items-start justify-between">
+          {/* Background connector line */}
+          <div className="absolute left-0 right-0 top-4 h-0.5 bg-muted" />
+          {/* Active progress line */}
+          <div
+            className="absolute left-0 top-4 h-0.5 bg-primary transition-all duration-300"
+            style={{ width: `${((Math.min(step, totalSteps) - 1) / (totalSteps - 1)) * 100}%` }}
+          />
+
           {[
-            { num: 1, label: "Type" },
-            { num: 2, label: "Schedule" },
-            { num: 3, label: "Review" },
-            { num: 4, label: "Payment" },
-          ].map(({ num, label }) => (
-            <div key={num} className="flex flex-1 items-center">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                    step >= num
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {num}
-                </div>
-                <span className="mt-1 text-xs text-muted-foreground">
-                  {label}
-                </span>
+            { num: 1, label: "Type", icon: Stethoscope },
+            { num: 2, label: "Schedule", icon: Calendar },
+            { num: 3, label: "Review", icon: User },
+            { num: 4, label: "Payment", icon: CreditCard },
+          ].map(({ num, label, icon: Icon }) => (
+            <div key={num} className="relative flex flex-col items-center">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ring-4 ring-background transition-colors ${
+                  step >= num
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
               </div>
-              {num < totalSteps && (
-                <div
-                  className={`mx-2 h-0.5 flex-1 ${
-                    step > num ? "bg-primary" : "bg-muted"
-                  }`}
-                />
-              )}
+              <span
+                className={`mt-1.5 text-xs ${
+                  step >= num
+                    ? "font-medium text-primary"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {label}
+              </span>
             </div>
           ))}
         </div>

@@ -12,6 +12,7 @@ import {
 } from "@/lib/validators/booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import type { AvailableSlot } from "@/types/index";
+import { headers } from "next/headers";
 import { removeBookingFromGoogleCalendar } from "@/lib/google/sync";
 import { deleteRoom } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
@@ -24,6 +25,23 @@ import {
 } from "@/lib/whatsapp/templates";
 
 const PLATFORM_FEE_PERCENT = 15;
+
+/** Derive origin + locale from incoming request headers. */
+async function getOriginAndLocale() {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "";
+  const proto = h.get("x-forwarded-proto") || "https";
+  const origin = host
+    ? `${proto}://${host}`
+    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // Extract locale from the referer path (e.g. /de/doctors/slug/book)
+  const referer = h.get("referer") || "";
+  const localeMatch = referer.match(/\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/);
+  const locale = localeMatch ? localeMatch[1] : "en";
+
+  return { origin, locale };
+}
 
 const CANCELLABLE_STATUSES = [
   BOOKING_STATUSES.CONFIRMED,
@@ -139,6 +157,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         : "In-Person Consultation";
 
     // Create Stripe Checkout Session
+    const { origin, locale } = await getOriginAndLocale();
+
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       line_items: [
@@ -164,8 +184,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         booking_id: booking.id,
         booking_number: booking.booking_number,
       },
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctors/${doctor.slug}`,
+      success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/${locale}/doctors/${doctor.slug}`,
     });
 
     return { url: session.url };
