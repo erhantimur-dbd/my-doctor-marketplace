@@ -295,6 +295,21 @@
     "faq": "SSS",
     "for_doctors": "Doktorlar Icin",
     "support": "Destek",
+    "find_pharmacy": "Eczane Bul",
     "copyright": "Tum haklari saklidir."
+  },
+  "findPharmacy": {
+    "title": "Eczane Bul",
+    "subtitle": "Yakininizdaki NHS eczanelerini arayin. Adres, calisma saatleri ve iletisim bilgilerini bulmak icin Ingiltere posta kodunuzu girin.",
+    "search_placeholder": "UK posta kodu girin (ornek: SW1A 1AA)",
+    "search_button": "Ara",
+    "searching": "Eczaneler araniyor...",
+    "no_results_title": "Eczane bulunamadi",
+    "no_results_description": "Farkli bir posta kodu deneyin veya girdiginiz kodu kontrol edin.",
+    "closed_today": "Bugun kapali",
+    "visit_website": "Web sitesini ziyaret et",
+    "list_view": "Liste",
+    "map_view": "Harita",
+    "nhs_attribution": "Eczane verileri NHS England tarafindan saglanmaktadir"
   }
 }

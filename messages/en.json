@@ -295,6 +295,21 @@
     "faq": "FAQ",
     "for_doctors": "For Doctors",
     "support": "Support",
+    "find_pharmacy": "Find a Pharmacy",
     "copyright": "All rights reserved."
+  },
+  "findPharmacy": {
+    "title": "Find a Pharmacy",
+    "subtitle": "Search for NHS pharmacies near you. Enter your UK postcode to find addresses, opening hours, and contact details.",
+    "search_placeholder": "Enter UK postcode (e.g. SW1A 1AA)",
+    "search_button": "Search",
+    "searching": "Searching pharmacies...",
+    "no_results_title": "No pharmacies found",
+    "no_results_description": "Try a different postcode or check the postcode is correct.",
+    "closed_today": "Closed today",
+    "visit_website": "Visit website",
+    "list_view": "List",
+    "map_view": "Map",
+    "nhs_attribution": "Pharmacy data provided by NHS England"
   }
 }

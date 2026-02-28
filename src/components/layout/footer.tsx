@@ -45,6 +45,11 @@ export function Footer() {
                   Support
                 </Link>
               </li>
+              <li>
+                <Link href="/find-pharmacy" className="hover:text-foreground">
+                  Find a Pharmacy
+                </Link>
+              </li>
             </ul>
           </div>
 

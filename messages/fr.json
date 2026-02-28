@@ -295,6 +295,21 @@
     "faq": "FAQ",
     "for_doctors": "Pour les Medecins",
     "support": "Support",
+    "find_pharmacy": "Trouver une pharmacie",
     "copyright": "Tous droits reserves."
+  },
+  "findPharmacy": {
+    "title": "Trouver une pharmacie",
+    "subtitle": "Recherchez des pharmacies NHS pres de chez vous. Entrez votre code postal britannique pour trouver les adresses, horaires et coordonnees.",
+    "search_placeholder": "Entrez un code postal UK (ex. SW1A 1AA)",
+    "search_button": "Rechercher",
+    "searching": "Recherche de pharmacies...",
+    "no_results_title": "Aucune pharmacie trouvee",
+    "no_results_description": "Essayez un autre code postal ou verifiez votre saisie.",
+    "closed_today": "Ferme aujourd'hui",
+    "visit_website": "Visiter le site web",
+    "list_view": "Liste",
+    "map_view": "Carte",
+    "nhs_attribution": "Donnees pharmaceutiques fournies par NHS England"
   }
 }

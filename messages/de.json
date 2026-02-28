@@ -144,7 +144,22 @@
     "faq": "FAQ",
     "for_doctors": "Fur Arzte",
     "support": "Support",
+    "find_pharmacy": "Apotheke finden",
     "copyright": "Alle Rechte vorbehalten."
+  },
+  "findPharmacy": {
+    "title": "Apotheke finden",
+    "subtitle": "Suchen Sie nach NHS-Apotheken in Ihrer Nahe. Geben Sie Ihre britische Postleitzahl ein, um Adressen, Offnungszeiten und Kontaktdaten zu finden.",
+    "search_placeholder": "UK-Postleitzahl eingeben (z.B. SW1A 1AA)",
+    "search_button": "Suchen",
+    "searching": "Apotheken werden gesucht...",
+    "no_results_title": "Keine Apotheken gefunden",
+    "no_results_description": "Versuchen Sie eine andere Postleitzahl oder prufen Sie die Eingabe.",
+    "closed_today": "Heute geschlossen",
+    "visit_website": "Website besuchen",
+    "list_view": "Liste",
+    "map_view": "Karte",
+    "nhs_attribution": "Apothekendaten bereitgestellt vom NHS England"
   },
   "specialty": {
     "general_practice": "Allgemeinmedizin",
