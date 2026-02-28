@@ -127,7 +127,7 @@ export default function PricingPage() {
                   )}
                   <CardHeader className="pb-4 pt-6 text-center">
                     <h3 className="text-lg font-bold">{plan.name}</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="min-h-[2.5rem] text-sm text-muted-foreground">
                       {plan.description}
                     </p>
                     <div className="mt-4">
