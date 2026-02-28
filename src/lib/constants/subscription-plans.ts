@@ -53,7 +53,7 @@ export const SUBSCRIPTION_PLANS = [
       "Everything in Professional & Premium",
       "3 hours of dedicated onboarding",
       "Custom branding on your profile",
-      "Up to 10 doctor profiles",
+      "Up to 5 doctor profiles",
       "Centralized clinic dashboard",
       "Multi-doctor scheduling",
       "Team performance analytics",
