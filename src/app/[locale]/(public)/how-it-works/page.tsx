@@ -3,9 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { StepAnimation } from "@/components/how-it-works/step-animation";
 import {
-  Search,
-  Calendar,
-  Video,
   CreditCard,
   Shield,
   Star,
@@ -13,69 +10,9 @@ import {
   Globe,
   ArrowRight,
   CheckCircle2,
-  Stethoscope,
-  Bell,
   MessageSquare,
+  Stethoscope,
 } from "lucide-react";
-
-const steps = [
-  {
-    step: "01",
-    icon: Search,
-    title: "Search & Discover",
-    description:
-      "Browse verified doctors by specialty, location, language, or price. Read real patient reviews and compare profiles to find the perfect match.",
-    features: [
-      "Filter by 24+ medical specialties",
-      "Search across multiple European cities",
-      "View transparent pricing upfront",
-      "Read verified patient reviews",
-    ],
-    color: { step: "bg-blue-600", iconBg: "bg-blue-50", iconText: "text-blue-600", check: "text-blue-600" },
-  },
-  {
-    step: "02",
-    icon: Calendar,
-    title: "Book Instantly",
-    description:
-      "Choose a convenient time slot from the doctor's real-time availability calendar. Book in-person or video consultations with just a few clicks.",
-    features: [
-      "Real-time availability calendar",
-      "In-person or video consultations",
-      "Secure online payment via Stripe",
-      "Instant booking confirmation",
-    ],
-    color: { step: "bg-emerald-600", iconBg: "bg-emerald-50", iconText: "text-emerald-600", check: "text-emerald-600" },
-  },
-  {
-    step: "03",
-    icon: Bell,
-    title: "Get Reminders",
-    description:
-      "Receive automatic reminders via email, SMS, or WhatsApp before your appointment so you never miss a visit.",
-    features: [
-      "24-hour advance email reminder",
-      "1-hour SMS/WhatsApp reminder",
-      "In-app notification center",
-      "Calendar integration",
-    ],
-    color: { step: "bg-amber-600", iconBg: "bg-amber-50", iconText: "text-amber-600", check: "text-amber-600" },
-  },
-  {
-    step: "04",
-    icon: Stethoscope,
-    title: "Visit Your Doctor",
-    description:
-      "Attend your appointment at the doctor's clinic or join a secure video call from anywhere. Your health, your choice.",
-    features: [
-      "Premium clinic locations",
-      "HD video consultations",
-      "Secure & private sessions",
-      "Follow-up booking option",
-    ],
-    color: { step: "bg-teal-600", iconBg: "bg-teal-50", iconText: "text-teal-600", check: "text-teal-600" },
-  },
-];
 
 const benefits = [
   {
@@ -128,6 +65,10 @@ export default function HowItWorksPage() {
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             Book appointments with top private specialists in just a few steps. Simple, transparent, and secure.
           </p>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+            <CheckCircle2 className="h-4 w-4" />
+            Free to sign up &mdash; No subscription required for patients or doctors
+          </div>
         </div>
       </section>
 
@@ -135,50 +76,6 @@ export default function HowItWorksPage() {
       <section className="px-4 py-12 md:py-16">
         <div className="container mx-auto">
           <StepAnimation />
-        </div>
-      </section>
-
-      {/* Steps */}
-      <section className="px-4 py-12 md:py-20">
-        <div className="container mx-auto max-w-4xl">
-          <div className="space-y-12">
-            {steps.map((step, i) => (
-              <div
-                key={step.step}
-                className={`flex flex-col gap-8 md:flex-row md:items-center ${
-                  i % 2 === 1 ? "md:flex-row-reverse" : ""
-                }`}
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-full ${step.color.step} text-sm font-bold text-white`}>
-                      {step.step}
-                    </span>
-                    <h2 className="text-xl font-bold md:text-2xl">
-                      {step.title}
-                    </h2>
-                  </div>
-                  <p className="mt-3 text-muted-foreground">
-                    {step.description}
-                  </p>
-                  <ul className="mt-4 space-y-2">
-                    {step.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className={`h-4 w-4 shrink-0 ${step.color.check}`} />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="flex flex-1 items-center justify-center">
-                  <div className={`flex h-32 w-32 items-center justify-center rounded-3xl ${step.color.iconBg} md:h-40 md:w-40`}>
-                    <step.icon className={`h-16 w-16 ${step.color.iconText} md:h-20 md:w-20`} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
@@ -227,6 +124,19 @@ export default function HowItWorksPage() {
             <Button size="lg" variant="outline" className="rounded-full" asChild>
               <Link href="/register">Create Free Account</Link>
             </Button>
+          </div>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Free for patients and doctors. No credit card required.
+          </p>
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <Stethoscope className="h-4 w-4" />
+            <span>Are you a doctor?</span>
+            <Link
+              href="/register-doctor"
+              className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+            >
+              Join as a Doctor <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
       </section>
