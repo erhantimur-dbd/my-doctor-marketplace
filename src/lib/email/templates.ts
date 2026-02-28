@@ -895,3 +895,76 @@ export function contactInquiryAutoReplyEmail(params: {
 
   return { subject, html };
 }
+
+// ---------------------------------------------------------------------------
+// Subscription Upgrade Invite
+// ---------------------------------------------------------------------------
+
+interface SubscriptionUpgradeInviteParams {
+  doctorName: string;
+  subscriptionUrl: string;
+}
+
+export function subscriptionUpgradeInviteEmail({
+  doctorName,
+  subscriptionUrl,
+}: SubscriptionUpgradeInviteParams): { subject: string; html: string } {
+  const subject = `Upgrade to Professional — Grow Your Practice with ${BRAND_NAME}`;
+
+  const features = [
+    "Online booking calendar with real-time availability",
+    "Unlimited patient bookings",
+    "Email, SMS & WhatsApp appointment reminders",
+    "Video consultations",
+    "Basic & advanced analytics dashboard",
+    "Patient CRM",
+    "Priority support",
+  ];
+
+  const featureList = features
+    .map(
+      (f) =>
+        `<li style="padding: 6px 0; font-size: 14px; color: #374151;">
+          <span style="color: #059669; font-weight: 600;">&#10003;</span>&nbsp; ${f}
+        </li>`
+    )
+    .join("");
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 16px; font-size: 20px; color: #111827; font-weight: 700;">
+      Upgrade to Professional and Grow Your Practice
+    </h2>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Hi Dr. ${doctorName},
+    </p>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      You're currently on the <strong>Free</strong> plan, which gives you a public doctor profile on ${BRAND_NAME}. Upgrade to <strong>Professional</strong> to unlock the full suite of tools to manage your practice and reach more patients.
+    </p>
+
+    <div style="background-color: #f0fdf4; border-left: 4px solid #059669; padding: 16px 20px; border-radius: 4px; margin: 0 0 24px;">
+      <p style="margin: 0; font-size: 15px; color: #065f46; font-weight: 600;">
+        Professional Plan &mdash; &euro;99/month
+      </p>
+      <p style="margin: 4px 0 0; font-size: 13px; color: #047857;">
+        Introductory pricing &middot; Lock in your rate today
+      </p>
+    </div>
+
+    <p style="margin: 0 0 12px; font-size: 14px; color: #374151; font-weight: 600;">
+      What's included:
+    </p>
+    <ul style="margin: 0 0 24px; padding-left: 16px; list-style: none;">
+      ${featureList}
+    </ul>
+
+    ${button("Upgrade to Professional", subscriptionUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you have any questions about the Professional plan, our team is here to help. Simply reply to this email or contact us through the platform.
+    </p>
+  `);
+
+  return { subject, html };
+}

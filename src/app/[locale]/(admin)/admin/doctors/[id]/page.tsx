@@ -58,6 +58,17 @@ export default async function AdminDoctorDetailPage({
     .select("*", { count: "exact", head: true })
     .eq("doctor_id", id);
 
+  const { data: subscription } = await supabase
+    .from("doctor_subscriptions")
+    .select("plan_id, status, current_period_end, cancel_at_period_end")
+    .eq("doctor_id", id)
+    .in("status", ["active", "trialing", "past_due"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const currentPlan = (subscription as any)?.plan_id || "free";
+
   return (
     <div className="space-y-6">
       <Link
@@ -132,6 +143,24 @@ export default async function AdminDoctorDetailPage({
               <span className="text-muted-foreground">Registered</span>
               <span>
                 {new Date(doctor.profile.created_at).toLocaleDateString()}
+              </span>
+            </div>
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Subscription</span>
+              <span className="flex items-center gap-2">
+                {currentPlan === "free" ? (
+                  <Badge variant="outline">Free</Badge>
+                ) : currentPlan === "professional" ? (
+                  <Badge className="bg-blue-600">Professional</Badge>
+                ) : (
+                  <Badge variant="secondary" className="capitalize">{currentPlan}</Badge>
+                )}
+                {(subscription as any)?.status && (
+                  <span className="text-xs text-muted-foreground">
+                    ({(subscription as any).status})
+                  </span>
+                )}
               </span>
             </div>
           </CardContent>
@@ -210,6 +239,7 @@ export default async function AdminDoctorDetailPage({
             currentStatus={doctor.verification_status}
             isActive={doctor.is_active}
             isFeatured={doctor.is_featured}
+            currentPlan={currentPlan}
           />
         </CardContent>
       </Card>

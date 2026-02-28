@@ -8,19 +8,22 @@ import {
   updateDoctorVerification,
   toggleDoctorActive,
   toggleDoctorFeatured,
+  sendUpgradeInvite,
 } from "@/actions/admin";
-import { CheckCircle, XCircle, Star, Ban, Shield } from "lucide-react";
+import { CheckCircle, XCircle, Star, Ban, Shield, Mail } from "lucide-react";
 
 export function AdminDoctorActions({
   doctorId,
   currentStatus,
   isActive,
   isFeatured,
+  currentPlan,
 }: {
   doctorId: string;
   currentStatus: string;
   isActive: boolean;
   isFeatured: boolean;
+  currentPlan: string;
 }) {
   const [status, setStatus] = useState(currentStatus);
   const [active, setActive] = useState(isActive);
@@ -61,6 +64,17 @@ export function AdminDoctorActions({
       toast.success(
         featured ? "Featured status removed" : "Doctor featured"
       );
+    }
+    setLoading("");
+  }
+
+  async function handleSendUpgradeInvite() {
+    setLoading("invite");
+    const result = await sendUpgradeInvite(doctorId);
+    if (result?.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Upgrade invite sent successfully");
     }
     setLoading("");
   }
@@ -135,6 +149,35 @@ export function AdminDoctorActions({
             {featured ? "Remove" : "Feature"}
           </Button>
         </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-sm font-medium">Subscription</p>
+        {currentPlan === "free" ? (
+          <div className="flex items-center gap-3">
+            <Badge variant="outline">Free Plan</Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendUpgradeInvite}
+              disabled={loading === "invite"}
+            >
+              <Mail className="mr-1 h-4 w-4" />
+              {loading === "invite" ? "Sending..." : "Send Upgrade Invite"}
+            </Button>
+          </div>
+        ) : (
+          <Badge
+            className={
+              currentPlan === "professional"
+                ? "bg-blue-600"
+                : "capitalize"
+            }
+            variant={currentPlan === "professional" ? "default" : "secondary"}
+          >
+            {currentPlan}
+          </Badge>
+        )}
       </div>
     </div>
   );

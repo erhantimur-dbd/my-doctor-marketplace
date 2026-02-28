@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { subscriptionUpgradeInviteEmail } from "@/lib/email/templates";
+import { createNotification } from "@/lib/notifications";
 
 // Admin email allowlist — mirrors middleware check for defense-in-depth
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
@@ -180,5 +182,54 @@ export async function updatePlatformSetting(key: string, value: string) {
   await logAdminAction(supabase, user.id, "setting_updated", "platform_setting", key, { value });
 
   revalidatePath("/admin/settings");
+  return { success: true };
+}
+
+export async function sendUpgradeInvite(doctorId: string) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  // Fetch doctor with profile
+  const { data: doctor } = await supabase
+    .from("doctors")
+    .select("id, profile:profiles!doctors_profile_id_fkey(id, first_name, last_name, email)")
+    .eq("id", doctorId)
+    .single();
+
+  if (!doctor) return { error: "Doctor not found" };
+
+  // Check they don't already have an active subscription
+  const { data: activeSub } = await supabase
+    .from("doctor_subscriptions")
+    .select("id, plan_id")
+    .eq("doctor_id", doctorId)
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1)
+    .maybeSingle();
+
+  if (activeSub) return { error: "Doctor already has an active subscription" };
+
+  const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  const { subject, html } = subscriptionUpgradeInviteEmail({
+    doctorName: `${profile.first_name} ${profile.last_name}`,
+    subscriptionUrl: `${appUrl}/en/doctor-dashboard/subscription`,
+  });
+
+  // Send in-app notification + email
+  await createNotification({
+    userId: profile.id,
+    type: "subscription_upgrade_invite",
+    title: "Upgrade to Professional",
+    message: "Unlock the full suite of tools to manage your practice and reach more patients.",
+    channels: ["in_app", "email"],
+    metadata: { invitedBy: user.id, plan: "professional" },
+    email: { to: profile.email, subject, html },
+  });
+
+  await logAdminAction(supabase, user.id, "subscription_upgrade_invite_sent", "doctor", doctorId, { plan: "professional" });
+
+  revalidatePath("/admin/doctors");
   return { success: true };
 }

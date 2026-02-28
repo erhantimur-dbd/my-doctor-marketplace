@@ -43,6 +43,16 @@ export default async function AdminDoctorsPage() {
     )
     .order("created_at", { ascending: false });
 
+  // Fetch active subscriptions to show plan per doctor
+  const { data: subscriptions } = await supabase
+    .from("doctor_subscriptions")
+    .select("doctor_id, plan_id")
+    .in("status", ["active", "trialing", "past_due"]);
+
+  const subMap = new Map(
+    (subscriptions || []).map((s: any) => [s.doctor_id, s.plan_id])
+  );
+
   const { count: pendingCount } = await supabase
     .from("doctors")
     .select("*", { count: "exact", head: true })
@@ -67,6 +77,7 @@ export default async function AdminDoctorsPage() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Plan</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead>Bookings</TableHead>
@@ -84,6 +95,14 @@ export default async function AdminDoctorsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {doc.profile.email}
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const plan = subMap.get(doc.id);
+                        if (!plan || plan === "free") return <Badge variant="outline">Free</Badge>;
+                        if (plan === "professional") return <Badge className="bg-blue-600">Professional</Badge>;
+                        return <Badge variant="secondary" className="capitalize">{plan}</Badge>;
+                      })()}
                     </TableCell>
                     <TableCell>
                       <span
@@ -127,7 +146,7 @@ export default async function AdminDoctorsPage() {
               )}
               {(!doctors || doctors.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
                     No doctors registered yet
                   </TableCell>
                 </TableRow>
