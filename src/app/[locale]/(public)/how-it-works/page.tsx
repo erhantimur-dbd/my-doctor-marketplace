@@ -1,6 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { StepAnimation } from "@/components/how-it-works/step-animation";
 import {
   Search,
   Calendar,
@@ -127,6 +128,13 @@ export default function HowItWorksPage() {
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             Book appointments with top private specialists in just a few steps. Simple, transparent, and secure.
           </p>
+        </div>
+      </section>
+
+      {/* Interactive Step Animation */}
+      <section className="px-4 py-12 md:py-16">
+        <div className="container mx-auto">
+          <StepAnimation />
         </div>
       </section>
 
