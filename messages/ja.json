@@ -60,6 +60,7 @@
     "search_location_placeholder": "すべての地域",
     "search_button": "検索",
     "use_my_location": "現在地を使用",
+    "detecting_location": "検出中...",
     "suggestions_specialties": "診療科",
     "suggestions_doctors": "医師",
     "suggestions_searching": "検索中...",

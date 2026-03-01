@@ -60,6 +60,7 @@
     "search_location_placeholder": "所有地区",
     "search_button": "搜索",
     "use_my_location": "使用我的位置",
+    "detecting_location": "定位中...",
     "suggestions_specialties": "专科",
     "suggestions_doctors": "医生",
     "suggestions_searching": "搜索中...",
