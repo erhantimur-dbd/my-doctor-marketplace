@@ -133,25 +133,25 @@ export default function PricingPage() {
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-5xl">
           <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
-            {/* Professional — Blue */}
+            {/* Professional — Emerald */}
             {(() => {
               const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "professional")!;
               return (
-                <Card className="relative flex flex-col overflow-hidden border-blue-200 dark:border-blue-900">
-                  <div className="bg-gradient-to-br from-blue-50 via-blue-50/80 to-sky-50 px-6 pb-6 pt-10 text-center dark:from-blue-950/40 dark:via-blue-950/30 dark:to-sky-950/20">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/50">
-                      <Stethoscope className="h-5 w-5 text-blue-600" />
+                <Card className="relative flex flex-col overflow-hidden border-emerald-200 dark:border-emerald-900">
+                  <div className="bg-gradient-to-br from-emerald-50 via-emerald-50/80 to-green-50 px-6 pb-6 pt-10 text-center dark:from-emerald-950/40 dark:via-emerald-950/30 dark:to-green-950/20">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
+                      <Stethoscope className="h-5 w-5 text-emerald-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100">{plan.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-blue-600/70 dark:text-blue-300/70">
+                    <h3 className="text-lg font-bold text-emerald-900 dark:text-emerald-100">{plan.name}</h3>
+                    <p className="mt-1 min-h-[40px] text-sm text-emerald-600/70 dark:text-emerald-300/70">
                       {plan.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold text-blue-700 dark:text-blue-300">
+                      <span className="text-4xl font-bold text-emerald-700 dark:text-emerald-300">
                         {formatPriceForLocale(plan.prices, locale)}
                       </span>
-                      <span className="text-blue-500/70"> / month</span>
-                      <p className="mt-1.5 text-xs font-medium text-blue-500/60">
+                      <span className="text-emerald-500/70"> / month</span>
+                      <p className="mt-1.5 text-xs font-medium text-emerald-500/60">
                         Introductory pricing
                       </p>
                     </div>
@@ -160,13 +160,13 @@ export default function PricingPage() {
                     <ul className="flex-1 space-y-3">
                       {plan.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                           {feature}
                         </li>
                       ))}
                     </ul>
                     <Button
-                      className="mt-6 w-full rounded-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                      className="mt-6 w-full rounded-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
                       variant="outline"
                       asChild
                     >
@@ -229,25 +229,25 @@ export default function PricingPage() {
               );
             })()}
 
-            {/* Clinic Starter Pack — Amber */}
+            {/* Clinic Starter Pack — Rose */}
             {(() => {
               const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "clinic")!;
               return (
-                <Card className="relative flex flex-col overflow-hidden border-amber-200 dark:border-amber-900">
-                  <div className="bg-gradient-to-br from-amber-50 via-orange-50/80 to-yellow-50 px-6 pb-6 pt-10 text-center dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/20">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/50">
-                      <Users className="h-5 w-5 text-amber-600" />
+                <Card className="relative flex flex-col overflow-hidden border-rose-200 dark:border-rose-900">
+                  <div className="bg-gradient-to-br from-rose-50 via-rose-50/80 to-pink-50 px-6 pb-6 pt-10 text-center dark:from-rose-950/40 dark:via-rose-950/30 dark:to-pink-950/20">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-900/50">
+                      <Users className="h-5 w-5 text-rose-600" />
                     </div>
-                    <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">{plan.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-amber-600/70 dark:text-amber-300/70">
+                    <h3 className="text-lg font-bold text-rose-900 dark:text-rose-100">{plan.name}</h3>
+                    <p className="mt-1 min-h-[40px] text-sm text-rose-600/70 dark:text-rose-300/70">
                       {plan.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold text-amber-700 dark:text-amber-300">
+                      <span className="text-4xl font-bold text-rose-700 dark:text-rose-300">
                         {formatPriceForLocale(plan.prices, locale)}
                       </span>
-                      <span className="text-amber-500/70"> / month</span>
-                      <p className="mt-1.5 text-xs font-medium text-amber-500/60">
+                      <span className="text-rose-500/70"> / month</span>
+                      <p className="mt-1.5 text-xs font-medium text-rose-500/60">
                         Introductory pricing
                       </p>
                     </div>
@@ -256,13 +256,13 @@ export default function PricingPage() {
                     <ul className="flex-1 space-y-3">
                       {plan.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
                           {feature}
                         </li>
                       ))}
                     </ul>
                     <Button
-                      className="mt-6 w-full rounded-full bg-amber-600 text-white hover:bg-amber-700"
+                      className="mt-6 w-full rounded-full bg-rose-600 text-white hover:bg-rose-700"
                       asChild
                     >
                       <Link href="/register-doctor">
