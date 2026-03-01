@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -30,6 +31,7 @@ import {
   Loader2,
   ExternalLink,
   CheckCircle2,
+  Accessibility,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { centsToAmount, amountToCents } from "@/lib/utils/currency";
@@ -63,6 +65,7 @@ export default function ProfilePage() {
   const [videoConsultationFeeCents, setVideoConsultationFeeCents] = useState(0);
   const [cancellationPolicy, setCancellationPolicy] = useState("flexible");
   const [cancellationHours, setCancellationHours] = useState(24);
+  const [isWheelchairAccessible, setIsWheelchairAccessible] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -97,6 +100,7 @@ export default function ProfilePage() {
     setVideoConsultationFeeCents(data.video_consultation_fee_cents || 0);
     setCancellationPolicy(data.cancellation_policy || "flexible");
     setCancellationHours(data.cancellation_hours || 24);
+    setIsWheelchairAccessible(data.is_wheelchair_accessible || false);
     setLoading(false);
   }
 
@@ -122,6 +126,7 @@ export default function ProfilePage() {
         video_consultation_fee_cents: videoConsultationFeeCents || null,
         cancellation_policy: cancellationPolicy,
         cancellation_hours: cancellationHours,
+        is_wheelchair_accessible: isWheelchairAccessible,
       })
       .eq("id", doctor.id);
 
@@ -333,6 +338,27 @@ export default function ProfilePage() {
                 />
                 <span className="text-sm">Video Consultation</span>
               </label>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-2">
+            <Label>Clinic Accessibility</Label>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="flex items-center gap-2">
+                <Accessibility className="h-4 w-4 text-blue-600" />
+                <div>
+                  <p className="text-sm font-medium">Wheelchair Accessible</p>
+                  <p className="text-xs text-muted-foreground">
+                    Indicate if your clinic is accessible for wheelchair users
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={isWheelchairAccessible}
+                onCheckedChange={setIsWheelchairAccessible}
+              />
             </div>
           </div>
         </CardContent>

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { DoctorCard } from "./doctor-card";
 import type { MapDoctor } from "@/components/maps/doctor-map";
-import type { DoctorNextAvailability } from "@/actions/search";
+import type { DoctorMultiDayAvailability } from "@/actions/search";
 
 // Dynamic import — Google Maps requires window
 const DoctorMap = dynamic(
@@ -25,7 +25,7 @@ type Doctor = Parameters<typeof DoctorCard>[0]["doctor"];
 interface DoctorResultsWithMapProps {
   doctors: Doctor[];
   locale: string;
-  availability?: Record<string, DoctorNextAvailability>;
+  availability?: Record<string, DoctorMultiDayAvailability>;
   centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
 }
 

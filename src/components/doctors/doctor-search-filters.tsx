@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { X, Clock } from "lucide-react";
+import { X, Clock, Accessibility } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
@@ -115,6 +115,7 @@ export function DoctorSearchFilters({
       k !== "lat" &&
       k !== "lng" &&
       k !== "availableToday" &&
+      k !== "wheelchairAccessible" &&
       k !== "query"
   ).length;
 
@@ -233,6 +234,20 @@ export function DoctorSearchFilters({
                 checked={currentFilters.availableToday === "true"}
                 onCheckedChange={(checked) =>
                   updateFilter("availableToday", checked ? "true" : undefined)
+                }
+              />
+            </div>
+
+            {/* Wheelchair Accessible */}
+            <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
+              <Label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                <Accessibility className="h-4 w-4 text-blue-600" />
+                {t("wheelchair_accessible")}
+              </Label>
+              <Switch
+                checked={currentFilters.wheelchairAccessible === "true"}
+                onCheckedChange={(checked) =>
+                  updateFilter("wheelchairAccessible", checked ? "true" : undefined)
                 }
               />
             </div>

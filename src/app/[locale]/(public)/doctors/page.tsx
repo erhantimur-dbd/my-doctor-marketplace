@@ -2,7 +2,7 @@ import {
   searchDoctors,
   getSpecialties,
   getLocations,
-  getNextAvailabilityBatch,
+  getMultiDayAvailabilityBatch,
 } from "@/actions/search";
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
@@ -40,6 +40,7 @@ export default async function DoctorsPage({
       sort: sp.sort || "featured",
       page: sp.page ? Number(sp.page) : 1,
       availableToday: sp.availableToday === "true",
+      wheelchairAccessible: sp.wheelchairAccessible === "true",
       userLat: sp.lat ? Number(sp.lat) : undefined,
       userLng: sp.lng ? Number(sp.lng) : undefined,
     }),
@@ -51,9 +52,9 @@ export default async function DoctorsPage({
     typeof DoctorCard
   >[0]["doctor"][];
 
-  // Fetch next availability for all returned doctors (single batch RPC)
+  // Fetch multi-day availability for all returned doctors (single batch RPC)
   const doctorIds = typedDoctors.map((d) => d.id);
-  const availability = await getNextAvailabilityBatch(
+  const availability = await getMultiDayAvailabilityBatch(
     doctorIds,
     sp.consultationType
   );

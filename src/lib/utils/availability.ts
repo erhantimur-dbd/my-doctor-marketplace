@@ -26,6 +26,26 @@ export function formatDateLabel(dateStr: string): string {
 }
 
 /**
+ * Short date label for tab pills: "Today", "Tomorrow", or "Wed 5".
+ */
+export function formatShortDateLabel(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  if (date.getTime() === today.getTime()) return "Today";
+  if (date.getTime() === tomorrow.getTime()) return "Tomorrow";
+
+  return date.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+  });
+}
+
+/**
  * Formats a TIMESTAMPTZ string (e.g. "2026-03-05T10:00:00+00:00") into "HH:mm".
  */
 export function formatSlotTime(timestamptz: string): string {

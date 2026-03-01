@@ -216,7 +216,11 @@
     "use_my_location": "Meinen Standort verwenden",
     "detecting_location": "Erkennung...",
     "sort_nearest": "Nächste",
-    "show_results": "Ergebnisse anzeigen"
+    "show_results": "Ergebnisse anzeigen",
+    "wheelchair_accessible": "Rollstuhlgerecht",
+    "view_full_availability": "Vollständige Verfügbarkeit anzeigen",
+    "no_availability_14_days": "Keine Verfügbarkeit in den nächsten 14 Tagen",
+    "full_availability_title": "Vollständige Verfügbarkeit"
   },
   "booking": {
     "select_date": "Datum wahlen",
@@ -304,7 +308,10 @@
     "total_revenue": "Gesamtumsatz",
     "avg_rating": "Durchschnittsbewertung",
     "new_patients": "Neue Patienten",
-    "this_month": "Diesen Monat"
+    "this_month": "Diesen Monat",
+    "wheelchair_accessible": "Rollstuhlgerecht",
+    "wheelchair_accessible_desc": "Geben Sie an, ob Ihre Praxis für Rollstuhlfahrer zugänglich ist",
+    "accessible": "Zugänglich"
   },
   "review": {
     "write_review": "Bewertung schreiben",

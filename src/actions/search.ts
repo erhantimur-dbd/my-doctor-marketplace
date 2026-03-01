@@ -14,6 +14,7 @@ export interface SearchFilters {
   sort?: string;
   page?: number;
   availableToday?: boolean;
+  wheelchairAccessible?: boolean;
   userLat?: number;
   userLng?: number;
 }
@@ -110,6 +111,9 @@ export async function searchDoctors(filters: SearchFilters) {
   }
   if (filters.query) {
     query = query.ilike("bio", `%${filters.query}%`);
+  }
+  if (filters.wheelchairAccessible) {
+    query = query.eq("is_wheelchair_accessible", true);
   }
 
   // Pagination
@@ -347,6 +351,67 @@ export async function getNextAvailabilityBatch(
       start: row.slot_start,
       end: row.slot_end,
     });
+  }
+
+  return result;
+}
+
+/* ── Multi-day batch availability for doctor cards ────────── */
+
+export interface DoctorMultiDayAvailability {
+  days: { date: string; slots: NextAvailabilitySlot[] }[];
+  consultationType: string;
+}
+
+/**
+ * For a list of doctor IDs, returns the next N available days + up to 4 slots
+ * per day for each doctor. Single DB round-trip via the batch RPC function.
+ */
+export async function getMultiDayAvailabilityBatch(
+  doctorIds: string[],
+  consultationType?: string
+): Promise<Record<string, DoctorMultiDayAvailability>> {
+  if (doctorIds.length === 0) return {};
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc(
+    "get_multi_day_available_slots_batch",
+    {
+      p_doctor_ids: doctorIds,
+      p_lookahead_days: 14,
+      p_max_days_per_doctor: 3,
+      p_max_slots_per_day: 4,
+      p_consultation_type: consultationType || "in_person",
+    }
+  );
+
+  if (error || !data) {
+    console.error("Multi-day batch availability RPC error:", error);
+    return {};
+  }
+
+  const usedType = consultationType || "in_person";
+  const result: Record<string, DoctorMultiDayAvailability> = {};
+  for (const row of data as {
+    doctor_id: string;
+    available_date: string;
+    slot_start: string;
+    slot_end: string;
+  }[]) {
+    if (!result[row.doctor_id]) {
+      result[row.doctor_id] = { days: [], consultationType: usedType };
+    }
+    const existingDay = result[row.doctor_id].days.find(
+      (d) => d.date === row.available_date
+    );
+    if (existingDay) {
+      existingDay.slots.push({ start: row.slot_start, end: row.slot_end });
+    } else {
+      result[row.doctor_id].days.push({
+        date: row.available_date,
+        slots: [{ start: row.slot_start, end: row.slot_end }],
+      });
+    }
   }
 
   return result;

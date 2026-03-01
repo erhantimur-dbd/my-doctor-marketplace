@@ -187,7 +187,11 @@
     "use_my_location": "Utiliser ma position",
     "detecting_location": "Detection...",
     "sort_nearest": "Plus proche",
-    "show_results": "Afficher les résultats"
+    "show_results": "Afficher les résultats",
+    "wheelchair_accessible": "Accessible en fauteuil roulant",
+    "view_full_availability": "Voir toutes les disponibilités",
+    "no_availability_14_days": "Aucune disponibilité dans les 14 prochains jours",
+    "full_availability_title": "Disponibilité complète"
   },
   "booking": {
     "select_date": "Choisir une date",
@@ -253,7 +257,10 @@
     "total_revenue": "Revenu total",
     "avg_rating": "Note moyenne",
     "new_patients": "Nouveaux patients",
-    "this_month": "Ce mois"
+    "this_month": "Ce mois",
+    "wheelchair_accessible": "Accessible en fauteuil roulant",
+    "wheelchair_accessible_desc": "Indiquez si votre cabinet est accessible aux fauteuils roulants",
+    "accessible": "Accessible"
   },
   "review": {
     "write_review": "Ecrire un avis",

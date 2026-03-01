@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -19,7 +20,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Clock, SlidersHorizontal, X, MapPin, Loader2 } from "lucide-react";
+import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MobileFilterBarProps {
@@ -81,6 +82,26 @@ export function MobileFilterBar({
       >
         <Clock className="h-3.5 w-3.5" />
         {t("available_today")}
+      </button>
+
+      {/* Wheelchair Accessible chip */}
+      <button
+        type="button"
+        onClick={() =>
+          updateFilter(
+            "wheelchairAccessible",
+            currentFilters.wheelchairAccessible === "true" ? undefined : "true"
+          )
+        }
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+          currentFilters.wheelchairAccessible === "true"
+            ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400"
+            : "border-border bg-background hover:bg-accent"
+        )}
+      >
+        <Accessibility className="h-3.5 w-3.5" />
+        {t("wheelchair_accessible")}
       </button>
 
       {/* Sort dropdown */}
@@ -218,6 +239,20 @@ export function MobileFilterBar({
                   <SelectItem value="video">Video Call</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Wheelchair Accessible */}
+            <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/30">
+              <Label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+                <Accessibility className="h-4 w-4 text-blue-600" />
+                {t("wheelchair_accessible")}
+              </Label>
+              <Switch
+                checked={currentFilters.wheelchairAccessible === "true"}
+                onCheckedChange={(checked) =>
+                  updateFilter("wheelchairAccessible", checked ? "true" : undefined)
+                }
+              />
             </div>
 
             {/* Minimum Rating */}
