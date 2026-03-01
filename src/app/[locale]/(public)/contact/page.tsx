@@ -14,7 +14,7 @@ import { ContactForm } from "./contact-form";
 const salesEmail =
   process.env.CONTACT_ADMIN_EMAIL ||
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
-  "sales@mydoctor.com";
+  "sales@mydoctors360.com";
 
 export default function ContactPage() {
   return (
@@ -167,7 +167,7 @@ export default function ContactPage() {
             Ready to Grow Your Practice?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-            Join hundreds of doctors across Europe who use MyDoctor to connect
+            Join hundreds of doctors across Europe who use MyDoctors360 to connect
             with patients and manage their practice.
           </p>
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">

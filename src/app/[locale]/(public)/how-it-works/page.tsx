@@ -60,7 +60,7 @@ export default function HowItWorksPage() {
       <section className="bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
         <div className="container mx-auto text-center">
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
-            How MyDoctor Works
+            How MyDoctors360 Works
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             Book appointments with top private specialists in just a few steps. Simple, transparent, and secure.
@@ -83,7 +83,7 @@ export default function HowItWorksPage() {
       <section className="bg-muted/30 px-4 py-12 md:py-20">
         <div className="container mx-auto">
           <h2 className="text-center text-2xl font-bold md:text-3xl">
-            Why Choose MyDoctor
+            Why Choose MyDoctors360
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-muted-foreground">
             We make finding and booking the right doctor simple, safe, and transparent.
@@ -113,7 +113,7 @@ export default function HowItWorksPage() {
             Ready to Book Your First Appointment?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Join thousands of patients who trust MyDoctor for their healthcare needs.
+            Join thousands of patients who trust MyDoctors360 for their healthcare needs.
           </p>
           <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button size="lg" className="rounded-full" asChild>

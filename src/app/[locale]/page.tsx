@@ -232,7 +232,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Why Choose MyDoctor */}
+      {/* Why Choose MyDoctors360 */}
       <section className="px-4 py-16 md:py-24">
         <div className="container mx-auto">
           <div className="text-center">

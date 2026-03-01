@@ -12,7 +12,7 @@ export const TEMPLATE_APPOINTMENT_REMINDER = "appointment_reminder";
 /** Utility: "Hi {{1}}, your booking {{2}} is confirmed for {{3}} at {{4}} with Dr. {{5}}. Amount: {{6}}." */
 export const TEMPLATE_BOOKING_CONFIRMATION = "booking_confirmation";
 
-/** Utility: "Hi {{1}}, payment of {{2}} received for booking {{3}}. Thank you for choosing MyDoctor." */
+/** Utility: "Hi {{1}}, payment of {{2}} received for booking {{3}}. Thank you for choosing MyDoctors360." */
 export const TEMPLATE_PAYMENT_RECEIPT = "payment_receipt";
 
 /** Utility: "Hi {{1}}, your booking {{2}} for {{3}} has been cancelled. {{4}}" */

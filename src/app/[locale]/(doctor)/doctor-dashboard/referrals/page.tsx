@@ -104,7 +104,7 @@ export default async function DoctorReferralsPage() {
       </div>
 
       <p className="text-muted-foreground">
-        Invite colleagues to join MyDoctor. When they subscribe, you both get 1
+        Invite colleagues to join MyDoctors360. When they subscribe, you both get 1
         month free on your subscription plan.
       </p>
 

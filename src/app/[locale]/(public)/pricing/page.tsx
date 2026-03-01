@@ -97,7 +97,7 @@ export default function PricingPage() {
             For Doctors
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
-            Grow Your Practice with MyDoctor
+            Grow Your Practice with MyDoctors360
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             Join our premium marketplace and reach patients across Europe. Simple pricing, powerful tools, no long-term contracts.
@@ -305,7 +305,7 @@ export default function PricingPage() {
                   Ready to Grow Your Practice?
                 </h2>
                 <p className="mx-auto mt-3 max-w-xl text-white/70">
-                  Join hundreds of doctors already using MyDoctor to reach new
+                  Join hundreds of doctors already using MyDoctors360 to reach new
                   patients and streamline their practice.
                 </p>
 

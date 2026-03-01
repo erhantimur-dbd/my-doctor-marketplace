@@ -80,7 +80,7 @@ export async function submitContactInquiry(formData: FormData) {
     const adminEmail =
       process.env.CONTACT_ADMIN_EMAIL ||
       process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
-      "sales@mydoctor.com";
+      "sales@mydoctors360.com";
     sendEmail({ to: adminEmail, subject, html }).catch((err) =>
       console.error("[Contact] Admin email error:", err)
     );

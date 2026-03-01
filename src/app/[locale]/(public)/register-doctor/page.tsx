@@ -262,7 +262,7 @@ export default function RegisterDoctorPage() {
 
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Join MyDoctor as a Doctor</CardTitle>
+          <CardTitle className="text-2xl">Join MyDoctors360 as a Doctor</CardTitle>
           <CardDescription>
             Step {step} of 5 -{" "}
             {STEPS.find((s) => s.number === step)?.title}
@@ -759,7 +759,7 @@ export default function RegisterDoctorPage() {
                 {showInvite && (
                   <div className="mt-4 space-y-3">
                     <p className="text-xs text-muted-foreground">
-                      Know a colleague who&apos;d benefit from MyDoctor? We&apos;ll
+                      Know a colleague who&apos;d benefit from MyDoctors360? We&apos;ll
                       send them a personal invitation with your referral code.
                     </p>
                     <div className="grid grid-cols-2 gap-3">

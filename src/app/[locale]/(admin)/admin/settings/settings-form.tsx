@@ -66,7 +66,7 @@ export function AdminSettingsForm({
       label: "Support Email",
       description: "Email displayed to users for support",
       type: "email",
-      defaultValue: "support@mydoctor.com",
+      defaultValue: "support@mydoctors360.com",
     },
   ];
 

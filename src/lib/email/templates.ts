@@ -2,7 +2,7 @@
 // No external React Email dependency needed - uses inline CSS for compatibility
 
 const BRAND_COLOR = "#2563EB";
-const BRAND_NAME = "MyDoctor";
+const BRAND_NAME = "MyDoctors360";
 
 function baseLayout(content: string): string {
   return `
@@ -597,7 +597,7 @@ export function doctorReferralInvitationEmail({
       </p>
     </div>
 
-    <!-- Why Doctors Choose MyDoctor -->
+    <!-- Why Doctors Choose MyDoctors360 -->
     <p style="margin: 0 0 16px; font-size: 16px; font-weight: 600; color: #111827;">
       Why Doctors Choose ${BRAND_NAME}
     </p>
@@ -724,7 +724,7 @@ export function supportTicketCreatedEmail(params: {
     ${button("View Ticket", params.dashboardUrl)}
 
     <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
-      If your issue is urgent, you can also reach us via WhatsApp or email at support@mydoctor.com.
+      If your issue is urgent, you can also reach us via WhatsApp or email at support@mydoctors360.com.
     </p>
   `);
 
@@ -863,7 +863,7 @@ export function contactInquiryAutoReplyEmail(params: {
 }): { subject: string; html: string } {
   const subject = `We've Received Your Inquiry — ${BRAND_NAME}`;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctor.com";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
 
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #111827;">

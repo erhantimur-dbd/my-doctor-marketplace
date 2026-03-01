@@ -10,7 +10,7 @@ import { Link } from "@/i18n/navigation";
 import { Mail, FileText, MessageCircle, HelpCircle } from "lucide-react";
 
 const supportEmail =
-  process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@mydoctor.com";
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@mydoctors360.com";
 const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_NUMBER || "";
 
 const faqs = [
@@ -40,7 +40,7 @@ const faqs = [
       "Log in to your dashboard and navigate to Settings. From there you can update your personal details, contact information, and manage your saved payment methods. Changes take effect immediately.",
   },
   {
-    question: "I'm a doctor \u2014 how do I join MyDoctor?",
+    question: "I'm a doctor \u2014 how do I join MyDoctors360?",
     answer:
       "Visit our 'Join as a Doctor' page to create your professional profile. After submitting your credentials and medical license, our team will verify your information within 24-48 hours. Once approved, you can set your availability, consultation fees, and start receiving patient bookings.",
   },
@@ -156,7 +156,7 @@ export default function SupportPage() {
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-muted-foreground">
             Find quick answers to common questions about bookings, payments, and
-            using MyDoctor.
+            using MyDoctors360.
           </p>
 
           <div className="mt-10">

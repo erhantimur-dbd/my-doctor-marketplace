@@ -39,7 +39,7 @@ export default async function DoctorSupportPage() {
         <div>
           <h1 className="text-2xl font-bold">Support</h1>
           <p className="text-muted-foreground">
-            Get help from the MyDoctor support team
+            Get help from the MyDoctors360 support team
           </p>
         </div>
         <Button asChild>

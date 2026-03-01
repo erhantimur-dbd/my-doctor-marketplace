@@ -4,7 +4,7 @@ import { PharmacySearch } from "@/components/pharmacy/pharmacy-search";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Find a Pharmacy | MyDoctor",
+  title: "Find a Pharmacy | MyDoctors360",
   description:
     "Search for NHS pharmacies near you by postcode. Find opening hours, addresses, and phone numbers for pharmacies across the UK.",
 };

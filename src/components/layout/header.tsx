@@ -70,7 +70,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Stethoscope className="h-7 w-7 text-primary" />
-          <span className="text-xl font-bold tracking-tight">MyDoctor</span>
+          <span className="text-xl font-bold tracking-tight">MyDoctors360</span>
         </Link>
 
         {/* Desktop Nav */}
@@ -173,7 +173,7 @@ export function Header() {
               <SheetHeader className="border-b bg-muted/30 px-6 pb-4 pt-6">
                 <SheetTitle className="flex items-center gap-2.5">
                   <Stethoscope className="h-6 w-6 text-primary" />
-                  <span className="text-lg font-bold tracking-tight">MyDoctor</span>
+                  <span className="text-lg font-bold tracking-tight">MyDoctors360</span>
                 </SheetTitle>
                 <SheetDescription className="text-xs">
                   Premium private healthcare marketplace

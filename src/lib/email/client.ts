@@ -31,7 +31,7 @@ export async function sendEmail({
 
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_FROM || "MyDoctor <noreply@mydoctor.com>",
+      from: process.env.EMAIL_FROM || "MyDoctors360 <noreply@mydoctors360.com>",
       to,
       subject,
       html,

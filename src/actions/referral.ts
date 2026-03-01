@@ -221,7 +221,7 @@ export async function processReferralSignup(
       userId: referrerDoctor.profile_id,
       type: "referral_signup",
       title: "Your colleague signed up!",
-      message: `A colleague you invited has joined MyDoctor. They'll need to subscribe for both of you to earn your free month.`,
+      message: `A colleague you invited has joined MyDoctors360. They'll need to subscribe for both of you to earn your free month.`,
       channels: ["in_app"],
     });
   }

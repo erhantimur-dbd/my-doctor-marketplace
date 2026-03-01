@@ -13,7 +13,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2">
               <Stethoscope className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold">MyDoctor</span>
+              <span className="text-lg font-bold">MyDoctors360</span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
               Premium private healthcare marketplace connecting patients with
@@ -99,7 +99,7 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} MyDoctor. {t("copyright")}
+          &copy; {new Date().getFullYear()} MyDoctors360. {t("copyright")}
         </div>
       </div>
     </footer>

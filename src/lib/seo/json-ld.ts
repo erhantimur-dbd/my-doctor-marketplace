@@ -44,9 +44,9 @@ export function organizationJsonLd() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "MyDoctor",
+    name: "MyDoctors360",
     description: "Premium private healthcare marketplace connecting patients with verified specialists across Europe.",
-    url: process.env.NEXT_PUBLIC_APP_URL || "https://mydoctor.com",
-    logo: `${process.env.NEXT_PUBLIC_APP_URL || "https://mydoctor.com"}/logo.png`,
+    url: process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com",
+    logo: `${process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com"}/logo.png`,
   };
 }

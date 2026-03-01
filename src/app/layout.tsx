@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "MyDoctor - Premium Private Healthcare Marketplace",
-    template: "%s | MyDoctor",
+    default: "MyDoctors360 - Premium Private Healthcare Marketplace",
+    template: "%s | MyDoctors360",
   },
   description:
     "Find verified private doctors, book instantly, and receive premium healthcare. Transparent pricing across Europe.",
