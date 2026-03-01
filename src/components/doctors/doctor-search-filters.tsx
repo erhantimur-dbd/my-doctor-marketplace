@@ -305,8 +305,8 @@ export function DoctorSearchFilters({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t("all_types")}</SelectItem>
-                  <SelectItem value="in_person">In Person</SelectItem>
-                  <SelectItem value="video">Video Call</SelectItem>
+                  <SelectItem value="in_person">{t("in_person")}</SelectItem>
+                  <SelectItem value="video">{t("video_call")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

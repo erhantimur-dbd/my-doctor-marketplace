@@ -26,7 +26,10 @@ import {
   Scan,
   Thermometer,
   TestTube2,
+  Building2,
+  Video,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
 import { searchSuggestions } from "@/actions/search";
@@ -109,6 +112,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
 
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
+  const [consultationType, setConsultationType] = useState<"all" | "in_person" | "video">("all");
   const [hasManuallySelected, setHasManuallySelected] = useState(false);
 
   // Autocomplete state
@@ -271,9 +275,10 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
     const params = new URLSearchParams();
     if (query.trim()) params.set("query", query.trim());
     if (location && location !== "all") params.set("location", location);
+    if (consultationType !== "all") params.set("consultationType", consultationType);
     const qs = params.toString();
     router.push(`/doctors${qs ? `?${qs}` : ""}`);
-  }, [query, location, router]);
+  }, [query, location, consultationType, router]);
 
   const navigateToSpecialty = useCallback(
     (slug: string) => {
@@ -624,6 +629,29 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           </div>
         </div>
 
+        {/* Consultation type toggle — desktop */}
+        <div className="flex justify-center gap-1 mt-3">
+          {(["all", "in_person", "video"] as const).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setConsultationType(type)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                consultationType === type
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {type === "in_person" && <Building2 className="h-3 w-3" />}
+              {type === "video" && <Video className="h-3 w-3" />}
+              {type === "all" && t("all_consultation_types")}
+              {type === "in_person" && t("in_person_consultation")}
+              {type === "video" && t("video_consultation")}
+            </button>
+          ))}
+        </div>
+
         {/* Autocomplete dropdown — desktop */}
         {renderDropdown()}
       </div>
@@ -781,6 +809,29 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           detectingLabel={t("detecting_location") || "Detecting..."}
           onEnterKey={handleSearch}
         />
+
+        {/* Consultation type toggle — mobile */}
+        <div className="flex justify-center gap-1">
+          {(["all", "in_person", "video"] as const).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setConsultationType(type)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                consultationType === type
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {type === "in_person" && <Building2 className="h-3.5 w-3.5" />}
+              {type === "video" && <Video className="h-3.5 w-3.5" />}
+              {type === "all" && t("all_consultation_types")}
+              {type === "in_person" && t("in_person_consultation")}
+              {type === "video" && t("video_consultation")}
+            </button>
+          ))}
+        </div>
 
         {/* Search button */}
         <Button className="h-11 w-full rounded-lg" onClick={handleSearch}>
