@@ -1,7 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,7 @@ interface DoctorCardProps {
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
   function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability }, ref) {
+    const router = useRouter();
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
       ?.specialty || doctor.specialties?.[0]?.specialty;
 
@@ -158,14 +159,18 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       </div>
                       <div className="flex flex-wrap gap-1.5">
                         {availability.slots.slice(0, 4).map((slot) => (
-                          <Link
+                          <button
                             key={slot.start}
-                            href={`/doctors/${doctor.slug}/book?date=${availability.date}&type=${availability.consultationType || "in_person"}`}
-                            onClick={(e) => e.stopPropagation()}
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              router.push(`/doctors/${doctor.slug}/book?date=${availability.date}&type=${availability.consultationType || "in_person"}`);
+                            }}
                             className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
                           >
                             {formatSlotTime(slot.start)}
-                          </Link>
+                          </button>
                         ))}
                         {availability.slots.length > 4 && (
                           <span className="inline-flex items-center px-1 py-1 text-xs text-muted-foreground">
