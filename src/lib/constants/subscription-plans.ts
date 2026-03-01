@@ -5,6 +5,7 @@ export const SUBSCRIPTION_PLANS = [
     description: "Get started with your online presence",
     priceMonthly: 0,
     currency: "EUR",
+    prices: { EUR: 0, GBP: 0, TRY: 0 },
     features: [
       "Public doctor profile",
     ],
@@ -15,6 +16,7 @@ export const SUBSCRIPTION_PLANS = [
     description: "Individual plans for Doctors",
     priceMonthly: 9900,
     currency: "EUR",
+    prices: { EUR: 9900, GBP: 19900, TRY: 379900 },
     features: [
       "1 User Doctor Profile",
       "Online booking calendar",
@@ -33,6 +35,7 @@ export const SUBSCRIPTION_PLANS = [
     description: "Individual plans for Doctors",
     priceMonthly: 19900,
     currency: "EUR",
+    prices: { EUR: 19900, GBP: 29900, TRY: 759900 },
     features: [
       "Everything in Professional",
       "Featured profile placement",
@@ -49,6 +52,7 @@ export const SUBSCRIPTION_PLANS = [
     description: "Everything you need to launch your clinic online",
     priceMonthly: 79900,
     currency: "EUR",
+    prices: { EUR: 79900, GBP: 149500, TRY: 3039900 },
     features: [
       "Everything in Professional & Premium",
       "Up to 5 doctor profiles",
@@ -66,6 +70,7 @@ export const SUBSCRIPTION_PLANS = [
     description: "For labs, clinics & nurses offering diagnostic services",
     priceMonthly: 4900,
     currency: "GBP",
+    prices: { EUR: 5700, GBP: 4900, TRY: 215600 },
     features: [
       "Online booking calendar",
       "Unlimited bookings",

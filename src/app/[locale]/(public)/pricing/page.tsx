@@ -19,7 +19,6 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
-import { formatCurrency } from "@/lib/utils/currency";
 import { useLocale } from "next-intl";
 
 const platformFeatures = [
@@ -93,38 +92,20 @@ function getDisplayCurrency(locale: string): string {
   }
 }
 
-/** Format price in the locale's currency, no decimals */
-function formatPriceForLocale(cents: number, planCurrency: string, locale: string): string {
+/** Format price using explicit per-currency prices from the plan */
+function formatPriceForLocale(
+  prices: { readonly EUR: number; readonly GBP: number; readonly TRY: number },
+  locale: string
+): string {
   const displayCurrency = getDisplayCurrency(locale);
-
-  // If plan is in a different currency, we still show it in the plan's native currency
-  // (doctor plans = EUR, testing = GBP). Convert when currencies differ.
-  let displayCents = cents;
-  let currency = planCurrency;
-
-  if (planCurrency === "EUR" && displayCurrency === "GBP") {
-    // Approximate EUR → GBP conversion for display
-    displayCents = Math.round(cents * 0.86);
-    currency = "GBP";
-  } else if (planCurrency === "EUR" && displayCurrency === "TRY") {
-    displayCents = Math.round(cents * 38);
-    currency = "TRY";
-  } else if (planCurrency === "GBP" && displayCurrency === "EUR") {
-    displayCents = Math.round(cents * 1.16);
-    currency = "EUR";
-  } else if (planCurrency === "GBP" && displayCurrency === "TRY") {
-    displayCents = Math.round(cents * 44);
-    currency = "TRY";
-  } else {
-    currency = planCurrency;
-  }
+  const cents = prices[displayCurrency as keyof typeof prices] ?? prices.EUR;
 
   return new Intl.NumberFormat(locale === "de" ? "de-DE" : locale === "fr" ? "fr-FR" : locale === "tr" ? "tr-TR" : "en-GB", {
     style: "currency",
-    currency,
+    currency: displayCurrency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(displayCents / 100);
+  }).format(cents / 100);
 }
 
 export default function PricingPage() {
@@ -175,7 +156,7 @@ export default function PricingPage() {
                     </p>
                     <div className="mt-4">
                       <span className="text-4xl font-bold">
-                        {formatPriceForLocale(plan.priceMonthly, plan.currency, locale)}
+                        {formatPriceForLocale(plan.prices, locale)}
                       </span>
                       <span className="text-muted-foreground"> / month</span>
                       <p className="mt-1.5 text-xs font-medium text-primary/70">
@@ -255,7 +236,7 @@ export default function PricingPage() {
                   </div>
                   <div className="mt-4">
                     <span className="text-3xl font-bold">
-                      {formatPriceForLocale(testingPlan.priceMonthly, testingPlan.currency, locale)}
+                      {formatPriceForLocale(testingPlan.prices, locale)}
                     </span>
                     <span className="text-muted-foreground"> / month</span>
                   </div>
