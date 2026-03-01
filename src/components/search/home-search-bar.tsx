@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useTransition } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,18 @@ import {
   Ear,
   Flower,
   Scan,
+  Thermometer,
+  TestTube2,
 } from "lucide-react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
 import { searchSuggestions } from "@/actions/search";
 import type { DoctorSuggestion } from "@/actions/search";
 import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
+import { SYMPTOMS } from "@/lib/constants/symptoms";
+import { MEDICAL_TESTS } from "@/lib/constants/medical-tests";
+import { matchSymptoms, matchTests } from "@/lib/utils/search-matcher";
+import type { SearchMatch } from "@/lib/utils/search-matcher";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
 const specialtyIconMap: Record<string, React.ElementType> = {
@@ -59,6 +65,11 @@ const specialtyIconMap: Record<string, React.ElementType> = {
   nephrology: Droplets,
 };
 
+/** Convert specialty slug to i18n key: "general-practice" → "general_practice" */
+function slugToSpecialtyKey(slug: string) {
+  return slug.replace(/-/g, "_");
+}
+
 interface HomeSearchBarProps {
   specialties: { id: string; name_key: string; slug: string }[];
   locations: {
@@ -82,8 +93,18 @@ const POPULAR_SLUGS = [
   "ophthalmology",
 ];
 
+type SuggestionItem =
+  | { type: "specialty"; slug: string; label: string }
+  | { type: "doctor"; slug: string; label: string; sub?: string }
+  | { type: "symptom"; id: string; labelKey: string; specialtySlug: string; score: number }
+  | { type: "test"; id: string; labelKey: string; specialtySlug: string; score: number }
+  | { type: "gp_fallback" };
+
 export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const t = useTranslations("home");
+  const tSpec = useTranslations("specialty");
+  const tSymptom = useTranslations("symptom");
+  const tTest = useTranslations("test");
   const router = useRouter();
 
   const [query, setQuery] = useState("");
@@ -139,11 +160,20 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   // Whether we're in "popular" mode (empty input, just focused) vs "search" mode (typing)
   const isSearchMode = query.trim().length >= 2;
 
+  // Match symptoms and tests client-side
+  const symptomMatches = useMemo(
+    () => (isSearchMode ? matchSymptoms(query, SYMPTOMS, 3) : []),
+    [query, isSearchMode]
+  );
+  const testMatches = useMemo(
+    () => (isSearchMode ? matchTests(query, MEDICAL_TESTS, 3) : []),
+    [query, isSearchMode]
+  );
+
   // Debounced doctor search
   useEffect(() => {
     if (!isSearchMode) {
       setDoctorResults([]);
-      // Don't close suggestions here — popular list stays open on focus
       return;
     }
 
@@ -178,26 +208,53 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
 
   // Which specialties to show in the dropdown
   const displaySpecialties = isSearchMode
-    ? filteredSpecialties.slice(0, 5)
+    ? filteredSpecialties.slice(0, 3) // Reduced from 5 to 3 to keep dropdown compact
     : popularSpecialties;
 
+  // Show GP fallback when query >= 3 chars but no symptom/test matches found
+  const showGpFallback =
+    isSearchMode &&
+    query.trim().length >= 3 &&
+    symptomMatches.length === 0 &&
+    testMatches.length === 0;
+
   // Build flat suggestion list for keyboard navigation
-  const allSuggestions: { type: "specialty" | "doctor"; slug: string; label: string; sub?: string }[] = [
-    ...displaySpecialties.map((s) => ({
-      type: "specialty" as const,
-      slug: s.slug,
-      label: s.name_key
-        .replace("specialty.", "")
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (l: string) => l.toUpperCase()),
-    })),
-    ...doctorResults.map((d) => ({
-      type: "doctor" as const,
-      slug: d.slug,
-      label: d.name,
-      sub: d.specialty,
-    })),
-  ];
+  const allSuggestions: SuggestionItem[] = useMemo(() => {
+    const items: SuggestionItem[] = [];
+    // Specialties
+    for (const s of displaySpecialties) {
+      items.push({
+        type: "specialty",
+        slug: s.slug,
+        label: s.name_key
+          .replace("specialty.", "")
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (l: string) => l.toUpperCase()),
+      });
+    }
+    // Symptoms
+    for (const m of symptomMatches) {
+      items.push(m);
+    }
+    // Tests
+    for (const m of testMatches) {
+      items.push(m);
+    }
+    // Doctors
+    for (const d of doctorResults) {
+      items.push({
+        type: "doctor",
+        slug: d.slug,
+        label: d.name,
+        sub: d.specialty,
+      });
+    }
+    // GP fallback
+    if (showGpFallback) {
+      items.push({ type: "gp_fallback" });
+    }
+    return items;
+  }, [displaySpecialties, symptomMatches, testMatches, doctorResults, showGpFallback]);
 
   const handleLocationChange = (value: string) => {
     setHasManuallySelected(true);
@@ -218,15 +275,33 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
     router.push(`/doctors${qs ? `?${qs}` : ""}`);
   }, [query, location, router]);
 
-  const handleSelectSuggestion = (item: (typeof allSuggestions)[0]) => {
-    setShowSuggestions(false);
-    if (item.type === "specialty") {
+  const navigateToSpecialty = useCallback(
+    (slug: string) => {
+      setShowSuggestions(false);
       const params = new URLSearchParams();
-      params.set("specialty", item.slug);
+      params.set("specialty", slug);
       if (location && location !== "all") params.set("location", location);
       router.push(`/doctors?${params.toString()}`);
-    } else {
-      router.push(`/doctors/${item.slug}`);
+    },
+    [location, router]
+  );
+
+  const handleSelectSuggestion = (item: SuggestionItem) => {
+    setShowSuggestions(false);
+    switch (item.type) {
+      case "specialty":
+        navigateToSpecialty(item.slug);
+        break;
+      case "doctor":
+        router.push(`/doctors/${item.slug}`);
+        break;
+      case "symptom":
+      case "test":
+        navigateToSpecialty(item.specialtySlug);
+        break;
+      case "gp_fallback":
+        navigateToSpecialty("general-practice");
+        break;
     }
   };
 
@@ -266,9 +341,86 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
 
   const hasSuggestions =
     showSuggestions &&
-    (displaySpecialties.length > 0 || doctorResults.length > 0 || isPending);
+    (displaySpecialties.length > 0 ||
+      symptomMatches.length > 0 ||
+      testMatches.length > 0 ||
+      doctorResults.length > 0 ||
+      isPending ||
+      showGpFallback);
 
-  // Shared dropdown content
+  /** Render a symptom/test match row */
+  const renderMatchRow = (
+    item: SearchMatch,
+    idx: number,
+    icon: React.ElementType,
+    options?: { mobile?: boolean }
+  ) => {
+    const Icon = icon;
+    const label =
+      item.type === "symptom"
+        ? tSymptom(item.labelKey.replace("symptom.", ""))
+        : tTest(item.labelKey.replace("test.", ""));
+    const specLabel = tSpec(slugToSpecialtyKey(item.specialtySlug));
+    const SpecIcon = specialtyIconMap[item.specialtySlug] || Stethoscope;
+    const sc = getSpecialtyColor(item.specialtySlug);
+
+    return (
+      <button
+        key={item.id}
+        type="button"
+        className={`flex w-full items-center gap-2.5 rounded-lg px-3 ${options?.mobile ? "py-2.5 active:bg-accent/50" : `py-2 transition-colors ${
+          highlightIndex === idx
+            ? "bg-accent text-accent-foreground"
+            : "hover:bg-accent/50"
+        }`} text-sm`}
+        onMouseEnter={options?.mobile ? undefined : () => setHighlightIndex(idx)}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          handleSelectSuggestion(item);
+        }}
+      >
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+          item.type === "symptom" ? "bg-orange-50" : "bg-purple-50"
+        }`}>
+          <Icon className={`h-3.5 w-3.5 ${
+            item.type === "symptom" ? "text-orange-600" : "text-purple-600"
+          }`} />
+        </span>
+        <span className="truncate">{label}</span>
+        <span className="ml-auto flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+          <span>→</span>
+          <span className={`flex h-4 w-4 items-center justify-center rounded ${sc.bg}`}>
+            <SpecIcon className={`h-2.5 w-2.5 ${sc.text}`} />
+          </span>
+          <span>{specLabel}</span>
+        </span>
+      </button>
+    );
+  };
+
+  /** Render the GP fallback CTA */
+  const renderGpFallback = (idx: number, options?: { mobile?: boolean }) => (
+    <button
+      type="button"
+      className={`flex w-full items-center gap-2.5 rounded-lg px-3 ${options?.mobile ? "py-2.5 active:bg-accent/50" : `py-2 transition-colors ${
+        highlightIndex === idx
+          ? "bg-accent text-accent-foreground"
+          : "hover:bg-accent/50"
+      }`} text-sm`}
+      onMouseEnter={options?.mobile ? undefined : () => setHighlightIndex(idx)}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        handleSelectSuggestion({ type: "gp_fallback" });
+      }}
+    >
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
+        <Stethoscope className="h-3.5 w-3.5 text-emerald-600" />
+      </span>
+      <span className="text-muted-foreground">{t("suggestions_see_gp")}</span>
+    </button>
+  );
+
+  // Shared dropdown content (desktop)
   const renderDropdown = () => {
     if (!hasSuggestions) return null;
 
@@ -301,7 +453,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                   }`}
                   onMouseEnter={() => setHighlightIndex(idx)}
                   onMouseDown={(e) => {
-                    e.preventDefault(); // Prevent blur before click registers
+                    e.preventDefault();
                     handleSelectSuggestion({
                       type: "specialty",
                       slug: s.slug,
@@ -324,10 +476,42 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           </div>
         )}
 
+        {/* Symptoms group */}
+        {symptomMatches.length > 0 && (
+          <div className="p-1">
+            {(displaySpecialties.length > 0) && (
+              <div className="mx-2 border-t" />
+            )}
+            <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              {t("suggestions_symptoms")}
+            </div>
+            {symptomMatches.map((m) => {
+              itemIndex++;
+              return renderMatchRow(m, itemIndex, Thermometer);
+            })}
+          </div>
+        )}
+
+        {/* Tests group */}
+        {testMatches.length > 0 && (
+          <div className="p-1">
+            {(displaySpecialties.length > 0 || symptomMatches.length > 0) && (
+              <div className="mx-2 border-t" />
+            )}
+            <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              {t("suggestions_tests")}
+            </div>
+            {testMatches.map((m) => {
+              itemIndex++;
+              return renderMatchRow(m, itemIndex, TestTube2);
+            })}
+          </div>
+        )}
+
         {/* Doctors group (only in search mode) */}
         {isSearchMode && (doctorResults.length > 0 || isPending) && (
           <div className="p-1">
-            {displaySpecialties.length > 0 && (
+            {(displaySpecialties.length > 0 || symptomMatches.length > 0 || testMatches.length > 0) && (
               <div className="mx-2 border-t" />
             )}
             <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -372,6 +556,17 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {/* GP fallback */}
+        {showGpFallback && (
+          <div className="p-1">
+            <div className="mx-2 border-t" />
+            {(() => {
+              itemIndex++;
+              return renderGpFallback(itemIndex);
+            })()}
           </div>
         )}
       </div>
@@ -495,10 +690,38 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
               </div>
             )}
 
+            {/* Symptoms group (mobile) */}
+            {symptomMatches.length > 0 && (
+              <div className="p-1">
+                {displaySpecialties.length > 0 && <div className="mx-2 border-t" />}
+                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                  {t("suggestions_symptoms")}
+                </div>
+                {symptomMatches.map((m) =>
+                  renderMatchRow(m, -1, Thermometer, { mobile: true })
+                )}
+              </div>
+            )}
+
+            {/* Tests group (mobile) */}
+            {testMatches.length > 0 && (
+              <div className="p-1">
+                {(displaySpecialties.length > 0 || symptomMatches.length > 0) && (
+                  <div className="mx-2 border-t" />
+                )}
+                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                  {t("suggestions_tests")}
+                </div>
+                {testMatches.map((m) =>
+                  renderMatchRow(m, -1, TestTube2, { mobile: true })
+                )}
+              </div>
+            )}
+
             {/* Doctors group (only in search mode) */}
             {isSearchMode && (doctorResults.length > 0 || isPending) && (
               <div className="p-1">
-                {displaySpecialties.length > 0 && (
+                {(displaySpecialties.length > 0 || symptomMatches.length > 0 || testMatches.length > 0) && (
                   <div className="mx-2 border-t" />
                 )}
                 <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -534,6 +757,14 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                     )}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* GP fallback (mobile) */}
+            {showGpFallback && (
+              <div className="p-1">
+                <div className="mx-2 border-t" />
+                {renderGpFallback(-1, { mobile: true })}
               </div>
             )}
           </div>
