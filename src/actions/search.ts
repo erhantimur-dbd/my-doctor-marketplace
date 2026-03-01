@@ -17,6 +17,7 @@ export interface SearchFilters {
   wheelchairAccessible?: boolean;
   userLat?: number;
   userLng?: number;
+  providerType?: "doctor" | "testing_service";
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -46,6 +47,11 @@ export async function searchDoctors(filters: SearchFilters) {
     )
     .eq("verification_status", "verified")
     .eq("is_active", true);
+
+  // Provider type filter (doctor vs testing_service)
+  if (filters.providerType) {
+    query = query.eq("provider_type", filters.providerType);
+  }
 
   // Same-day availability filter
   if (filters.availableToday) {

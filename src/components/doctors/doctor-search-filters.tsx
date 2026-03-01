@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { X, Clock, Accessibility } from "lucide-react";
+import { X, Clock, Accessibility, FlaskConical } from "lucide-react";
 import { useCallback, useEffect, useRef } from "react";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
@@ -250,6 +250,29 @@ export function DoctorSearchFilters({
                   updateFilter("wheelchairAccessible", checked ? "true" : undefined)
                 }
               />
+            </div>
+
+            {/* Provider Type */}
+            <div className="space-y-2">
+              <Label className="text-sm">{t("provider_type")}</Label>
+              <Select
+                value={currentFilters.providerType || "all"}
+                onValueChange={(v) => updateFilter("providerType", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("all_providers")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_providers")}</SelectItem>
+                  <SelectItem value="doctor">{t("doctors_only")}</SelectItem>
+                  <SelectItem value="testing_service">
+                    <span className="flex items-center gap-1.5">
+                      <FlaskConical className="h-3.5 w-3.5" />
+                      {t("testing_services")}
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Specialty */}

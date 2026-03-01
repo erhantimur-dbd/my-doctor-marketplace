@@ -159,7 +159,11 @@
     "wheelchair_accessible": "Wheelchair Accessible",
     "view_full_availability": "View full availability",
     "no_availability_14_days": "No availability in next 14 days",
-    "full_availability_title": "Full Availability"
+    "full_availability_title": "Full Availability",
+    "provider_type": "Provider Type",
+    "all_providers": "All",
+    "doctors_only": "Doctors",
+    "testing_services": "Testing Services"
   },
   "booking": {
     "select_date": "Select Date",
@@ -302,7 +306,17 @@
     "nutrition": "Nutrition & Dietetics",
     "allergy": "Allergy & Immunology",
     "rheumatology": "Rheumatology",
-    "nephrology": "Nephrology"
+    "nephrology": "Nephrology",
+    "blood_tests": "Blood Tests",
+    "mri_scans": "MRI Scans",
+    "ct_scans": "CT Scans",
+    "xray": "X-Ray",
+    "ultrasound": "Ultrasound",
+    "urine_tests": "Urine Tests",
+    "allergy_testing": "Allergy Testing",
+    "ecg_heart_tests": "ECG / Heart Tests",
+    "sti_testing": "STI Testing",
+    "health_screenings": "Health Screenings"
   },
   "footer": {
     "about": "About",

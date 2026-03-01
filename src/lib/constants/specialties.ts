@@ -5,6 +5,7 @@ export interface SpecialtyMeta {
   description: string;
   commonConditions: string[];
   relatedSlugs: string[];
+  category?: "medical" | "testing";
 }
 
 export const SPECIALTIES: readonly SpecialtyMeta[] = [
@@ -368,9 +369,180 @@ export const SPECIALTIES: readonly SpecialtyMeta[] = [
     ],
     relatedSlugs: ["urology", "endocrinology", "cardiology"],
   },
+  // ── Testing Service Specialties ──────────────────────────
+  {
+    nameKey: "specialty.blood_tests",
+    slug: "blood-tests",
+    icon: "Droplets",
+    category: "testing",
+    description:
+      "Comprehensive blood testing services including full blood count, liver and kidney function, cholesterol, glucose, and hormone panels.",
+    commonConditions: [
+      "Full blood count (FBC / CBC)",
+      "Liver function tests (LFTs)",
+      "Kidney function tests",
+      "Cholesterol and lipid panel",
+      "Thyroid and hormone panels",
+    ],
+    relatedSlugs: ["health-screenings", "urine-tests", "allergy-testing"],
+  },
+  {
+    nameKey: "specialty.mri_scans",
+    slug: "mri-scans",
+    icon: "Scan",
+    category: "testing",
+    description:
+      "Magnetic resonance imaging (MRI) scans provide detailed images of organs, soft tissues, bones, and internal structures without radiation.",
+    commonConditions: [
+      "Brain and spinal cord imaging",
+      "Joint and musculoskeletal scans",
+      "Abdominal and pelvic MRI",
+      "Cardiac MRI",
+      "Breast MRI screening",
+    ],
+    relatedSlugs: ["ct-scans", "xray", "ultrasound"],
+  },
+  {
+    nameKey: "specialty.ct_scans",
+    slug: "ct-scans",
+    icon: "Scan",
+    category: "testing",
+    description:
+      "CT (computed tomography) scans combine X-ray images from multiple angles to produce detailed cross-sectional views of bones, blood vessels, and soft tissues.",
+    commonConditions: [
+      "Chest and lung CT scans",
+      "Abdominal and pelvic CT",
+      "Head and brain CT",
+      "CT angiography (blood vessels)",
+      "Whole-body cancer screening",
+    ],
+    relatedSlugs: ["mri-scans", "xray", "health-screenings"],
+  },
+  {
+    nameKey: "specialty.xray",
+    slug: "xray",
+    icon: "Scan",
+    category: "testing",
+    description:
+      "X-ray imaging provides quick diagnostic images of bones, joints, chest, and teeth to detect fractures, infections, and other conditions.",
+    commonConditions: [
+      "Bone fracture detection",
+      "Chest X-ray (lungs and heart)",
+      "Dental X-rays",
+      "Joint and spine imaging",
+      "Foreign body detection",
+    ],
+    relatedSlugs: ["ct-scans", "mri-scans", "ultrasound"],
+  },
+  {
+    nameKey: "specialty.ultrasound",
+    slug: "ultrasound",
+    icon: "Radio",
+    category: "testing",
+    description:
+      "Ultrasound imaging uses sound waves to produce real-time images of internal organs, blood vessels, and developing pregnancies.",
+    commonConditions: [
+      "Pregnancy and obstetric scans",
+      "Abdominal organ imaging",
+      "Thyroid and neck ultrasound",
+      "Musculoskeletal ultrasound",
+      "Vascular and Doppler studies",
+    ],
+    relatedSlugs: ["mri-scans", "xray", "health-screenings"],
+  },
+  {
+    nameKey: "specialty.urine_tests",
+    slug: "urine-tests",
+    icon: "FlaskConical",
+    category: "testing",
+    description:
+      "Urine testing services for detecting infections, kidney conditions, metabolic disorders, and drug screening.",
+    commonConditions: [
+      "Urinary tract infection (UTI) testing",
+      "Kidney function markers",
+      "Pregnancy testing",
+      "Drug and substance screening",
+      "Diabetes glucose monitoring",
+    ],
+    relatedSlugs: ["blood-tests", "health-screenings", "sti-testing"],
+  },
+  {
+    nameKey: "specialty.allergy_testing",
+    slug: "allergy-testing",
+    icon: "Flower",
+    category: "testing",
+    description:
+      "Allergy testing services to identify triggers for allergic reactions, including skin prick tests, blood tests, and patch testing.",
+    commonConditions: [
+      "Skin prick testing",
+      "Specific IgE blood tests",
+      "Patch testing for contact dermatitis",
+      "Food allergy panels",
+      "Environmental allergen screening",
+    ],
+    relatedSlugs: ["blood-tests", "health-screenings", "urine-tests"],
+  },
+  {
+    nameKey: "specialty.ecg_heart_tests",
+    slug: "ecg-heart-tests",
+    icon: "HeartPulse",
+    category: "testing",
+    description:
+      "Cardiac diagnostic tests including ECG, echocardiography, stress tests, and Holter monitoring for heart rhythm and function assessment.",
+    commonConditions: [
+      "Resting ECG (electrocardiogram)",
+      "Echocardiography (heart ultrasound)",
+      "Exercise stress testing",
+      "24-hour Holter monitoring",
+      "Blood pressure monitoring",
+    ],
+    relatedSlugs: ["blood-tests", "health-screenings", "ultrasound"],
+  },
+  {
+    nameKey: "specialty.sti_testing",
+    slug: "sti-testing",
+    icon: "Shield",
+    category: "testing",
+    description:
+      "Confidential sexually transmitted infection testing and screening services, including blood, urine, and swab-based tests.",
+    commonConditions: [
+      "Chlamydia and gonorrhoea testing",
+      "HIV testing",
+      "Syphilis screening",
+      "Hepatitis B and C testing",
+      "Comprehensive STI panels",
+    ],
+    relatedSlugs: ["blood-tests", "urine-tests", "health-screenings"],
+  },
+  {
+    nameKey: "specialty.health_screenings",
+    slug: "health-screenings",
+    icon: "ClipboardCheck",
+    category: "testing",
+    description:
+      "Comprehensive health check-up packages combining blood tests, imaging, and physical assessments for preventive health monitoring.",
+    commonConditions: [
+      "Annual health check-up packages",
+      "Executive health screenings",
+      "Cancer screening panels",
+      "Pre-employment health checks",
+      "Travel health assessments",
+    ],
+    relatedSlugs: ["blood-tests", "ecg-heart-tests", "ultrasound"],
+  },
 ] as const;
 
 /** Look up a specialty by its slug */
 export function getSpecialtyMeta(slug: string): SpecialtyMeta | undefined {
   return SPECIALTIES.find((s) => s.slug === slug);
+}
+
+/** Get only testing service specialties */
+export function getTestingSpecialties(): readonly SpecialtyMeta[] {
+  return SPECIALTIES.filter((s) => s.category === "testing");
+}
+
+/** Get only medical (doctor) specialties */
+export function getMedicalSpecialties(): readonly SpecialtyMeta[] {
+  return SPECIALTIES.filter((s) => s.category !== "testing");
 }

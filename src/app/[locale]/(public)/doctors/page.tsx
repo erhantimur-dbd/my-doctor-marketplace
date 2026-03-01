@@ -43,6 +43,7 @@ export default async function DoctorsPage({
       wheelchairAccessible: sp.wheelchairAccessible === "true",
       userLat: sp.lat ? Number(sp.lat) : undefined,
       userLng: sp.lng ? Number(sp.lng) : undefined,
+      providerType: sp.providerType as "doctor" | "testing_service" | undefined,
     }),
     getSpecialties(),
     getLocations(),

@@ -196,7 +196,11 @@
     "wheelchair_accessible": "Tekerlekli Sandalye Erişilebilir",
     "view_full_availability": "Tüm müsaitliği görüntüle",
     "no_availability_14_days": "Önümüzdeki 14 gün içinde müsaitlik yok",
-    "full_availability_title": "Tüm Müsaitlik"
+    "full_availability_title": "Tüm Müsaitlik",
+    "provider_type": "Sağlayıcı Türü",
+    "all_providers": "Tümü",
+    "doctors_only": "Doktorlar",
+    "testing_services": "Test Hizmetleri"
   },
   "booking": {
     "select_date": "Tarih Secin",
@@ -302,7 +306,17 @@
     "nutrition": "Beslenme ve Diyetetik",
     "allergy": "Alerji ve Immunoloji",
     "rheumatology": "Romatoloji",
-    "nephrology": "Nefroloji"
+    "nephrology": "Nefroloji",
+    "blood_tests": "Kan Testleri",
+    "mri_scans": "MR Taramaları",
+    "ct_scans": "BT Taramaları",
+    "xray": "Röntgen",
+    "ultrasound": "Ultrason",
+    "urine_tests": "İdrar Testleri",
+    "allergy_testing": "Alerji Testleri",
+    "ecg_heart_tests": "EKG / Kalp Testleri",
+    "sti_testing": "CYBE Testleri",
+    "health_screenings": "Sağlık Taramaları"
   },
   "footer": {
     "about": "Hakkimizda",

@@ -223,6 +223,109 @@ export async function registerDoctor(formData: FormData) {
   redirect(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
 }
 
+export async function registerTestingService(formData: FormData) {
+  const supabase = await createClient();
+  const origin = await getOrigin();
+
+  const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
+  const firstName = formData.get("first_name") as string;
+  const lastName = formData.get("last_name") as string;
+  const locale = (formData.get("locale") as string) || "en";
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        first_name: firstName,
+        last_name: lastName,
+        role: "doctor",
+      },
+      emailRedirectTo: `${origin}/${locale}/callback`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (data.user) {
+    const adminSupabase = createAdminClient();
+
+    // Wait for auth trigger to create profile
+    let profileReady = false;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const { data: profile } = await adminSupabase
+        .from("profiles")
+        .select("id")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profile) {
+        profileReady = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    if (!profileReady) {
+      const { error: profileError } = await adminSupabase
+        .from("profiles")
+        .insert({
+          id: data.user.id,
+          role: "doctor",
+          first_name: firstName,
+          last_name: lastName,
+          email,
+        });
+
+      if (profileError) {
+        console.error("Profile creation failed:", profileError);
+        return {
+          error:
+            "Account created but profile setup is still processing. Please wait a moment and log in.",
+        };
+      }
+    }
+
+    const slug =
+      `test-${firstName}-${lastName}`
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") +
+      "-" +
+      Math.random().toString(36).substring(2, 6);
+
+    const newReferralCode = (
+      firstName.substring(0, 2) +
+      lastName.substring(0, 2) +
+      Math.random().toString(36).substring(2, 6)
+    ).toUpperCase();
+
+    const { error: doctorError } = await adminSupabase
+      .from("doctors")
+      .insert({
+        profile_id: data.user.id,
+        slug,
+        provider_type: "testing_service",
+        consultation_fee_cents: 0,
+        base_currency: "GBP",
+        referral_code: newReferralCode,
+      })
+      .select("id")
+      .single();
+
+    if (doctorError) {
+      console.error("Testing service creation failed:", doctorError);
+      return { error: doctorError.message };
+    }
+  }
+
+  revalidatePath("/", "layout");
+  redirect(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
+}
+
 export async function resendVerificationEmail(email: string, locale: string = "en") {
   const supabase = await createClient();
   const origin = await getOrigin();

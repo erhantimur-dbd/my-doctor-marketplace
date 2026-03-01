@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, Star, MapPin, Shield, Video, User, Accessibility, CalendarDays } from "lucide-react";
+import { Clock, Star, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
 import { formatShortDateLabel, formatSlotTime } from "@/lib/utils/availability";
@@ -33,6 +33,7 @@ interface DoctorCardProps {
     verification_status: string;
     consultation_types: string[];
     is_wheelchair_accessible?: boolean;
+    provider_type?: string;
     languages: string[];
     profile: {
       first_name: string;
@@ -63,6 +64,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const [showFullAvailability, setShowFullAvailability] = useState(false);
 
+    const isTestingService = doctor.provider_type === "testing_service";
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
       ?.specialty || doctor.specialties?.[0]?.specialty;
 
@@ -84,15 +86,19 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
             <CardContent className="p-5">
               <div className="flex gap-4">
                 {/* Avatar */}
-                <Avatar className="h-16 w-16 shrink-0">
+                <Avatar className={cn("h-16 w-16 shrink-0", isTestingService && "rounded-xl")}>
                   {doctor.profile.avatar_url ? (
                     <AvatarImage
                       src={doctor.profile.avatar_url}
                       alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
                     />
                   ) : null}
-                  <AvatarFallback className="text-lg">
-                    <User className="h-6 w-6" />
+                  <AvatarFallback className={cn("text-lg", isTestingService && "rounded-xl bg-teal-50 dark:bg-teal-950/30")}>
+                    {isTestingService ? (
+                      <FlaskConical className="h-6 w-6 text-teal-600" />
+                    ) : (
+                      <User className="h-6 w-6" />
+                    )}
                   </AvatarFallback>
                 </Avatar>
 
@@ -113,11 +119,19 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         </p>
                       )}
                     </div>
-                    {doctor.is_featured && (
-                      <Badge variant="secondary" className="shrink-0 text-xs">
-                        Featured
-                      </Badge>
-                    )}
+                    <div className="flex shrink-0 gap-1.5">
+                      {isTestingService && (
+                        <Badge className="shrink-0 bg-teal-100 text-teal-800 hover:bg-teal-100 text-xs dark:bg-teal-900/40 dark:text-teal-300">
+                          <FlaskConical className="mr-1 h-3 w-3" />
+                          Testing
+                        </Badge>
+                      )}
+                      {doctor.is_featured && (
+                        <Badge variant="secondary" className="shrink-0 text-xs">
+                          Featured
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Location */}
@@ -256,7 +270,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {" "}
-                    / session
+                    / {isTestingService ? "test" : "session"}
                   </span>
                 </div>
                 <Button

@@ -27,9 +27,12 @@ export interface Profile {
   updated_at: string;
 }
 
+export type ProviderType = "doctor" | "testing_service";
+
 export interface Doctor {
   id: string;
   profile_id: string;
+  provider_type: ProviderType;
   slug: string;
   title: string | null;
   bio: string | null;
@@ -83,6 +86,7 @@ export interface Specialty {
   icon: string | null;
   display_order: number;
   is_active: boolean;
+  category: "medical" | "testing";
 }
 
 export interface Location {

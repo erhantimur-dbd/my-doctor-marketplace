@@ -196,7 +196,11 @@
     "wheelchair_accessible": "Accessible en fauteuil roulant",
     "view_full_availability": "Voir toutes les disponibilités",
     "no_availability_14_days": "Aucune disponibilité dans les 14 prochains jours",
-    "full_availability_title": "Disponibilité complète"
+    "full_availability_title": "Disponibilité complète",
+    "provider_type": "Type de prestataire",
+    "all_providers": "Tous",
+    "doctors_only": "Médecins",
+    "testing_services": "Services de tests"
   },
   "booking": {
     "select_date": "Choisir une date",
@@ -302,7 +306,17 @@
     "nutrition": "Nutrition et Dietetique",
     "allergy": "Allergologie",
     "rheumatology": "Rhumatologie",
-    "nephrology": "Nephrologie"
+    "nephrology": "Nephrologie",
+    "blood_tests": "Analyses de sang",
+    "mri_scans": "IRM",
+    "ct_scans": "Scanners",
+    "xray": "Radiographie",
+    "ultrasound": "Echographie",
+    "urine_tests": "Analyses d'urine",
+    "allergy_testing": "Tests allergiques",
+    "ecg_heart_tests": "ECG / Tests cardiaques",
+    "sti_testing": "Tests IST",
+    "health_screenings": "Bilans de sante"
   },
   "footer": {
     "about": "A propos",

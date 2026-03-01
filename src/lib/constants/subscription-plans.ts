@@ -60,4 +60,17 @@ export const SUBSCRIPTION_PLANS = [
       "Dedicated account manager",
     ],
   },
+  {
+    id: "testing_service",
+    name: "Medical Testing",
+    description: "For labs, clinics & nurses offering diagnostic services",
+    priceMonthly: 4900,
+    currency: "GBP",
+    features: [
+      "Online booking calendar",
+      "Unlimited bookings",
+      "Email reminders",
+      "SMS & WhatsApp reminders",
+    ],
+  },
 ] as const;

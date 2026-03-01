@@ -16,8 +16,11 @@ import {
   Bell,
   Shield,
   Zap,
+  FlaskConical,
 } from "lucide-react";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
+import { formatCurrency } from "@/lib/utils/currency";
+import { useLocale } from "next-intl";
 
 const platformFeatures = [
   {
@@ -78,16 +81,56 @@ const platformFeatures = [
   },
 ];
 
-function formatPrice(cents: number): string {
-  return new Intl.NumberFormat("en-EU", {
+/** Map locale to display currency */
+function getDisplayCurrency(locale: string): string {
+  switch (locale) {
+    case "en":
+      return "GBP";
+    case "tr":
+      return "TRY";
+    default:
+      return "EUR";
+  }
+}
+
+/** Format price in the locale's currency, no decimals */
+function formatPriceForLocale(cents: number, planCurrency: string, locale: string): string {
+  const displayCurrency = getDisplayCurrency(locale);
+
+  // If plan is in a different currency, we still show it in the plan's native currency
+  // (doctor plans = EUR, testing = GBP). Convert when currencies differ.
+  let displayCents = cents;
+  let currency = planCurrency;
+
+  if (planCurrency === "EUR" && displayCurrency === "GBP") {
+    // Approximate EUR → GBP conversion for display
+    displayCents = Math.round(cents * 0.86);
+    currency = "GBP";
+  } else if (planCurrency === "EUR" && displayCurrency === "TRY") {
+    displayCents = Math.round(cents * 38);
+    currency = "TRY";
+  } else if (planCurrency === "GBP" && displayCurrency === "EUR") {
+    displayCents = Math.round(cents * 1.16);
+    currency = "EUR";
+  } else if (planCurrency === "GBP" && displayCurrency === "TRY") {
+    displayCents = Math.round(cents * 44);
+    currency = "TRY";
+  } else {
+    currency = planCurrency;
+  }
+
+  return new Intl.NumberFormat(locale === "de" ? "de-DE" : locale === "fr" ? "fr-FR" : locale === "tr" ? "tr-TR" : "en-GB", {
     style: "currency",
-    currency: "EUR",
+    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(cents / 100);
+  }).format(displayCents / 100);
 }
 
 export default function PricingPage() {
+  const locale = useLocale();
+  const testingPlan = SUBSCRIPTION_PLANS.find((p) => p.id === "testing_service")!;
+
   return (
     <>
       {/* Hero */}
@@ -109,7 +152,7 @@ export default function PricingPage() {
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-5xl">
           <div className="grid gap-6 md:grid-cols-3">
-            {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0).map((plan) => {
+            {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0 && plan.id !== "testing_service").map((plan) => {
               const isPopular = "popular" in plan && plan.popular;
               return (
                 <Card
@@ -132,7 +175,7 @@ export default function PricingPage() {
                     </p>
                     <div className="mt-4">
                       <span className="text-4xl font-bold">
-                        {formatPrice(plan.priceMonthly)}
+                        {formatPriceForLocale(plan.priceMonthly, plan.currency, locale)}
                       </span>
                       <span className="text-muted-foreground"> / month</span>
                       <p className="mt-1.5 text-xs font-medium text-primary/70">
@@ -196,6 +239,73 @@ export default function PricingPage() {
               </Link>
             </Button>
           </div>
+        </div>
+      </section>
+
+      {/* Medical Testing Services */}
+      <section className="px-4 pb-12 md:pb-20">
+        <div className="container mx-auto max-w-5xl">
+          <div className="text-center">
+            <Badge variant="secondary" className="mb-4">
+              <FlaskConical className="mr-1.5 h-3 w-3" />
+              For Testing Providers
+            </Badge>
+            <h2 className="text-2xl font-bold md:text-3xl">
+              Medical Testing Services
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              For labs, clinics, and nurses offering diagnostic testing. List your services and accept bookings online.
+            </p>
+          </div>
+
+          <Card className="mx-auto mt-8 max-w-2xl border-teal-200 dark:border-teal-900">
+            <CardContent className="p-6 md:p-8">
+              <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
+                {/* Icon + Price */}
+                <div className="flex flex-col items-center text-center md:w-1/3">
+                  <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
+                    <FlaskConical className="h-8 w-8 text-teal-600" />
+                  </div>
+                  <div className="mt-4">
+                    <span className="text-3xl font-bold">
+                      {formatPriceForLocale(testingPlan.priceMonthly, testingPlan.currency, locale)}
+                    </span>
+                    <span className="text-muted-foreground"> / month</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    + 15% platform commission
+                  </p>
+                </div>
+
+                {/* Features + CTA */}
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">{testingPlan.name}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {testingPlan.description}
+                  </p>
+                  <ul className="mt-4 space-y-2.5">
+                    {testingPlan.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-start gap-2 text-sm"
+                      >
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    className="mt-6 rounded-full bg-teal-600 hover:bg-teal-700"
+                    asChild
+                  >
+                    <Link href="/register-testing-service">
+                      Register as Testing Service <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 

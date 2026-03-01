@@ -193,7 +193,17 @@
     "nutrition": "Ernahrungsmedizin",
     "allergy": "Allergologie",
     "rheumatology": "Rheumatologie",
-    "nephrology": "Nephrologie"
+    "nephrology": "Nephrologie",
+    "blood_tests": "Bluttests",
+    "mri_scans": "MRT-Scans",
+    "ct_scans": "CT-Scans",
+    "xray": "Röntgen",
+    "ultrasound": "Ultraschall",
+    "urine_tests": "Urintests",
+    "allergy_testing": "Allergietests",
+    "ecg_heart_tests": "EKG / Herztests",
+    "sti_testing": "STI-Tests",
+    "health_screenings": "Gesundheitsvorsorge"
   },
   "search": {
     "title": "Arzt finden",
@@ -225,7 +235,11 @@
     "wheelchair_accessible": "Rollstuhlgerecht",
     "view_full_availability": "Vollständige Verfügbarkeit anzeigen",
     "no_availability_14_days": "Keine Verfügbarkeit in den nächsten 14 Tagen",
-    "full_availability_title": "Vollständige Verfügbarkeit"
+    "full_availability_title": "Vollständige Verfügbarkeit",
+    "provider_type": "Anbietertyp",
+    "all_providers": "Alle",
+    "doctors_only": "Ärzte",
+    "testing_services": "Testdienste"
   },
   "booking": {
     "select_date": "Datum wahlen",

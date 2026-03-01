@@ -20,7 +20,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility } from "lucide-react";
+import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface MobileFilterBarProps {
@@ -161,6 +161,29 @@ export function MobileFilterBar({
           </SheetHeader>
 
           <div className="space-y-5 overflow-y-auto px-4 pb-4">
+            {/* Provider Type */}
+            <div className="space-y-2">
+              <Label className="text-sm">{t("provider_type")}</Label>
+              <Select
+                value={currentFilters.providerType || "all"}
+                onValueChange={(v) => updateFilter("providerType", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("all_providers")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_providers")}</SelectItem>
+                  <SelectItem value="doctor">{t("doctors_only")}</SelectItem>
+                  <SelectItem value="testing_service">
+                    <span className="flex items-center gap-1.5">
+                      <FlaskConical className="h-3.5 w-3.5" />
+                      {t("testing_services")}
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Specialty */}
             <div className="space-y-2">
               <Label className="text-sm">{t("specialty")}</Label>
