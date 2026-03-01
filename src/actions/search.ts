@@ -115,7 +115,44 @@ export async function searchDoctors(filters: SearchFilters) {
   if (filters.location) {
     query = query.eq("location.slug", filters.location);
   }
-  if (filters.query) {
+  // Free-text query: match against specialty names, doctor names, and bio
+  if (filters.query && !filters.specialty) {
+    const term = filters.query.trim().toLowerCase();
+
+    // Check if the query matches a specialty name (slug or display name)
+    const { data: matchingSpecs } = await supabase
+      .from("specialties")
+      .select("id, slug, name_key")
+      .eq("is_active", true);
+
+    const matchedSpec = (matchingSpecs || []).find((s) => {
+      const display = s.name_key
+        .replace("specialty.", "")
+        .replace(/_/g, " ")
+        .toLowerCase();
+      return display === term || s.slug === term.replace(/\s+/g, "-");
+    });
+
+    if (matchedSpec) {
+      // Resolve to specialty filter for exact matches
+      const { data: matchRows } = await supabase
+        .from("doctor_specialties")
+        .select("doctor_id")
+        .eq("specialty_id", matchedSpec.id);
+
+      const ids = (matchRows || []).map(
+        (r: { doctor_id: string }) => r.doctor_id
+      );
+      if (ids.length === 0) {
+        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      }
+      query = query.in("id", ids);
+    } else {
+      // Fallback: search in bio text
+      query = query.ilike("bio", `%${filters.query}%`);
+    }
+  } else if (filters.query && filters.specialty) {
+    // If both query and specialty are set, still search bio
     query = query.ilike("bio", `%${filters.query}%`);
   }
   if (filters.wheelchairAccessible) {
