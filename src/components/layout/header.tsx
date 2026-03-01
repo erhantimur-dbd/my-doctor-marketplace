@@ -39,6 +39,7 @@ import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 import { LocaleSwitcher } from "./locale-switcher";
 import { logout } from "@/actions/auth";
+import { Logo } from "@/components/brand/logo";
 
 export function Header() {
   const t = useTranslations("nav");
@@ -69,7 +70,7 @@ export function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <Stethoscope className="h-7 w-7 text-primary" />
+          <Logo className="h-7 w-7 text-primary" />
           <span className="text-xl font-bold tracking-tight">MyDoctors360</span>
         </Link>
 
@@ -172,7 +173,7 @@ export function Header() {
               {/* Branded Header */}
               <SheetHeader className="border-b bg-muted/30 px-6 pb-4 pt-6">
                 <SheetTitle className="flex items-center gap-2.5">
-                  <Stethoscope className="h-6 w-6 text-primary" />
+                  <Logo className="h-6 w-6 text-primary" />
                   <span className="text-lg font-bold tracking-tight">MyDoctors360</span>
                 </SheetTitle>
                 <SheetDescription className="text-xs">
@@ -199,14 +200,10 @@ export function Header() {
                         }`}
                       >
                         <div
-                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                            isActive ? "bg-primary/10" : link.iconBg
-                          }`}
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${link.iconBg}`}
                         >
                           <Icon
-                            className={`h-[18px] w-[18px] ${
-                              isActive ? "text-primary" : link.iconColor
-                            }`}
+                            className={`h-[18px] w-[18px] ${link.iconColor}`}
                           />
                         </div>
                         <span>{link.label}</span>

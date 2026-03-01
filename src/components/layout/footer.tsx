@@ -1,6 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Stethoscope } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -12,7 +12,7 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2">
-              <Stethoscope className="h-6 w-6 text-primary" />
+              <Logo className="h-6 w-6 text-primary" />
               <span className="text-lg font-bold">MyDoctors360</span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
