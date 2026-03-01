@@ -278,12 +278,9 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const navigateToSpecialty = useCallback(
     (slug: string) => {
       setShowSuggestions(false);
-      const params = new URLSearchParams();
-      params.set("specialty", slug);
-      if (location && location !== "all") params.set("location", location);
-      router.push(`/doctors?${params.toString()}`);
+      router.push(`/specialties/${slug}`);
     },
-    [location, router]
+    [router]
   );
 
   const handleSelectSuggestion = (item: SuggestionItem) => {
