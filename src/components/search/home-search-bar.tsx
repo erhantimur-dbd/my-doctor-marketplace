@@ -292,17 +292,29 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
     setShowSuggestions(false);
     switch (item.type) {
       case "specialty":
-        navigateToSpecialty(item.slug);
+        // Populate search field so user can pick consultation type before searching
+        setQuery(
+          item.label
+            .replace("specialty.", "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l: string) => l.toUpperCase())
+        );
         break;
       case "doctor":
+        // Doctor links still navigate directly to their profile
         router.push(`/doctors/${item.slug}`);
         break;
       case "symptom":
-      case "test":
-        navigateToSpecialty(item.specialtySlug);
+      case "test": {
+        const label =
+          item.type === "symptom"
+            ? tSymptom(item.labelKey.replace("symptom.", ""))
+            : tTest(item.labelKey.replace("test.", ""));
+        setQuery(label);
         break;
+      }
       case "gp_fallback":
-        navigateToSpecialty("general-practice");
+        setQuery("General Practice");
         break;
     }
   };
