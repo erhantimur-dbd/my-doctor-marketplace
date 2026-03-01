@@ -137,7 +137,7 @@ export default function PricingPage() {
       <section className="bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
         <div className="container mx-auto text-center">
           <Badge variant="secondary" className="mb-4">
-            For Doctors
+            For Doctors &amp; Clinics
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
             Grow Your Practice with MyDoctors360
@@ -219,26 +219,13 @@ export default function PricingPage() {
           </p>
 
           {/* Free Profile Note */}
-          <div className="mx-auto mt-10 max-w-xl rounded-xl border border-emerald-200 bg-emerald-50/50 px-6 py-5 text-center dark:border-emerald-900 dark:bg-emerald-950/20">
-            <div className="flex items-center justify-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              <h3 className="font-semibold text-emerald-900 dark:text-emerald-100">
-                Free Doctor Profile
-              </h3>
-            </div>
-            <p className="mx-auto mt-2 max-w-lg text-sm text-emerald-800/80 dark:text-emerald-200/70">
-              Every doctor starts with a free listing in our directory. Add your details, get discovered by patients, and upgrade to Professional or Premium when you&apos;re ready.
-            </p>
-            <Button
-              variant="link"
-              className="mt-1 text-emerald-700 dark:text-emerald-400"
-              asChild
-            >
-              <Link href="/register-doctor">
-                Create your free profile <ArrowRight className="ml-1 h-3.5 w-3.5" />
-              </Link>
-            </Button>
-          </div>
+          <p className="mt-10 text-center text-sm text-muted-foreground">
+            Want to try first?{" "}
+            <Link href="/register-doctor" className="font-medium text-primary hover:underline">
+              Create a free doctor profile
+            </Link>{" "}
+            and upgrade when you&apos;re ready.
+          </p>
         </div>
       </section>
 

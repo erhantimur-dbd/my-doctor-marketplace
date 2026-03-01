@@ -29,7 +29,7 @@
     "find_doctor": "医師を探す",
     "specialties": "診療科",
     "how_it_works": "ご利用方法",
-    "for_doctors": "医師の方へ",
+    "for_doctors": "医師・クリニックの方へ",
     "pricing": "料金",
     "login": "ログイン",
     "register": "新規登録",
@@ -256,7 +256,7 @@
     "terms": "利用規約",
     "privacy": "プライバシーポリシー",
     "faq": "よくある質問",
-    "for_doctors": "医師の方へ",
+    "for_doctors": "医師・クリニックの方へ",
     "support": "サポート",
     "copyright": "全著作権所有。"
   }

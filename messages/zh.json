@@ -29,7 +29,7 @@
     "find_doctor": "查找医生",
     "specialties": "专科",
     "how_it_works": "使用指南",
-    "for_doctors": "医生入驻",
+    "for_doctors": "医生与诊所入驻",
     "pricing": "价格",
     "login": "登录",
     "register": "注册",
@@ -256,7 +256,7 @@
     "terms": "服务条款",
     "privacy": "隐私政策",
     "faq": "常见问题",
-    "for_doctors": "医生入驻",
+    "for_doctors": "医生与诊所入驻",
     "support": "客服支持",
     "copyright": "保留所有权利。"
   }

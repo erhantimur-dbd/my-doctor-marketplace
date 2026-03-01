@@ -29,7 +29,7 @@
     "find_doctor": "Buscar Médico",
     "specialties": "Especialidades",
     "how_it_works": "Cómo Funciona",
-    "for_doctors": "Para Médicos",
+    "for_doctors": "Para Médicos & Clínicas",
     "pricing": "Precios",
     "login": "Iniciar Sesión",
     "register": "Registrarse",
@@ -256,7 +256,7 @@
     "terms": "Términos de Servicio",
     "privacy": "Política de Privacidad",
     "faq": "Preguntas Frecuentes",
-    "for_doctors": "Para Médicos",
+    "for_doctors": "Para Médicos & Clínicas",
     "support": "Soporte",
     "copyright": "Todos los derechos reservados."
   }
