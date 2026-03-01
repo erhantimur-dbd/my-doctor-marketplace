@@ -132,54 +132,42 @@ export default function PricingPage() {
       {/* Pricing Plans */}
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-5xl">
-          <div className="grid gap-6 md:grid-cols-3">
-            {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0 && plan.id !== "testing_service").map((plan) => {
-              const isPopular = "popular" in plan && plan.popular;
+          <div className="grid gap-6 md:grid-cols-3 md:items-start">
+            {/* Professional — Blue */}
+            {(() => {
+              const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "professional")!;
               return (
-                <Card
-                  key={plan.id}
-                  className={`relative flex flex-col ${
-                    isPopular ? "border-primary shadow-lg scale-[1.02]" : ""
-                  }`}
-                >
-                  {isPopular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary text-primary-foreground">
-                        Most Doctors start here
-                      </Badge>
+                <Card className="relative flex flex-col overflow-hidden border-blue-200 dark:border-blue-900">
+                  <div className="bg-gradient-to-br from-blue-50 via-blue-50/80 to-sky-50 px-6 pb-6 pt-8 text-center dark:from-blue-950/40 dark:via-blue-950/30 dark:to-sky-950/20">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/50">
+                      <Stethoscope className="h-5 w-5 text-blue-600" />
                     </div>
-                  )}
-                  <CardHeader className="pb-4 pt-6 text-center">
-                    <h3 className="text-lg font-bold">{plan.name}</h3>
-                    <p className="min-h-[2.5rem] text-sm text-muted-foreground">
+                    <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100">{plan.name}</h3>
+                    <p className="mt-1 text-sm text-blue-600/70 dark:text-blue-300/70">
                       {plan.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold">
+                      <span className="text-4xl font-bold text-blue-700 dark:text-blue-300">
                         {formatPriceForLocale(plan.prices, locale)}
                       </span>
-                      <span className="text-muted-foreground"> / month</span>
-                      <p className="mt-1.5 text-xs font-medium text-primary/70">
+                      <span className="text-blue-500/70"> / month</span>
+                      <p className="mt-1.5 text-xs font-medium text-blue-500/60">
                         Introductory pricing
                       </p>
                     </div>
-                  </CardHeader>
-                  <Separator />
+                  </div>
                   <CardContent className="flex flex-1 flex-col p-6">
                     <ul className="flex-1 space-y-3">
                       {plan.features.map((feature) => (
-                        <li
-                          key={feature}
-                          className="flex items-start gap-2 text-sm"
-                        >
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                        <li key={feature} className="flex items-start gap-2 text-sm">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
                           {feature}
                         </li>
                       ))}
                     </ul>
                     <Button
-                      className="mt-6 w-full rounded-full"
-                      variant={isPopular ? "default" : "outline"}
+                      className="mt-6 w-full rounded-full border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-950/50"
+                      variant="outline"
                       asChild
                     >
                       <Link href="/register-doctor">
@@ -189,7 +177,102 @@ export default function PricingPage() {
                   </CardContent>
                 </Card>
               );
-            })}
+            })()}
+
+            {/* Premium — Violet (Popular) */}
+            {(() => {
+              const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "premium")!;
+              return (
+                <Card className="relative flex flex-col overflow-hidden border-violet-300 shadow-lg shadow-violet-100 md:scale-[1.03] dark:border-violet-800 dark:shadow-violet-950/30">
+                  <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
+                    <Badge className="bg-violet-600 text-white shadow-md hover:bg-violet-600">
+                      Most Doctors start here
+                    </Badge>
+                  </div>
+                  <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 px-6 pb-6 pt-12 text-center">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
+                      <Zap className="h-5 w-5 text-white" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white">{plan.name}</h3>
+                    <p className="mt-1 text-sm text-violet-200/80">
+                      {plan.description}
+                    </p>
+                    <div className="mt-4">
+                      <span className="text-4xl font-bold text-white">
+                        {formatPriceForLocale(plan.prices, locale)}
+                      </span>
+                      <span className="text-violet-200/70"> / month</span>
+                      <p className="mt-1.5 text-xs font-medium text-violet-200/60">
+                        Introductory pricing
+                      </p>
+                    </div>
+                  </div>
+                  <CardContent className="flex flex-1 flex-col p-6">
+                    <ul className="flex-1 space-y-3">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2 text-sm">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      className="mt-6 w-full rounded-full bg-violet-600 hover:bg-violet-700"
+                      asChild
+                    >
+                      <Link href="/register-doctor">
+                        Get Started
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+
+            {/* Clinic Starter Pack — Amber */}
+            {(() => {
+              const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "clinic")!;
+              return (
+                <Card className="relative flex flex-col overflow-hidden border-amber-200 dark:border-amber-900">
+                  <div className="bg-gradient-to-br from-amber-50 via-orange-50/80 to-yellow-50 px-6 pb-6 pt-8 text-center dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/20">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/50">
+                      <Users className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">{plan.name}</h3>
+                    <p className="mt-1 text-sm text-amber-600/70 dark:text-amber-300/70">
+                      {plan.description}
+                    </p>
+                    <div className="mt-4">
+                      <span className="text-4xl font-bold text-amber-700 dark:text-amber-300">
+                        {formatPriceForLocale(plan.prices, locale)}
+                      </span>
+                      <span className="text-amber-500/70"> / month</span>
+                      <p className="mt-1.5 text-xs font-medium text-amber-500/60">
+                        Introductory pricing
+                      </p>
+                    </div>
+                  </div>
+                  <CardContent className="flex flex-1 flex-col p-6">
+                    <ul className="flex-1 space-y-3">
+                      {plan.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2 text-sm">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button
+                      className="mt-6 w-full rounded-full bg-amber-600 text-white hover:bg-amber-700"
+                      asChild
+                    >
+                      <Link href="/register-doctor">
+                        Get Started
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </div>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
