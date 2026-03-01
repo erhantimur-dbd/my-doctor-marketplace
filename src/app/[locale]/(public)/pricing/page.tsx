@@ -132,18 +132,18 @@ export default function PricingPage() {
       {/* Pricing Plans */}
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-5xl">
-          <div className="grid gap-6 md:grid-cols-3 md:items-start">
+          <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
             {/* Professional — Blue */}
             {(() => {
               const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "professional")!;
               return (
                 <Card className="relative flex flex-col overflow-hidden border-blue-200 dark:border-blue-900">
-                  <div className="bg-gradient-to-br from-blue-50 via-blue-50/80 to-sky-50 px-6 pb-6 pt-8 text-center dark:from-blue-950/40 dark:via-blue-950/30 dark:to-sky-950/20">
+                  <div className="bg-gradient-to-br from-blue-50 via-blue-50/80 to-sky-50 px-6 pb-6 pt-10 text-center dark:from-blue-950/40 dark:via-blue-950/30 dark:to-sky-950/20">
                     <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/50">
                       <Stethoscope className="h-5 w-5 text-blue-600" />
                     </div>
                     <h3 className="text-lg font-bold text-blue-900 dark:text-blue-100">{plan.name}</h3>
-                    <p className="mt-1 text-sm text-blue-600/70 dark:text-blue-300/70">
+                    <p className="mt-1 min-h-[40px] text-sm text-blue-600/70 dark:text-blue-300/70">
                       {plan.description}
                     </p>
                     <div className="mt-4">
@@ -183,18 +183,18 @@ export default function PricingPage() {
             {(() => {
               const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "premium")!;
               return (
-                <Card className="relative flex flex-col overflow-hidden border-violet-300 shadow-lg shadow-violet-100 md:scale-[1.03] dark:border-violet-800 dark:shadow-violet-950/30">
+                <Card className="relative flex flex-col overflow-hidden border-violet-300 shadow-lg shadow-violet-100 dark:border-violet-800 dark:shadow-violet-950/30">
                   <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
                     <Badge className="bg-violet-600 text-white shadow-md hover:bg-violet-600">
                       Most Doctors start here
                     </Badge>
                   </div>
-                  <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 px-6 pb-6 pt-12 text-center">
+                  <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 px-6 pb-6 pt-10 text-center">
                     <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
                       <Zap className="h-5 w-5 text-white" />
                     </div>
                     <h3 className="text-lg font-bold text-white">{plan.name}</h3>
-                    <p className="mt-1 text-sm text-violet-200/80">
+                    <p className="mt-1 min-h-[40px] text-sm text-violet-200/80">
                       {plan.description}
                     </p>
                     <div className="mt-4">
@@ -234,12 +234,12 @@ export default function PricingPage() {
               const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "clinic")!;
               return (
                 <Card className="relative flex flex-col overflow-hidden border-amber-200 dark:border-amber-900">
-                  <div className="bg-gradient-to-br from-amber-50 via-orange-50/80 to-yellow-50 px-6 pb-6 pt-8 text-center dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/20">
+                  <div className="bg-gradient-to-br from-amber-50 via-orange-50/80 to-yellow-50 px-6 pb-6 pt-10 text-center dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/20">
                     <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 dark:bg-amber-900/50">
                       <Users className="h-5 w-5 text-amber-600" />
                     </div>
                     <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">{plan.name}</h3>
-                    <p className="mt-1 text-sm text-amber-600/70 dark:text-amber-300/70">
+                    <p className="mt-1 min-h-[40px] text-sm text-amber-600/70 dark:text-amber-300/70">
                       {plan.description}
                     </p>
                     <div className="mt-4">
