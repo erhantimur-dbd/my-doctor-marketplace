@@ -131,7 +131,15 @@
     "clinic": "Clinic",
     "cancellation_policy": "Cancellation Policy",
     "view_profile": "View Profile",
-    "all_reviews": "All Reviews"
+    "all_reviews": "All Reviews",
+    "select_date": "Select a date to view times",
+    "available_times": "Available Times",
+    "no_slots_this_date": "No available slots for this date",
+    "no_availability_this_month": "No availability this month",
+    "few_slots_left": "Few slots left",
+    "book_time": "Book this time",
+    "video_call": "Video Call",
+    "view_full_calendar": "View full calendar"
   },
   "search": {
     "title": "Find a Doctor",

@@ -131,7 +131,15 @@
     "clinic": "クリニック",
     "cancellation_policy": "キャンセルポリシー",
     "view_profile": "プロフィールを見る",
-    "all_reviews": "すべてのレビュー"
+    "all_reviews": "すべてのレビュー",
+    "select_date": "日付を選択して空き時間を確認",
+    "available_times": "空き時間",
+    "no_slots_this_date": "この日の空きはありません",
+    "no_availability_this_month": "今月の空きはありません",
+    "few_slots_left": "残りわずか",
+    "book_time": "この時間を予約",
+    "video_call": "ビデオ通話",
+    "view_full_calendar": "カレンダー全体を表示"
   },
   "search": {
     "title": "医師を探す",

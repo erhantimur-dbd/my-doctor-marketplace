@@ -16,7 +16,7 @@ import { Clock, Star, MapPin, Shield, Video, User, Accessibility, CalendarDays, 
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
 import { formatShortDateLabel, formatSlotTime } from "@/lib/utils/availability";
-import { SlotPicker } from "@/components/booking/slot-picker";
+import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
 import type { DoctorMultiDayAvailability } from "@/actions/search";
 
 interface DoctorCardProps {
@@ -185,34 +185,36 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                 <div className="mt-3 border-t pt-3">
                   {availability && availability.days.length > 0 ? (
                     <div>
-                      {/* Day selector tabs */}
+                      {/* Day selector tabs — scrollable for 7+ days */}
                       <div className="mb-2 flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                        {availability.days.map((day, idx) => (
-                          <button
-                            key={day.date}
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedDayIndex(idx);
-                            }}
-                            className={cn(
-                              "rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
-                              idx === selectedDayIndex
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                                : "text-muted-foreground hover:bg-muted"
-                            )}
-                          >
-                            {formatShortDateLabel(day.date)}
-                          </button>
-                        ))}
+                        <div className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          {availability.days.map((day, idx) => (
+                            <button
+                              key={day.date}
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedDayIndex(idx);
+                              }}
+                              className={cn(
+                                "shrink-0 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+                                idx === selectedDayIndex
+                                  ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                                  : "text-muted-foreground hover:bg-muted"
+                              )}
+                            >
+                              {formatShortDateLabel(day.date)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       {/* Slots for selected day */}
                       {selectedDay && (
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedDay.slots.slice(0, 4).map((slot) => (
+                          {selectedDay.slots.slice(0, 6).map((slot) => (
                             <button
                               key={slot.start}
                               type="button"
@@ -228,15 +230,15 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                               {formatSlotTime(slot.start)}
                             </button>
                           ))}
-                          {selectedDay.slots.length > 4 && (
+                          {selectedDay.slots.length > 6 && (
                             <span className="inline-flex items-center px-1 py-1 text-xs text-muted-foreground">
-                              +{selectedDay.slots.length - 4} more
+                              +{selectedDay.slots.length - 6} more
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* View full availability link */}
+                      {/* View full calendar link */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -247,7 +249,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                       >
                         <CalendarDays className="h-3 w-3" />
-                        View full availability
+                        View full calendar
                       </button>
                     </div>
                   ) : (
@@ -285,25 +287,23 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
           </Card>
         </Link>
 
-        {/* Full Availability Modal */}
+        {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
           <Dialog open={showFullAvailability} onOpenChange={setShowFullAvailability}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
-                  {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name} — Availability
+                  {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
                 </DialogTitle>
               </DialogHeader>
-              <SlotPicker
+              <AvailabilityCalendar
                 doctorId={doctor.id}
+                doctorSlug={doctor.slug}
                 consultationType={availability?.consultationType || "in_person"}
-                onSlotSelect={(date) => {
-                  setShowFullAvailability(false);
-                  router.push(
-                    `/doctors/${doctor.slug}/book?date=${date}&type=${availability?.consultationType || "in_person"}`
-                  );
-                }}
+                consultationTypes={doctor.consultation_types}
                 initialDate={availability?.days[0]?.date}
+                locale={locale}
+                compact
               />
             </DialogContent>
           </Dialog>

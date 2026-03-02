@@ -17,11 +17,10 @@ import {
   Award,
   Globe,
   User,
-  Calendar,
+  CalendarDays,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
-import { formatDateLabel, formatSlotTime } from "@/lib/utils/availability";
-import { getNextAvailabilityBatch } from "@/actions/search";
+import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
 import type { Metadata } from "next";
 
 interface DoctorPageProps {
@@ -89,10 +88,6 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     .eq("is_visible", true)
     .order("created_at", { ascending: false })
     .limit(5);
-
-  // Fetch next availability (reuses the batch RPC with a single-element array)
-  const availabilityMap = await getNextAvailabilityBatch([doctor.id]);
-  const availability = availabilityMap[doctor.id] || null;
 
   // Check if doctor has an active subscription (for booking eligibility)
   const { data: doctorSubscription } = await supabase
@@ -378,7 +373,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
 
         {/* Sidebar - Booking CTA */}
         <div className="lg:col-span-1">
-          <div className="sticky top-24 space-y-4">
+          <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto space-y-4">
             {/* Location map — prefer clinic-level coords, fall back to city */}
             {(doctor.clinic_latitude || doctor.location?.latitude) &&
              (doctor.clinic_longitude || doctor.location?.longitude) && (
@@ -404,42 +399,22 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
               </Card>
             )}
 
-            {/* Next Availability */}
+            {/* Availability Calendar */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Clock className="h-4 w-4" />
-                  Next Available
+                  <CalendarDays className="h-4 w-4" />
+                  Availability
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {availability && availability.slots.length > 0 ? (
-                  <div>
-                    <p className="mb-2 text-sm font-medium text-green-700">
-                      {formatDateLabel(availability.date)}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {availability.slots.slice(0, 4).map((slot: { start: string; end: string }) => (
-                        <Link
-                          key={slot.start}
-                          href={`/doctors/${doctor.slug}/book?date=${availability.date}&type=${availability.consultationType || "in_person"}`}
-                          className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
-                        >
-                          {formatSlotTime(slot.start)}
-                        </Link>
-                      ))}
-                      {availability.slots.length > 4 && (
-                        <span className="inline-flex items-center px-1 py-1.5 text-xs text-muted-foreground">
-                          +{availability.slots.length - 4} more
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    No availability in next 14 days
-                  </p>
-                )}
+                <AvailabilityCalendar
+                  doctorId={doctor.id}
+                  doctorSlug={doctor.slug}
+                  consultationType="in_person"
+                  consultationTypes={doctor.consultation_types}
+                  locale={locale}
+                />
               </CardContent>
             </Card>
 
@@ -481,7 +456,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                   <>
                     <Button className="w-full" size="lg" asChild>
                       <Link href={`/doctors/${doctor.slug}/book`}>
-                        <Calendar className="mr-2 h-4 w-4" />
+                        <CalendarDays className="mr-2 h-4 w-4" />
                         Book Appointment
                       </Link>
                     </Button>

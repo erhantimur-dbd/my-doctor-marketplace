@@ -426,8 +426,8 @@ export async function getMultiDayAvailabilityBatch(
     {
       p_doctor_ids: doctorIds,
       p_lookahead_days: 14,
-      p_max_days_per_doctor: 3,
-      p_max_slots_per_day: 4,
+      p_max_days_per_doctor: 7,
+      p_max_slots_per_day: 6,
       p_consultation_type: consultationType || "in_person",
     }
   );

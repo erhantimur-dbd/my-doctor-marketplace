@@ -168,7 +168,15 @@
     "clinic": "Cabinet",
     "cancellation_policy": "Politique d'annulation",
     "view_profile": "Voir le profil",
-    "all_reviews": "Tous les avis"
+    "all_reviews": "Tous les avis",
+    "select_date": "Sélectionnez une date pour voir les horaires",
+    "available_times": "Horaires disponibles",
+    "no_slots_this_date": "Aucun créneau disponible pour cette date",
+    "no_availability_this_month": "Aucune disponibilité ce mois-ci",
+    "few_slots_left": "Peu de créneaux restants",
+    "book_time": "Réserver ce créneau",
+    "video_call": "Appel vidéo",
+    "view_full_calendar": "Voir le calendrier complet"
   },
   "search": {
     "title": "Trouver un Medecin",

@@ -317,7 +317,15 @@
     "clinic": "Praxis",
     "cancellation_policy": "Stornierungsbedingungen",
     "view_profile": "Profil ansehen",
-    "all_reviews": "Alle Bewertungen"
+    "all_reviews": "Alle Bewertungen",
+    "select_date": "Datum auswählen, um Zeiten anzuzeigen",
+    "available_times": "Verfügbare Zeiten",
+    "no_slots_this_date": "Keine verfügbaren Termine für dieses Datum",
+    "no_availability_this_month": "Keine Verfügbarkeit in diesem Monat",
+    "few_slots_left": "Wenige Termine verfügbar",
+    "book_time": "Diesen Termin buchen",
+    "video_call": "Videoanruf",
+    "view_full_calendar": "Vollständigen Kalender anzeigen"
   },
   "dashboard": {
     "welcome": "Willkommen zuruck, {name}",

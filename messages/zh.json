@@ -131,7 +131,15 @@
     "clinic": "诊所",
     "cancellation_policy": "取消政策",
     "view_profile": "查看资料",
-    "all_reviews": "所有评价"
+    "all_reviews": "所有评价",
+    "select_date": "选择日期查看可用时间",
+    "available_times": "可用时间",
+    "no_slots_this_date": "该日期无可用时间",
+    "no_availability_this_month": "本月无可用时间",
+    "few_slots_left": "仅剩少量名额",
+    "book_time": "预约此时间",
+    "video_call": "视频问诊",
+    "view_full_calendar": "查看完整日历"
   },
   "search": {
     "title": "查找医生",

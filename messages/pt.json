@@ -131,7 +131,15 @@
     "clinic": "Clínica",
     "cancellation_policy": "Política de Cancelamento",
     "view_profile": "Ver Perfil",
-    "all_reviews": "Todas as Avaliações"
+    "all_reviews": "Todas as Avaliações",
+    "select_date": "Selecione uma data para ver os horários",
+    "available_times": "Horários disponíveis",
+    "no_slots_this_date": "Sem horários disponíveis para esta data",
+    "no_availability_this_month": "Sem disponibilidade este mês",
+    "few_slots_left": "Poucos horários restantes",
+    "book_time": "Reservar este horário",
+    "video_call": "Chamada de vídeo",
+    "view_full_calendar": "Ver calendário completo"
   },
   "search": {
     "title": "Encontrar Médico",

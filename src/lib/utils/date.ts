@@ -1,11 +1,16 @@
 import { format, formatDistanceToNow, isToday, isTomorrow, parseISO, type Locale } from "date-fns";
-import { enGB, de, tr, fr } from "date-fns/locale";
+import { enGB, de, tr, fr, it, es, pt, ja, zhCN } from "date-fns/locale";
 
-const localeMap: Record<string, Locale> = {
+export const localeMap: Record<string, Locale> = {
   en: enGB,
   de: de,
   tr: tr,
   fr: fr,
+  it: it,
+  es: es,
+  pt: pt,
+  ja: ja,
+  zh: zhCN,
 };
 
 export function formatDate(

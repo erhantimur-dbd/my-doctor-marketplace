@@ -449,6 +449,46 @@ export async function getBookingDetails(bookingId: string) {
   }
 }
 
+export interface AvailableDateInfo {
+  date: string; // "YYYY-MM-DD"
+  slotCount: number;
+}
+
+export async function getDoctorAvailableDates(
+  doctorId: string,
+  startDate: string, // "YYYY-MM-DD"
+  endDate: string, // "YYYY-MM-DD"
+  consultationType: string
+): Promise<{ dates: AvailableDateInfo[]; error?: string }> {
+  try {
+    const supabase = createAdminClient();
+
+    const { data, error } = await supabase.rpc("get_available_dates_in_range", {
+      p_doctor_id: doctorId,
+      p_start_date: startDate,
+      p_end_date: endDate,
+      p_consultation_type: consultationType,
+    });
+
+    if (error) {
+      console.error("get_available_dates_in_range RPC error:", error);
+      return { dates: [], error: "Failed to fetch available dates." };
+    }
+
+    return {
+      dates: (
+        (data as { available_date: string; slot_count: number }[]) || []
+      ).map((r) => ({
+        date: r.available_date,
+        slotCount: r.slot_count,
+      })),
+    };
+  } catch (err) {
+    console.error("getDoctorAvailableDates error:", err);
+    return { dates: [], error: "Failed to fetch available dates." };
+  }
+}
+
 export async function getDoctorAvailableSlots(
   doctorId: string,
   date: string,

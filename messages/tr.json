@@ -168,7 +168,15 @@
     "clinic": "Klinik",
     "cancellation_policy": "Iptal Politikasi",
     "view_profile": "Profili Gor",
-    "all_reviews": "Tum Degerlendirmeler"
+    "all_reviews": "Tum Degerlendirmeler",
+    "select_date": "Saatleri görmek için bir tarih seçin",
+    "available_times": "Müsait Saatler",
+    "no_slots_this_date": "Bu tarih için müsait randevu yok",
+    "no_availability_this_month": "Bu ay müsaitlik yok",
+    "few_slots_left": "Az sayıda randevu kaldı",
+    "book_time": "Bu saati ayırt",
+    "video_call": "Görüntülü Görüşme",
+    "view_full_calendar": "Tam takvimi görüntüle"
   },
   "search": {
     "title": "Doktor Bul",
