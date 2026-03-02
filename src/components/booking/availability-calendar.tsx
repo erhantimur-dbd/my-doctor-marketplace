@@ -189,7 +189,7 @@ export function AvailabilityCalendar({
     if (!selectedDate) return;
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     router.push(
-      `/doctors/${doctorSlug}/book?date=${dateStr}&type=${activeType}`
+      `/doctors/${doctorSlug}/book?date=${dateStr}&type=${activeType}&time=${encodeURIComponent(slot.slot_start)}`
     );
   };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,6 +81,7 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
   const searchParams = useSearchParams();
   const initialDate = searchParams.get("date"); // e.g. "2026-03-05" from availability chip
   const initialType = searchParams.get("type") as ConsultationType | null; // e.g. "in_person" or "video"
+  const initialTime = searchParams.get("time"); // e.g. "07:00:00" from selected time slot
 
   // Auto-select consultation type and skip to step 2 if valid type provided via URL
   const validInitialType =
@@ -143,9 +144,9 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
     }
   }
 
-  function handleSlotSelect(date: string, startTime: string, endTime: string) {
+  const handleSlotSelect = useCallback((date: string, startTime: string, endTime: string) => {
     setSlotSelection({ date, startTime, endTime });
-  }
+  }, []);
 
   function handleProceedToPayment() {
     if (!consultationType || !slotSelection) return;
@@ -340,6 +341,7 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
               consultationType={consultationType}
               onSlotSelect={handleSlotSelect}
               initialDate={initialDate || undefined}
+              initialTime={initialTime || undefined}
             />
 
             {slotSelection && (

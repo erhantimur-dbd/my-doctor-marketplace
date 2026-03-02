@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,6 +16,7 @@ interface SlotPickerProps {
   consultationType: string;
   onSlotSelect: (date: string, startTime: string, endTime: string) => void;
   initialDate?: string; // "YYYY-MM-DD" — auto-select this date on mount
+  initialTime?: string; // "HH:MM:SS" — auto-select this time slot on mount
 }
 
 export function SlotPicker({
@@ -23,6 +24,7 @@ export function SlotPicker({
   consultationType,
   onSlotSelect,
   initialDate,
+  initialTime,
 }: SlotPickerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     initialDate ? new Date(initialDate + "T00:00:00") : undefined
@@ -36,6 +38,7 @@ export function SlotPicker({
   } | null>(null);
 
   const today = startOfDay(new Date());
+  const hasAutoSelectedTime = useRef(false);
 
   const fetchSlots = useCallback(
     async (date: Date) => {
@@ -54,11 +57,22 @@ export function SlotPicker({
       if (result.error) {
         setError(result.error);
       } else {
-        setSlots(result.slots.filter((s) => s.is_available));
+        const availableSlots = result.slots.filter((s) => s.is_available);
+        setSlots(availableSlots);
+
+        // Auto-select matching time slot from URL (once on initial load)
+        if (initialTime && !hasAutoSelectedTime.current && availableSlots.length > 0) {
+          const matchingSlot = availableSlots.find((s) => s.slot_start === initialTime);
+          if (matchingSlot) {
+            setSelectedSlot({ start: matchingSlot.slot_start, end: matchingSlot.slot_end });
+            onSlotSelect(dateStr, matchingSlot.slot_start, matchingSlot.slot_end);
+            hasAutoSelectedTime.current = true;
+          }
+        }
       }
       setLoading(false);
     },
-    [doctorId, consultationType]
+    [doctorId, consultationType, initialTime, onSlotSelect]
   );
 
   useEffect(() => {

@@ -49,6 +49,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     const queryParts: string[] = [];
     if (sp.date) queryParts.push(`date=${encodeURIComponent(sp.date)}`);
     if (sp.type) queryParts.push(`type=${encodeURIComponent(sp.type)}`);
+    if (sp.time) queryParts.push(`time=${encodeURIComponent(sp.time)}`);
     const bookUrl = queryParts.length > 0 ? `${bookPath}?${queryParts.join("&")}` : bookPath;
     redirect(`/${locale}/login?redirect=${encodeURIComponent(bookUrl)}`);
   }
