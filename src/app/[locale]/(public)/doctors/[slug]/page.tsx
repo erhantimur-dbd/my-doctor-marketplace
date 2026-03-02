@@ -192,7 +192,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                 {/* Embedded map */}
                 {(doctor.clinic_latitude || doctor.location?.latitude) &&
                  (doctor.clinic_longitude || doctor.location?.longitude) && (
-                  <div className="w-full md:w-64 lg:w-72 shrink-0">
+                  <div className="w-full overflow-hidden rounded-b-xl md:w-64 md:rounded-b-none md:rounded-r-xl lg:w-72 shrink-0">
                     <ProfileMapWrapper
                       lat={Number(doctor.clinic_latitude ?? doctor.location.latitude)}
                       lng={Number(doctor.clinic_longitude ?? doctor.location.longitude)}
