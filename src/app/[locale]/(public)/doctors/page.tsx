@@ -44,6 +44,7 @@ export default async function DoctorsPage({
       userLat: sp.lat ? Number(sp.lat) : undefined,
       userLng: sp.lng ? Number(sp.lng) : undefined,
       providerType: sp.providerType as "doctor" | "testing_service" | undefined,
+      acceptedPayment: sp.acceptedPayment,
     }),
     getSpecialties(),
     getLocations(),
@@ -84,18 +85,16 @@ export default async function DoctorsPage({
         {t("title")}
       </h1>
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:gap-8">
-        {/* Filters sidebar */}
-        <aside className="w-full shrink-0 lg:w-72">
-          <DoctorSearchFilters
-            specialties={specialties}
-            locations={locations}
-            currentFilters={sp}
-          />
-        </aside>
+      <div className="flex flex-col gap-4">
+        {/* Filters — full-width horizontal bar */}
+        <DoctorSearchFilters
+          specialties={specialties}
+          locations={locations}
+          currentFilters={sp}
+        />
 
         {/* Results */}
-        <div className="flex-1">
+        <div>
           <div className="mb-4 text-sm text-muted-foreground">
             {t("results_count", { count: result.total })}
           </div>

@@ -18,6 +18,7 @@ export interface SearchFilters {
   userLat?: number;
   userLng?: number;
   providerType?: "doctor" | "testing_service";
+  acceptedPayment?: string;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -157,6 +158,9 @@ export async function searchDoctors(filters: SearchFilters) {
   }
   if (filters.wheelchairAccessible) {
     query = query.eq("is_wheelchair_accessible", true);
+  }
+  if (filters.acceptedPayment) {
+    query = query.contains("accepted_payments", [filters.acceptedPayment]);
   }
 
   // Pagination

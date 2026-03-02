@@ -18,8 +18,8 @@ interface LocationComboboxProps {
   value: string; // location slug or ""
   onValueChange: (slug: string) => void;
   placeholder?: string;
-  /** Render as a compact inline input (for home search bar) vs a full-width bordered input (for filters) */
-  variant?: "inline" | "bordered";
+  /** Render as a compact inline input (for home search bar), a full-width bordered input (for filters), or a pill chip (for horizontal filter bar) */
+  variant?: "inline" | "bordered" | "pill";
   /** Show "Use my location" button */
   geoSupported?: boolean;
   geoLoading?: boolean;
@@ -148,6 +148,7 @@ export function LocationCombobox({
   }, [onValueChange]);
 
   const isInline = variant === "inline";
+  const isPill = variant === "pill";
 
   return (
     <div ref={wrapperRef} className={cn("relative", className)}>
@@ -157,7 +158,9 @@ export function LocationCombobox({
           "flex items-center gap-2",
           isInline
             ? "h-14 px-3"
-            : "h-10 rounded-md border border-input bg-background px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+            : isPill
+              ? "h-8 rounded-full border border-input bg-background px-3 text-sm font-medium"
+              : "h-10 rounded-md border border-input bg-background px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
         )}
       >
         <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />

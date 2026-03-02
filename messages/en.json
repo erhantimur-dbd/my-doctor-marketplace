@@ -167,7 +167,16 @@
     "provider_type": "Provider Type",
     "all_providers": "All",
     "doctors_only": "Doctors",
-    "testing_services": "Testing Services"
+    "testing_services": "Testing Services",
+    "payments_accepted": "Payments Accepted",
+    "all_payments": "All",
+    "payment_insurance": "Insurance",
+    "payment_bank_transfer": "Bank Transfer",
+    "payment_instant_transfer": "Instant Transfer",
+    "payment_credit_card": "Credit Card",
+    "payment_debit_card": "Debit Card",
+    "payment_cash": "Cash",
+    "payment_paypal": "PayPal"
   },
   "booking": {
     "select_date": "Select Date",

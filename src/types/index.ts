@@ -57,6 +57,7 @@ export interface Doctor {
   is_active: boolean;
   cancellation_policy: string;
   cancellation_hours: number;
+  accepted_payments: string[];
   is_wheelchair_accessible: boolean;
   avg_rating: number;
   total_reviews: number;

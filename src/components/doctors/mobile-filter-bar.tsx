@@ -20,8 +20,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility, FlaskConical } from "lucide-react";
+import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility, FlaskConical, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PAYMENT_METHODS } from "@/lib/constants/payment-methods";
 
 interface MobileFilterBarProps {
   specialties: { id: string; name_key: string; slug: string }[];
@@ -260,6 +261,30 @@ export function MobileFilterBar({
                   <SelectItem value="all">{t("all_types")}</SelectItem>
                   <SelectItem value="in_person">{t("in_person")}</SelectItem>
                   <SelectItem value="video">{t("video_call")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Payments Accepted */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-sm">
+                <CreditCard className="h-3.5 w-3.5" />
+                {t("payments_accepted")}
+              </Label>
+              <Select
+                value={currentFilters.acceptedPayment || "all"}
+                onValueChange={(v) => updateFilter("acceptedPayment", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("all_payments")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("all_payments")}</SelectItem>
+                  {PAYMENT_METHODS.map((pm) => (
+                    <SelectItem key={pm.value} value={pm.value}>
+                      {t(pm.labelKey)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

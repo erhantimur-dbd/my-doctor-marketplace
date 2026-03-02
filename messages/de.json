@@ -251,7 +251,16 @@
     "provider_type": "Anbietertyp",
     "all_providers": "Alle",
     "doctors_only": "Ärzte",
-    "testing_services": "Testdienste"
+    "testing_services": "Testdienste",
+    "payments_accepted": "Akzeptierte Zahlungsmethoden",
+    "all_payments": "Alle",
+    "payment_insurance": "Versicherung",
+    "payment_bank_transfer": "Banküberweisung",
+    "payment_instant_transfer": "Sofortüberweisung",
+    "payment_credit_card": "Kreditkarte",
+    "payment_debit_card": "Debitkarte",
+    "payment_cash": "Bargeld",
+    "payment_paypal": "PayPal"
   },
   "booking": {
     "select_date": "Datum wahlen",

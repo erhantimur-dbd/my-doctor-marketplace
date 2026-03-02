@@ -204,7 +204,16 @@
     "provider_type": "Type de prestataire",
     "all_providers": "Tous",
     "doctors_only": "Médecins",
-    "testing_services": "Services de tests"
+    "testing_services": "Services de tests",
+    "payments_accepted": "Paiements acceptés",
+    "all_payments": "Tous",
+    "payment_insurance": "Assurance",
+    "payment_bank_transfer": "Virement bancaire",
+    "payment_instant_transfer": "Virement instantané",
+    "payment_credit_card": "Carte de crédit",
+    "payment_debit_card": "Carte de débit",
+    "payment_cash": "Espèces",
+    "payment_paypal": "PayPal"
   },
   "booking": {
     "select_date": "Choisir une date",

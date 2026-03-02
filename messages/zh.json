@@ -167,7 +167,16 @@
     "provider_type": "服务类型",
     "all_providers": "全部",
     "doctors_only": "医生",
-    "testing_services": "检查服务"
+    "testing_services": "检查服务",
+    "payments_accepted": "接受的付款方式",
+    "all_payments": "全部",
+    "payment_insurance": "保险",
+    "payment_bank_transfer": "银行转账",
+    "payment_instant_transfer": "即时转账",
+    "payment_credit_card": "信用卡",
+    "payment_debit_card": "借记卡",
+    "payment_cash": "现金",
+    "payment_paypal": "PayPal"
   },
   "booking": {
     "select_date": "选择日期",

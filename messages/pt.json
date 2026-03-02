@@ -167,7 +167,16 @@
     "provider_type": "Tipo de Provedor",
     "all_providers": "Todos",
     "doctors_only": "Médicos",
-    "testing_services": "Serviços de Análises"
+    "testing_services": "Serviços de Análises",
+    "payments_accepted": "Pagamentos aceitos",
+    "all_payments": "Todos",
+    "payment_insurance": "Seguro",
+    "payment_bank_transfer": "Transferência bancária",
+    "payment_instant_transfer": "Transferência instantânea",
+    "payment_credit_card": "Cartão de crédito",
+    "payment_debit_card": "Cartão de débito",
+    "payment_cash": "Dinheiro",
+    "payment_paypal": "PayPal"
   },
   "booking": {
     "select_date": "Selecionar Data",

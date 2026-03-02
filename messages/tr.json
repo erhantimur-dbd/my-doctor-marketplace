@@ -204,7 +204,16 @@
     "provider_type": "Sağlayıcı Türü",
     "all_providers": "Tümü",
     "doctors_only": "Doktorlar",
-    "testing_services": "Test Hizmetleri"
+    "testing_services": "Test Hizmetleri",
+    "payments_accepted": "Kabul Edilen Ödemeler",
+    "all_payments": "Tümü",
+    "payment_insurance": "Sigorta",
+    "payment_bank_transfer": "Banka Havalesi",
+    "payment_instant_transfer": "Anında Havale",
+    "payment_credit_card": "Kredi Kartı",
+    "payment_debit_card": "Banka Kartı",
+    "payment_cash": "Nakit",
+    "payment_paypal": "PayPal"
   },
   "booking": {
     "select_date": "Tarih Secin",

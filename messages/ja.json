@@ -167,7 +167,16 @@
     "provider_type": "プロバイダータイプ",
     "all_providers": "すべて",
     "doctors_only": "医師",
-    "testing_services": "検査サービス"
+    "testing_services": "検査サービス",
+    "payments_accepted": "利用可能な支払い方法",
+    "all_payments": "すべて",
+    "payment_insurance": "保険",
+    "payment_bank_transfer": "銀行振込",
+    "payment_instant_transfer": "即時振込",
+    "payment_credit_card": "クレジットカード",
+    "payment_debit_card": "デビットカード",
+    "payment_cash": "現金",
+    "payment_paypal": "PayPal"
   },
   "booking": {
     "select_date": "日付を選択",

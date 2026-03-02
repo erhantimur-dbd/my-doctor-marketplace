@@ -167,7 +167,16 @@
     "provider_type": "Tipo di Fornitore",
     "all_providers": "Tutti",
     "doctors_only": "Medici",
-    "testing_services": "Servizi di Analisi"
+    "testing_services": "Servizi di Analisi",
+    "payments_accepted": "Pagamenti accettati",
+    "all_payments": "Tutti",
+    "payment_insurance": "Assicurazione",
+    "payment_bank_transfer": "Bonifico bancario",
+    "payment_instant_transfer": "Bonifico istantaneo",
+    "payment_credit_card": "Carta di credito",
+    "payment_debit_card": "Carta di debito",
+    "payment_cash": "Contanti",
+    "payment_paypal": "PayPal"
   },
   "booking": {
     "select_date": "Seleziona Data",
