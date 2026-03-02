@@ -214,7 +214,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       {/* Slots for selected day */}
                       {selectedDay && (
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedDay.slots.slice(0, 6).map((slot) => (
+                          {selectedDay.slots.slice(0, 12).map((slot) => (
                             <button
                               key={slot.start}
                               type="button"
@@ -230,9 +230,9 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                               {formatSlotTime(slot.start)}
                             </button>
                           ))}
-                          {selectedDay.slots.length > 6 && (
+                          {selectedDay.slots.length > 12 && (
                             <span className="inline-flex items-center px-1 py-1 text-xs text-muted-foreground">
-                              +{selectedDay.slots.length - 6} more
+                              +{selectedDay.slots.length - 12} more
                             </span>
                           )}
                         </div>
