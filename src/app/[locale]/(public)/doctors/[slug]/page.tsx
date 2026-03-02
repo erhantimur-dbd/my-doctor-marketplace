@@ -374,6 +374,25 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
         {/* Sidebar - Booking CTA */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto space-y-4">
+            {/* Availability Calendar */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <CalendarDays className="h-4 w-4" />
+                  Availability
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AvailabilityCalendar
+                  doctorId={doctor.id}
+                  doctorSlug={doctor.slug}
+                  consultationType="in_person"
+                  consultationTypes={doctor.consultation_types}
+                  locale={locale}
+                />
+              </CardContent>
+            </Card>
+
             {/* Location map — prefer clinic-level coords, fall back to city */}
             {(doctor.clinic_latitude || doctor.location?.latitude) &&
              (doctor.clinic_longitude || doctor.location?.longitude) && (
@@ -398,25 +417,6 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                 </CardContent>
               </Card>
             )}
-
-            {/* Availability Calendar */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <CalendarDays className="h-4 w-4" />
-                  Availability
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <AvailabilityCalendar
-                  doctorId={doctor.id}
-                  doctorSlug={doctor.slug}
-                  consultationType="in_person"
-                  consultationTypes={doctor.consultation_types}
-                  locale={locale}
-                />
-              </CardContent>
-            </Card>
 
             <Card>
               <CardContent className="p-6">
