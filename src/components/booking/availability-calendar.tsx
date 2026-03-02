@@ -216,7 +216,8 @@ export function AvailabilityCalendar({
               type="button"
               onClick={() => handleTypeChange("in_person")}
               className={cn(
-                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                "flex-1 rounded-md text-sm font-medium transition-colors",
+                compact ? "px-2 py-1" : "px-3 py-1.5",
                 activeType === "in_person"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -230,7 +231,8 @@ export function AvailabilityCalendar({
               type="button"
               onClick={() => handleTypeChange("video")}
               className={cn(
-                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                "flex-1 rounded-md text-sm font-medium transition-colors",
+                compact ? "px-2 py-1" : "px-3 py-1.5",
                 activeType === "video"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -274,7 +276,7 @@ export function AvailabilityCalendar({
             Week: ({ week, ...props }) => <div role="row" {...props} />,
             Weeks: (props) => <div role="rowgroup" {...props} />,
           }}
-          className="rounded-md border w-full"
+          className={cn("rounded-md border w-full", compact && "p-2 [--cell-size:--spacing(7)]")}
         />
       </div>
 
@@ -291,9 +293,12 @@ export function AvailabilityCalendar({
       </div>
 
       {/* Time slots section */}
-      <div className="min-h-[80px]">
+      <div className={compact ? "min-h-[60px]" : "min-h-[80px]"}>
         {!selectedDate && (
-          <div className="flex h-20 items-center justify-center rounded-md border border-dashed">
+          <div className={cn(
+            "flex items-center justify-center rounded-md border border-dashed",
+            compact ? "h-14" : "h-20"
+          )}>
             <p className="text-sm text-muted-foreground">
               {t("select_date")}
             </p>
@@ -302,20 +307,23 @@ export function AvailabilityCalendar({
 
         {selectedDate && loadingSlots && (
           <div>
-            <p className="mb-2 text-sm font-medium">
+            <p className={cn("font-medium", compact ? "mb-1.5 text-xs" : "mb-2 text-sm")}>
               <Clock className="mr-1.5 inline-block h-3.5 w-3.5" />
               {t("available_times")}
             </p>
             <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-9 w-full rounded-md" />
+                <Skeleton key={i} className={cn("w-full rounded-md", compact ? "h-8" : "h-9")} />
               ))}
             </div>
           </div>
         )}
 
         {selectedDate && !loadingSlots && slots.length === 0 && (
-          <div className="flex h-20 items-center justify-center rounded-md border border-dashed">
+          <div className={cn(
+            "flex items-center justify-center rounded-md border border-dashed",
+            compact ? "h-14" : "h-20"
+          )}>
             <p className="text-sm text-muted-foreground">
               {t("no_slots_this_date")}
             </p>
@@ -324,7 +332,7 @@ export function AvailabilityCalendar({
 
         {selectedDate && !loadingSlots && slots.length > 0 && (
           <div>
-            <p className="mb-2 text-sm font-medium">
+            <p className={cn("font-medium", compact ? "mb-1.5 text-xs" : "mb-2 text-sm")}>
               <Clock className="mr-1.5 inline-block h-3.5 w-3.5" />
               {t("available_times")} — {format(selectedDate, "EEE, d MMM", { locale: dateFnsLocale })}
             </p>
@@ -337,7 +345,10 @@ export function AvailabilityCalendar({
                   key={`${slot.slot_start}-${slot.slot_end}`}
                   variant="outline"
                   size="sm"
-                  className="h-9 text-sm font-medium border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground"
+                  className={cn(
+                    "font-medium border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
+                    compact ? "h-8 text-xs" : "h-9 text-sm"
+                  )}
                   onClick={() => handleSlotClick(slot)}
                 >
                   {formatSlotTime(slot.slot_start)}

@@ -222,7 +222,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                                 e.preventDefault();
                                 e.stopPropagation();
                                 router.push(
-                                  `/doctors/${doctor.slug}/book?date=${selectedDay.date}&type=${availability.consultationType || "in_person"}`
+                                  `/doctors/${doctor.slug}/book?date=${selectedDay.date}&type=${availability.consultationType || "in_person"}&time=${encodeURIComponent(slot.start)}`
                                 );
                               }}
                               className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
@@ -290,9 +290,9 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
           <Dialog open={showFullAvailability} onOpenChange={setShowFullAvailability}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
+            <DialogContent className="max-w-sm p-4 gap-2">
+              <DialogHeader className="pb-0">
+                <DialogTitle className="text-base">
                   {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
                 </DialogTitle>
               </DialogHeader>
