@@ -12,7 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, Star, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical } from "lucide-react";
+import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical } from "lucide-react";
+import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
 import { formatShortDateLabel, formatSlotTime } from "@/lib/utils/availability";
@@ -118,6 +119,16 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             .replace(/\b\w/g, (l: string) => l.toUpperCase())}
                         </p>
                       )}
+                      {doctor.avg_rating > 0 && (
+                        <div className="mt-1">
+                          <StarRating
+                            rating={doctor.avg_rating}
+                            totalReviews={doctor.total_reviews}
+                            size="sm"
+                            showCount
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="flex shrink-0 gap-1.5">
                       {isTestingService && (
@@ -144,19 +155,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     </div>
                   )}
 
-                  {/* Rating & Reviews */}
+                  {/* Badges */}
                   <div className="mt-2 flex items-center gap-3">
-                    {doctor.avg_rating > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">
-                          {Number(doctor.avg_rating).toFixed(1)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          ({doctor.total_reviews})
-                        </span>
-                      </div>
-                    )}
                     {doctor.verification_status === "verified" && (
                       <div className="flex items-center gap-1 text-green-600">
                         <Shield className="h-3.5 w-3.5" />

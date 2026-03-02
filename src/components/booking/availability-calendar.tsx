@@ -251,6 +251,9 @@ export function AvailabilityCalendar({
           components={{
             DayButton: DayButtonWithDot,
           }}
+          classNames={{
+            table: "w-full flex flex-col [&>thead]:block [&>tbody]:flex [&>tbody]:flex-col",
+          }}
           className="rounded-md border w-full"
         />
       </div>
