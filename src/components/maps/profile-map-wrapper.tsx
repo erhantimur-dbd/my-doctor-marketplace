@@ -19,8 +19,9 @@ interface ProfileMapWrapperProps {
   lng: number;
   label?: string;
   className?: string;
+  interactive?: boolean;
 }
 
-export function ProfileMapWrapper({ lat, lng, label, className }: ProfileMapWrapperProps) {
-  return <ProfileMap lat={lat} lng={lng} label={label} className={className} />;
+export function ProfileMapWrapper({ lat, lng, label, className, interactive }: ProfileMapWrapperProps) {
+  return <ProfileMap lat={lat} lng={lng} label={label} className={className} interactive={interactive} />;
 }

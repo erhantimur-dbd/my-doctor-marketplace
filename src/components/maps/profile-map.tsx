@@ -7,22 +7,22 @@ interface ProfileMapProps {
   lng: number;
   label?: string;
   className?: string;
+  interactive?: boolean;
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-export function ProfileMap({ lat, lng, className }: ProfileMapProps) {
+export function ProfileMap({ lat, lng, className, interactive = false }: ProfileMapProps) {
   return (
     <APIProvider apiKey={API_KEY}>
       <Map
         defaultCenter={{ lat, lng }}
         defaultZoom={14}
         mapId="doctor-profile-map"
-        gestureHandling="none"
-        disableDefaultUI
+        gestureHandling={interactive ? "cooperative" : "none"}
+        disableDefaultUI={!interactive}
         clickableIcons={false}
         className={className || "h-48 w-full"}
-        style={{ minHeight: "192px" }}
       >
         <AdvancedMarker position={{ lat, lng }}>
           <svg

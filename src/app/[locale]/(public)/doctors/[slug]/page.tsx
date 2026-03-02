@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { ProfileMapWrapper } from "@/components/maps/profile-map-wrapper";
+import { ClickableProfileMap } from "@/components/maps/clickable-profile-map";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -192,14 +192,13 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                 {/* Embedded map */}
                 {(doctor.clinic_latitude || doctor.location?.latitude) &&
                  (doctor.clinic_longitude || doctor.location?.longitude) && (
-                  <div className="w-full overflow-hidden rounded-b-xl md:w-64 md:rounded-b-none md:rounded-r-xl lg:w-72 shrink-0">
-                    <ProfileMapWrapper
-                      lat={Number(doctor.clinic_latitude ?? doctor.location.latitude)}
-                      lng={Number(doctor.clinic_longitude ?? doctor.location.longitude)}
-                      label={doctor.clinic_name || doctor.location?.city}
-                      className="h-48 w-full md:h-full md:min-h-[192px]"
-                    />
-                  </div>
+                  <ClickableProfileMap
+                    lat={Number(doctor.clinic_latitude ?? doctor.location.latitude)}
+                    lng={Number(doctor.clinic_longitude ?? doctor.location.longitude)}
+                    label={doctor.clinic_name || doctor.location?.city}
+                    containerClassName="w-full shrink-0 md:w-64 lg:w-72"
+                    className="h-48 w-full md:h-full"
+                  />
                 )}
               </div>
             </CardContent>

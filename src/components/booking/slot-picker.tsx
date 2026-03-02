@@ -101,7 +101,7 @@ export function SlotPicker({
     <div className="space-y-6">
       <div className="flex flex-col gap-6 md:flex-row">
         {/* Calendar */}
-        <div className="shrink-0">
+        <div className="shrink-0 self-center md:self-start">
           <div className="mb-2 flex items-center gap-2 text-sm font-medium">
             <CalendarDays className="h-4 w-4" />
             Select a Date
