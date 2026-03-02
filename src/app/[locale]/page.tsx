@@ -85,15 +85,15 @@ export default async function HomePage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
               <Shield className="h-4 w-4 text-green-600" />
-              <span>Verified Doctors</span>
+              <span>{t("verified_doctors")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4 text-blue-600" />
-              <span>Instant Booking</span>
+              <span>{t("instant_booking")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Video className="h-4 w-4 text-purple-600" />
-              <span>Video Consultations</span>
+              <span>{t("video_consultations")}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Star className="h-4 w-4 text-yellow-500" />
