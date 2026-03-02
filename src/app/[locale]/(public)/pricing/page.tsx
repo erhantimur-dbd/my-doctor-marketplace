@@ -189,20 +189,20 @@ export default function PricingPage() {
                       Most Doctors start here
                     </Badge>
                   </div>
-                  <div className="bg-foreground px-6 pb-6 pt-10 text-center">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-background/15">
-                      <Zap className="h-5 w-5 text-background" />
+                  <div className="px-6 pb-6 pt-10 text-center">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                      <Zap className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-bold text-background">{plan.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-background/70">
+                    <h3 className="text-lg font-bold">{plan.name}</h3>
+                    <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
                       {plan.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold text-background">
+                      <span className="text-4xl font-bold">
                         {formatPriceForLocale(plan.prices, locale)}
                       </span>
-                      <span className="text-background/60"> / month</span>
-                      <p className="mt-1.5 text-xs text-background/50">
+                      <span className="text-muted-foreground"> / month</span>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
                         Introductory pricing
                       </p>
                     </div>
