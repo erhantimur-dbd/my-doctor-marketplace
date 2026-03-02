@@ -113,78 +113,94 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
           {/* Profile header */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-6 sm:flex-row">
-                <Avatar className="h-24 w-24 shrink-0">
-                  {doctor.profile.avatar_url ? (
-                    <AvatarImage src={doctor.profile.avatar_url} alt={fullName} />
-                  ) : null}
-                  <AvatarFallback className="text-2xl">
-                    <User className="h-10 w-10" />
-                  </AvatarFallback>
-                </Avatar>
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="flex flex-col md:flex-row">
+                {/* Doctor info */}
+                <div className="flex flex-1 flex-col gap-6 p-6 sm:flex-row">
+                  <Avatar className="h-24 w-24 shrink-0">
+                    {doctor.profile.avatar_url ? (
+                      <AvatarImage src={doctor.profile.avatar_url} alt={fullName} />
+                    ) : null}
+                    <AvatarFallback className="text-2xl">
+                      <User className="h-10 w-10" />
+                    </AvatarFallback>
+                  </Avatar>
 
-                <div className="flex-1">
-                  <div className="flex items-start gap-3">
-                    <h1 className="text-2xl font-bold">{fullName}</h1>
-                    {doctor.verification_status === "verified" && (
-                      <Badge
-                        variant="secondary"
-                        className="gap-1 bg-green-50 text-green-700"
-                      >
-                        <Shield className="h-3 w-3" />
-                        Verified
-                      </Badge>
-                    )}
-                    {doctor.is_featured && (
-                      <Badge variant="secondary">Featured</Badge>
-                    )}
-                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <h1 className="text-2xl font-bold">{fullName}</h1>
+                      {doctor.verification_status === "verified" && (
+                        <Badge
+                          variant="secondary"
+                          className="gap-1 bg-green-50 text-green-700"
+                        >
+                          <Shield className="h-3 w-3" />
+                          Verified
+                        </Badge>
+                      )}
+                      {doctor.is_featured && (
+                        <Badge variant="secondary">Featured</Badge>
+                      )}
+                    </div>
 
-                  {primarySpecialty && (
-                    <p className="mt-1 text-muted-foreground">
-                      {primarySpecialty.name_key
-                        .replace("specialty.", "")
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                    </p>
-                  )}
+                    {primarySpecialty && (
+                      <p className="mt-1 text-muted-foreground">
+                        {primarySpecialty.name_key
+                          .replace("specialty.", "")
+                          .replace(/_/g, " ")
+                          .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                      </p>
+                    )}
 
-                  <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {doctor.location && (
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        {doctor.location.city}, {doctor.location.country_code}
-                      </div>
-                    )}
-                    {doctor.years_of_experience && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {doctor.years_of_experience} years experience
-                      </div>
-                    )}
-                    {doctor.avg_rating > 0 && (
-                      <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        {Number(doctor.avg_rating).toFixed(1)} (
-                        {doctor.total_reviews} reviews)
-                      </div>
-                    )}
-                  </div>
+                    <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
+                      {doctor.location && (
+                        <div className="flex items-center gap-1">
+                          <MapPin className="h-4 w-4" />
+                          {doctor.location.city}, {doctor.location.country_code}
+                        </div>
+                      )}
+                      {doctor.years_of_experience && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          {doctor.years_of_experience} years experience
+                        </div>
+                      )}
+                      {doctor.avg_rating > 0 && (
+                        <div className="flex items-center gap-1">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          {Number(doctor.avg_rating).toFixed(1)} (
+                          {doctor.total_reviews} reviews)
+                        </div>
+                      )}
+                    </div>
 
-                  {/* Consultation types */}
-                  <div className="mt-3 flex gap-2">
-                    {doctor.consultation_types?.map((type: string) => (
-                      <Badge key={type} variant="outline">
-                        {type === "video" && (
-                          <Video className="mr-1 h-3 w-3" />
-                        )}
-                        {type === "in_person" ? "In Person" : "Video Call"}
-                      </Badge>
-                    ))}
+                    {/* Consultation types */}
+                    <div className="mt-3 flex gap-2">
+                      {doctor.consultation_types?.map((type: string) => (
+                        <Badge key={type} variant="outline">
+                          {type === "video" && (
+                            <Video className="mr-1 h-3 w-3" />
+                          )}
+                          {type === "in_person" ? "In Person" : "Video Call"}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
+
+                {/* Embedded map */}
+                {(doctor.clinic_latitude || doctor.location?.latitude) &&
+                 (doctor.clinic_longitude || doctor.location?.longitude) && (
+                  <div className="w-full md:w-64 lg:w-72 shrink-0">
+                    <ProfileMapWrapper
+                      lat={Number(doctor.clinic_latitude ?? doctor.location.latitude)}
+                      lng={Number(doctor.clinic_longitude ?? doctor.location.longitude)}
+                      label={doctor.clinic_name || doctor.location?.city}
+                      className="h-48 w-full md:h-full md:min-h-[192px]"
+                    />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -392,31 +408,6 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                 />
               </CardContent>
             </Card>
-
-            {/* Location map — prefer clinic-level coords, fall back to city */}
-            {(doctor.clinic_latitude || doctor.location?.latitude) &&
-             (doctor.clinic_longitude || doctor.location?.longitude) && (
-              <Card className="overflow-hidden">
-                <CardContent className="p-0">
-                  <ProfileMapWrapper
-                    lat={Number(doctor.clinic_latitude ?? doctor.location.latitude)}
-                    lng={Number(doctor.clinic_longitude ?? doctor.location.longitude)}
-                    label={doctor.clinic_name || doctor.location?.city}
-                  />
-                  <div className="p-4">
-                    <div className="flex items-center gap-1.5 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">
-                        {doctor.clinic_name || doctor.location.city}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 pl-5.5 text-sm text-muted-foreground">
-                      {doctor.location.city}, {doctor.location.country_code}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             <Card>
               <CardContent className="p-6">

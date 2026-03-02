@@ -6,11 +6,12 @@ interface ProfileMapProps {
   lat: number;
   lng: number;
   label?: string;
+  className?: string;
 }
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-export function ProfileMap({ lat, lng }: ProfileMapProps) {
+export function ProfileMap({ lat, lng, className }: ProfileMapProps) {
   return (
     <APIProvider apiKey={API_KEY}>
       <Map
@@ -20,7 +21,7 @@ export function ProfileMap({ lat, lng }: ProfileMapProps) {
         gestureHandling="none"
         disableDefaultUI
         clickableIcons={false}
-        className="h-48 w-full"
+        className={className || "h-48 w-full"}
         style={{ minHeight: "192px" }}
       >
         <AdvancedMarker position={{ lat, lng }}>

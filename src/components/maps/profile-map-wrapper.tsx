@@ -18,8 +18,9 @@ interface ProfileMapWrapperProps {
   lat: number;
   lng: number;
   label?: string;
+  className?: string;
 }
 
-export function ProfileMapWrapper({ lat, lng, label }: ProfileMapWrapperProps) {
-  return <ProfileMap lat={lat} lng={lng} label={label} />;
+export function ProfileMapWrapper({ lat, lng, label, className }: ProfileMapWrapperProps) {
+  return <ProfileMap lat={lat} lng={lng} label={label} className={className} />;
 }
