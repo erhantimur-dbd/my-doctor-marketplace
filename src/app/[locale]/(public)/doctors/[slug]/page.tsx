@@ -376,7 +376,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
           <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto space-y-4">
             {/* Availability Calendar */}
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-1.5">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CalendarDays className="h-4 w-4" />
                   Availability

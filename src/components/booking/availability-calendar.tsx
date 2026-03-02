@@ -115,6 +115,9 @@ export function AvailabilityCalendar({
     [doctorId, cacheKey]
   );
 
+  // Track whether we've auto-selected so we only do it once per type change
+  const hasAutoSelected = useRef(false);
+
   // Load dates when month or type changes
   useEffect(() => {
     let cancelled = false;
@@ -124,6 +127,15 @@ export function AvailabilityCalendar({
       if (!cancelled) {
         setAvailableDates(dates);
         setLoadingDates(false);
+
+        // Auto-select first available day (only once per type change, not on month nav)
+        if (!hasAutoSelected.current && !selectedDate && dates.length > 0) {
+          const firstAvailable = dates.find((d) => d.slotCount > 0);
+          if (firstAvailable) {
+            setSelectedDate(new Date(firstAvailable.date + "T00:00:00"));
+            hasAutoSelected.current = true;
+          }
+        }
       }
     });
 
@@ -164,6 +176,7 @@ export function AvailabilityCalendar({
     setActiveType(type);
     setSelectedDate(undefined);
     setSlots([]);
+    hasAutoSelected.current = false;
   };
 
   // Handle month navigation
@@ -194,7 +207,7 @@ export function AvailabilityCalendar({
   const dateFnsLocale = localeMap[locale] || localeMap.en;
 
   return (
-    <div className={cn("space-y-4", compact && "space-y-3")}>
+    <div className={cn("space-y-3", compact && "space-y-2")}>
       {/* Consultation type toggle */}
       {showTypeToggle && (
         <div className="flex gap-1.5 rounded-lg bg-muted p-1">
