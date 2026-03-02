@@ -133,25 +133,25 @@ export default function PricingPage() {
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-5xl">
           <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
-            {/* Professional — Emerald */}
+            {/* Professional */}
             {(() => {
               const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "professional")!;
               return (
-                <Card className="relative flex flex-col overflow-hidden border-emerald-200 dark:border-emerald-900">
-                  <div className="bg-gradient-to-br from-emerald-50 via-emerald-50/80 to-green-50 px-6 pb-6 pt-10 text-center dark:from-emerald-950/40 dark:via-emerald-950/30 dark:to-green-950/20">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/50">
-                      <Stethoscope className="h-5 w-5 text-emerald-600" />
+                <Card className="relative flex flex-col overflow-hidden">
+                  <div className="px-6 pb-6 pt-10 text-center">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                      <Stethoscope className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-bold text-emerald-900 dark:text-emerald-100">{plan.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-emerald-600/70 dark:text-emerald-300/70">
+                    <h3 className="text-lg font-bold">{plan.name}</h3>
+                    <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
                       {plan.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold text-emerald-700 dark:text-emerald-300">
+                      <span className="text-4xl font-bold">
                         {formatPriceForLocale(plan.prices, locale)}
                       </span>
-                      <span className="text-emerald-500/70"> / month</span>
-                      <p className="mt-1.5 text-xs font-medium text-emerald-500/60">
+                      <span className="text-muted-foreground"> / month</span>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
                         Introductory pricing
                       </p>
                     </div>
@@ -160,13 +160,13 @@ export default function PricingPage() {
                     <ul className="flex-1 space-y-3">
                       {plan.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                           {feature}
                         </li>
                       ))}
                     </ul>
                     <Button
-                      className="mt-6 w-full rounded-full border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/50"
+                      className="mt-6 w-full rounded-full"
                       variant="outline"
                       asChild
                     >
@@ -179,30 +179,30 @@ export default function PricingPage() {
               );
             })()}
 
-            {/* Premium — Violet (Popular) */}
+            {/* Premium (Popular) */}
             {(() => {
               const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "premium")!;
               return (
-                <Card className="relative flex flex-col overflow-hidden border-violet-300 shadow-lg shadow-violet-100 dark:border-violet-800 dark:shadow-violet-950/30">
+                <Card className="relative flex flex-col overflow-hidden border-foreground/20 shadow-lg">
                   <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
-                    <Badge className="bg-violet-600 text-white shadow-md hover:bg-violet-600">
+                    <Badge className="bg-foreground text-background shadow-md hover:bg-foreground">
                       Most Doctors start here
                     </Badge>
                   </div>
-                  <div className="bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 px-6 pb-6 pt-10 text-center">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-                      <Zap className="h-5 w-5 text-white" />
+                  <div className="bg-foreground px-6 pb-6 pt-10 text-center">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-background/15">
+                      <Zap className="h-5 w-5 text-background" />
                     </div>
-                    <h3 className="text-lg font-bold text-white">{plan.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-violet-200/80">
+                    <h3 className="text-lg font-bold text-background">{plan.name}</h3>
+                    <p className="mt-1 min-h-[40px] text-sm text-background/70">
                       {plan.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold text-white">
+                      <span className="text-4xl font-bold text-background">
                         {formatPriceForLocale(plan.prices, locale)}
                       </span>
-                      <span className="text-violet-200/70"> / month</span>
-                      <p className="mt-1.5 text-xs font-medium text-violet-200/60">
+                      <span className="text-background/60"> / month</span>
+                      <p className="mt-1.5 text-xs text-background/50">
                         Introductory pricing
                       </p>
                     </div>
@@ -211,13 +211,13 @@ export default function PricingPage() {
                     <ul className="flex-1 space-y-3">
                       {plan.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                           {feature}
                         </li>
                       ))}
                     </ul>
                     <Button
-                      className="mt-6 w-full rounded-full bg-violet-600 hover:bg-violet-700"
+                      className="mt-6 w-full rounded-full"
                       asChild
                     >
                       <Link href="/register-doctor">
@@ -229,25 +229,25 @@ export default function PricingPage() {
               );
             })()}
 
-            {/* Clinic Starter Pack — Rose */}
+            {/* Clinic Starter Pack */}
             {(() => {
               const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "clinic")!;
               return (
-                <Card className="relative flex flex-col overflow-hidden border-rose-200 dark:border-rose-900">
-                  <div className="bg-gradient-to-br from-rose-50 via-rose-50/80 to-pink-50 px-6 pb-6 pt-10 text-center dark:from-rose-950/40 dark:via-rose-950/30 dark:to-pink-950/20">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-900/50">
-                      <Users className="h-5 w-5 text-rose-600" />
+                <Card className="relative flex flex-col overflow-hidden">
+                  <div className="px-6 pb-6 pt-10 text-center">
+                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                      <Users className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-bold text-rose-900 dark:text-rose-100">{plan.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-rose-600/70 dark:text-rose-300/70">
+                    <h3 className="text-lg font-bold">{plan.name}</h3>
+                    <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
                       {plan.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold text-rose-700 dark:text-rose-300">
+                      <span className="text-4xl font-bold">
                         {formatPriceForLocale(plan.prices, locale)}
                       </span>
-                      <span className="text-rose-500/70"> / month</span>
-                      <p className="mt-1.5 text-xs font-medium text-rose-500/60">
+                      <span className="text-muted-foreground"> / month</span>
+                      <p className="mt-1.5 text-xs text-muted-foreground">
                         Introductory pricing
                       </p>
                     </div>
@@ -256,13 +256,14 @@ export default function PricingPage() {
                     <ul className="flex-1 space-y-3">
                       {plan.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                           {feature}
                         </li>
                       ))}
                     </ul>
                     <Button
-                      className="mt-6 w-full rounded-full bg-rose-600 text-white hover:bg-rose-700"
+                      className="mt-6 w-full rounded-full"
+                      variant="outline"
                       asChild
                     >
                       <Link href="/register-doctor">
