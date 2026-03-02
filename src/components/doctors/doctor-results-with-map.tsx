@@ -136,8 +136,8 @@ export function DoctorResultsWithMap({
 
       {/* Map — right side (only if we have location data) */}
       {hasMapData && (
-        <div className="hidden w-1/2 lg:block">
-          <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-hidden rounded-lg border">
+        <div className="hidden w-1/2 lg:flex lg:items-start">
+          <div className="sticky top-20 h-[calc(70vh-4rem)] w-full overflow-hidden rounded-lg border">
             <DoctorMap
               doctors={mapDoctors}
               hoveredDoctorId={hoveredDoctorId}
