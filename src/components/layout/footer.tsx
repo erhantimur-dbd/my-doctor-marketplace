@@ -16,38 +16,37 @@ export function Footer() {
               <span className="text-lg font-bold">MyDoctors360</span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
-              Premium private healthcare marketplace connecting patients with
-              verified specialists across Europe.
+              {t("brand_description")}
             </p>
           </div>
 
           {/* Patients */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold">For Patients</h4>
+            <h4 className="mb-3 text-sm font-semibold">{t("for_patients")}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link href="/doctors" className="hover:text-foreground">
-                  Find a Doctor
+                  {t("find_doctor")}
                 </Link>
               </li>
               <li>
                 <Link href="/specialties" className="hover:text-foreground">
-                  Specialties
+                  {t("specialties")}
                 </Link>
               </li>
               <li>
                 <Link href="/how-it-works" className="hover:text-foreground">
-                  How It Works
+                  {t("how_it_works")}
                 </Link>
               </li>
               <li>
                 <Link href="/support" className="hover:text-foreground">
-                  Support
+                  {t("support")}
                 </Link>
               </li>
               <li>
                 <Link href="/find-pharmacy" className="hover:text-foreground">
-                  Find a Pharmacy
+                  {t("find_pharmacy")}
                 </Link>
               </li>
             </ul>
@@ -59,12 +58,12 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link href="/pricing" className="hover:text-foreground">
-                  Pricing
+                  {t("pricing")}
                 </Link>
               </li>
               <li>
                 <Link href="/register-doctor" className="hover:text-foreground">
-                  Join as Doctor
+                  {t("join_as_doctor")}
                 </Link>
               </li>
               <li>
@@ -77,7 +76,7 @@ export function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold">Legal</h4>
+            <h4 className="mb-3 text-sm font-semibold">{t("legal")}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link href="/terms" className="hover:text-foreground">

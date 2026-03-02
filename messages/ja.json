@@ -319,12 +319,20 @@
     "health_screenings": "健康診断"
   },
   "footer": {
+    "brand_description": "ヨーロッパ全土の認定専門医と患者をつなぐプレミアムプライベートヘルスケアマーケットプレイス。",
+    "for_patients": "患者の方へ",
+    "find_doctor": "医師を探す",
+    "specialties": "診療科目",
+    "how_it_works": "ご利用方法",
+    "for_doctors": "医師・クリニックの方へ",
+    "pricing": "料金プラン",
+    "join_as_doctor": "医師として登録",
+    "legal": "法的情報",
     "about": "会社概要",
     "contact": "お問い合わせ",
     "terms": "利用規約",
     "privacy": "プライバシーポリシー",
     "faq": "よくある質問",
-    "for_doctors": "医師・クリニックの方へ",
     "support": "サポート",
     "find_pharmacy": "薬局を探す",
     "copyright": "全著作権所有。"

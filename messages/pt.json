@@ -319,12 +319,20 @@
     "health_screenings": "Check-ups de Saúde"
   },
   "footer": {
+    "brand_description": "Marketplace premium de saúde privada que conecta pacientes com especialistas verificados em toda a Europa.",
+    "for_patients": "Para Pacientes",
+    "find_doctor": "Encontrar um Médico",
+    "specialties": "Especialidades",
+    "how_it_works": "Como Funciona",
+    "for_doctors": "Para Médicos & Clínicas",
+    "pricing": "Preços",
+    "join_as_doctor": "Cadastrar-se como Médico",
+    "legal": "Legal",
     "about": "Sobre",
     "contact": "Contato",
     "terms": "Termos de Serviço",
     "privacy": "Política de Privacidade",
     "faq": "Perguntas Frequentes",
-    "for_doctors": "Para Médicos & Clínicas",
     "support": "Suporte",
     "find_pharmacy": "Encontrar uma Farmácia",
     "copyright": "Todos os direitos reservados."

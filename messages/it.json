@@ -319,12 +319,20 @@
     "health_screenings": "Screening Sanitari"
   },
   "footer": {
+    "brand_description": "Marketplace sanitario privato premium che collega i pazienti con specialisti verificati in tutta Europa.",
+    "for_patients": "Per i Pazienti",
+    "find_doctor": "Trova un Medico",
+    "specialties": "Specialità",
+    "how_it_works": "Come Funziona",
+    "for_doctors": "Per Medici & Cliniche",
+    "pricing": "Prezzi",
+    "join_as_doctor": "Iscriviti come Medico",
+    "legal": "Legale",
     "about": "Chi Siamo",
     "contact": "Contatti",
     "terms": "Termini di Servizio",
     "privacy": "Informativa sulla Privacy",
     "faq": "FAQ",
-    "for_doctors": "Per Medici & Cliniche",
     "support": "Supporto",
     "find_pharmacy": "Trova una Farmacia",
     "copyright": "Tutti i diritti riservati."

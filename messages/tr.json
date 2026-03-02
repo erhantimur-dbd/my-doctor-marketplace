@@ -319,15 +319,23 @@
     "health_screenings": "Sağlık Taramaları"
   },
   "footer": {
-    "about": "Hakkimizda",
-    "contact": "Iletisim",
-    "terms": "Kullanim Kosullari",
-    "privacy": "Gizlilik Politikasi",
-    "faq": "SSS",
+    "brand_description": "Hastaları Avrupa genelinde doğrulanmış uzmanlarla buluşturan premium özel sağlık pazaryeri.",
+    "for_patients": "Hastalar İçin",
+    "find_doctor": "Doktor Bul",
+    "specialties": "Uzmanlıklar",
+    "how_it_works": "Nasıl Çalışır",
     "for_doctors": "Doktorlar & Klinikler",
+    "pricing": "Fiyatlandırma",
+    "join_as_doctor": "Doktor Olarak Katıl",
+    "legal": "Yasal",
+    "about": "Hakkımızda",
+    "contact": "İletişim",
+    "terms": "Kullanım Koşulları",
+    "privacy": "Gizlilik Politikası",
+    "faq": "SSS",
     "support": "Destek",
     "find_pharmacy": "Eczane Bul",
-    "copyright": "Tum haklari saklidir."
+    "copyright": "Tüm hakları saklıdır."
   },
   "findPharmacy": {
     "title": "Eczane Bul",

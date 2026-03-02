@@ -319,15 +319,23 @@
     "health_screenings": "Bilans de sante"
   },
   "footer": {
-    "about": "A propos",
+    "brand_description": "Marketplace premium de santé privée connectant les patients avec des spécialistes vérifiés à travers l'Europe.",
+    "for_patients": "Pour les Patients",
+    "find_doctor": "Trouver un Médecin",
+    "specialties": "Spécialités",
+    "how_it_works": "Comment ça marche",
+    "for_doctors": "Pour Médecins & Cliniques",
+    "pricing": "Tarifs",
+    "join_as_doctor": "Rejoindre en tant que Médecin",
+    "legal": "Mentions Légales",
+    "about": "À propos",
     "contact": "Contact",
     "terms": "Conditions d'utilisation",
-    "privacy": "Politique de confidentialite",
+    "privacy": "Politique de confidentialité",
     "faq": "FAQ",
-    "for_doctors": "Pour Médecins & Cliniques",
     "support": "Support",
     "find_pharmacy": "Trouver une pharmacie",
-    "copyright": "Tous droits reserves."
+    "copyright": "Tous droits réservés."
   },
   "findPharmacy": {
     "title": "Trouver une pharmacie",
