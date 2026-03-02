@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { Calendar } from "@/components/ui/calendar";
+import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
+import type { DayButton as DayButtonType } from "react-day-picker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getDoctorAvailableDates, getDoctorAvailableSlots } from "@/actions/booking";
 import type { AvailableDateInfo } from "@/actions/booking";
@@ -30,6 +31,31 @@ interface AvailabilityCalendarProps {
   compact?: boolean;
   initialDate?: string; // "YYYY-MM-DD"
   locale?: string;
+}
+
+// Custom DayButton that renders availability dots as real DOM elements
+// instead of ::after pseudo-elements (which break table height calculation)
+function DayButtonWithDot({
+  modifiers,
+  children,
+  ...rest
+}: React.ComponentProps<typeof DayButtonType>) {
+  const isAvailable = (modifiers as Record<string, boolean>).available;
+  const isFewSlots = (modifiers as Record<string, boolean>).fewSlots;
+
+  return (
+    <CalendarDayButton modifiers={modifiers} {...rest}>
+      {children}
+      {(isAvailable || isFewSlots) && (
+        <span
+          className={cn(
+            "h-1 w-1 rounded-full",
+            isAvailable ? "bg-green-500" : "bg-amber-500"
+          )}
+        />
+      )}
+    </CalendarDayButton>
+  );
 }
 
 export function AvailabilityCalendar({
@@ -222,16 +248,10 @@ export function AvailabilityCalendar({
             available: availableModifierDates,
             fewSlots: fewSlotsModifierDates,
           }}
-          modifiersClassNames={{
-            available:
-              "relative after:absolute after:bottom-0.5 after:left-1/2 after:-translate-x-1/2 after:h-1.5 after:w-1.5 after:rounded-full after:bg-green-500",
-            fewSlots:
-              "relative after:absolute after:bottom-0.5 after:left-1/2 after:-translate-x-1/2 after:h-1.5 after:w-1.5 after:rounded-full after:bg-amber-500",
+          components={{
+            DayButton: DayButtonWithDot,
           }}
           className="rounded-md border w-full"
-          classNames={{
-            table: "w-full block",
-          }}
         />
       </div>
 
