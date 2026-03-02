@@ -177,7 +177,7 @@ export function Header() {
                   <span className="text-lg font-bold tracking-tight">MyDoctors360</span>
                 </SheetTitle>
                 <SheetDescription className="text-xs">
-                  Premium private healthcare marketplace
+                  {t("brand_tagline")}
                 </SheetDescription>
               </SheetHeader>
 

@@ -36,7 +36,8 @@
     "dashboard": "Dashboard",
     "logout": "Log Out",
     "my_bookings": "My Bookings",
-    "my_profile": "My Profile"
+    "my_profile": "My Profile",
+    "brand_tagline": "Premium private healthcare marketplace"
   },
   "home": {
     "hero_title": "Find Your Doctor, Book Instantly",

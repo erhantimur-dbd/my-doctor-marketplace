@@ -36,7 +36,8 @@
     "dashboard": "Panel",
     "logout": "Cerrar Sesión",
     "my_bookings": "Mis Citas",
-    "my_profile": "Mi Perfil"
+    "my_profile": "Mi Perfil",
+    "brand_tagline": "Marketplace premium de salud privada"
   },
   "home": {
     "hero_title": "Encuentra tu Médico, Reserva al Instante",

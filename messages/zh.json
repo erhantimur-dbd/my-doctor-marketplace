@@ -36,7 +36,8 @@
     "dashboard": "控制面板",
     "logout": "退出",
     "my_bookings": "我的预约",
-    "my_profile": "我的资料"
+    "my_profile": "我的资料",
+    "brand_tagline": "高端私人医疗健康平台"
   },
   "home": {
     "hero_title": "找到您的医生，即时预约",

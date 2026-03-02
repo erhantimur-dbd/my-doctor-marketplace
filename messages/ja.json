@@ -36,7 +36,8 @@
     "dashboard": "ダッシュボード",
     "logout": "ログアウト",
     "my_bookings": "予約一覧",
-    "my_profile": "マイプロフィール"
+    "my_profile": "マイプロフィール",
+    "brand_tagline": "プレミアムプライベートヘルスケアマーケットプレイス"
   },
   "home": {
     "hero_title": "あなたの医師を見つけ、すぐに予約",

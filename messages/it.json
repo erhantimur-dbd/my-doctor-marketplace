@@ -36,7 +36,8 @@
     "dashboard": "Dashboard",
     "logout": "Esci",
     "my_bookings": "I Miei Appuntamenti",
-    "my_profile": "Il Mio Profilo"
+    "my_profile": "Il Mio Profilo",
+    "brand_tagline": "Marketplace sanitario privato premium"
   },
   "home": {
     "hero_title": "Trova il Tuo Medico, Prenota Subito",
