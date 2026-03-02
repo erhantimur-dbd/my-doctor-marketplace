@@ -230,8 +230,7 @@ export function AvailabilityCalendar({
           }}
           className="rounded-md border w-full"
           classNames={{
-            month: "flex flex-col w-full gap-4",
-            table: "w-full border-collapse",
+            table: "w-full block",
           }}
         />
       </div>
