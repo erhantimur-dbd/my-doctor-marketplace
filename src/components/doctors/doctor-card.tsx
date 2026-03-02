@@ -12,12 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical } from "lucide-react";
+import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2 } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
 import { formatShortDateLabel, formatSlotTime } from "@/lib/utils/availability";
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
+import { getMultiDayAvailabilityBatch } from "@/actions/search";
 import type { DoctorMultiDayAvailability } from "@/actions/search";
 
 interface DoctorCardProps {
@@ -64,12 +65,36 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
     const router = useRouter();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const [showFullAvailability, setShowFullAvailability] = useState(false);
+    const [activeConsultationType, setActiveConsultationType] = useState(
+      availability?.consultationType || "in_person"
+    );
+    const [cardAvailability, setCardAvailability] = useState(availability);
+    const [loadingAvailability, setLoadingAvailability] = useState(false);
 
     const isTestingService = doctor.provider_type === "testing_service";
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
       ?.specialty || doctor.specialties?.[0]?.specialty;
 
-    const selectedDay = availability?.days[selectedDayIndex];
+    const selectedDay = cardAvailability?.days[selectedDayIndex];
+
+    const handleConsultationTypeChange = async (newType: string) => {
+      if (newType === activeConsultationType) return;
+      setActiveConsultationType(newType);
+      setSelectedDayIndex(0);
+      setLoadingAvailability(true);
+      try {
+        const result = await getMultiDayAvailabilityBatch([doctor.id], newType);
+        setCardAvailability(result[doctor.id] || null);
+      } catch {
+        setCardAvailability(null);
+      }
+      setLoadingAvailability(false);
+    };
+
+    const showTypeToggle =
+      doctor.consultation_types &&
+      doctor.consultation_types.length > 1 &&
+      availability !== undefined;
 
     return (
       <div
@@ -180,16 +205,64 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                 </div>
               </div>
 
+              {/* Consultation Type Toggle */}
+              {showTypeToggle && (
+                <div className="mt-3 border-t pt-3 pb-0">
+                  <div className="flex gap-1 rounded-lg bg-muted p-0.5">
+                    {doctor.consultation_types!.includes("in_person") && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleConsultationTypeChange("in_person");
+                        }}
+                        className={cn(
+                          "flex-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+                          activeConsultationType === "in_person"
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        In Person
+                      </button>
+                    )}
+                    {doctor.consultation_types!.includes("video") && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleConsultationTypeChange("video");
+                        }}
+                        className={cn(
+                          "flex-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+                          activeConsultationType === "video"
+                            ? "bg-background text-foreground shadow-sm"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        Video
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Multi-Day Availability */}
               {availability !== undefined && (
-                <div className="mt-3 border-t pt-3">
-                  {availability && availability.days.length > 0 ? (
+                <div className={cn("border-t pt-3", showTypeToggle ? "mt-2" : "mt-3")}>
+                  {loadingAvailability ? (
+                    <div className="flex h-20 items-center justify-center">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : cardAvailability && cardAvailability.days.length > 0 ? (
                     <div>
                       {/* Day selector tabs — scrollable for 7+ days */}
                       <div className="mb-2 flex items-center gap-1.5">
                         <Clock className="h-3.5 w-3.5 text-green-600 shrink-0" />
                         <div className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                          {availability.days.map((day, idx) => (
+                          {cardAvailability.days.map((day, idx) => (
                             <button
                               key={day.date}
                               type="button"
@@ -222,7 +295,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                                 e.preventDefault();
                                 e.stopPropagation();
                                 router.push(
-                                  `/doctors/${doctor.slug}/book?date=${selectedDay.date}&type=${availability.consultationType || "in_person"}&time=${encodeURIComponent(slot.start)}`
+                                  `/doctors/${doctor.slug}/book?date=${selectedDay.date}&type=${activeConsultationType}&time=${encodeURIComponent(slot.start)}`
                                 );
                               }}
                               className="inline-flex items-center rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
@@ -304,9 +377,9 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
               <AvailabilityCalendar
                 doctorId={doctor.id}
                 doctorSlug={doctor.slug}
-                consultationType={availability?.consultationType || "in_person"}
+                consultationType={activeConsultationType}
                 consultationTypes={doctor.consultation_types}
-                initialDate={availability?.days[0]?.date}
+                initialDate={cardAvailability?.days[0]?.date}
                 locale={locale}
                 compact
               />

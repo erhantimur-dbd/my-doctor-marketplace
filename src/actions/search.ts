@@ -411,7 +411,7 @@ export interface DoctorMultiDayAvailability {
 }
 
 /**
- * For a list of doctor IDs, returns the next N available days + up to 4 slots
+ * For a list of doctor IDs, returns the next N available days + up to 12 slots
  * per day for each doctor. Single DB round-trip via the batch RPC function.
  */
 export async function getMultiDayAvailabilityBatch(
@@ -427,7 +427,7 @@ export async function getMultiDayAvailabilityBatch(
       p_doctor_ids: doctorIds,
       p_lookahead_days: 14,
       p_max_days_per_doctor: 7,
-      p_max_slots_per_day: 6,
+      p_max_slots_per_day: 12,
       p_consultation_type: consultationType || "in_person",
     }
   );
