@@ -279,6 +279,11 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   size="sm"
                   variant="outline"
                   className="group-hover:bg-primary group-hover:text-primary-foreground"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    router.push(`/doctors/${doctor.slug}/book`);
+                  }}
                 >
                   Book Now
                 </Button>
