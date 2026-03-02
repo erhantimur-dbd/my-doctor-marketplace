@@ -250,9 +250,16 @@ export function AvailabilityCalendar({
           }}
           components={{
             DayButton: DayButtonWithDot,
-          }}
-          classNames={{
-            table: "w-full flex flex-col [&>thead]:block [&>tbody]:flex [&>tbody]:flex-col",
+            // Replace table elements with divs to fix Safari height calculation
+            // Safari ignores display:flex on <table>/<tbody> elements
+            MonthGrid: (props) => <div role="grid" {...props} />,
+            Weekdays: ({ className, ...props }) => (
+              <div role="rowgroup" aria-hidden>
+                <div role="row" className={className} {...props} />
+              </div>
+            ),
+            Week: ({ week, ...props }) => <div role="row" {...props} />,
+            Weeks: (props) => <div role="rowgroup" {...props} />,
           }}
           className="rounded-md border w-full"
         />
