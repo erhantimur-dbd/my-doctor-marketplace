@@ -227,10 +227,12 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
     setShowNLOption(shouldUseNLSearch(trimmed));
 
     // Trigger AI symptom analysis when keyword matcher finds nothing
-    // and the input looks like symptom description (3+ words, no NL search indicators)
+    // and the input looks like a symptom description (3+ words).
+    // NL search option can coexist — user sees both the AI symptom result
+    // and the "Search with AI" button, letting them choose.
     const hasKeywordMatches = symptomMatches.length > 0 || testMatches.length > 0;
     const wordCount = trimmed.split(/\s+/).length;
-    const shouldTryAI = !hasKeywordMatches && wordCount >= 3 && !shouldUseNLSearch(trimmed);
+    const shouldTryAI = !hasKeywordMatches && wordCount >= 3;
 
     if (!shouldTryAI) {
       setAiSymptomResult(null);

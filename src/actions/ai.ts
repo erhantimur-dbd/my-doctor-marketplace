@@ -28,8 +28,10 @@ export async function analyzeSymptoms(
   locale: string
 ): Promise<{ data: SymptomAnalysis | null; error: string | null }> {
   if (!isAIEnabled()) {
+    console.warn("[AI] analyzeSymptoms: OPENAI_API_KEY not found in env");
     return { data: null, error: "AI not configured" };
   }
+  console.log("[AI] analyzeSymptoms: starting for input:", input.substring(0, 50));
 
   const trimmed = input.trim();
   if (trimmed.length < 3) {
@@ -49,10 +51,12 @@ export async function analyzeSymptoms(
       .single();
 
     if (cached?.result) {
+      console.log("[AI] analyzeSymptoms: cache hit");
       return { data: cached.result as SymptomAnalysis, error: null };
     }
-  } catch {
+  } catch (e) {
     // Cache miss — proceed to AI
+    console.log("[AI] analyzeSymptoms: cache miss or table error:", (e as Error)?.message);
   }
 
   // 2. AI call with timeout
@@ -81,6 +85,7 @@ Return ONLY specialty slugs from the allowed list above.`,
     });
 
     clearTimeout(timeout);
+    console.log("[AI] analyzeSymptoms: AI returned:", JSON.stringify(object));
 
     // Validate the specialty slug
     const validSlugs = new Set(SPECIALTIES.map((s) => s.slug));
@@ -126,8 +131,10 @@ export async function parseNaturalLanguageSearch(
   locale: string
 ): Promise<{ data: NLSearchFilters | null; error: string | null }> {
   if (!isAIEnabled()) {
+    console.warn("[AI] parseNaturalLanguageSearch: OPENAI_API_KEY not found in env");
     return { data: null, error: "AI not configured" };
   }
+  console.log("[AI] parseNaturalLanguageSearch: starting for input:", input.substring(0, 50));
 
   const trimmed = input.trim();
   if (trimmed.length < 5) {
@@ -147,13 +154,15 @@ export async function parseNaturalLanguageSearch(
       .single();
 
     if (cached?.parsed_filters) {
+      console.log("[AI] parseNaturalLanguageSearch: cache hit");
       return {
         data: cached.parsed_filters as NLSearchFilters,
         error: null,
       };
     }
-  } catch {
+  } catch (e) {
     // Cache miss
+    console.log("[AI] parseNaturalLanguageSearch: cache miss or table error:", (e as Error)?.message);
   }
 
   // 2. Build context
@@ -201,6 +210,7 @@ Rules:
     });
 
     clearTimeout(timeout);
+    console.log("[AI] parseNaturalLanguageSearch: AI returned:", JSON.stringify(object));
 
     // Validate specialty slug if present
     const validSlugs = new Set(SPECIALTIES.map((s) => s.slug));
