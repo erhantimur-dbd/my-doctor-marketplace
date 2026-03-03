@@ -444,9 +444,18 @@ export function HomeSearchBar({
     }
   }, [query, locale, location, router, handleSearch]);
 
+  // Smart search: use NL parser when AI detects natural language, otherwise basic search
+  const handleSmartSearch = useCallback(() => {
+    if (showNLOption) {
+      handleNLSearch();
+    } else {
+      handleSearch();
+    }
+  }, [showNLOption, handleNLSearch, handleSearch]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions || allSuggestions.length === 0) {
-      if (e.key === "Enter") handleSearch();
+      if (e.key === "Enter") handleSmartSearch();
       return;
     }
 
@@ -468,7 +477,7 @@ export function HomeSearchBar({
         if (highlightIndex >= 0 && highlightIndex < allSuggestions.length) {
           handleSelectSuggestion(allSuggestions[highlightIndex]);
         } else {
-          handleSearch();
+          handleSmartSearch();
         }
         break;
       case "Escape":
@@ -810,7 +819,7 @@ export function HomeSearchBar({
               onUseMyLocation={handleLocateClick}
               useMyLocationLabel={t("use_my_location")}
               detectingLabel={t("detecting_location") || "Detecting..."}
-              onEnterKey={handleSearch}
+              onEnterKey={handleSmartSearch}
             />
           </div>
 
@@ -819,7 +828,7 @@ export function HomeSearchBar({
             <Button
               size="lg"
               className="rounded-full px-6"
-              onClick={handleSearch}
+              onClick={handleSmartSearch}
             >
               <Search className="mr-2 h-4 w-4" />
               {t("search_button")}
@@ -1073,7 +1082,7 @@ export function HomeSearchBar({
           onUseMyLocation={handleLocateClick}
           useMyLocationLabel={t("use_my_location")}
           detectingLabel={t("detecting_location") || "Detecting..."}
-          onEnterKey={handleSearch}
+          onEnterKey={handleSmartSearch}
         />
 
         {!compact && (
@@ -1110,7 +1119,7 @@ export function HomeSearchBar({
         )}
 
         {/* Search button */}
-        <Button className="h-11 w-full rounded-lg" onClick={handleSearch}>
+        <Button className="h-11 w-full rounded-lg" onClick={handleSmartSearch}>
           <Search className="mr-2 h-4 w-4" />
           {t("search_button")}
         </Button>
