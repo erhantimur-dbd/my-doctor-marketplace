@@ -15,7 +15,7 @@ export const symptomAnalysisSchema = z.object({
     .describe("emergency = seek ER immediately, urgent = book within days, routine = standard appointment"),
   urgencyReason: z
     .string()
-    .optional()
+    .nullable()
     .describe("Brief explanation of urgency assessment"),
   suggestedConsultationType: z
     .enum(["in_person", "video", "either"])
@@ -35,31 +35,31 @@ export type SymptomAnalysis = z.infer<typeof symptomAnalysisSchema>;
 export const nlSearchSchema = z.object({
   specialty: z
     .string()
-    .optional()
+    .nullable()
     .describe("Specialty slug if mentioned (e.g. 'cardiology', 'dermatology')"),
   location: z
     .string()
-    .optional()
+    .nullable()
     .describe("Location slug or city name if mentioned"),
   language: z
     .string()
-    .optional()
+    .nullable()
     .describe("Language name if mentioned (e.g. 'Turkish', 'German', 'English')"),
   maxPrice: z
     .number()
-    .optional()
+    .nullable()
     .describe("Maximum price in cents if mentioned (e.g. '100 euros' = 10000)"),
   minRating: z
     .number()
-    .optional()
+    .nullable()
     .describe("Minimum rating if mentioned (e.g. 'highly rated' = 4.0)"),
   consultationType: z
     .enum(["in_person", "video"])
-    .optional()
+    .nullable()
     .describe("Consultation type if mentioned"),
   query: z
     .string()
-    .optional()
+    .nullable()
     .describe("Remaining free-text query that doesn't map to a filter"),
 });
 

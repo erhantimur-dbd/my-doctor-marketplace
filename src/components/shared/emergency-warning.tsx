@@ -36,7 +36,7 @@ function getEmergencyNumber(locale: string): string {
 
 interface EmergencyWarningProps {
   locale: string;
-  reason?: string;
+  reason?: string | null;
 }
 
 export function EmergencyWarning({ locale, reason }: EmergencyWarningProps) {

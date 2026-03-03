@@ -219,9 +219,7 @@ Rules:
       specialty:
         object.specialty && validSlugs.has(object.specialty)
           ? object.specialty
-          : object.specialty
-            ? undefined // Remove invalid slugs rather than keeping them
-            : undefined,
+          : null,
     };
 
     // 4. Cache result
