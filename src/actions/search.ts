@@ -114,7 +114,24 @@ export async function searchDoctors(filters: SearchFilters) {
     query = query.contains("consultation_types", [filters.consultationType]);
   }
   if (filters.location) {
-    query = query.eq("location.slug", filters.location);
+    if (filters.consultationType === "video") {
+      // Video consultations: expand to country-level so patients see all
+      // doctors in the same country, not just the selected city.
+      const { data: loc } = await supabase
+        .from("locations")
+        .select("country_code")
+        .eq("slug", filters.location)
+        .single();
+
+      if (loc) {
+        query = query.eq("location.country_code", loc.country_code);
+      } else {
+        query = query.eq("location.slug", filters.location);
+      }
+    } else {
+      // In-person / default: filter by exact city
+      query = query.eq("location.slug", filters.location);
+    }
   }
   // Free-text query: match against specialty names, doctor names, and bio
   if (filters.query && !filters.specialty) {
