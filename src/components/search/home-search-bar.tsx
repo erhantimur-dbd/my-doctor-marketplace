@@ -595,12 +595,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                   <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${sc.bg}`}>
                     <SpecIcon className={`h-3.5 w-3.5 ${sc.text}`} />
                   </span>
-                  <span>
-                    {s.name_key
-                      .replace("specialty.", "")
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                  </span>
+                  <span>{tSpec(slugToSpecialtyKey(s.slug))}</span>
                 </button>
               );
             })}
@@ -743,20 +738,23 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
 
         {/* NL Search option */}
         {showNLOption && !aiLoading && (
-          <div className="p-1">
-            <div className="mx-2 border-t" />
+          <div className="px-3 pb-2 pt-1">
+            <div className="mb-2 border-t" />
             <button
               type="button"
-              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-primary/5"
+              className="flex w-full items-center justify-between rounded-full border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm transition-colors hover:bg-primary/10 hover:border-primary/30"
               onMouseDown={(e) => {
                 e.preventDefault();
                 handleSelectSuggestion({ type: "nl_search" });
               }}
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                <Sparkles className="h-3.5 w-3.5 text-primary" />
-              </span>
-              <span className="font-medium text-primary">{tAi("try_ai_search")}</span>
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                </span>
+                <span className="font-medium text-primary">{tAi("try_ai_search")}</span>
+              </div>
+              <span className="text-xs text-muted-foreground">{tAi("powered_by_ai")}</span>
             </button>
           </div>
         )}
@@ -892,12 +890,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                       <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${sc.bg}`}>
                         <SpecIcon className={`h-3.5 w-3.5 ${sc.text}`} />
                       </span>
-                      <span>
-                        {s.name_key
-                          .replace("specialty.", "")
-                          .replace(/_/g, " ")
-                          .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                      </span>
+                      <span>{tSpec(slugToSpecialtyKey(s.slug))}</span>
                     </button>
                   );
                 })}
@@ -1024,20 +1017,23 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
 
             {/* NL Search option (mobile) */}
             {showNLOption && !aiLoading && (
-              <div className="p-1">
-                <div className="mx-2 border-t" />
+              <div className="px-3 pb-2 pt-1">
+                <div className="mb-2 border-t" />
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm active:bg-primary/5"
+                  className="flex w-full items-center justify-between rounded-full border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm active:bg-primary/10"
                   onMouseDown={(e) => {
                     e.preventDefault();
                     handleSelectSuggestion({ type: "nl_search" });
                   }}
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  </span>
-                  <span className="font-medium text-primary">{tAi("try_ai_search")}</span>
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    </span>
+                    <span className="font-medium text-primary">{tAi("try_ai_search")}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{tAi("powered_by_ai")}</span>
                 </button>
               </div>
             )}
