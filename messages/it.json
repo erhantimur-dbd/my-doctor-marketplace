@@ -555,5 +555,33 @@
     "body_composition": "Analisi della Composizione Corporea",
     "urodynamics": "Esame Urodinamico",
     "bone_marrow_biopsy": "Biopsia del Midollo Osseo"
+  },
+  "ai": {
+    "analyzing": "Analisi dei tuoi sintomi...",
+    "suggestion": "Suggerimento AI",
+    "emergency_warning": "Questi sintomi potrebbero richiedere cure d'emergenza. Chiama immediatamente i servizi di emergenza.",
+    "emergency_call": "Chiama il {number}",
+    "search_parsed": "L'AI ha interpretato la tua ricerca come:",
+    "match_score": "{score}% Corrispondenza",
+    "review_summary_title": "Cosa dicono i pazienti",
+    "powered_by_ai": "Riepilogo generato dall'AI",
+    "try_ai_search": "Cerca con AI",
+    "fallback_error": "L'AI è temporaneamente non disponibile. Risultati standard mostrati.",
+    "urgency_routine": "Routine",
+    "urgency_urgent": "Prenota presto",
+    "urgency_emergency": "Emergenza",
+    "suggested_specialty": "Specialità consigliata",
+    "suggested_consultation": "Tipo di consulto suggerito",
+    "in_person_recommended": "Visita di persona consigliata",
+    "video_ok": "Videoconsulto adatto",
+    "either_works": "Di persona o video",
+    "best_match": "Migliore Corrispondenza",
+    "match_reason_specialty": "Corrisponde alla tua specialità",
+    "match_reason_language": "Parla la tua lingua",
+    "match_reason_budget": "Nel tuo budget",
+    "match_reason_rating": "Molto apprezzato",
+    "match_reason_reviews": "Molte recensioni positive",
+    "clear_ai_filters": "Cancella filtri AI",
+    "not_what_you_meant": "Non era quello che cercavi?"
   }
 }

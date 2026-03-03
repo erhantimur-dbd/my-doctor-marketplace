@@ -555,5 +555,33 @@
     "body_composition": "Body Composition Analysis",
     "urodynamics": "Urodynamics Test",
     "bone_marrow_biopsy": "Bone Marrow Biopsy"
+  },
+  "ai": {
+    "analyzing": "Ihre Symptome werden analysiert...",
+    "suggestion": "KI-Vorschlag",
+    "emergency_warning": "Diese Symptome erfordern möglicherweise eine Notfallversorgung. Bitte rufen Sie sofort den Notdienst an.",
+    "emergency_call": "{number} anrufen",
+    "search_parsed": "KI hat Ihre Suche verstanden als:",
+    "match_score": "{score}% Übereinstimmung",
+    "review_summary_title": "Was Patienten sagen",
+    "powered_by_ai": "KI-generierte Zusammenfassung",
+    "try_ai_search": "Mit KI suchen",
+    "fallback_error": "KI ist vorübergehend nicht verfügbar. Standardergebnisse werden angezeigt.",
+    "urgency_routine": "Routineuntersuchung",
+    "urgency_urgent": "Bald buchen",
+    "urgency_emergency": "Notfall",
+    "suggested_specialty": "Empfohlenes Fachgebiet",
+    "suggested_consultation": "Vorgeschlagene Beratungsart",
+    "in_person_recommended": "Persönlicher Besuch empfohlen",
+    "video_ok": "Videosprechstunde geeignet",
+    "either_works": "Persönlich oder per Video",
+    "best_match": "Beste Übereinstimmung",
+    "match_reason_specialty": "Passt zu Ihrem Fachgebiet",
+    "match_reason_language": "Spricht Ihre Sprache",
+    "match_reason_budget": "Innerhalb Ihres Budgets",
+    "match_reason_rating": "Hoch bewertet",
+    "match_reason_reviews": "Viele positive Bewertungen",
+    "clear_ai_filters": "KI-Filter löschen",
+    "not_what_you_meant": "Nicht das Richtige?"
   }
 }

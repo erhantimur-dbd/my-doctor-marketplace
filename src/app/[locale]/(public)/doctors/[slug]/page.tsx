@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
+import { ReviewSummaryCard } from "@/components/doctors/review-summary-card";
 import type { Metadata } from "next";
 
 interface DoctorPageProps {
@@ -88,6 +89,13 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     .eq("is_visible", true)
     .order("created_at", { ascending: false })
     .limit(5);
+
+  // Get AI review summary (if available)
+  const { data: reviewSummary } = await supabase
+    .from("doctor_review_summaries")
+    .select("summary_text, sentiment_tags")
+    .eq("doctor_id", doctor.id)
+    .single();
 
   // Check if doctor has an active subscription (for booking eligibility)
   const { data: doctorSubscription } = await supabase
@@ -330,6 +338,18 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
               )}
             </CardHeader>
             <CardContent>
+              {/* AI Review Summary */}
+              {reviewSummary && doctor.total_reviews >= 3 && (
+                <div className="mb-4">
+                  <ReviewSummaryCard
+                    summary={reviewSummary.summary_text}
+                    sentimentTags={reviewSummary.sentiment_tags || []}
+                    reviewSummaryTitle="What patients say"
+                    poweredByAi="AI-generated summary"
+                  />
+                </div>
+              )}
+
               {(!reviews || reviews.length === 0) && (
                 <p className="text-sm text-muted-foreground">
                   No reviews yet

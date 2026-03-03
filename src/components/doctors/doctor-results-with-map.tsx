@@ -27,6 +27,7 @@ interface DoctorResultsWithMapProps {
   locale: string;
   availability?: Record<string, DoctorMultiDayAvailability>;
   centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
+  matchScores?: Record<string, { score: number; reasons: string[] }>;
 }
 
 export function DoctorResultsWithMap({
@@ -34,6 +35,7 @@ export function DoctorResultsWithMap({
   locale,
   availability,
   centerLocation,
+  matchScores,
 }: DoctorResultsWithMapProps) {
   const [hoveredDoctorId, setHoveredDoctorId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -130,6 +132,8 @@ export function DoctorResultsWithMap({
             isHighlighted={hoveredDoctorId === doctor.id}
             onHover={setHoveredDoctorId}
             availability={availability ? (availability[doctor.id] || null) : undefined}
+            matchScore={matchScores?.[doctor.id]?.score}
+            matchReasons={matchScores?.[doctor.id]?.reasons}
           />
         ))}
       </div>

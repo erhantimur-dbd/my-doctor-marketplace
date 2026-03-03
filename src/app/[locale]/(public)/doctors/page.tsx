@@ -53,6 +53,7 @@ export default async function DoctorsPage({
   const typedDoctors = result.doctors as unknown as Parameters<
     typeof DoctorCard
   >[0]["doctor"][];
+  const matchScores = result.matchScores;
 
   // Fetch multi-day availability for all returned doctors (single batch RPC)
   const doctorIds = typedDoctors.map((d) => d.id);
@@ -117,6 +118,7 @@ export default async function DoctorsPage({
                   locale={locale}
                   availability={availability}
                   centerLocation={centerLocation}
+                  matchScores={matchScores}
                 />
               </div>
 
@@ -128,6 +130,8 @@ export default async function DoctorsPage({
                     doctor={doctor}
                     locale={locale}
                     availability={availability[doctor.id] || null}
+                    matchScore={matchScores?.[doctor.id]?.score}
+                    matchReasons={matchScores?.[doctor.id]?.reasons}
                   />
                 ))}
               </div>

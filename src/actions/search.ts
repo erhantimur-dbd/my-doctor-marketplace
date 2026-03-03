@@ -1,6 +1,11 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  scoreDoctors,
+  type MatchContext,
+  type DoctorMatchInput,
+} from "@/lib/utils/doctor-match-scorer";
 
 export interface SearchFilters {
   specialty?: string;
@@ -264,10 +269,50 @@ export async function searchDoctors(filters: SearchFilters) {
 
   if (error) {
     console.error("Search error:", error);
-    return { doctors: [], total: 0, page, perPage };
+    return { doctors: [], total: 0, page, perPage, matchScores: undefined };
   }
 
-  return { doctors: data || [], total: count || 0, page, perPage };
+  // Smart Match: compute match scores when best_match sort is active
+  if (filters.sort === "best_match" && data && data.length > 0) {
+    const context: MatchContext = {
+      preferredSpecialty: filters.specialty,
+      preferredLanguage: filters.language,
+      maxBudget: filters.maxPrice ? filters.maxPrice * 100 : undefined,
+      consultationType: filters.consultationType,
+    };
+
+    const doctorInputs: DoctorMatchInput[] = data.map((d: Record<string, unknown>) => ({
+      id: d.id as string,
+      avg_rating: d.avg_rating as number | null,
+      total_reviews: d.total_reviews as number,
+      languages: (d.languages || []) as string[],
+      consultation_types: (d.consultation_types || []) as string[],
+      consultation_fee_cents: d.consultation_fee_cents as number,
+      video_consultation_fee_cents: d.video_consultation_fee_cents as number | null,
+      ai_sentiment_tags: (d.ai_sentiment_tags || []) as string[],
+      specialties: (d.specialties || []) as DoctorMatchInput["specialties"],
+    }));
+
+    const scored = scoreDoctors(doctorInputs, context);
+    const scoreMap = new Map(scored.map((s) => [s.doctorId, s]));
+
+    // Sort doctors by match score
+    const sorted = [...data].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      const scoreA = scoreMap.get(a.id as string)?.matchScore ?? 0;
+      const scoreB = scoreMap.get(b.id as string)?.matchScore ?? 0;
+      return scoreB - scoreA;
+    });
+
+    // Build match score map for the client
+    const matchScores: Record<string, { score: number; reasons: string[] }> = {};
+    for (const s of scored) {
+      matchScores[s.doctorId] = { score: s.matchScore, reasons: s.matchReasons };
+    }
+
+    return { doctors: sorted, total: count || 0, page, perPage, matchScores };
+  }
+
+  return { doctors: data || [], total: count || 0, page, perPage, matchScores: undefined };
 }
 
 export async function getSpecialties() {

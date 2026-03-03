@@ -58,10 +58,12 @@ interface DoctorCardProps {
   isHighlighted?: boolean;
   onHover?: (id: string | null) => void;
   availability?: DoctorMultiDayAvailability | null;
+  matchScore?: number;
+  matchReasons?: string[];
 }
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
-  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability }, ref) {
+  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons }, ref) {
     const router = useRouter();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const [showFullAvailability, setShowFullAvailability] = useState(false);
@@ -165,6 +167,11 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       {doctor.is_featured && (
                         <Badge variant="secondary" className="shrink-0 text-xs">
                           Featured
+                        </Badge>
+                      )}
+                      {matchScore != null && matchScore > 0 && (
+                        <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
+                          {matchScore}% Match
                         </Badge>
                       )}
                     </div>

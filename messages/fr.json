@@ -555,5 +555,33 @@
     "body_composition": "Body Composition Analysis",
     "urodynamics": "Urodynamics Test",
     "bone_marrow_biopsy": "Bone Marrow Biopsy"
+  },
+  "ai": {
+    "analyzing": "Analyse de vos symptômes...",
+    "suggestion": "Suggestion IA",
+    "emergency_warning": "Ces symptômes peuvent nécessiter des soins d'urgence. Veuillez appeler les services d'urgence immédiatement.",
+    "emergency_call": "Appeler le {number}",
+    "search_parsed": "L'IA a compris votre recherche comme :",
+    "match_score": "{score}% de correspondance",
+    "review_summary_title": "Ce que disent les patients",
+    "powered_by_ai": "Résumé généré par IA",
+    "try_ai_search": "Rechercher avec l'IA",
+    "fallback_error": "L'IA est temporairement indisponible. Résultats standards affichés.",
+    "urgency_routine": "Routine",
+    "urgency_urgent": "À réserver bientôt",
+    "urgency_emergency": "Urgence",
+    "suggested_specialty": "Spécialité recommandée",
+    "suggested_consultation": "Type de consultation suggéré",
+    "in_person_recommended": "Visite en personne recommandée",
+    "video_ok": "Consultation vidéo adaptée",
+    "either_works": "En personne ou en vidéo",
+    "best_match": "Meilleure correspondance",
+    "match_reason_specialty": "Correspond à votre spécialité",
+    "match_reason_language": "Parle votre langue",
+    "match_reason_budget": "Dans votre budget",
+    "match_reason_rating": "Très bien noté",
+    "match_reason_reviews": "Nombreux avis positifs",
+    "clear_ai_filters": "Effacer les filtres IA",
+    "not_what_you_meant": "Ce n'est pas ce que vous cherchiez ?"
   }
 }

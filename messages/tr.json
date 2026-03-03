@@ -555,5 +555,33 @@
     "body_composition": "Body Composition Analysis",
     "urodynamics": "Urodynamics Test",
     "bone_marrow_biopsy": "Bone Marrow Biopsy"
+  },
+  "ai": {
+    "analyzing": "Belirtileriniz analiz ediliyor...",
+    "suggestion": "AI Önerisi",
+    "emergency_warning": "Bu belirtiler acil müdahale gerektirebilir. Lütfen hemen acil servisi arayın.",
+    "emergency_call": "{number} numarasını arayın",
+    "search_parsed": "AI aramanızı şöyle anladı:",
+    "match_score": "%{score} Eşleşme",
+    "review_summary_title": "Hastalar ne diyor",
+    "powered_by_ai": "AI tarafından oluşturulan özet",
+    "try_ai_search": "AI ile Ara",
+    "fallback_error": "AI geçici olarak kullanılamıyor. Standart sonuçlar gösteriliyor.",
+    "urgency_routine": "Rutin",
+    "urgency_urgent": "Yakında randevu alın",
+    "urgency_emergency": "Acil",
+    "suggested_specialty": "Önerilen uzmanlık",
+    "suggested_consultation": "Önerilen muayene türü",
+    "in_person_recommended": "Yüz yüze muayene önerilir",
+    "video_ok": "Video görüşme uygun",
+    "either_works": "Yüz yüze veya video",
+    "best_match": "En İyi Eşleşme",
+    "match_reason_specialty": "Uzmanlık alanınıza uygun",
+    "match_reason_language": "Dilinizi konuşuyor",
+    "match_reason_budget": "Bütçenize uygun",
+    "match_reason_rating": "Yüksek puanlı",
+    "match_reason_reviews": "Birçok olumlu değerlendirme",
+    "clear_ai_filters": "AI filtrelerini temizle",
+    "not_what_you_meant": "Doğru değil mi?"
   }
 }

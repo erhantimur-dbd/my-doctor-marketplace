@@ -555,5 +555,33 @@
     "body_composition": "Body Composition Analysis",
     "urodynamics": "Urodynamics Test",
     "bone_marrow_biopsy": "Bone Marrow Biopsy"
+  },
+  "ai": {
+    "analyzing": "Analyzing your symptoms...",
+    "suggestion": "AI Suggestion",
+    "emergency_warning": "These symptoms may require emergency care. Please call emergency services immediately.",
+    "emergency_call": "Call {number}",
+    "search_parsed": "AI understood your search as:",
+    "match_score": "{score}% Match",
+    "review_summary_title": "What patients say",
+    "powered_by_ai": "AI-generated summary",
+    "try_ai_search": "Search with AI",
+    "fallback_error": "AI is temporarily unavailable. Showing standard results.",
+    "urgency_routine": "Routine",
+    "urgency_urgent": "Book soon",
+    "urgency_emergency": "Emergency",
+    "suggested_specialty": "Recommended specialty",
+    "suggested_consultation": "Suggested consultation type",
+    "in_person_recommended": "In-person visit recommended",
+    "video_ok": "Video consultation suitable",
+    "either_works": "Either in-person or video",
+    "best_match": "Best Match",
+    "match_reason_specialty": "Matches your needed specialty",
+    "match_reason_language": "Speaks your language",
+    "match_reason_budget": "Within your budget",
+    "match_reason_rating": "Highly rated",
+    "match_reason_reviews": "Many positive reviews",
+    "clear_ai_filters": "Clear AI filters",
+    "not_what_you_meant": "Not what you meant?"
   }
 }

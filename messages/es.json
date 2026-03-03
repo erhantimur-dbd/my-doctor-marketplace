@@ -555,5 +555,33 @@
     "body_composition": "Análisis de Composición Corporal",
     "urodynamics": "Estudio Urodinámico",
     "bone_marrow_biopsy": "Biopsia de Médula Ósea"
+  },
+  "ai": {
+    "analyzing": "Analizando tus síntomas...",
+    "suggestion": "Sugerencia de IA",
+    "emergency_warning": "Estos síntomas pueden requerir atención de emergencia. Llame a los servicios de emergencia inmediatamente.",
+    "emergency_call": "Llamar al {number}",
+    "search_parsed": "La IA entendió tu búsqueda como:",
+    "match_score": "{score}% Coincidencia",
+    "review_summary_title": "Lo que dicen los pacientes",
+    "powered_by_ai": "Resumen generado por IA",
+    "try_ai_search": "Buscar con IA",
+    "fallback_error": "La IA no está disponible temporalmente. Mostrando resultados estándar.",
+    "urgency_routine": "Rutina",
+    "urgency_urgent": "Reservar pronto",
+    "urgency_emergency": "Emergencia",
+    "suggested_specialty": "Especialidad recomendada",
+    "suggested_consultation": "Tipo de consulta sugerido",
+    "in_person_recommended": "Visita presencial recomendada",
+    "video_ok": "Consulta por video adecuada",
+    "either_works": "Presencial o por video",
+    "best_match": "Mejor Coincidencia",
+    "match_reason_specialty": "Coincide con tu especialidad",
+    "match_reason_language": "Habla tu idioma",
+    "match_reason_budget": "Dentro de tu presupuesto",
+    "match_reason_rating": "Muy bien valorado",
+    "match_reason_reviews": "Muchas reseñas positivas",
+    "clear_ai_filters": "Borrar filtros de IA",
+    "not_what_you_meant": "¿No es lo que buscabas?"
   }
 }

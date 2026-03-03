@@ -7,6 +7,8 @@ import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
 import { MobileFilterBar } from "./mobile-filter-bar";
 import { DesktopFilterBar } from "./desktop-filter-bar";
+import { NLSearchIndicator } from "@/components/search/nl-search-indicator";
+import type { NLSearchFilters } from "@/lib/ai/schemas";
 
 interface FilterProps {
   specialties: { id: string; name_key: string; slug: string }[];
@@ -91,7 +93,7 @@ export function DoctorSearchFilters({
   };
 
   const hasFilters = Object.entries(currentFilters).some(
-    ([k, v]) => v && k !== "sort" && k !== "page" && k !== "lat" && k !== "lng"
+    ([k, v]) => v && k !== "sort" && k !== "page" && k !== "lat" && k !== "lng" && k !== "aiParsed"
   );
 
   // Count active filters (excluding sort, page, lat, lng, availableToday — since that has its own chip)
@@ -104,7 +106,8 @@ export function DoctorSearchFilters({
       k !== "lng" &&
       k !== "availableToday" &&
       k !== "wheelchairAccessible" &&
-      k !== "query"
+      k !== "query" &&
+      k !== "aiParsed"
   ).length;
 
   // Track whether the user clicked "Use my location" to apply coords when they arrive
@@ -180,8 +183,38 @@ export function DoctorSearchFilters({
     [handleSortChange, updateFilter]
   );
 
+  // Build NL search indicator data when AI parsed the search
+  const isAIParsed = currentFilters.aiParsed === "true";
+  const nlFilters: NLSearchFilters | null = isAIParsed
+    ? {
+        specialty: currentFilters.specialty,
+        location: currentFilters.location,
+        language: currentFilters.language,
+        maxPrice: currentFilters.maxPrice
+          ? Number(currentFilters.maxPrice) * 100
+          : undefined,
+        minRating: currentFilters.minRating
+          ? Number(currentFilters.minRating)
+          : undefined,
+        consultationType: currentFilters.consultationType as
+          | "in_person"
+          | "video"
+          | undefined,
+        query: currentFilters.query,
+      }
+    : null;
+
+  const clearAIFilters = () => {
+    router.push(pathname);
+  };
+
   return (
     <>
+      {/* NL Search Indicator */}
+      {nlFilters && (
+        <NLSearchIndicator filters={nlFilters} onClear={clearAIFilters} />
+      )}
+
       {/* Mobile: compact horizontal bar */}
       <div className="lg:hidden">
         <MobileFilterBar

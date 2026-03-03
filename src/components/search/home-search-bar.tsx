@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from "react";
 import { useRouter } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { LocationCombobox } from "@/components/search/location-combobox";
 import {
@@ -28,17 +28,23 @@ import {
   TestTube2,
   Building2,
   Video,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
 import { searchSuggestions } from "@/actions/search";
 import type { DoctorSuggestion } from "@/actions/search";
+import { analyzeSymptoms, parseNaturalLanguageSearch } from "@/actions/ai";
+import type { SymptomAnalysis } from "@/lib/ai/schemas";
 import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
 import { SYMPTOMS } from "@/lib/constants/symptoms";
 import { MEDICAL_TESTS } from "@/lib/constants/medical-tests";
 import { matchSymptoms, matchTests } from "@/lib/utils/search-matcher";
 import type { SearchMatch } from "@/lib/utils/search-matcher";
+import { shouldUseNLSearch } from "@/lib/utils/nl-search-detector";
+import { AISymptomResult } from "@/components/search/ai-symptom-result";
+import { EmergencyWarning } from "@/components/shared/emergency-warning";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
 const specialtyIconMap: Record<string, React.ElementType> = {
@@ -101,13 +107,17 @@ type SuggestionItem =
   | { type: "doctor"; slug: string; label: string; sub?: string }
   | { type: "symptom"; id: string; labelKey: string; specialtySlug: string; score: number }
   | { type: "test"; id: string; labelKey: string; specialtySlug: string; score: number }
-  | { type: "gp_fallback" };
+  | { type: "gp_fallback" }
+  | { type: "ai_symptom"; analysis: SymptomAnalysis }
+  | { type: "nl_search" };
 
 export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const t = useTranslations("home");
   const tSpec = useTranslations("specialty");
   const tSymptom = useTranslations("symptom");
   const tTest = useTranslations("test");
+  const tAi = useTranslations("ai");
+  const locale = useLocale();
   const router = useRouter();
 
   const [query, setQuery] = useState("");
@@ -124,6 +134,12 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
+
+  // AI state
+  const [aiSymptomResult, setAiSymptomResult] = useState<SymptomAnalysis | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showNLOption, setShowNLOption] = useState(false);
+  const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Popular specialties (resolved from the specialties prop)
   const popularSpecialties = POPULAR_SLUGS
@@ -195,6 +211,56 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [query, isSearchMode]);
+
+  // AI: detect NL search queries and trigger symptom analysis fallback
+  useEffect(() => {
+    if (!isSearchMode) {
+      setAiSymptomResult(null);
+      setShowNLOption(false);
+      setAiLoading(false);
+      return;
+    }
+
+    const trimmed = query.trim();
+
+    // Check if this looks like a natural language search
+    setShowNLOption(shouldUseNLSearch(trimmed));
+
+    // Trigger AI symptom analysis when keyword matcher finds nothing
+    // and the input looks like symptom description (3+ words, no NL search indicators)
+    const hasKeywordMatches = symptomMatches.length > 0 || testMatches.length > 0;
+    const wordCount = trimmed.split(/\s+/).length;
+    const shouldTryAI = !hasKeywordMatches && wordCount >= 3 && !shouldUseNLSearch(trimmed);
+
+    if (!shouldTryAI) {
+      setAiSymptomResult(null);
+      setAiLoading(false);
+      if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+      return;
+    }
+
+    // Debounce AI calls (800ms)
+    if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+    setAiLoading(true);
+    aiDebounceRef.current = setTimeout(async () => {
+      try {
+        const result = await analyzeSymptoms(trimmed, locale);
+        if (result.data) {
+          setAiSymptomResult(result.data);
+        } else {
+          setAiSymptomResult(null);
+        }
+      } catch {
+        setAiSymptomResult(null);
+      } finally {
+        setAiLoading(false);
+      }
+    }, 800);
+
+    return () => {
+      if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
+    };
+  }, [query, isSearchMode, symptomMatches.length, testMatches.length, locale]);
 
   // Close on click outside
   useEffect(() => {
@@ -316,8 +382,54 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
       case "gp_fallback":
         setQuery("General Practice");
         break;
+      case "ai_symptom": {
+        // Navigate to search with AI-suggested specialty and consultation type
+        setShowSuggestions(false);
+        const params = new URLSearchParams();
+        params.set("specialty", item.analysis.primarySpecialty);
+        if (item.analysis.suggestedConsultationType !== "either") {
+          params.set("consultationType", item.analysis.suggestedConsultationType);
+        }
+        if (location && location !== "all") params.set("location", location);
+        router.push(`/doctors?${params.toString()}`);
+        break;
+      }
+      case "nl_search": {
+        // Trigger NL search parsing
+        setShowSuggestions(false);
+        handleNLSearch();
+        break;
+      }
     }
   };
+
+  // Handle Natural Language Search
+  const handleNLSearch = useCallback(async () => {
+    setAiLoading(true);
+    try {
+      const result = await parseNaturalLanguageSearch(query.trim(), locale);
+      if (result.data) {
+        const params = new URLSearchParams();
+        if (result.data.specialty) params.set("specialty", result.data.specialty);
+        if (result.data.location) params.set("location", result.data.location);
+        if (result.data.language) params.set("language", result.data.language);
+        if (result.data.maxPrice) params.set("maxPrice", String(result.data.maxPrice / 100));
+        if (result.data.minRating) params.set("minRating", String(result.data.minRating));
+        if (result.data.consultationType) params.set("consultationType", result.data.consultationType);
+        if (result.data.query) params.set("query", result.data.query);
+        if (location && location !== "all" && !result.data.location) params.set("location", location);
+        params.set("aiParsed", "true");
+        router.push(`/doctors?${params.toString()}`);
+      } else {
+        // Fallback to regular search
+        handleSearch();
+      }
+    } catch {
+      handleSearch();
+    } finally {
+      setAiLoading(false);
+    }
+  }, [query, locale, location, router, handleSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions || allSuggestions.length === 0) {
@@ -360,7 +472,10 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
       testMatches.length > 0 ||
       doctorResults.length > 0 ||
       isPending ||
-      showGpFallback);
+      showGpFallback ||
+      aiLoading ||
+      aiSymptomResult !== null ||
+      showNLOption);
 
   /** Render a symptom/test match row */
   const renderMatchRow = (
@@ -574,13 +689,66 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
         )}
 
         {/* GP fallback */}
-        {showGpFallback && (
+        {showGpFallback && !aiSymptomResult && !aiLoading && (
           <div className="p-1">
             <div className="mx-2 border-t" />
             {(() => {
               itemIndex++;
               return renderGpFallback(itemIndex);
             })()}
+          </div>
+        )}
+
+        {/* AI Symptom Analysis */}
+        {(aiLoading || aiSymptomResult) && (
+          <div className="p-1">
+            <div className="mx-2 border-t" />
+            <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3" />
+              {tAi("suggestion")}
+            </div>
+            {aiLoading && !aiSymptomResult && (
+              <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {tAi("analyzing")}
+              </div>
+            )}
+            {aiSymptomResult && aiSymptomResult.urgency === "emergency" && (
+              <div className="px-2 pb-2">
+                <EmergencyWarning locale={locale} reason={aiSymptomResult.urgencyReason} />
+              </div>
+            )}
+            {aiSymptomResult && (
+              <div className="px-2 pb-1">
+                <AISymptomResult
+                  analysis={aiSymptomResult}
+                  specialtyLabel={tSpec(slugToSpecialtyKey(aiSymptomResult.primarySpecialty))}
+                  onSelect={() =>
+                    handleSelectSuggestion({ type: "ai_symptom", analysis: aiSymptomResult })
+                  }
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* NL Search option */}
+        {showNLOption && !aiLoading && (
+          <div className="p-1">
+            <div className="mx-2 border-t" />
+            <button
+              type="button"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-primary/5"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelectSuggestion({ type: "nl_search" });
+              }}
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+              </span>
+              <span className="font-medium text-primary">{tAi("try_ai_search")}</span>
+            </button>
           </div>
         )}
       </div>
@@ -798,10 +966,63 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
             )}
 
             {/* GP fallback (mobile) */}
-            {showGpFallback && (
+            {showGpFallback && !aiSymptomResult && !aiLoading && (
               <div className="p-1">
                 <div className="mx-2 border-t" />
                 {renderGpFallback(-1, { mobile: true })}
+              </div>
+            )}
+
+            {/* AI Symptom Analysis (mobile) */}
+            {(aiLoading || aiSymptomResult) && (
+              <div className="p-1">
+                <div className="mx-2 border-t" />
+                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3" />
+                  {tAi("suggestion")}
+                </div>
+                {aiLoading && !aiSymptomResult && (
+                  <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {tAi("analyzing")}
+                  </div>
+                )}
+                {aiSymptomResult && aiSymptomResult.urgency === "emergency" && (
+                  <div className="px-2 pb-2">
+                    <EmergencyWarning locale={locale} reason={aiSymptomResult.urgencyReason} />
+                  </div>
+                )}
+                {aiSymptomResult && (
+                  <div className="px-2 pb-1">
+                    <AISymptomResult
+                      analysis={aiSymptomResult}
+                      specialtyLabel={tSpec(slugToSpecialtyKey(aiSymptomResult.primarySpecialty))}
+                      onSelect={() =>
+                        handleSelectSuggestion({ type: "ai_symptom", analysis: aiSymptomResult })
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* NL Search option (mobile) */}
+            {showNLOption && !aiLoading && (
+              <div className="p-1">
+                <div className="mx-2 border-t" />
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm active:bg-primary/5"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    handleSelectSuggestion({ type: "nl_search" });
+                  }}
+                >
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  </span>
+                  <span className="font-medium text-primary">{tAi("try_ai_search")}</span>
+                </button>
               </div>
             )}
           </div>

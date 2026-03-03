@@ -555,5 +555,33 @@
     "body_composition": "体成分分析",
     "urodynamics": "尿动力学检查",
     "bone_marrow_biopsy": "骨髓活检"
+  },
+  "ai": {
+    "analyzing": "正在分析您的症状...",
+    "suggestion": "AI 建议",
+    "emergency_warning": "这些症状可能需要急诊治疗。请立即拨打急救电话。",
+    "emergency_call": "拨打 {number}",
+    "search_parsed": "AI 理解您的搜索为：",
+    "match_score": "{score}% 匹配",
+    "review_summary_title": "患者评价",
+    "powered_by_ai": "AI 生成的摘要",
+    "try_ai_search": "AI 搜索",
+    "fallback_error": "AI 暂时不可用。显示标准结果。",
+    "urgency_routine": "常规",
+    "urgency_urgent": "尽快预约",
+    "urgency_emergency": "急诊",
+    "suggested_specialty": "推荐科室",
+    "suggested_consultation": "建议就诊方式",
+    "in_person_recommended": "建议面诊",
+    "video_ok": "视频问诊适用",
+    "either_works": "面诊或视频均可",
+    "best_match": "最佳匹配",
+    "match_reason_specialty": "匹配您需要的科室",
+    "match_reason_language": "会说您的语言",
+    "match_reason_budget": "在您的预算内",
+    "match_reason_rating": "评分很高",
+    "match_reason_reviews": "好评众多",
+    "clear_ai_filters": "清除 AI 筛选",
+    "not_what_you_meant": "不是您想找的？"
   }
 }

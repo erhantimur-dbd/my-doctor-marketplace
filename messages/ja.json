@@ -555,5 +555,33 @@
     "body_composition": "体組成分析",
     "urodynamics": "尿流動態検査",
     "bone_marrow_biopsy": "骨髄生検"
+  },
+  "ai": {
+    "analyzing": "症状を分析中...",
+    "suggestion": "AI の提案",
+    "emergency_warning": "これらの症状は緊急医療が必要な可能性があります。すぐに救急サービスに電話してください。",
+    "emergency_call": "{number} に電話",
+    "search_parsed": "AI が検索を次のように理解しました：",
+    "match_score": "{score}% マッチ",
+    "review_summary_title": "患者の声",
+    "powered_by_ai": "AI 生成の要約",
+    "try_ai_search": "AI で検索",
+    "fallback_error": "AI は一時的に利用できません。標準の結果を表示しています。",
+    "urgency_routine": "定期",
+    "urgency_urgent": "早めに予約",
+    "urgency_emergency": "緊急",
+    "suggested_specialty": "おすすめの診療科",
+    "suggested_consultation": "おすすめの診療形式",
+    "in_person_recommended": "対面診療をお勧めします",
+    "video_ok": "オンライン診療可能",
+    "either_works": "対面またはオンライン",
+    "best_match": "ベストマッチ",
+    "match_reason_specialty": "必要な診療科に一致",
+    "match_reason_language": "あなたの言語を話します",
+    "match_reason_budget": "予算内",
+    "match_reason_rating": "高評価",
+    "match_reason_reviews": "多数の良いレビュー",
+    "clear_ai_filters": "AI フィルターをクリア",
+    "not_what_you_meant": "お探しのものと違いますか？"
   }
 }
