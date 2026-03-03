@@ -720,17 +720,24 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                 <EmergencyWarning locale={locale} reason={aiSymptomResult.urgencyReason} />
               </div>
             )}
-            {aiSymptomResult && (
-              <div className="px-2 pb-1">
-                <AISymptomResult
-                  analysis={aiSymptomResult}
-                  specialtyLabel={tSpec(slugToSpecialtyKey(aiSymptomResult.primarySpecialty))}
-                  onSelect={() =>
-                    handleSelectSuggestion({ type: "ai_symptom", analysis: aiSymptomResult })
-                  }
-                />
-              </div>
-            )}
+            {aiSymptomResult && (() => {
+              const AiSpecIcon = specialtyIconMap[aiSymptomResult.primarySpecialty] || Stethoscope;
+              const aiSc = getSpecialtyColor(aiSymptomResult.primarySpecialty);
+              return (
+                <div className="px-2 pb-1">
+                  <AISymptomResult
+                    analysis={aiSymptomResult}
+                    specialtyLabel={tSpec(slugToSpecialtyKey(aiSymptomResult.primarySpecialty))}
+                    onSelect={() =>
+                      handleSelectSuggestion({ type: "ai_symptom", analysis: aiSymptomResult })
+                    }
+                    icon={AiSpecIcon}
+                    iconBg={aiSc.bg}
+                    iconColor={aiSc.text}
+                  />
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -994,17 +1001,24 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
                     <EmergencyWarning locale={locale} reason={aiSymptomResult.urgencyReason} />
                   </div>
                 )}
-                {aiSymptomResult && (
-                  <div className="px-2 pb-1">
-                    <AISymptomResult
-                      analysis={aiSymptomResult}
-                      specialtyLabel={tSpec(slugToSpecialtyKey(aiSymptomResult.primarySpecialty))}
-                      onSelect={() =>
-                        handleSelectSuggestion({ type: "ai_symptom", analysis: aiSymptomResult })
-                      }
-                    />
-                  </div>
-                )}
+                {aiSymptomResult && (() => {
+                  const AiSpecIcon = specialtyIconMap[aiSymptomResult.primarySpecialty] || Stethoscope;
+                  const aiSc = getSpecialtyColor(aiSymptomResult.primarySpecialty);
+                  return (
+                    <div className="px-2 pb-1">
+                      <AISymptomResult
+                        analysis={aiSymptomResult}
+                        specialtyLabel={tSpec(slugToSpecialtyKey(aiSymptomResult.primarySpecialty))}
+                        onSelect={() =>
+                          handleSelectSuggestion({ type: "ai_symptom", analysis: aiSymptomResult })
+                        }
+                        icon={AiSpecIcon}
+                        iconBg={aiSc.bg}
+                        iconColor={aiSc.text}
+                      />
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

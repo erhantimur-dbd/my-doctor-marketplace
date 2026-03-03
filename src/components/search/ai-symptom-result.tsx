@@ -10,6 +10,9 @@ interface AISymptomResultProps {
   analysis: SymptomAnalysis;
   specialtyLabel: string;
   onSelect: () => void;
+  icon?: React.ElementType;
+  iconBg?: string;
+  iconColor?: string;
 }
 
 const urgencyConfig = {
@@ -37,11 +40,15 @@ export function AISymptomResult({
   analysis,
   specialtyLabel,
   onSelect,
+  icon: Icon,
+  iconBg,
+  iconColor,
 }: AISymptomResultProps) {
   const t = useTranslations("ai");
   const urgency = urgencyConfig[analysis.urgency];
   const ConsultIcon =
     consultationIcons[analysis.suggestedConsultationType] || ArrowRight;
+  const DisplayIcon = Icon || Sparkles;
 
   return (
     <button
@@ -49,8 +56,11 @@ export function AISymptomResult({
       onClick={onSelect}
       className="flex w-full items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10"
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-        <Sparkles className="h-4 w-4 text-primary" />
+      <div className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+        iconBg || "bg-primary/10"
+      )}>
+        <DisplayIcon className={cn("h-4 w-4", iconColor || "text-primary")} />
       </div>
 
       <div className="flex-1 min-w-0">
