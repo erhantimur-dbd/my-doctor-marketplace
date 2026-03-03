@@ -89,6 +89,10 @@ interface HomeSearchBarProps {
     latitude: number | null;
     longitude: number | null;
   }[];
+  initialQuery?: string;
+  initialLocation?: string;
+  initialConsultationType?: "all" | "in_person" | "video";
+  compact?: boolean;
 }
 
 // Popular specialties shown on focus before typing
@@ -111,7 +115,14 @@ type SuggestionItem =
   | { type: "ai_symptom"; analysis: SymptomAnalysis }
   | { type: "nl_search" };
 
-export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
+export function HomeSearchBar({
+  specialties,
+  locations,
+  initialQuery = "",
+  initialLocation = "",
+  initialConsultationType = "all",
+  compact = false,
+}: HomeSearchBarProps) {
   const t = useTranslations("home");
   const tSpec = useTranslations("specialty");
   const tSymptom = useTranslations("symptom");
@@ -120,10 +131,10 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   const locale = useLocale();
   const router = useRouter();
 
-  const [query, setQuery] = useState("");
-  const [location, setLocation] = useState("");
-  const [consultationType, setConsultationType] = useState<"all" | "in_person" | "video">("all");
-  const [hasManuallySelected, setHasManuallySelected] = useState(false);
+  const [query, setQuery] = useState(initialQuery);
+  const [location, setLocation] = useState(initialLocation);
+  const [consultationType, setConsultationType] = useState<"all" | "in_person" | "video">(initialConsultationType);
+  const [hasManuallySelected, setHasManuallySelected] = useState(!!initialLocation);
 
   // Autocomplete state
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -763,10 +774,10 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
   };
 
   return (
-    <div className="mx-auto max-w-3xl" ref={wrapperRef}>
+    <div className={cn("mx-auto", compact ? "max-w-full" : "max-w-3xl")} ref={wrapperRef}>
       {/* Desktop layout */}
       <div className="relative hidden md:block">
-        <div className="flex items-center gap-0 rounded-full border bg-background shadow-lg transition-shadow hover:shadow-xl overflow-hidden">
+        <div className={cn("flex items-center gap-0 rounded-full border bg-background overflow-hidden", compact ? "shadow-md" : "shadow-lg transition-shadow hover:shadow-xl")}>
           {/* Text input */}
           <div className="flex items-center gap-2 flex-1 pl-5 pr-2">
             <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -778,7 +789,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
               onFocus={() => setShowSuggestions(true)}
               onKeyDown={handleKeyDown}
               placeholder={t("search_name_placeholder")}
-              className="h-14 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className={cn("flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground", compact ? "h-12" : "h-14")}
               autoComplete="off"
             />
           </div>
@@ -816,41 +827,45 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           </div>
         </div>
 
-        {/* Consultation type toggle — desktop */}
-        <div className="flex justify-center gap-1 mt-3">
-          {(["all", "in_person", "video"] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setConsultationType(type)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                consultationType === type
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {type === "in_person" && <Building2 className="h-3 w-3" />}
-              {type === "video" && <Video className="h-3 w-3" />}
-              {type === "all" && t("all_consultation_types")}
-              {type === "in_person" && t("in_person_consultation")}
-              {type === "video" && t("video_consultation")}
-            </button>
-          ))}
-        </div>
+        {!compact && (
+          <>
+            {/* Consultation type toggle — desktop */}
+            <div className="flex justify-center gap-1 mt-3">
+              {(["all", "in_person", "video"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setConsultationType(type)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                    consultationType === type
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {type === "in_person" && <Building2 className="h-3 w-3" />}
+                  {type === "video" && <Video className="h-3 w-3" />}
+                  {type === "all" && t("all_consultation_types")}
+                  {type === "in_person" && t("in_person_consultation")}
+                  {type === "video" && t("video_consultation")}
+                </button>
+              ))}
+            </div>
 
-        {/* AI search hint — desktop */}
-        <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70">
-          <Sparkles className="h-3 w-3 shrink-0" />
-          <span>{t("ai_search_hint")}</span>
-        </p>
+            {/* AI search hint — desktop */}
+            <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70">
+              <Sparkles className="h-3 w-3 shrink-0" />
+              <span>{t("ai_search_hint")}</span>
+            </p>
+          </>
+        )}
 
         {/* Autocomplete dropdown — desktop */}
         {renderDropdown()}
       </div>
 
       {/* Mobile layout */}
-      <div className="relative flex md:hidden flex-col gap-3 rounded-2xl border bg-background p-4 shadow-lg">
+      <div className={cn("relative flex md:hidden flex-col gap-3 rounded-2xl border bg-background", compact ? "p-3 shadow-md" : "p-4 shadow-lg")}>
         {/* Text input */}
         <div className="flex items-center gap-2 rounded-lg border px-3">
           <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -1061,34 +1076,38 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           onEnterKey={handleSearch}
         />
 
-        {/* Consultation type toggle — mobile */}
-        <div className="flex justify-center gap-1">
-          {(["all", "in_person", "video"] as const).map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setConsultationType(type)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                consultationType === type
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted/50 text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {type === "in_person" && <Building2 className="h-3.5 w-3.5" />}
-              {type === "video" && <Video className="h-3.5 w-3.5" />}
-              {type === "all" && t("all_consultation_types")}
-              {type === "in_person" && t("in_person_consultation")}
-              {type === "video" && t("video_consultation")}
-            </button>
-          ))}
-        </div>
+        {!compact && (
+          <>
+            {/* Consultation type toggle — mobile */}
+            <div className="flex justify-center gap-1">
+              {(["all", "in_person", "video"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setConsultationType(type)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors",
+                    consultationType === type
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {type === "in_person" && <Building2 className="h-3.5 w-3.5" />}
+                  {type === "video" && <Video className="h-3.5 w-3.5" />}
+                  {type === "all" && t("all_consultation_types")}
+                  {type === "in_person" && t("in_person_consultation")}
+                  {type === "video" && t("video_consultation")}
+                </button>
+              ))}
+            </div>
 
-        {/* AI search hint — mobile */}
-        <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70 text-center leading-snug px-2">
-          <Sparkles className="h-3 w-3 shrink-0" />
-          <span>{t("ai_search_hint")}</span>
-        </p>
+            {/* AI search hint — mobile */}
+            <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70 text-center leading-snug px-2">
+              <Sparkles className="h-3 w-3 shrink-0" />
+              <span>{t("ai_search_hint")}</span>
+            </p>
+          </>
+        )}
 
         {/* Search button */}
         <Button className="h-11 w-full rounded-lg" onClick={handleSearch}>

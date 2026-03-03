@@ -7,6 +7,7 @@ import {
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
+import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -85,6 +86,20 @@ export default async function DoctorsPage({
       <h1 className="mb-3 text-2xl font-bold lg:mb-6 lg:text-3xl">
         {t("title")}
       </h1>
+
+      {/* AI-powered search bar */}
+      <div className="mb-4">
+        <HomeSearchBar
+          specialties={specialties}
+          locations={locations}
+          initialQuery={sp.query || ""}
+          initialLocation={sp.location || ""}
+          initialConsultationType={
+            (sp.consultationType as "all" | "in_person" | "video") || "all"
+          }
+          compact
+        />
+      </div>
 
       <div className="flex flex-col gap-4">
         {/* Filters — full-width horizontal bar */}
