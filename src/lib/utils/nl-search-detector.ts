@@ -1,20 +1,31 @@
 /**
+ * Count "words" in a way that works across all languages.
+ * For CJK (Chinese/Japanese/Korean) text, each character ≈ 1 word.
+ * For space-separated languages, splits on whitespace.
+ */
+export function countWords(text: string): number {
+  const cjkChars = text.match(/[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g);
+  const nonCJK = text.replace(/[\u4e00-\u9fff\u3400-\u4dbf\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]/g, " ").trim();
+  const spaceWords = nonCJK ? nonCJK.split(/\s+/).length : 0;
+  return (cjkChars?.length ?? 0) + spaceWords;
+}
+
+/**
  * Detect whether a search query is a natural language query that should
  * be parsed by AI, rather than a simple keyword/specialty search.
  *
  * Returns true when the query:
- * - Has 4+ words, OR
+ * - Has 4+ words (CJK characters count as 1 word each), OR
  * - Contains price/budget indicators, OR
  * - Contains location indicators (near, in, around), OR
  * - Contains language references (speaks, speaking)
  */
 export function shouldUseNLSearch(query: string): boolean {
   const trimmed = query.trim();
-  if (trimmed.length < 10) return false;
+  if (trimmed.length < 5) return false;
 
-  // Multi-word natural language input
-  const wordCount = trimmed.split(/\s+/).length;
-  if (wordCount >= 4) return true;
+  // Multi-word natural language input (CJK-aware)
+  if (countWords(trimmed) >= 4) return true;
 
   // Price indicators
   const pricePattern =

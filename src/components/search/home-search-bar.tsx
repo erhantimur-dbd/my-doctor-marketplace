@@ -42,7 +42,7 @@ import { SYMPTOMS } from "@/lib/constants/symptoms";
 import { MEDICAL_TESTS } from "@/lib/constants/medical-tests";
 import { matchSymptoms, matchTests } from "@/lib/utils/search-matcher";
 import type { SearchMatch } from "@/lib/utils/search-matcher";
-import { shouldUseNLSearch } from "@/lib/utils/nl-search-detector";
+import { shouldUseNLSearch, countWords } from "@/lib/utils/nl-search-detector";
 import { AISymptomResult } from "@/components/search/ai-symptom-result";
 import { EmergencyWarning } from "@/components/shared/emergency-warning";
 
@@ -231,7 +231,7 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
     // NL search option can coexist — user sees both the AI symptom result
     // and the "Search with AI" button, letting them choose.
     const hasKeywordMatches = symptomMatches.length > 0 || testMatches.length > 0;
-    const wordCount = trimmed.split(/\s+/).length;
+    const wordCount = countWords(trimmed);
     const shouldTryAI = !hasKeywordMatches && wordCount >= 3;
 
     if (!shouldTryAI) {
