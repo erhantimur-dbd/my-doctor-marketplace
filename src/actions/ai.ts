@@ -214,12 +214,32 @@ Rules:
 
     // Validate specialty slug if present
     const validSlugs = new Set(SPECIALTIES.map((s) => s.slug));
+
+    // Validate / normalize location slug if present
+    let resolvedLocation: string | null = null;
+    if (object.location && locations) {
+      const locSlugs = new Set(locations.map((l) => l.slug));
+      if (locSlugs.has(object.location)) {
+        resolvedLocation = object.location;
+      } else {
+        // Fuzzy-match: AI may return city name instead of slug
+        const lower = object.location.toLowerCase();
+        const match = locations.find(
+          (l) =>
+            l.city.toLowerCase() === lower ||
+            l.slug.toLowerCase().startsWith(lower)
+        );
+        if (match) resolvedLocation = match.slug;
+      }
+    }
+
     const result: NLSearchFilters = {
       ...object,
       specialty:
         object.specialty && validSlugs.has(object.specialty)
           ? object.specialty
           : null,
+      location: resolvedLocation,
     };
 
     // 4. Cache result
