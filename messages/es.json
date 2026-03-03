@@ -99,6 +99,7 @@
     "all_consultation_types": "Todos",
     "in_person_consultation": "Presencial",
     "video_consultation": "Video",
+    "ai_search_hint": "Describe cómo te sientes — ej. 'dolores de cabeza y visión borrosa' o 'dentista que habla inglés en Madrid'",
     "suggestions_specialties": "Especialidades",
     "suggestions_doctors": "Médicos",
     "suggestions_searching": "Buscando...",

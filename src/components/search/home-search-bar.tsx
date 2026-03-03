@@ -839,6 +839,12 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
           ))}
         </div>
 
+        {/* AI search hint — desktop */}
+        <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70">
+          <Sparkles className="h-3 w-3 shrink-0" />
+          <span>{t("ai_search_hint")}</span>
+        </p>
+
         {/* Autocomplete dropdown — desktop */}
         {renderDropdown()}
       </div>
@@ -1077,6 +1083,12 @@ export function HomeSearchBar({ specialties, locations }: HomeSearchBarProps) {
             </button>
           ))}
         </div>
+
+        {/* AI search hint — mobile */}
+        <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70 text-center leading-snug px-2">
+          <Sparkles className="h-3 w-3 shrink-0" />
+          <span>{t("ai_search_hint")}</span>
+        </p>
 
         {/* Search button */}
         <Button className="h-11 w-full rounded-lg" onClick={handleSearch}>

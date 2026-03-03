@@ -99,6 +99,7 @@
     "all_consultation_types": "Alle",
     "in_person_consultation": "Vor Ort",
     "video_consultation": "Video",
+    "ai_search_hint": "Beschreiben Sie Ihre Symptome — z.B. 'Kopfschmerzen und verschwommenes Sehen' oder 'Zahnarzt der Französisch spricht in Berlin'",
     "suggestions_specialties": "Fachgebiete",
     "suggestions_doctors": "Arzte",
     "suggestions_searching": "Suche...",

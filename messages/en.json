@@ -99,6 +99,7 @@
     "all_consultation_types": "All",
     "in_person_consultation": "In Person",
     "video_consultation": "Video",
+    "ai_search_hint": "Try describing how you feel — e.g. 'headaches and blurred vision' or 'dentist who speaks French in Berlin'",
     "suggestions_specialties": "Specialties",
     "suggestions_doctors": "Doctors",
     "suggestions_searching": "Searching...",

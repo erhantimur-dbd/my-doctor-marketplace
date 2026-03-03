@@ -99,6 +99,7 @@
     "all_consultation_types": "Tous",
     "in_person_consultation": "En personne",
     "video_consultation": "Vidéo",
+    "ai_search_hint": "Décrivez vos symptômes — ex. 'maux de tête et vision floue' ou 'dentiste parlant anglais à Berlin'",
     "suggestions_specialties": "Specialites",
     "suggestions_doctors": "Medecins",
     "suggestions_searching": "Recherche...",

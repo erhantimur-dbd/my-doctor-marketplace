@@ -99,6 +99,7 @@
     "all_consultation_types": "すべて",
     "in_person_consultation": "対面",
     "video_consultation": "ビデオ",
+    "ai_search_hint": "症状を説明してください — 例：「頭痛とかすみ目」や「ベルリンでフランス語を話す歯科医」",
     "suggestions_specialties": "診療科",
     "suggestions_doctors": "医師",
     "suggestions_searching": "検索中...",
