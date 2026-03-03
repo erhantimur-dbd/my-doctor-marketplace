@@ -87,8 +87,8 @@ export default async function DoctorsPage({
         {t("title")}
       </h1>
 
-      {/* AI-powered search bar */}
-      <div className="mb-4">
+      {/* AI-powered search bar – desktop only */}
+      <div className="mb-4 hidden lg:block">
         <HomeSearchBar
           specialties={specialties}
           locations={locations}
