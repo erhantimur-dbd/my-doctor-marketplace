@@ -187,20 +187,20 @@ export function DoctorSearchFilters({
   const isAIParsed = currentFilters.aiParsed === "true";
   const nlFilters: NLSearchFilters | null = isAIParsed
     ? {
-        specialty: currentFilters.specialty,
-        location: currentFilters.location,
-        language: currentFilters.language,
+        specialty: currentFilters.specialty ?? null,
+        location: currentFilters.location ?? null,
+        language: currentFilters.language ?? null,
         maxPrice: currentFilters.maxPrice
           ? Number(currentFilters.maxPrice) * 100
-          : undefined,
+          : null,
         minRating: currentFilters.minRating
           ? Number(currentFilters.minRating)
-          : undefined,
-        consultationType: currentFilters.consultationType as
+          : null,
+        consultationType: (currentFilters.consultationType as
           | "in_person"
           | "video"
-          | undefined,
-        query: currentFilters.query,
+          | undefined) ?? null,
+        query: currentFilters.query ?? null,
       }
     : null;
 
