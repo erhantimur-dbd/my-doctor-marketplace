@@ -352,12 +352,27 @@ export function HomeSearchBar({
   const handleSearch = useCallback(() => {
     setShowSuggestions(false);
     const params = new URLSearchParams();
-    if (query.trim()) params.set("query", query.trim());
+    if (query.trim()) {
+      // Check if query matches a specialty name → use specialty filter instead of free-text
+      const term = query.trim().toLowerCase();
+      const matchedSpec = specialties.find((s) => {
+        const display = s.name_key
+          .replace("specialty.", "")
+          .replace(/_/g, " ")
+          .toLowerCase();
+        return display === term || s.slug === term || s.slug === term.replace(/\s+/g, "-");
+      });
+      if (matchedSpec) {
+        params.set("specialty", matchedSpec.slug);
+      } else {
+        params.set("query", query.trim());
+      }
+    }
     if (location && location !== "all") params.set("location", location);
     if (consultationType !== "all") params.set("consultationType", consultationType);
     const qs = params.toString();
     router.push(`/doctors${qs ? `?${qs}` : ""}`);
-  }, [query, location, consultationType, router]);
+  }, [query, location, consultationType, router, specialties]);
 
   const navigateToSpecialty = useCallback(
     (slug: string) => {
