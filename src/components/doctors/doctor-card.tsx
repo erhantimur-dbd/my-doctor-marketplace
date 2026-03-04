@@ -463,7 +463,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
           <Dialog open={showFullAvailability} onOpenChange={setShowFullAvailability}>
-            <DialogContent showCloseButton={false} className="max-w-sm md:max-w-5xl p-4 md:p-6 gap-2 md:h-[70vh] max-h-[90vh] flex flex-col">
+            <DialogContent showCloseButton={false} className="max-w-sm md:max-w-5xl p-4 md:p-6 gap-2 md:h-[82vh] max-h-[90vh] flex flex-col">
               {/* Custom close button */}
               <DialogClose className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/80 text-white shadow-md transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                 <X className="h-4 w-4" />
@@ -484,7 +484,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                 View availability and book an appointment
               </DialogDescription>
 
-              <div className="overflow-y-auto md:overflow-hidden min-h-0 -mx-1 px-1 flex-1">
+              <div className="overflow-y-auto min-h-0 -mx-1 px-1 flex-1">
                 <div className="flex flex-col md:grid md:grid-cols-[2fr_3fr] md:gap-6 h-full">
                   {/* ── Left Panel: Doctor Profile (desktop only) ── */}
                   <div className="hidden md:flex md:flex-col md:items-center md:justify-center md:text-center md:border-r md:pr-6 md:overflow-hidden md:gap-3">
@@ -597,7 +597,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   </div>
 
                   {/* ── Right Panel: Calendar + Times (always visible) ── */}
-                  <div className="min-w-0 flex flex-col md:justify-center">
+                  <div className="min-w-0 flex flex-col h-full min-h-0 overflow-hidden">
                     <AvailabilityCalendar
                       doctorId={doctor.id}
                       doctorSlug={doctor.slug}
