@@ -143,7 +143,7 @@
 
     /* ---- Features ---- */
     .features-section { background: var(--muted); }
-    .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .features-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
     .feature-card {
       background: var(--background); border: 1px solid var(--border);
       border-radius: calc(var(--radius) + 4px); padding: 2rem;
@@ -164,6 +164,8 @@
     .icon-teal { background: rgba(20,184,166,0.1); color: var(--teal); }
     .icon-violet { background: rgba(139,92,246,0.1); color: var(--violet); }
     .icon-rose { background: rgba(244,63,94,0.1); color: var(--rose); }
+    .icon-indigo { background: rgba(99,102,241,0.1); color: #6366f1; }
+    .icon-sky { background: rgba(14,165,233,0.1); color: #0ea5e9; }
 
     /* ---- How It Works ---- */
     .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; text-align: center; }
@@ -261,8 +263,10 @@
     .form-success svg { width: 20px; height: 20px; }
 
     /* ---- Responsive ---- */
+    @media (max-width: 1100px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
     @media (max-width: 900px) {
-      .features-grid { grid-template-columns: 1fr 1fr; }
       .steps-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
       .step::after { display: none; }
       .stats { grid-template-columns: repeat(2, 1fr); }
@@ -328,7 +332,7 @@
       <div class="stat-label">Medical Specialties</div>
     </div>
     <div class="stat">
-      <div class="stat-number">4</div>
+      <div class="stat-number">9</div>
       <div class="stat-label">Languages Supported</div>
     </div>
     <div class="stat">
@@ -374,8 +378,8 @@
           <div class="feature-icon icon-teal">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
-          <h3>Multi-Language</h3>
-          <p>Access top specialists across Europe. Book in your language and pay in your preferred currency.</p>
+          <h3>9 Languages</h3>
+          <p>Use the platform in English, German, Turkish, French, Italian, Spanish, Portuguese, Chinese, or Japanese.</p>
         </div>
         <div class="feature-card">
           <div class="feature-icon icon-violet">
@@ -390,6 +394,20 @@
           </div>
           <h3>Smart Reminders</h3>
           <p>Automatic appointment reminders via email, SMS, and WhatsApp so you never miss a visit.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon icon-indigo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5c0 2.76-2.24 5-5 5s-5-2.24-5-5a5 5 0 0 1 5-5z"/><path d="M3 20c0-3.87 3.13-7 7-7h4c3.87 0 7 3.13 7 7"/><circle cx="18" cy="8" r="3" fill="none"/><path d="M18 6v4M16 8h4"/></svg>
+          </div>
+          <h3>AI Doctor Match</h3>
+          <p>Describe your symptoms in plain language and our AI instantly matches you with the right specialist for your needs.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon icon-sky">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <h3>Cross-Border Care</h3>
+          <p>Travelling or living abroad? Find doctors who speak your language in any European city with the specialty you need.</p>
         </div>
       </div>
     </div>
@@ -442,7 +460,8 @@
             <li><span class="check check-blue"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M10 3L4.5 8.5 2 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Browse 24+ specialties with verified doctor profiles</li>
             <li><span class="check check-blue"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M10 3L4.5 8.5 2 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>See all fees upfront — zero hidden charges</li>
             <li><span class="check check-blue"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M10 3L4.5 8.5 2 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Read verified patient reviews before booking</li>
-            <li><span class="check check-blue"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M10 3L4.5 8.5 2 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Book 24/7 — no phone calls needed</li>
+            <li><span class="check check-blue"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M10 3L4.5 8.5 2 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>AI-powered search — describe symptoms in plain language</li>
+            <li><span class="check check-blue"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M10 3L4.5 8.5 2 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Cross-border care — find your-language doctors abroad</li>
             <li><span class="check check-blue"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M10 3L4.5 8.5 2 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>Free to sign up — no subscription or credit card</li>
           </ul>
         </div>
