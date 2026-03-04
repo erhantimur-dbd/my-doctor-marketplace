@@ -33,27 +33,31 @@ interface AvailabilityCalendarProps {
   locale?: string;
 }
 
-// Custom DayButton that renders availability dots as real DOM elements
-// instead of ::after pseudo-elements (which break table height calculation)
+// Custom DayButton with coloured cell backgrounds for availability
 function DayButtonWithDot({
   modifiers,
   children,
+  className,
   ...rest
 }: React.ComponentProps<typeof DayButtonType>) {
   const isAvailable = (modifiers as Record<string, boolean>).available;
   const isFewSlots = (modifiers as Record<string, boolean>).fewSlots;
+  const isSelected = (modifiers as Record<string, boolean>).selected;
 
   return (
-    <CalendarDayButton modifiers={modifiers} {...rest}>
-      {children}
-      {(isAvailable || isFewSlots) && (
-        <span
-          className={cn(
-            "h-1 w-1 rounded-full",
-            isAvailable ? "bg-green-500" : "bg-amber-500"
-          )}
-        />
+    <CalendarDayButton
+      modifiers={modifiers}
+      className={cn(
+        "transition-colors duration-150",
+        isAvailable && !isSelected &&
+          "bg-emerald-50 text-emerald-700 font-medium hover:bg-emerald-100 dark:bg-emerald-950/30 dark:text-emerald-300 dark:hover:bg-emerald-950/50",
+        isFewSlots && !isSelected &&
+          "bg-amber-50 text-amber-700 font-medium hover:bg-amber-100 dark:bg-amber-950/30 dark:text-amber-300 dark:hover:bg-amber-950/50",
+        className
       )}
+      {...rest}
+    >
+      {children}
     </CalendarDayButton>
   );
 }
@@ -210,14 +214,14 @@ export function AvailabilityCalendar({
     <div className={cn("space-y-3", compact && "space-y-1.5 flex flex-col h-full")}>
       {/* Consultation type toggle */}
       {showTypeToggle && (
-        <div className="flex gap-1.5 rounded-lg bg-muted p-1">
+        <div className={cn("flex gap-1 bg-muted p-1", compact ? "rounded-xl" : "rounded-lg")}>
           {consultationTypes!.includes("in_person") && (
             <button
               type="button"
               onClick={() => handleTypeChange("in_person")}
               className={cn(
-                "flex-1 rounded-md text-sm font-medium transition-colors",
-                compact ? "px-2 py-1" : "px-3 py-1.5",
+                "flex-1 text-sm font-medium transition-all duration-200",
+                compact ? "rounded-lg px-3 py-1.5" : "rounded-md px-3 py-1.5",
                 activeType === "in_person"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -231,8 +235,8 @@ export function AvailabilityCalendar({
               type="button"
               onClick={() => handleTypeChange("video")}
               className={cn(
-                "flex-1 rounded-md text-sm font-medium transition-colors",
-                compact ? "px-2 py-1" : "px-3 py-1.5",
+                "flex-1 text-sm font-medium transition-all duration-200",
+                compact ? "rounded-lg px-3 py-1.5" : "rounded-md px-3 py-1.5",
                 activeType === "video"
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -276,23 +280,34 @@ export function AvailabilityCalendar({
             Week: ({ week, ...props }) => <div role="row" {...props} />,
             Weeks: (props) => <div role="rowgroup" {...props} />,
           }}
-          className={cn("rounded-md border w-full", compact && "p-2 [--cell-size:--spacing(7)]")}
+          className={cn(
+            "w-full",
+            compact
+              ? "rounded-xl bg-muted/30 p-3 [--cell-size:--spacing(7)]"
+              : "rounded-md border p-3"
+          )}
           classNames={compact ? {
             month: "flex flex-col w-full gap-2",
-            week: "flex w-full mt-1.5 [&>*]:flex-1",
+            week: "flex w-full mt-1 [&>*]:flex-1",
             weekdays: "flex [&>*]:flex-1",
+            weekday: "text-muted-foreground/60 flex-1 font-medium text-[0.65rem] uppercase tracking-widest select-none pb-1",
+            caption_label: "select-none font-semibold text-sm tracking-tight",
+            today: "ring-2 ring-primary/30 rounded-md data-[selected=true]:ring-0",
           } : undefined}
         />
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className={cn(
+        "flex items-center gap-5 text-[11px] text-muted-foreground/70",
+        compact && "justify-center"
+      )}>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+          <span className="inline-block h-3 w-3 rounded border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30" />
           {t("availability")}
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
+          <span className="inline-block h-3 w-3 rounded border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30" />
           {t("few_slots_left")}
         </span>
       </div>
@@ -337,10 +352,15 @@ export function AvailabilityCalendar({
 
         {selectedDate && !loadingSlots && slots.length > 0 && (
           <div>
-            <p className={cn("font-medium", compact ? "mb-1.5 text-xs" : "mb-2 text-sm")}>
-              <Clock className="mr-1.5 inline-block h-3.5 w-3.5" />
-              {t("available_times")} — {format(selectedDate, "EEE, d MMM", { locale: dateFnsLocale })}
-            </p>
+            <div className={cn("flex items-center gap-2", compact ? "mb-2" : "mb-2")}>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80">
+                <Clock className="h-3.5 w-3.5" />
+                {t("available_times")}
+              </div>
+              <span className="text-xs text-muted-foreground/60">
+                {format(selectedDate, "EEE, d MMM", { locale: dateFnsLocale })}
+              </span>
+            </div>
             <div className={cn(
               "grid",
               compact ? "grid-cols-3 gap-1.5" : "grid-cols-3 gap-1.5 sm:grid-cols-4"
@@ -351,7 +371,7 @@ export function AvailabilityCalendar({
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "font-medium border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
+                    "font-medium rounded-lg border-primary/15 bg-primary/5 text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-sm",
                     compact ? "h-8 text-sm" : "h-9 text-sm"
                   )}
                   onClick={() => handleSlotClick(slot)}
