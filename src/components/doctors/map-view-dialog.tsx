@@ -124,9 +124,9 @@ function MapViewDialog({
           {t("map_view")}
         </DialogTitle>
 
-        <div className="flex h-full">
+        <div className="flex h-full min-h-0 overflow-hidden">
           {/* Left panel: scrollable card list */}
-          <div className="w-[32%] border-r overflow-y-auto">
+          <div className="w-[32%] min-h-0 border-r overflow-y-auto">
             <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
               <p className="text-sm font-medium text-muted-foreground">
                 {t("doctors_on_map", { count: mapDoctors.length })}
@@ -150,7 +150,7 @@ function MapViewDialog({
           </div>
 
           {/* Right panel: large map */}
-          <div className="flex-1 relative">
+          <div className="flex-1 min-h-0 relative overflow-hidden">
             <DoctorMap
               doctors={mapDoctors}
               hoveredDoctorId={hoveredDoctorId}

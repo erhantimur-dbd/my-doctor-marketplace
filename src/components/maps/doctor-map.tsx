@@ -67,7 +67,15 @@ function FitBounds({
       bounds.extend({ lat: centerLocation.lat, lng: centerLocation.lng });
     }
 
-    map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+    const padding = { top: 50, right: 50, bottom: 50, left: 50 };
+
+    // Apply fitBounds immediately and also after a short delay to handle
+    // animated containers (e.g. dialog overlays) where the map container
+    // may not have its final dimensions on first render.
+    map.fitBounds(bounds, padding);
+    const timeout = setTimeout(() => {
+      map.fitBounds(bounds, padding);
+    }, 350);
 
     // When a city is selected, clamp zoom to city-level (~3 mile radius)
     // to keep surrounding context visible even if doctors are clustered tightly
@@ -78,8 +86,13 @@ function FitBounds({
           map.setZoom(14);
         }
       });
-      return () => google.maps.event.removeListener(listener);
+      return () => {
+        clearTimeout(timeout);
+        google.maps.event.removeListener(listener);
+      };
     }
+
+    return () => clearTimeout(timeout);
   }, [doctors, map, centerLocation]);
 
   return null;
