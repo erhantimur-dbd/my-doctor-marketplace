@@ -18,7 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { createBookingAndCheckout } from "@/actions/booking";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
 import { formatSlotTime } from "@/lib/utils/availability";
 import { toast } from "sonner";
 import {
@@ -33,8 +33,6 @@ import {
   User,
   Video,
 } from "lucide-react";
-
-const PATIENT_BOOKING_FEE_CENTS = 495;
 
 interface BookingWizardProps {
   doctor: {
@@ -120,7 +118,7 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
       ? doctor.video_consultation_fee_cents
       : doctor.consultation_fee_cents;
 
-  const platformFeeCents = PATIENT_BOOKING_FEE_CENTS;
+  const platformFeeCents = getBookingFeeCents(doctor.base_currency);
   const totalAmountCents = consultationFeeCents + platformFeeCents;
 
   function canProceed(): boolean {

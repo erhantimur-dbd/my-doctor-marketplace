@@ -9,10 +9,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
@@ -446,22 +447,147 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
           <Dialog open={showFullAvailability} onOpenChange={setShowFullAvailability}>
-            <DialogContent className="max-w-sm p-4 gap-2 max-h-[90vh] flex flex-col">
-              <DialogHeader className="pb-0 shrink-0">
+            <DialogContent className="max-w-sm md:max-w-3xl p-4 md:p-6 gap-2 max-h-[90vh] flex flex-col">
+              {/* Mobile header (hidden on desktop where left panel shows name) */}
+              <DialogHeader className="pb-0 shrink-0 md:hidden">
                 <DialogTitle className="text-base">
                   {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
                 </DialogTitle>
               </DialogHeader>
+              {/* Desktop sr-only title for a11y */}
+              <DialogTitle className="sr-only md:sr-only">
+                {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
+              </DialogTitle>
+              <DialogDescription className="sr-only">
+                View availability and book an appointment
+              </DialogDescription>
+
               <div className="overflow-y-auto min-h-0 -mx-1 px-1">
-                <AvailabilityCalendar
-                  doctorId={doctor.id}
-                  doctorSlug={doctor.slug}
-                  consultationType={activeConsultationType}
-                  consultationTypes={doctor.consultation_types}
-                  initialDate={cardAvailability?.days[0]?.date}
-                  locale={locale}
-                  compact
-                />
+                <div className="flex flex-col md:flex-row md:gap-6">
+                  {/* ── Left Panel: Doctor Profile (desktop only) ── */}
+                  <div className="hidden md:flex md:flex-col md:w-[280px] md:shrink-0 md:border-r md:pr-6">
+                    {/* Avatar + Name centered */}
+                    <div className="flex flex-col items-center text-center">
+                      <Avatar className={cn("h-20 w-20", isTestingService && "rounded-xl")}>
+                        {doctor.profile.avatar_url ? (
+                          <AvatarImage
+                            src={doctor.profile.avatar_url}
+                            alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
+                          />
+                        ) : null}
+                        <AvatarFallback className={cn("text-2xl", isTestingService && "rounded-xl bg-teal-50 dark:bg-teal-950/30")}>
+                          {isTestingService ? (
+                            <FlaskConical className="h-8 w-8 text-teal-600" />
+                          ) : (
+                            <User className="h-8 w-8" />
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <h3 className="mt-3 text-lg font-semibold">
+                        {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
+                      </h3>
+
+                      {primarySpecialty && (
+                        <p className="text-sm text-muted-foreground">
+                          {primarySpecialty.name_key
+                            .replace("specialty.", "")
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        </p>
+                      )}
+
+                      {doctor.avg_rating > 0 && (
+                        <div className="mt-2">
+                          <StarRating
+                            rating={doctor.avg_rating}
+                            totalReviews={doctor.total_reviews}
+                            size="sm"
+                            showCount
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Detail rows */}
+                    <div className="mt-4 space-y-2.5 text-sm">
+                      {doctor.location && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="h-4 w-4 shrink-0" />
+                          <span>{doctor.location.city}, {doctor.location.country_code}</span>
+                        </div>
+                      )}
+
+                      {doctor.verification_status === "verified" && (
+                        <div className="flex items-center gap-2 text-green-600">
+                          <Shield className="h-4 w-4 shrink-0" />
+                          <span>Verified</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-3">
+                        {doctor.consultation_types?.includes("video") && (
+                          <div className="flex items-center gap-1.5 text-purple-600">
+                            <Video className="h-4 w-4" />
+                            <span>Video</span>
+                          </div>
+                        )}
+                        {doctor.consultation_types?.includes("in_person") && (
+                          <div className="flex items-center gap-1.5 text-blue-600">
+                            <User className="h-4 w-4" />
+                            <span>In Person</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {doctor.languages && doctor.languages.length > 0 && (
+                        <div className="flex items-start gap-2 text-muted-foreground">
+                          <Globe className="h-4 w-4 shrink-0 mt-0.5" />
+                          <span>{doctor.languages.map((l) => l.toUpperCase()).join(", ")}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Fee card */}
+                    <div className="mt-4 rounded-lg bg-muted/50 p-3 text-center">
+                      <span className="text-xl font-bold">
+                        {formatCurrency(doctor.consultation_fee_cents, doctor.base_currency, locale)}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {" "}/ {isTestingService ? "test" : "session"}
+                      </span>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5">+ booking fee</p>
+                    </div>
+
+                    {/* Bio excerpt */}
+                    {doctor.bio && (
+                      <p className="mt-3 text-xs text-muted-foreground line-clamp-3 leading-relaxed">
+                        {doctor.bio}
+                      </p>
+                    )}
+
+                    {/* View profile link */}
+                    <Link
+                      href={`/doctors/${doctor.slug}`}
+                      className="mt-3 inline-flex items-center justify-center text-sm font-medium text-primary hover:underline"
+                    >
+                      View Full Profile →
+                    </Link>
+                  </div>
+
+                  {/* ── Right Panel: Calendar (always visible) ── */}
+                  <div className="flex-1 min-w-0">
+                    <AvailabilityCalendar
+                      doctorId={doctor.id}
+                      doctorSlug={doctor.slug}
+                      consultationType={activeConsultationType}
+                      consultationTypes={doctor.consultation_types}
+                      initialDate={cardAvailability?.days[0]?.date}
+                      locale={locale}
+                      compact
+                    />
+                  </div>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
