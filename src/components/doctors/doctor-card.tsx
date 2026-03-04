@@ -239,6 +239,9 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         {" "}
                         / {isTestingService ? "test" : "session"}
                       </span>
+                      <span className="block text-[10px] text-muted-foreground/70">
+                        + booking fee
+                      </span>
                     </div>
                     <Button
                       size="sm"

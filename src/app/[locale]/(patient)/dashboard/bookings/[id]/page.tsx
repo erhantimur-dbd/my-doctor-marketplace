@@ -439,7 +439,7 @@ export default async function BookingDetailPage({
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Platform Fee</span>
+                <span className="text-muted-foreground">Booking Fee</span>
                 <span>
                   {formatCurrency(
                     typedBooking.platform_fee_cents,

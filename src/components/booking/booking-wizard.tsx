@@ -34,7 +34,7 @@ import {
   Video,
 } from "lucide-react";
 
-const PLATFORM_FEE_PERCENT = 15;
+const PATIENT_BOOKING_FEE_CENTS = 495;
 
 interface BookingWizardProps {
   doctor: {
@@ -120,9 +120,7 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
       ? doctor.video_consultation_fee_cents
       : doctor.consultation_fee_cents;
 
-  const platformFeeCents = Math.round(
-    (consultationFeeCents * PLATFORM_FEE_PERCENT) / 100
-  );
+  const platformFeeCents = PATIENT_BOOKING_FEE_CENTS;
   const totalAmountCents = consultationFeeCents + platformFeeCents;
 
   function canProceed(): boolean {
@@ -484,7 +482,7 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
-                      Service Fee ({PLATFORM_FEE_PERCENT}%)
+                      Booking Fee
                     </span>
                     <span>
                       {formatCurrency(platformFeeCents, doctor.base_currency)}

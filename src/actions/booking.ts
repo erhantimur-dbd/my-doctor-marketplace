@@ -24,7 +24,7 @@ import {
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
 
-const PLATFORM_FEE_PERCENT = 15;
+const PATIENT_BOOKING_FEE_CENTS = 495;
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -134,9 +134,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         ? doctor.video_consultation_fee_cents
         : doctor.consultation_fee_cents;
 
-    const platformFeeCents = Math.round(
-      (consultationFeeCents * PLATFORM_FEE_PERCENT) / 100
-    );
+    const platformFeeCents = PATIENT_BOOKING_FEE_CENTS;
     const totalAmountCents = consultationFeeCents + platformFeeCents;
 
     // Insert booking with pending_payment status

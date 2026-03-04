@@ -277,7 +277,7 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            All plans include a 15% platform commission on each booking. Cancel anytime, no long-term contracts.
+            All plans include a 15% platform commission on each booking, invoiced monthly. Cancel anytime, no long-term contracts.
           </p>
           <p className="mt-2 text-center text-xs text-muted-foreground/70">
             These are introductory rates for early adopters. Lock in your price today — it stays the same for as long as you&apos;re subscribed.

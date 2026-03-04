@@ -132,13 +132,18 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
                   </div>
 
                   <div className="flex items-center justify-between mt-2">
-                    <span className="text-sm font-bold">
-                      {formatCurrency(
-                        doctor.consultation_fee_cents,
-                        doctor.base_currency,
-                        locale
-                      )}
-                    </span>
+                    <div>
+                      <span className="text-sm font-bold">
+                        {formatCurrency(
+                          doctor.consultation_fee_cents,
+                          doctor.base_currency,
+                          locale
+                        )}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground/70 ml-0.5">
+                        + fee
+                      </span>
+                    </div>
                     {nextSlotLabel && (
                       <span className="text-xs text-green-600 flex items-center gap-0.5">
                         <Clock className="h-3 w-3" />
