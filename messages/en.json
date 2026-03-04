@@ -192,7 +192,9 @@
     "price_min": "Min Price",
     "price_max": "Max Price",
     "price_range_label": "Price per session",
-    "min_rating": "Minimum Rating"
+    "min_rating": "Minimum Rating",
+    "map_view": "Map View",
+    "doctors_on_map": "{count, plural, one {# doctor} other {# doctors}}"
   },
   "booking": {
     "select_date": "Select Date",

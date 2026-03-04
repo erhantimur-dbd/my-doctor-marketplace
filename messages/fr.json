@@ -229,7 +229,9 @@
     "price_min": "Prix min",
     "price_max": "Prix max",
     "price_range_label": "Prix par séance",
-    "min_rating": "Note minimum"
+    "min_rating": "Note minimum",
+    "map_view": "Vue carte",
+    "doctors_on_map": "{count, plural, one {# médecin} other {# médecins}}"
   },
   "booking": {
     "select_date": "Choisir une date",

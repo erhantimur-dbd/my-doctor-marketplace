@@ -268,7 +268,9 @@
     "price_min": "Mindestpreis",
     "price_max": "Höchstpreis",
     "price_range_label": "Preis pro Sitzung",
-    "min_rating": "Mindestbewertung"
+    "min_rating": "Mindestbewertung",
+    "map_view": "Kartenansicht",
+    "doctors_on_map": "{count, plural, one {# Arzt} other {# Ärzte}}"
   },
   "booking": {
     "select_date": "Datum wahlen",

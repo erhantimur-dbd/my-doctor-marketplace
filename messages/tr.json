@@ -229,7 +229,9 @@
     "price_min": "Min Fiyat",
     "price_max": "Max Fiyat",
     "price_range_label": "Seans başına ücret",
-    "min_rating": "Minimum Puan"
+    "min_rating": "Minimum Puan",
+    "map_view": "Harita Görünümü",
+    "doctors_on_map": "{count, plural, one {# doktor} other {# doktor}}"
   },
   "booking": {
     "select_date": "Tarih Secin",
