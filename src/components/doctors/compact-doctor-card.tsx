@@ -71,8 +71,8 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
         <Link href={`/doctors/${doctor.slug}`}>
           <Card
             className={cn(
-              "overflow-hidden border-t-[3px] border-t-transparent transition-all duration-200 hover:border-t-blue-500 hover:shadow-md hover:-translate-y-0.5 dark:hover:border-t-blue-400",
-              isHighlighted && "border-t-blue-500 ring-2 ring-blue-500/20 shadow-md dark:border-t-blue-400 dark:ring-blue-400/20"
+              "transition-all hover:border-primary/50 hover:shadow-md",
+              isHighlighted && "border-primary ring-2 ring-primary/20 shadow-md"
             )}
           >
             <CardContent className="p-3">
