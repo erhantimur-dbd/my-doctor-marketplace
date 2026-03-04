@@ -353,7 +353,7 @@ export function AvailabilityCalendar({
         {selectedDate && !loadingSlots && slots.length > 0 && (
           <div>
             <div className={cn("flex items-center gap-2", compact ? "mb-2" : "mb-2")}>
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-800 dark:text-blue-300">
                 <Clock className="h-3.5 w-3.5" />
                 {t("available_times")}
               </div>
@@ -371,7 +371,7 @@ export function AvailabilityCalendar({
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "font-medium rounded-lg border-primary/15 bg-primary/5 text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-sm",
+                    "font-medium rounded-lg border-blue-200/60 bg-blue-50 text-blue-700 transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-sm dark:bg-blue-950/25 dark:text-blue-300 dark:border-blue-800/40 dark:hover:bg-blue-600 dark:hover:text-white",
                     compact ? "h-8 text-sm" : "h-9 text-sm"
                   )}
                   onClick={() => handleSlotClick(slot)}

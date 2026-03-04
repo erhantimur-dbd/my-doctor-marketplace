@@ -127,8 +127,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         <Link href={`/doctors/${doctor.slug}`}>
           <Card
             className={cn(
-              "group h-full transition-all hover:border-primary/50 hover:shadow-lg",
-              isHighlighted && "border-primary ring-2 ring-primary/20 shadow-lg"
+              "group h-full overflow-hidden border-t-[3px] border-t-transparent transition-all duration-200 hover:border-t-blue-500 hover:shadow-lg hover:-translate-y-0.5 dark:hover:border-t-blue-400",
+              isHighlighted && "border-t-blue-500 ring-2 ring-blue-500/20 shadow-lg dark:border-t-blue-400 dark:ring-blue-400/20"
             )}
           >
             <CardContent className="p-5">
@@ -164,7 +164,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <h3 className="font-semibold group-hover:text-primary">
+                          <h3 className="font-semibold group-hover:text-blue-700 dark:group-hover:text-blue-400">
                             {doctor.title} {doctor.profile.first_name}{" "}
                             {doctor.profile.last_name}
                           </h3>
@@ -200,7 +200,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             </Badge>
                           )}
                           {matchScore != null && matchScore > 0 && (
-                            <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
+                            <Badge className="shrink-0 bg-blue-100 text-blue-800 hover:bg-blue-100 text-xs dark:bg-blue-900/40 dark:text-blue-300">
                               {matchScore}% Match
                             </Badge>
                           )}
@@ -262,8 +262,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     </div>
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="group-hover:bg-primary group-hover:text-primary-foreground"
+                      className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm dark:bg-blue-600 dark:hover:bg-blue-500"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -369,7 +368,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                                 className={cn(
                                   "shrink-0 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
                                   idx === selectedDayIndex
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
                                     : "text-muted-foreground hover:bg-muted"
                                 )}
                               >
@@ -413,7 +412,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                                     `/doctors/${doctor.slug}/book?date=${selectedDay.date}&type=${activeConsultationType}&time=${encodeURIComponent(slot.start)}`
                                   );
                                 }}
-                                className="inline-flex items-center justify-center rounded-md border border-primary/20 bg-primary/5 px-1 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                                className="inline-flex items-center justify-center rounded-md border border-blue-200/60 bg-blue-50 px-1 py-1 text-xs font-medium text-blue-700 transition-all hover:bg-blue-600 hover:text-white hover:border-blue-600 hover:shadow-sm dark:bg-blue-950/25 dark:text-blue-300 dark:border-blue-800/40 dark:hover:bg-blue-600 dark:hover:text-white"
                               >
                                 {formatSlotTime(slot.start)}
                               </button>
@@ -426,7 +425,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                                   e.stopPropagation();
                                   setShowFullAvailability(true);
                                 }}
-                                className="inline-flex items-center justify-center rounded-md border border-dashed border-muted-foreground/30 px-1 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+                                className="inline-flex items-center justify-center rounded-md border border-dashed border-blue-300/40 px-1 py-1 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-700/30 dark:text-blue-400 dark:hover:bg-blue-950/20"
                               >
                                 +{selectedDay.slots.length - 9} more
                               </button>
@@ -442,7 +441,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             e.stopPropagation();
                             setShowFullAvailability(true);
                           }}
-                          className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          className="mt-2 flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                         >
                           <CalendarDays className="h-3 w-3" />
                           View full calendar
@@ -565,8 +564,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
 
                     {/* Featured review quote */}
                     {featuredReview && (
-                      <div className="w-full rounded-lg bg-primary/5 border border-primary/10 p-3 text-left">
-                        <Quote className="h-3.5 w-3.5 text-primary/40 mb-1" />
+                      <div className="w-full rounded-lg bg-blue-50/50 border border-blue-200/30 p-3 text-left dark:bg-blue-950/20 dark:border-blue-800/20">
+                        <Quote className="h-3.5 w-3.5 text-blue-400/60 mb-1 dark:text-blue-500/40" />
                         <p className="text-xs leading-relaxed text-muted-foreground italic line-clamp-3">
                           {featuredReview.comment}
                         </p>
@@ -590,7 +589,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     {/* View profile link */}
                     <Link
                       href={`/doctors/${doctor.slug}`}
-                      className="text-sm font-medium text-primary hover:underline"
+                      className="text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
                     >
                       View Full Profile →
                     </Link>
