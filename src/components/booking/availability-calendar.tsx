@@ -245,7 +245,7 @@ export function AvailabilityCalendar({
       )}
 
       {/* Calendar */}
-      <div className={cn("relative", compact && "max-w-[420px] mx-auto")}>
+      <div className="relative">
         {loadingDates && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 rounded-md">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
