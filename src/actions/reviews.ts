@@ -3,6 +3,37 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+/** Fetch a single highlighted 5-star review (most recent with a comment) */
+export async function getFeaturedReview(doctorId: string) {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("reviews")
+    .select(
+      `comment, rating, created_at,
+       patient:profiles!reviews_patient_id_fkey(first_name, last_name)`
+    )
+    .eq("doctor_id", doctorId)
+    .eq("is_visible", true)
+    .eq("rating", 5)
+    .not("comment", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!data) return null;
+
+  const patient: any = Array.isArray(data.patient)
+    ? data.patient[0]
+    : data.patient;
+
+  return {
+    comment: data.comment as string,
+    firstName: patient?.first_name ?? "Patient",
+    lastInitial: patient?.last_name?.[0] ?? "",
+  };
+}
+
 export async function submitReview(formData: FormData) {
   const supabase = await createClient();
   const {
