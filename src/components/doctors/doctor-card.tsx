@@ -590,7 +590,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   </div>
 
                   {/* ── Right Panel: Calendar + Times (always visible) ── */}
-                  <div className="min-w-0 flex flex-col justify-center">
+                  <div className="min-w-0 flex flex-col">
                     <AvailabilityCalendar
                       doctorId={doctor.id}
                       doctorSlug={doctor.slug}
