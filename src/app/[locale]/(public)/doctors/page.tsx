@@ -137,8 +137,8 @@ export default async function DoctorsPage({
                 />
               </div>
 
-              {/* Mobile: regular grid (no map) */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:hidden">
+              {/* Mobile / tablet: stacked cards (no map) */}
+              <div className="space-y-4 lg:hidden">
                 {typedDoctors.map((doctor) => (
                   <DoctorCard
                     key={doctor.id}

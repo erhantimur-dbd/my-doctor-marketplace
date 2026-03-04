@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, useState } from "react";
+import { forwardRef, useRef, useState } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2 } from "lucide-react";
+import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
@@ -72,6 +72,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
     );
     const [cardAvailability, setCardAvailability] = useState(availability);
     const [loadingAvailability, setLoadingAvailability] = useState(false);
+    const dayScrollRef = useRef<HTMLDivElement>(null);
 
     const isTestingService = doctor.provider_type === "testing_service";
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
@@ -98,6 +99,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
       doctor.consultation_types.length > 1 &&
       availability !== undefined;
 
+    const hasAvailability = availability !== undefined;
+
     return (
       <div
         ref={ref}
@@ -112,261 +115,326 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
             )}
           >
             <CardContent className="p-5">
-              <div className="flex gap-4">
-                {/* Avatar */}
-                <Avatar className={cn("h-16 w-16 shrink-0", isTestingService && "rounded-xl")}>
-                  {doctor.profile.avatar_url ? (
-                    <AvatarImage
-                      src={doctor.profile.avatar_url}
-                      alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
-                    />
-                  ) : null}
-                  <AvatarFallback className={cn("text-lg", isTestingService && "rounded-xl bg-teal-50 dark:bg-teal-950/30")}>
-                    {isTestingService ? (
-                      <FlaskConical className="h-6 w-6 text-teal-600" />
-                    ) : (
-                      <User className="h-6 w-6" />
-                    )}
-                  </AvatarFallback>
-                </Avatar>
-
-                {/* Info */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="font-semibold group-hover:text-primary">
-                        {doctor.title} {doctor.profile.first_name}{" "}
-                        {doctor.profile.last_name}
-                      </h3>
-                      {primarySpecialty && (
-                        <p className="text-sm text-muted-foreground">
-                          {primarySpecialty.name_key
-                            .replace("specialty.", "")
-                            .replace(/_/g, " ")
-                            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                        </p>
-                      )}
-                      {doctor.avg_rating > 0 && (
-                        <div className="mt-1">
-                          <StarRating
-                            rating={doctor.avg_rating}
-                            totalReviews={doctor.total_reviews}
-                            size="sm"
-                            showCount
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 gap-1.5">
-                      {isTestingService && (
-                        <Badge className="shrink-0 bg-teal-100 text-teal-800 hover:bg-teal-100 text-xs dark:bg-teal-900/40 dark:text-teal-300">
-                          <FlaskConical className="mr-1 h-3 w-3" />
-                          Testing
-                        </Badge>
-                      )}
-                      {doctor.is_featured && (
-                        <Badge variant="secondary" className="shrink-0 text-xs">
-                          Featured
-                        </Badge>
-                      )}
-                      {matchScore != null && matchScore > 0 && (
-                        <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
-                          {matchScore}% Match
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Location */}
-                  {doctor.location && (
-                    <div className="mt-1.5 flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span>
-                        {doctor.location.city}, {doctor.location.country_code}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Badges */}
-                  <div className="mt-2 flex items-center gap-3">
-                    {doctor.verification_status === "verified" && (
-                      <div className="flex items-center gap-1 text-green-600">
-                        <Shield className="h-3.5 w-3.5" />
-                        <span className="text-xs">Verified</span>
-                      </div>
-                    )}
-                    {doctor.consultation_types?.includes("video") && (
-                      <div className="flex items-center gap-1 text-purple-600">
-                        <Video className="h-3.5 w-3.5" />
-                        <span className="text-xs">Video</span>
-                      </div>
-                    )}
-                    {doctor.is_wheelchair_accessible &&
-                      doctor.consultation_types?.includes("in_person") && (
-                      <div className="flex items-center gap-1 text-blue-600">
-                        <Accessibility className="h-3.5 w-3.5" />
-                        <span className="text-xs">Accessible</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Consultation Type Toggle */}
-              {showTypeToggle && (
-                <div className="mt-3 border-t pt-3 pb-0">
-                  <div className="flex gap-1 rounded-lg bg-muted p-0.5">
-                    {doctor.consultation_types!.includes("in_person") && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleConsultationTypeChange("in_person");
-                        }}
-                        className={cn(
-                          "flex-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
-                          activeConsultationType === "in_person"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
+              {/* Desktop: horizontal split layout (info left | availability right) */}
+              <div className={cn(
+                "flex flex-col",
+                hasAvailability && "lg:flex-row lg:gap-5"
+              )}>
+                {/* ── LEFT SIDE: Doctor info ── */}
+                <div className={cn(
+                  "min-w-0",
+                  hasAvailability ? "lg:flex-1" : "w-full"
+                )}>
+                  <div className="flex gap-4">
+                    {/* Avatar */}
+                    <Avatar className={cn("h-16 w-16 shrink-0", isTestingService && "rounded-xl")}>
+                      {doctor.profile.avatar_url ? (
+                        <AvatarImage
+                          src={doctor.profile.avatar_url}
+                          alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
+                        />
+                      ) : null}
+                      <AvatarFallback className={cn("text-lg", isTestingService && "rounded-xl bg-teal-50 dark:bg-teal-950/30")}>
+                        {isTestingService ? (
+                          <FlaskConical className="h-6 w-6 text-teal-600" />
+                        ) : (
+                          <User className="h-6 w-6" />
                         )}
-                      >
-                        In Person
-                      </button>
-                    )}
-                    {doctor.consultation_types!.includes("video") && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleConsultationTypeChange("video");
-                        }}
-                        className={cn(
-                          "flex-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
-                          activeConsultationType === "video"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        Video
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
+                      </AvatarFallback>
+                    </Avatar>
 
-              {/* Multi-Day Availability */}
-              {availability !== undefined && (
-                <div className={cn("border-t pt-3", showTypeToggle ? "mt-2" : "mt-3")}>
-                  {loadingAvailability ? (
-                    <div className="flex h-20 items-center justify-center">
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : cardAvailability && cardAvailability.days.length > 0 ? (
-                    <div>
-                      {/* Day selector tabs — scrollable for 7+ days */}
-                      <div className="mb-2 flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-green-600 shrink-0" />
-                        <div className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                          {cardAvailability.days.map((day, idx) => (
-                            <button
-                              key={day.date}
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSelectedDayIndex(idx);
-                              }}
-                              className={cn(
-                                "shrink-0 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
-                                idx === selectedDayIndex
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                                  : "text-muted-foreground hover:bg-muted"
-                              )}
-                            >
-                              {formatShortDateLabel(day.date)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Slots for selected day — 6 per row */}
-                      {selectedDay && (
-                        <div className="grid grid-cols-6 gap-1.5">
-                          {selectedDay.slots.slice(0, 12).map((slot) => (
-                            <button
-                              key={slot.start}
-                              type="button"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                router.push(
-                                  `/doctors/${doctor.slug}/book?date=${selectedDay.date}&type=${activeConsultationType}&time=${encodeURIComponent(slot.start)}`
-                                );
-                              }}
-                              className="inline-flex items-center justify-center rounded-md border border-primary/20 bg-primary/5 px-1 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
-                            >
-                              {formatSlotTime(slot.start)}
-                            </button>
-                          ))}
-                          {selectedDay.slots.length > 12 && (
-                            <span className="col-span-6 text-center text-xs text-muted-foreground">
-                              +{selectedDay.slots.length - 12} more
-                            </span>
+                    {/* Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="font-semibold group-hover:text-primary">
+                            {doctor.title} {doctor.profile.first_name}{" "}
+                            {doctor.profile.last_name}
+                          </h3>
+                          {primarySpecialty && (
+                            <p className="text-sm text-muted-foreground">
+                              {primarySpecialty.name_key
+                                .replace("specialty.", "")
+                                .replace(/_/g, " ")
+                                .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                            </p>
+                          )}
+                          {doctor.avg_rating > 0 && (
+                            <div className="mt-1">
+                              <StarRating
+                                rating={doctor.avg_rating}
+                                totalReviews={doctor.total_reviews}
+                                size="sm"
+                                showCount
+                              />
+                            </div>
                           )}
                         </div>
+                        <div className="flex shrink-0 gap-1.5">
+                          {isTestingService && (
+                            <Badge className="shrink-0 bg-teal-100 text-teal-800 hover:bg-teal-100 text-xs dark:bg-teal-900/40 dark:text-teal-300">
+                              <FlaskConical className="mr-1 h-3 w-3" />
+                              Testing
+                            </Badge>
+                          )}
+                          {doctor.is_featured && (
+                            <Badge variant="secondary" className="shrink-0 text-xs">
+                              Featured
+                            </Badge>
+                          )}
+                          {matchScore != null && matchScore > 0 && (
+                            <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
+                              {matchScore}% Match
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Location */}
+                      {doctor.location && (
+                        <div className="mt-1.5 flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5" />
+                          <span>
+                            {doctor.location.city}, {doctor.location.country_code}
+                          </span>
+                        </div>
                       )}
 
-                      {/* View full calendar link */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setShowFullAvailability(true);
-                        }}
-                        className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                      >
-                        <CalendarDays className="h-3 w-3" />
-                        View full calendar
-                      </button>
+                      {/* Badges */}
+                      <div className="mt-2 flex items-center gap-3">
+                        {doctor.verification_status === "verified" && (
+                          <div className="flex items-center gap-1 text-green-600">
+                            <Shield className="h-3.5 w-3.5" />
+                            <span className="text-xs">Verified</span>
+                          </div>
+                        )}
+                        {doctor.consultation_types?.includes("video") && (
+                          <div className="flex items-center gap-1 text-purple-600">
+                            <Video className="h-3.5 w-3.5" />
+                            <span className="text-xs">Video</span>
+                          </div>
+                        )}
+                        {doctor.is_wheelchair_accessible &&
+                          doctor.consultation_types?.includes("in_person") && (
+                          <div className="flex items-center gap-1 text-blue-600">
+                            <Accessibility className="h-3.5 w-3.5" />
+                            <span className="text-xs">Accessible</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">
-                      No availability in next 14 days
-                    </p>
-                  )}
-                </div>
-              )}
+                  </div>
 
-              {/* Footer */}
-              <div className="mt-4 flex items-center justify-between border-t pt-3">
-                <div>
-                  <span className="text-lg font-bold">
-                    {formatCurrency(
-                      doctor.consultation_fee_cents,
-                      doctor.base_currency,
-                      locale
-                    )}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {" "}
-                    / {isTestingService ? "test" : "session"}
-                  </span>
+                  {/* Price + Book — always visible on left side */}
+                  <div className="mt-4 flex items-center justify-between border-t pt-3">
+                    <div>
+                      <span className="text-lg font-bold">
+                        {formatCurrency(
+                          doctor.consultation_fee_cents,
+                          doctor.base_currency,
+                          locale
+                        )}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {" "}
+                        / {isTestingService ? "test" : "session"}
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="group-hover:bg-primary group-hover:text-primary-foreground"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        router.push(`/doctors/${doctor.slug}/book`);
+                      }}
+                    >
+                      Book Now
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="group-hover:bg-primary group-hover:text-primary-foreground"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    router.push(`/doctors/${doctor.slug}/book`);
-                  }}
-                >
-                  Book Now
-                </Button>
+
+                {/* ── RIGHT SIDE: Availability (desktop: side-by-side, mobile: below) ── */}
+                {hasAvailability && (
+                  <div className={cn(
+                    "border-t pt-3 mt-3",
+                    "lg:border-t-0 lg:border-l lg:pt-0 lg:mt-0 lg:pl-5",
+                    "lg:w-[45%] lg:shrink-0"
+                  )}>
+                    {/* Consultation Type Toggle */}
+                    {showTypeToggle && (
+                      <div className="mb-3">
+                        <div className="flex gap-1 rounded-lg bg-muted p-0.5">
+                          {doctor.consultation_types!.includes("in_person") && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleConsultationTypeChange("in_person");
+                              }}
+                              className={cn(
+                                "flex-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+                                activeConsultationType === "in_person"
+                                  ? "bg-background text-foreground shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              In Person
+                            </button>
+                          )}
+                          {doctor.consultation_types!.includes("video") && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleConsultationTypeChange("video");
+                              }}
+                              className={cn(
+                                "flex-1 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+                                activeConsultationType === "video"
+                                  ? "bg-background text-foreground shadow-sm"
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              Video
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Multi-Day Availability */}
+                    {loadingAvailability ? (
+                      <div className="flex h-20 items-center justify-center">
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : cardAvailability && cardAvailability.days.length > 0 ? (
+                      <div>
+                        {/* Day selector tabs with arrow navigation */}
+                        <div className="mb-2 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (selectedDayIndex > 0) setSelectedDayIndex(selectedDayIndex - 1);
+                              dayScrollRef.current?.scrollBy({ left: -60, behavior: "smooth" });
+                            }}
+                            className={cn(
+                              "shrink-0 rounded-md p-0.5 transition-colors",
+                              selectedDayIndex > 0
+                                ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                : "text-muted-foreground/30 cursor-default"
+                            )}
+                            disabled={selectedDayIndex === 0}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <div
+                            ref={dayScrollRef}
+                            className="flex gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                          >
+                            {cardAvailability.days.map((day, idx) => (
+                              <button
+                                key={day.date}
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedDayIndex(idx);
+                                }}
+                                className={cn(
+                                  "shrink-0 rounded-md px-2 py-0.5 text-xs font-medium transition-colors",
+                                  idx === selectedDayIndex
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                                    : "text-muted-foreground hover:bg-muted"
+                                )}
+                              >
+                                {formatShortDateLabel(day.date)}
+                              </button>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              if (cardAvailability && selectedDayIndex < cardAvailability.days.length - 1) {
+                                setSelectedDayIndex(selectedDayIndex + 1);
+                              }
+                              dayScrollRef.current?.scrollBy({ left: 60, behavior: "smooth" });
+                            }}
+                            className={cn(
+                              "shrink-0 rounded-md p-0.5 transition-colors",
+                              cardAvailability && selectedDayIndex < cardAvailability.days.length - 1
+                                ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                : "text-muted-foreground/30 cursor-default"
+                            )}
+                            disabled={!cardAvailability || selectedDayIndex >= cardAvailability.days.length - 1}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Slots for selected day */}
+                        {selectedDay && (
+                          <div className="grid grid-cols-4 lg:grid-cols-3 gap-1.5">
+                            {selectedDay.slots.slice(0, 9).map((slot) => (
+                              <button
+                                key={slot.start}
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  router.push(
+                                    `/doctors/${doctor.slug}/book?date=${selectedDay.date}&type=${activeConsultationType}&time=${encodeURIComponent(slot.start)}`
+                                  );
+                                }}
+                                className="inline-flex items-center justify-center rounded-md border border-primary/20 bg-primary/5 px-1 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                              >
+                                {formatSlotTime(slot.start)}
+                              </button>
+                            ))}
+                            {selectedDay.slots.length > 9 && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setShowFullAvailability(true);
+                                }}
+                                className="inline-flex items-center justify-center rounded-md border border-dashed border-muted-foreground/30 px-1 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
+                              >
+                                +{selectedDay.slots.length - 9} more
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* View full calendar link */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setShowFullAvailability(true);
+                          }}
+                          className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                        >
+                          <CalendarDays className="h-3 w-3" />
+                          View full calendar
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        No availability in next 14 days
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
