@@ -117,23 +117,6 @@
     .hero-form button:hover { opacity: 0.9; }
     .form-note { font-size: 0.8125rem; color: var(--muted-foreground); margin-top: 0.75rem; text-align: center; }
 
-    /* ---- Stats ---- */
-    .stats {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 1px; background: var(--border);
-      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
-    }
-    .stat {
-      background: var(--background); text-align: center;
-      padding: 2.25rem 1rem;
-    }
-    .stat-number {
-      font-size: 2rem; font-weight: 800; letter-spacing: -0.02em;
-      background: linear-gradient(135deg, var(--foreground), var(--muted-foreground));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-    .stat-label { font-size: 0.8125rem; color: var(--muted-foreground); margin-top: 0.25rem; font-weight: 500; }
-
     /* ---- Footer ---- */
     footer {
       border-top: 1px solid var(--border); padding: 2.5rem 1.5rem;
@@ -150,14 +133,10 @@
     .form-success svg { width: 20px; height: 20px; }
 
     /* ---- Responsive ---- */
-    @media (max-width: 900px) {
-      .stats { grid-template-columns: repeat(2, 1fr); }
-    }
     @media (max-width: 640px) {
       .hero h1 { font-size: 2.25rem; }
       .hero p { font-size: 1rem; }
       .hero-form { flex-direction: column; }
-      .stats { grid-template-columns: 1fr 1fr; }
       .nav-cta { display: none; }
     }
   </style>
@@ -200,26 +179,6 @@
       <p class="form-note">Free to join. No credit card required.</p>
     </div>
   </section>
-
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-number">24+</div>
-      <div class="stat-label">Medical Specialties</div>
-    </div>
-    <div class="stat">
-      <div class="stat-number">9</div>
-      <div class="stat-label">Languages Supported</div>
-    </div>
-    <div class="stat">
-      <div class="stat-number">4</div>
-      <div class="stat-label">Currencies Accepted</div>
-    </div>
-    <div class="stat">
-      <div class="stat-number">24/7</div>
-      <div class="stat-label">Online Booking</div>
-    </div>
-  </div>
 
   <!-- Footer -->
   <footer>
