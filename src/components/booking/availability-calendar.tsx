@@ -279,7 +279,8 @@ export function AvailabilityCalendar({
           className={cn("rounded-md border w-full", compact && "p-2 [--cell-size:--spacing(7)]")}
           classNames={compact ? {
             month: "flex flex-col w-full gap-2",
-            week: "flex w-full mt-1.5",
+            week: "flex w-full mt-1.5 [&>*]:flex-1",
+            weekdays: "flex [&>*]:flex-1",
           } : undefined}
         />
       </div>
