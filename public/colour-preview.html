@@ -53,14 +53,17 @@
   /* ── Grid ── */
   .schemes-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 24px;
-    max-width: 1440px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    max-width: 1600px;
     margin: 0 auto;
     padding: 24px;
     grid-auto-rows: min-content;
   }
-  @media (max-width: 900px) {
+  @media (max-width: 1200px) {
+    .schemes-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 700px) {
     .schemes-grid { grid-template-columns: 1fr; }
   }
 
@@ -73,77 +76,77 @@
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
   .scheme-header {
-    padding: 14px 20px;
+    padding: 12px 16px;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
   .scheme-header h2 {
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
   }
   .scheme-number {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    font-size: 13px;
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    font-size: 12px;
     font-weight: 700;
     color: white;
   }
   .scheme-desc {
-    font-size: 13px;
+    font-size: 11px;
     color: var(--muted);
     font-weight: 400;
   }
   .scheme-body {
-    padding: 16px 20px;
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 12px;
   }
 
   /* ── Section Labels ── */
   .section-label {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1.2px;
     color: #a1a1aa;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
 
   /* ── Hero Mock ── */
   .hero-mock {
     border-radius: 10px;
-    padding: 16px;
+    padding: 14px;
     text-align: center;
   }
   .hero-mock h3 {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
     letter-spacing: -0.3px;
     line-height: 1.2;
   }
   .hero-mock p {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
-    margin-top: 4px;
+    margin-top: 3px;
   }
   .hero-cta {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 10px;
-    padding: 8px 20px;
-    border-radius: 8px;
-    font-size: 13px;
+    gap: 5px;
+    margin-top: 8px;
+    padding: 7px 16px;
+    border-radius: 7px;
+    font-size: 12px;
     font-weight: 600;
     color: white;
     border: none;
@@ -156,7 +159,7 @@
   .doctor-card {
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 12px;
+    padding: 10px;
     display: flex;
     gap: 10px;
     transition: all 0.2s;
@@ -166,9 +169,7 @@
   .doctor-card::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     height: 3px;
     opacity: 0;
     transition: opacity 0.2s;
@@ -179,233 +180,84 @@
     transform: translateY(-1px);
   }
   .avatar {
-    width: 44px;
-    height: 44px;
+    width: 40px; height: 40px;
     border-radius: 50%;
     background: var(--muted-bg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; color: var(--muted);
     flex-shrink: 0;
   }
   .doc-info { flex: 1; min-width: 0; }
-  .doc-name-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  .doc-name {
-    font-size: 14px;
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .verified-icon {
-    width: 14px;
-    height: 14px;
-    color: var(--green);
-    flex-shrink: 0;
-  }
-  .doc-specialty {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 1px;
-  }
-  .doc-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .doc-rating {
-    color: var(--yellow);
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-  .doc-bottom {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 10px;
-  }
-  .doc-price {
-    font-size: 15px;
-    font-weight: 700;
-  }
-  .doc-price small {
-    font-size: 9px;
-    color: #a1a1aa;
-    font-weight: 400;
-  }
+  .doc-name-row { display: flex; align-items: center; gap: 5px; }
+  .doc-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .verified-icon { width: 13px; height: 13px; color: var(--green); flex-shrink: 0; }
+  .doc-specialty { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .doc-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+  .doc-rating { color: var(--yellow); display: flex; align-items: center; gap: 2px; }
+  .doc-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  .doc-price { font-size: 14px; font-weight: 700; }
+  .doc-price small { font-size: 9px; color: #a1a1aa; font-weight: 400; }
   .book-btn {
-    padding: 6px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: white;
-    border: none;
-    cursor: pointer;
+    padding: 5px 14px; border-radius: 7px; font-size: 12px;
+    font-weight: 600; color: white; border: none; cursor: pointer;
     transition: all 0.15s;
   }
   .book-btn:hover { filter: brightness(1.1); }
 
   /* ── Time Slots ── */
-  .slots-row {
-    display: flex;
-    gap: 6px;
-    margin-top: 10px;
-    flex-wrap: wrap;
-  }
+  .slots-row { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
   .slot-pill {
-    padding: 5px 12px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 500;
-    border: 1px solid;
-    cursor: pointer;
+    padding: 4px 10px; border-radius: 7px; font-size: 11px;
+    font-weight: 500; border: 1px solid; cursor: pointer;
     transition: all 0.15s;
   }
-  .slot-pill:hover {
-    color: white !important;
-  }
+  .slot-pill:hover { color: white !important; }
 
   /* ── Calendar Row ── */
-  .calendar-row {
-    display: flex;
-    gap: 4px;
-  }
+  .calendar-row { display: flex; gap: 3px; }
   .cal-day {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
+    width: 32px; height: 32px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 500; cursor: pointer;
     transition: all 0.15s;
   }
-  .cal-day.normal {
-    color: var(--fg);
-  }
-  .cal-day.normal:hover {
-    background: var(--muted-bg);
-  }
-  .cal-day.available {
-    background: var(--emerald-bg);
-    color: var(--emerald-text);
-  }
-  .cal-day.few-slots {
-    background: var(--amber-bg);
-    color: var(--amber-text);
-  }
-  .cal-day.selected {
-    color: white;
-    font-weight: 600;
-  }
-  .cal-day.today {
-    box-shadow: inset 0 0 0 2px;
-    font-weight: 600;
-  }
-  .cal-day.disabled {
-    color: #d4d4d8;
-  }
+  .cal-day.normal { color: var(--fg); }
+  .cal-day.normal:hover { background: var(--muted-bg); }
+  .cal-day.available { background: var(--emerald-bg); color: var(--emerald-text); }
+  .cal-day.few-slots { background: var(--amber-bg); color: var(--amber-text); }
+  .cal-day.selected { color: white; font-weight: 600; }
+  .cal-day.today { box-shadow: inset 0 0 0 2px; font-weight: 600; }
+  .cal-day.disabled { color: #d4d4d8; }
 
   /* ── Buttons Row ── */
-  .buttons-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
+  .buttons-row { display: flex; gap: 6px; flex-wrap: wrap; }
   .btn {
-    padding: 8px 18px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s;
+    padding: 6px 14px; border-radius: 7px; font-size: 12px;
+    font-weight: 600; cursor: pointer; transition: all 0.15s;
     white-space: nowrap;
   }
-  .btn-filled {
-    color: white;
-    border: none;
-  }
-  .btn-outline {
-    background: transparent;
-  }
-  .btn-ghost {
-    background: transparent;
-    border: 1px solid transparent;
-  }
-  .btn-ghost:hover {
-    background: var(--muted-bg);
-  }
-  .btn-destructive {
-    background: #dc2626;
-    color: white;
-    border: none;
-  }
+  .btn-filled { color: white; border: none; }
+  .btn-outline { background: transparent; }
+  .btn-ghost { background: transparent; border: 1px solid transparent; }
+  .btn-ghost:hover { background: var(--muted-bg); }
+  .btn-destructive { background: #dc2626; color: white; border: none; }
 
   /* ── Links ── */
-  .links-row {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-  }
-  .link {
-    font-size: 13px;
-    font-weight: 500;
-    text-decoration: none;
-    cursor: pointer;
-  }
+  .links-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .link { font-size: 12px; font-weight: 500; text-decoration: none; cursor: pointer; }
   .link:hover { text-decoration: underline; }
-  .link-muted {
-    font-size: 13px;
-    color: var(--muted);
-  }
 
   /* ── Swatches ── */
-  .swatches-row {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .swatch {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-  .swatch-circle {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-  }
-  .swatch-label {
-    font-size: 9px;
-    color: #a1a1aa;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+  .swatches-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .swatch { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .swatch-circle { width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--border); }
+  .swatch-label { font-size: 8px; color: #a1a1aa; font-weight: 500; text-transform: uppercase; letter-spacing: 0.4px; }
 
   /* ── Badge ── */
   .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 3px 10px;
-    border-radius: 9999px;
-    font-size: 11px;
-    font-weight: 600;
+    display: inline-flex; align-items: center;
+    padding: 2px 8px; border-radius: 9999px;
+    font-size: 10px; font-weight: 600;
   }
 
   /* ── Footer ── */
@@ -426,538 +278,527 @@
     -webkit-text-fill-color: transparent;
   }
 
-  /* ── Scheme-specific card accents ── */
-  #scheme-1 .doctor-card::before { background: #2563eb; }
-  #scheme-2 .doctor-card::before { background: #0d9488; }
-  #scheme-3 .doctor-card::before { background: #4f46e5; }
-  #scheme-4 .doctor-card::before { background: linear-gradient(90deg, #3b82f6, #14b8a6); }
-  #scheme-5 .doctor-card::before { background: #1e3a5f; }
+  /* ── Colour Picker ── */
+  .picker-section {
+    max-width: 1600px;
+    margin: 0 auto 8px;
+    padding: 0 24px;
+  }
+  .picker-card {
+    background: var(--card-bg);
+    border: 2px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .picker-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .picker-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .picker-header .tag {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .picker-body {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 0;
+  }
+  @media (max-width: 900px) {
+    .picker-body { grid-template-columns: 1fr; }
+  }
+  .picker-controls {
+    padding: 20px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  @media (max-width: 900px) {
+    .picker-controls { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+  .picker-color-input {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .picker-color-input input[type="color"] {
+    width: 56px;
+    height: 56px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    padding: 2px;
+    background: none;
+  }
+  .picker-color-input input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  .picker-color-input input[type="color"]::-webkit-color-swatch { border: none; border-radius: 8px; }
+  .picker-hex-input {
+    flex: 1;
+  }
+  .picker-hex-input label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #a1a1aa;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .picker-hex-input input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: 'Inter', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--fg);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .picker-hex-input input[type="text"]:focus {
+    border-color: #a1a1aa;
+  }
+  .picker-presets {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .picker-presets label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #a1a1aa;
+  }
+  .preset-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .preset-chip {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .preset-chip:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+  .preset-chip.active {
+    border-color: var(--fg);
+    box-shadow: 0 0 0 2px white, 0 0 0 4px var(--fg);
+  }
+  .picker-preview {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+  }
+  .picker-preview .section-label { margin-bottom: 0; }
 </style>
 </head>
 <body>
 
 <div class="page-header">
   <h1>Colour Scheme Options</h1>
-  <p>Compare 5 colour schemes applied to real UI components. Each scheme changes the <strong>primary</strong> colour — buttons, links, focus rings, selected states, and CTAs all update automatically.</p>
+  <p>Compare 15 colour schemes applied to real UI components. Each scheme changes the <strong>primary</strong> colour — buttons, links, focus rings, selected states, and CTAs all update automatically.</p>
 </div>
 
-<div class="schemes-grid">
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SCHEME 1: Ocean Blue                       -->
-  <!-- ═══════════════════════════════════════════ -->
-  <div class="scheme-panel" id="scheme-1">
-    <div class="scheme-header">
-      <h2>
-        <span class="scheme-number" style="background: #2563eb;">1</span>
-        Ocean Blue
-      </h2>
-      <span class="scheme-desc">Classic Healthcare</span>
+<!-- ═══════════════════════════════════════════ -->
+<!-- INTERACTIVE COLOUR PICKER                  -->
+<!-- ═══════════════════════════════════════════ -->
+<div class="picker-section">
+  <div class="picker-card">
+    <div class="picker-header">
+      <h2>🎨 Custom Colour Picker</h2>
+      <span class="tag">Interactive</span>
     </div>
-    <div class="scheme-body">
-
-      <!-- Hero -->
-      <div>
-        <div class="section-label">Hero Section</div>
-        <div class="hero-mock" style="background: linear-gradient(135deg, rgba(37,99,235,0.05), transparent, rgba(37,99,235,0.05));">
-          <h3>Healthcare Made <span style="color: #2563eb;">Simple, Safe</span> & Transparent</h3>
-          <p>Find verified specialists. Book appointments 24/7.</p>
-          <button class="hero-cta" style="background: #2563eb;">Find a Doctor &rarr;</button>
-        </div>
-      </div>
-
-      <!-- Doctor Card -->
-      <div>
-        <div class="section-label">Doctor Card</div>
-        <div class="doctor-card" style="--accent: #2563eb;">
-          <div class="avatar">SM</div>
-          <div class="doc-info">
-            <div class="doc-name-row">
-              <span class="doc-name">Dr. Sarah Mueller</span>
-              <svg class="verified-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-            </div>
-            <div class="doc-specialty">Cardiology</div>
-            <div class="doc-meta">
-              <span>Berlin</span>
-              <span class="doc-rating">&#9733; 4.9 <span style="color: var(--muted);">(127)</span></span>
-            </div>
-            <div class="doc-bottom">
-              <span class="doc-price">&euro;85 <small>+ fee</small></span>
-              <button class="book-btn" style="background: #2563eb;">Book Now</button>
-            </div>
-            <div class="slots-row">
-              <span class="slot-pill" style="background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.2);" onmouseover="this.style.background='#2563eb'; this.style.borderColor='#2563eb'" onmouseout="this.style.background='rgba(37,99,235,0.06)'; this.style.borderColor='rgba(37,99,235,0.2)'; this.style.color='#2563eb'">09:00</span>
-              <span class="slot-pill" style="background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.2);" onmouseover="this.style.background='#2563eb'; this.style.borderColor='#2563eb'" onmouseout="this.style.background='rgba(37,99,235,0.06)'; this.style.borderColor='rgba(37,99,235,0.2)'; this.style.color='#2563eb'">10:30</span>
-              <span class="slot-pill" style="background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.2);" onmouseover="this.style.background='#2563eb'; this.style.borderColor='#2563eb'" onmouseout="this.style.background='rgba(37,99,235,0.06)'; this.style.borderColor='rgba(37,99,235,0.2)'; this.style.color='#2563eb'">14:00</span>
-            </div>
+    <div class="picker-body">
+      <div class="picker-controls">
+        <div class="picker-color-input">
+          <input type="color" id="colorPicker" value="#2563eb">
+          <div class="picker-hex-input">
+            <label>Hex Colour</label>
+            <input type="text" id="hexInput" value="#2563eb" maxlength="7" spellcheck="false">
           </div>
         </div>
-      </div>
-
-      <!-- Calendar -->
-      <div>
-        <div class="section-label">Calendar Days</div>
-        <div class="calendar-row">
-          <div class="cal-day disabled">2</div>
-          <div class="cal-day normal">3</div>
-          <div class="cal-day available">4</div>
-          <div class="cal-day few-slots">5</div>
-          <div class="cal-day selected" style="background: #2563eb;">6</div>
-          <div class="cal-day today" style="color: #2563eb; box-shadow: inset 0 0 0 2px rgba(37,99,235,0.3);">7</div>
-          <div class="cal-day available">8</div>
+        <div class="picker-presets">
+          <label>Quick Presets</label>
+          <div class="preset-chips" id="presetChips"></div>
         </div>
       </div>
-
-      <!-- Buttons -->
-      <div>
-        <div class="section-label">Buttons</div>
-        <div class="buttons-row">
-          <button class="btn btn-filled" style="background: #2563eb;">Primary</button>
-          <button class="btn btn-outline" style="border: 1px solid #2563eb; color: #2563eb;">Outline</button>
-          <button class="btn btn-ghost" style="color: #2563eb;">Ghost</button>
-          <button class="btn btn-destructive">Destructive</button>
-        </div>
-      </div>
-
-      <!-- Links + Badge -->
-      <div>
-        <div class="section-label">Links & Badges</div>
-        <div class="links-row">
-          <a class="link" style="color: #2563eb;">View full calendar</a>
-          <span class="badge" style="background: rgba(37,99,235,0.1); color: #1d4ed8;">98% Match</span>
-          <span class="badge" style="background: #ecfdf5; color: #047857;">Verified</span>
-        </div>
-      </div>
-
-      <!-- Swatches -->
-      <div>
-        <div class="section-label">Palette</div>
-        <div class="swatches-row">
-          <div class="swatch"><div class="swatch-circle" style="background: #2563eb;"></div><span class="swatch-label">Primary</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #3b82f6;"></div><span class="swatch-label">Blue-500</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #dbeafe;"></div><span class="swatch-label">Blue-100</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #10b981;"></div><span class="swatch-label">Emerald</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #f59e0b;"></div><span class="swatch-label">Amber</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #14b8a6;"></div><span class="swatch-label">Teal</span></div>
-        </div>
-      </div>
-
+      <div class="picker-preview" id="pickerPreview"></div>
     </div>
   </div>
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SCHEME 2: Teal Fresh                       -->
-  <!-- ═══════════════════════════════════════════ -->
-  <div class="scheme-panel" id="scheme-2">
-    <div class="scheme-header">
-      <h2>
-        <span class="scheme-number" style="background: #0d9488;">2</span>
-        Teal Fresh
-      </h2>
-      <span class="scheme-desc">Modern & Clean</span>
-    </div>
-    <div class="scheme-body">
-
-      <!-- Hero -->
-      <div>
-        <div class="section-label">Hero Section</div>
-        <div class="hero-mock" style="background: linear-gradient(135deg, rgba(13,148,136,0.05), transparent, rgba(13,148,136,0.05));">
-          <h3>Healthcare Made <span style="color: #0d9488;">Simple, Safe</span> & Transparent</h3>
-          <p>Find verified specialists. Book appointments 24/7.</p>
-          <button class="hero-cta" style="background: #0d9488;">Find a Doctor &rarr;</button>
-        </div>
-      </div>
-
-      <!-- Doctor Card -->
-      <div>
-        <div class="section-label">Doctor Card</div>
-        <div class="doctor-card">
-          <div class="avatar">SM</div>
-          <div class="doc-info">
-            <div class="doc-name-row">
-              <span class="doc-name">Dr. Sarah Mueller</span>
-              <svg class="verified-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-            </div>
-            <div class="doc-specialty">Cardiology</div>
-            <div class="doc-meta">
-              <span>Berlin</span>
-              <span class="doc-rating">&#9733; 4.9 <span style="color: var(--muted);">(127)</span></span>
-            </div>
-            <div class="doc-bottom">
-              <span class="doc-price">&euro;85 <small>+ fee</small></span>
-              <button class="book-btn" style="background: #0d9488;">Book Now</button>
-            </div>
-            <div class="slots-row">
-              <span class="slot-pill" style="background: rgba(13,148,136,0.06); color: #0d9488; border-color: rgba(13,148,136,0.2);" onmouseover="this.style.background='#0d9488'; this.style.borderColor='#0d9488'" onmouseout="this.style.background='rgba(13,148,136,0.06)'; this.style.borderColor='rgba(13,148,136,0.2)'; this.style.color='#0d9488'">09:00</span>
-              <span class="slot-pill" style="background: rgba(13,148,136,0.06); color: #0d9488; border-color: rgba(13,148,136,0.2);" onmouseover="this.style.background='#0d9488'; this.style.borderColor='#0d9488'" onmouseout="this.style.background='rgba(13,148,136,0.06)'; this.style.borderColor='rgba(13,148,136,0.2)'; this.style.color='#0d9488'">10:30</span>
-              <span class="slot-pill" style="background: rgba(13,148,136,0.06); color: #0d9488; border-color: rgba(13,148,136,0.2);" onmouseover="this.style.background='#0d9488'; this.style.borderColor='#0d9488'" onmouseout="this.style.background='rgba(13,148,136,0.06)'; this.style.borderColor='rgba(13,148,136,0.2)'; this.style.color='#0d9488'">14:00</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Calendar -->
-      <div>
-        <div class="section-label">Calendar Days</div>
-        <div class="calendar-row">
-          <div class="cal-day disabled">2</div>
-          <div class="cal-day normal">3</div>
-          <div class="cal-day available">4</div>
-          <div class="cal-day few-slots">5</div>
-          <div class="cal-day selected" style="background: #0d9488;">6</div>
-          <div class="cal-day today" style="color: #0d9488; box-shadow: inset 0 0 0 2px rgba(13,148,136,0.3);">7</div>
-          <div class="cal-day available">8</div>
-        </div>
-      </div>
-
-      <!-- Buttons -->
-      <div>
-        <div class="section-label">Buttons</div>
-        <div class="buttons-row">
-          <button class="btn btn-filled" style="background: #0d9488;">Primary</button>
-          <button class="btn btn-outline" style="border: 1px solid #0d9488; color: #0d9488;">Outline</button>
-          <button class="btn btn-ghost" style="color: #0d9488;">Ghost</button>
-          <button class="btn btn-destructive">Destructive</button>
-        </div>
-      </div>
-
-      <!-- Links + Badge -->
-      <div>
-        <div class="section-label">Links & Badges</div>
-        <div class="links-row">
-          <a class="link" style="color: #0d9488;">View full calendar</a>
-          <span class="badge" style="background: rgba(13,148,136,0.1); color: #0f766e;">98% Match</span>
-          <span class="badge" style="background: #ecfdf5; color: #047857;">Verified</span>
-        </div>
-      </div>
-
-      <!-- Swatches -->
-      <div>
-        <div class="section-label">Palette</div>
-        <div class="swatches-row">
-          <div class="swatch"><div class="swatch-circle" style="background: #0d9488;"></div><span class="swatch-label">Primary</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #14b8a6;"></div><span class="swatch-label">Teal-500</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #ccfbf1;"></div><span class="swatch-label">Teal-100</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #3b82f6;"></div><span class="swatch-label">Blue</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #f59e0b;"></div><span class="swatch-label">Amber</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #10b981;"></div><span class="swatch-label">Emerald</span></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SCHEME 3: Deep Indigo                      -->
-  <!-- ═══════════════════════════════════════════ -->
-  <div class="scheme-panel" id="scheme-3">
-    <div class="scheme-header">
-      <h2>
-        <span class="scheme-number" style="background: #4f46e5;">3</span>
-        Deep Indigo
-      </h2>
-      <span class="scheme-desc">Premium & Sophisticated</span>
-    </div>
-    <div class="scheme-body">
-
-      <!-- Hero -->
-      <div>
-        <div class="section-label">Hero Section</div>
-        <div class="hero-mock" style="background: linear-gradient(135deg, rgba(79,70,229,0.05), transparent, rgba(79,70,229,0.05));">
-          <h3>Healthcare Made <span style="color: #4f46e5;">Simple, Safe</span> & Transparent</h3>
-          <p>Find verified specialists. Book appointments 24/7.</p>
-          <button class="hero-cta" style="background: #4f46e5;">Find a Doctor &rarr;</button>
-        </div>
-      </div>
-
-      <!-- Doctor Card -->
-      <div>
-        <div class="section-label">Doctor Card</div>
-        <div class="doctor-card">
-          <div class="avatar">SM</div>
-          <div class="doc-info">
-            <div class="doc-name-row">
-              <span class="doc-name">Dr. Sarah Mueller</span>
-              <svg class="verified-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-            </div>
-            <div class="doc-specialty">Cardiology</div>
-            <div class="doc-meta">
-              <span>Berlin</span>
-              <span class="doc-rating">&#9733; 4.9 <span style="color: var(--muted);">(127)</span></span>
-            </div>
-            <div class="doc-bottom">
-              <span class="doc-price">&euro;85 <small>+ fee</small></span>
-              <button class="book-btn" style="background: #4f46e5;">Book Now</button>
-            </div>
-            <div class="slots-row">
-              <span class="slot-pill" style="background: rgba(79,70,229,0.06); color: #4f46e5; border-color: rgba(79,70,229,0.2);" onmouseover="this.style.background='#4f46e5'; this.style.borderColor='#4f46e5'" onmouseout="this.style.background='rgba(79,70,229,0.06)'; this.style.borderColor='rgba(79,70,229,0.2)'; this.style.color='#4f46e5'">09:00</span>
-              <span class="slot-pill" style="background: rgba(79,70,229,0.06); color: #4f46e5; border-color: rgba(79,70,229,0.2);" onmouseover="this.style.background='#4f46e5'; this.style.borderColor='#4f46e5'" onmouseout="this.style.background='rgba(79,70,229,0.06)'; this.style.borderColor='rgba(79,70,229,0.2)'; this.style.color='#4f46e5'">10:30</span>
-              <span class="slot-pill" style="background: rgba(79,70,229,0.06); color: #4f46e5; border-color: rgba(79,70,229,0.2);" onmouseover="this.style.background='#4f46e5'; this.style.borderColor='#4f46e5'" onmouseout="this.style.background='rgba(79,70,229,0.06)'; this.style.borderColor='rgba(79,70,229,0.2)'; this.style.color='#4f46e5'">14:00</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Calendar -->
-      <div>
-        <div class="section-label">Calendar Days</div>
-        <div class="calendar-row">
-          <div class="cal-day disabled">2</div>
-          <div class="cal-day normal">3</div>
-          <div class="cal-day available">4</div>
-          <div class="cal-day few-slots">5</div>
-          <div class="cal-day selected" style="background: #4f46e5;">6</div>
-          <div class="cal-day today" style="color: #4f46e5; box-shadow: inset 0 0 0 2px rgba(79,70,229,0.3);">7</div>
-          <div class="cal-day available">8</div>
-        </div>
-      </div>
-
-      <!-- Buttons -->
-      <div>
-        <div class="section-label">Buttons</div>
-        <div class="buttons-row">
-          <button class="btn btn-filled" style="background: #4f46e5;">Primary</button>
-          <button class="btn btn-outline" style="border: 1px solid #4f46e5; color: #4f46e5;">Outline</button>
-          <button class="btn btn-ghost" style="color: #4f46e5;">Ghost</button>
-          <button class="btn btn-destructive">Destructive</button>
-        </div>
-      </div>
-
-      <!-- Links + Badge -->
-      <div>
-        <div class="section-label">Links & Badges</div>
-        <div class="links-row">
-          <a class="link" style="color: #4f46e5;">View full calendar</a>
-          <span class="badge" style="background: rgba(79,70,229,0.1); color: #4338ca;">98% Match</span>
-          <span class="badge" style="background: #ecfdf5; color: #047857;">Verified</span>
-        </div>
-      </div>
-
-      <!-- Swatches -->
-      <div>
-        <div class="section-label">Palette</div>
-        <div class="swatches-row">
-          <div class="swatch"><div class="swatch-circle" style="background: #4f46e5;"></div><span class="swatch-label">Primary</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #6366f1;"></div><span class="swatch-label">Indigo-500</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #e0e7ff;"></div><span class="swatch-label">Indigo-100</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #14b8a6;"></div><span class="swatch-label">Teal</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #f59e0b;"></div><span class="swatch-label">Amber</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #10b981;"></div><span class="swatch-label">Emerald</span></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SCHEME 4: Blue-Teal Gradient               -->
-  <!-- ═══════════════════════════════════════════ -->
-  <div class="scheme-panel" id="scheme-4">
-    <div class="scheme-header">
-      <h2>
-        <span class="scheme-number" style="background: linear-gradient(135deg, #3b82f6, #14b8a6);">4</span>
-        Blue-Teal Gradient
-      </h2>
-      <span class="scheme-desc">Matches Coming Soon Page</span>
-    </div>
-    <div class="scheme-body">
-
-      <!-- Hero -->
-      <div>
-        <div class="section-label">Hero Section</div>
-        <div class="hero-mock" style="background: linear-gradient(135deg, rgba(59,130,246,0.06), transparent, rgba(20,184,166,0.06));">
-          <h3>Healthcare Made <span class="gradient-text" style="background: linear-gradient(135deg, #3b82f6, #14b8a6);">Simple, Safe & Transparent</span></h3>
-          <p>Find verified specialists. Book appointments 24/7.</p>
-          <button class="hero-cta" style="background: linear-gradient(135deg, #3b82f6, #14b8a6);">Find a Doctor &rarr;</button>
-        </div>
-      </div>
-
-      <!-- Doctor Card -->
-      <div>
-        <div class="section-label">Doctor Card</div>
-        <div class="doctor-card">
-          <div class="avatar">SM</div>
-          <div class="doc-info">
-            <div class="doc-name-row">
-              <span class="doc-name">Dr. Sarah Mueller</span>
-              <svg class="verified-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-            </div>
-            <div class="doc-specialty">Cardiology</div>
-            <div class="doc-meta">
-              <span>Berlin</span>
-              <span class="doc-rating">&#9733; 4.9 <span style="color: var(--muted);">(127)</span></span>
-            </div>
-            <div class="doc-bottom">
-              <span class="doc-price">&euro;85 <small>+ fee</small></span>
-              <button class="book-btn" style="background: linear-gradient(135deg, #3b82f6, #14b8a6);">Book Now</button>
-            </div>
-            <div class="slots-row">
-              <span class="slot-pill" style="background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.2);" onmouseover="this.style.background='#2563eb'; this.style.borderColor='#2563eb'" onmouseout="this.style.background='rgba(37,99,235,0.06)'; this.style.borderColor='rgba(37,99,235,0.2)'; this.style.color='#2563eb'">09:00</span>
-              <span class="slot-pill" style="background: rgba(37,99,235,0.06); color: #2563eb; border-color: rgba(37,99,235,0.2);" onmouseover="this.style.background='#2563eb'; this.style.borderColor='#2563eb'" onmouseout="this.style.background='rgba(37,99,235,0.06)'; this.style.borderColor='rgba(37,99,235,0.2)'; this.style.color='#2563eb'">10:30</span>
-              <span class="slot-pill" style="background: rgba(20,184,166,0.06); color: #0d9488; border-color: rgba(20,184,166,0.2);" onmouseover="this.style.background='#0d9488'; this.style.borderColor='#0d9488'" onmouseout="this.style.background='rgba(20,184,166,0.06)'; this.style.borderColor='rgba(20,184,166,0.2)'; this.style.color='#0d9488'">14:00</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Calendar -->
-      <div>
-        <div class="section-label">Calendar Days</div>
-        <div class="calendar-row">
-          <div class="cal-day disabled">2</div>
-          <div class="cal-day normal">3</div>
-          <div class="cal-day available">4</div>
-          <div class="cal-day few-slots">5</div>
-          <div class="cal-day selected" style="background: linear-gradient(135deg, #3b82f6, #14b8a6);">6</div>
-          <div class="cal-day today" style="color: #2563eb; box-shadow: inset 0 0 0 2px rgba(37,99,235,0.3);">7</div>
-          <div class="cal-day available">8</div>
-        </div>
-      </div>
-
-      <!-- Buttons -->
-      <div>
-        <div class="section-label">Buttons</div>
-        <div class="buttons-row">
-          <button class="btn btn-filled" style="background: linear-gradient(135deg, #3b82f6, #14b8a6);">Gradient</button>
-          <button class="btn btn-filled" style="background: #2563eb;">Solid Blue</button>
-          <button class="btn btn-outline" style="border: 1px solid #2563eb; color: #2563eb;">Outline</button>
-          <button class="btn btn-ghost" style="color: #2563eb;">Ghost</button>
-        </div>
-      </div>
-
-      <!-- Links + Badge -->
-      <div>
-        <div class="section-label">Links & Badges</div>
-        <div class="links-row">
-          <a class="link" style="color: #2563eb;">View full calendar</a>
-          <span class="badge" style="background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(20,184,166,0.1)); color: #1d4ed8;">98% Match</span>
-          <span class="badge" style="background: #ecfdf5; color: #047857;">Verified</span>
-        </div>
-      </div>
-
-      <!-- Swatches -->
-      <div>
-        <div class="section-label">Palette</div>
-        <div class="swatches-row">
-          <div class="swatch"><div class="swatch-circle" style="background: linear-gradient(135deg, #3b82f6, #14b8a6);"></div><span class="swatch-label">Gradient</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #2563eb;"></div><span class="swatch-label">Blue-600</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #14b8a6;"></div><span class="swatch-label">Teal-500</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #10b981;"></div><span class="swatch-label">Emerald</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #f59e0b;"></div><span class="swatch-label">Amber</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #8b5cf6;"></div><span class="swatch-label">Violet</span></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SCHEME 5: Navy Blue                        -->
-  <!-- ═══════════════════════════════════════════ -->
-  <div class="scheme-panel" id="scheme-5">
-    <div class="scheme-header">
-      <h2>
-        <span class="scheme-number" style="background: #1e3a5f;">5</span>
-        Navy Blue
-      </h2>
-      <span class="scheme-desc">Authoritative & Traditional</span>
-    </div>
-    <div class="scheme-body">
-
-      <!-- Hero -->
-      <div>
-        <div class="section-label">Hero Section</div>
-        <div class="hero-mock" style="background: linear-gradient(135deg, rgba(30,58,95,0.06), transparent, rgba(30,58,95,0.06));">
-          <h3>Healthcare Made <span style="color: #1e3a5f;">Simple, Safe</span> & Transparent</h3>
-          <p>Find verified specialists. Book appointments 24/7.</p>
-          <button class="hero-cta" style="background: #1e3a5f;">Find a Doctor &rarr;</button>
-        </div>
-      </div>
-
-      <!-- Doctor Card -->
-      <div>
-        <div class="section-label">Doctor Card</div>
-        <div class="doctor-card">
-          <div class="avatar">SM</div>
-          <div class="doc-info">
-            <div class="doc-name-row">
-              <span class="doc-name">Dr. Sarah Mueller</span>
-              <svg class="verified-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
-            </div>
-            <div class="doc-specialty">Cardiology</div>
-            <div class="doc-meta">
-              <span>Berlin</span>
-              <span class="doc-rating">&#9733; 4.9 <span style="color: var(--muted);">(127)</span></span>
-            </div>
-            <div class="doc-bottom">
-              <span class="doc-price">&euro;85 <small>+ fee</small></span>
-              <button class="book-btn" style="background: #1e3a5f;">Book Now</button>
-            </div>
-            <div class="slots-row">
-              <span class="slot-pill" style="background: rgba(30,58,95,0.06); color: #1e3a5f; border-color: rgba(30,58,95,0.2);" onmouseover="this.style.background='#1e3a5f'; this.style.borderColor='#1e3a5f'" onmouseout="this.style.background='rgba(30,58,95,0.06)'; this.style.borderColor='rgba(30,58,95,0.2)'; this.style.color='#1e3a5f'">09:00</span>
-              <span class="slot-pill" style="background: rgba(30,58,95,0.06); color: #1e3a5f; border-color: rgba(30,58,95,0.2);" onmouseover="this.style.background='#1e3a5f'; this.style.borderColor='#1e3a5f'" onmouseout="this.style.background='rgba(30,58,95,0.06)'; this.style.borderColor='rgba(30,58,95,0.2)'; this.style.color='#1e3a5f'">10:30</span>
-              <span class="slot-pill" style="background: rgba(30,58,95,0.06); color: #1e3a5f; border-color: rgba(30,58,95,0.2);" onmouseover="this.style.background='#1e3a5f'; this.style.borderColor='#1e3a5f'" onmouseout="this.style.background='rgba(30,58,95,0.06)'; this.style.borderColor='rgba(30,58,95,0.2)'; this.style.color='#1e3a5f'">14:00</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Calendar -->
-      <div>
-        <div class="section-label">Calendar Days</div>
-        <div class="calendar-row">
-          <div class="cal-day disabled">2</div>
-          <div class="cal-day normal">3</div>
-          <div class="cal-day available">4</div>
-          <div class="cal-day few-slots">5</div>
-          <div class="cal-day selected" style="background: #1e3a5f;">6</div>
-          <div class="cal-day today" style="color: #1e3a5f; box-shadow: inset 0 0 0 2px rgba(30,58,95,0.3);">7</div>
-          <div class="cal-day available">8</div>
-        </div>
-      </div>
-
-      <!-- Buttons -->
-      <div>
-        <div class="section-label">Buttons</div>
-        <div class="buttons-row">
-          <button class="btn btn-filled" style="background: #1e3a5f;">Primary</button>
-          <button class="btn btn-outline" style="border: 1px solid #1e3a5f; color: #1e3a5f;">Outline</button>
-          <button class="btn btn-ghost" style="color: #1e3a5f;">Ghost</button>
-          <button class="btn btn-destructive">Destructive</button>
-        </div>
-      </div>
-
-      <!-- Links + Badge -->
-      <div>
-        <div class="section-label">Links & Badges</div>
-        <div class="links-row">
-          <a class="link" style="color: #1e3a5f;">View full calendar</a>
-          <span class="badge" style="background: rgba(30,58,95,0.1); color: #1e3a5f;">98% Match</span>
-          <span class="badge" style="background: #ecfdf5; color: #047857;">Verified</span>
-        </div>
-      </div>
-
-      <!-- Swatches -->
-      <div>
-        <div class="section-label">Palette</div>
-        <div class="swatches-row">
-          <div class="swatch"><div class="swatch-circle" style="background: #1e3a5f;"></div><span class="swatch-label">Primary</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #2c5282;"></div><span class="swatch-label">Navy-500</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #dbeafe;"></div><span class="swatch-label">Blue-100</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #10b981;"></div><span class="swatch-label">Emerald</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #f59e0b;"></div><span class="swatch-label">Amber</span></div>
-          <div class="swatch"><div class="swatch-circle" style="background: #14b8a6;"></div><span class="swatch-label">Teal</span></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
 </div>
+
+<div class="schemes-grid" id="grid"></div>
 
 <div class="page-footer">
   <p>MyDoctors360 Colour Scheme Preview &mdash; All semantic colours (verified green, star yellow, error red, specialty colours) remain unchanged across all schemes.</p>
 </div>
+
+<script>
+const schemes = [
+  { num: 1,  name: "Ocean Blue",       desc: "Classic Healthcare",       hex: "#2563eb", rgb: "37,99,235",    darker: "#1d4ed8", light: "#dbeafe", s2: "#3b82f6", s2n: "Blue-500",   s3: "#dbeafe", s3n: "Blue-100",   s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+  { num: 2,  name: "Teal Fresh",       desc: "Modern & Clean",           hex: "#0d9488", rgb: "13,148,136",   darker: "#0f766e", light: "#ccfbf1", s2: "#14b8a6", s2n: "Teal-500",   s3: "#ccfbf1", s3n: "Teal-100",   s4: "#3b82f6", s4n: "Blue",    s5: "#f59e0b", s5n: "Amber", s6: "#10b981", s6n: "Emerald" },
+  { num: 3,  name: "Deep Indigo",      desc: "Premium & Sophisticated",  hex: "#4f46e5", rgb: "79,70,229",    darker: "#4338ca", light: "#e0e7ff", s2: "#6366f1", s2n: "Indigo-500", s3: "#e0e7ff", s3n: "Indigo-100", s4: "#14b8a6", s4n: "Teal",    s5: "#f59e0b", s5n: "Amber", s6: "#10b981", s6n: "Emerald" },
+  { num: 4,  name: "Blue-Teal Gradient", desc: "Matches Coming Soon",    hex: "#2563eb", rgb: "37,99,235",    darker: "#1d4ed8", light: "#dbeafe", s2: "#14b8a6", s2n: "Teal-500",   s3: "#dbeafe", s3n: "Blue-100",   s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#8b5cf6", s6n: "Violet", gradient: "linear-gradient(135deg, #3b82f6, #14b8a6)" },
+  { num: 5,  name: "Navy Blue",        desc: "Authoritative & Traditional", hex: "#1e3a5f", rgb: "30,58,95",  darker: "#1e3a5f", light: "#dbeafe", s2: "#2c5282", s2n: "Navy-500",   s3: "#dbeafe", s3n: "Blue-100",   s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+  { num: 6,  name: "Cerulean",          desc: "Bright & Medical",         hex: "#0891b2", rgb: "8,145,178",    darker: "#0e7490", light: "#cffafe", s2: "#06b6d4", s2n: "Cyan-500",   s3: "#cffafe", s3n: "Cyan-100",   s4: "#3b82f6", s4n: "Blue",    s5: "#f59e0b", s5n: "Amber", s6: "#10b981", s6n: "Emerald" },
+  { num: 7,  name: "Azure",            desc: "Modern & Trustworthy",     hex: "#0078d4", rgb: "0,120,212",    darker: "#005a9e", light: "#deecf9", s2: "#2b88d8", s2n: "Azure-400",  s3: "#deecf9", s3n: "Azure-100",  s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+  { num: 8,  name: "Sapphire",         desc: "Deep & Rich",              hex: "#1e40af", rgb: "30,64,175",    darker: "#1e3a8a", light: "#dbeafe", s2: "#3b82f6", s2n: "Blue-500",   s3: "#dbeafe", s3n: "Blue-100",   s4: "#14b8a6", s4n: "Teal",    s5: "#f59e0b", s5n: "Amber", s6: "#10b981", s6n: "Emerald" },
+  { num: 9,  name: "Steel Blue",       desc: "Calm & Gentle",            hex: "#4682b4", rgb: "70,130,180",   darker: "#3a6d96", light: "#e1eef6", s2: "#5b9bd5", s2n: "Steel-400",  s3: "#e1eef6", s3n: "Steel-100",  s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+  { num: 10, name: "Electric Blue",    desc: "Vivid & Bold",             hex: "#0066ff", rgb: "0,102,255",    darker: "#0052cc", light: "#e6f0ff", s2: "#3385ff", s2n: "Elec-400",   s3: "#e6f0ff", s3n: "Elec-100",   s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+  { num: 11, name: "Petrol",           desc: "Dark Teal-Blue",           hex: "#005f73", rgb: "0,95,115",     darker: "#004652", light: "#d4f0f5", s2: "#0a9396", s2n: "Petrol-400", s3: "#d4f0f5", s3n: "Petrol-50",  s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#3b82f6", s6n: "Blue" },
+  { num: 12, name: "Cornflower",       desc: "Soft & Friendly",          hex: "#6495ed", rgb: "100,149,237",  darker: "#4a78d6", light: "#e8effc", s2: "#93b4f5", s2n: "Corn-300",   s3: "#e8effc", s3n: "Corn-100",   s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+  { num: 13, name: "Royal Blue",       desc: "Classic & Regal",          hex: "#4169e1", rgb: "65,105,225",   darker: "#3457c9", light: "#e2e8f9", s2: "#6384e8", s2n: "Royal-400",  s3: "#e2e8f9", s3n: "Royal-100",  s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+  { num: 14, name: "Midnight",         desc: "Ultra Dark & Sleek",       hex: "#172554", rgb: "23,37,84",     darker: "#0f172a", light: "#dbeafe", s2: "#1e3a5f", s2n: "Dark-600",   s3: "#dbeafe", s3n: "Blue-100",   s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+  { num: 15, name: "Cobalt",           desc: "Strong & Confident",       hex: "#0047ab", rgb: "0,71,171",     darker: "#003580", light: "#d9e6f7", s2: "#2563eb", s2n: "Blue-600",   s3: "#d9e6f7", s3n: "Cobalt-100", s4: "#10b981", s4n: "Emerald", s5: "#f59e0b", s5n: "Amber", s6: "#14b8a6", s6n: "Teal" },
+];
+
+const shieldSvg = `<svg class="verified-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>`;
+
+function buildPanel(s) {
+  const bg = s.gradient || s.hex;
+  const isGrad = !!s.gradient;
+  const r = s.rgb;
+  const h = s.hex;
+  const numBg = isGrad ? s.gradient : h;
+
+  return `
+  <div class="scheme-panel" id="scheme-${s.num}">
+    <div class="scheme-header">
+      <h2>
+        <span class="scheme-number" style="background: ${numBg};">${s.num}</span>
+        ${s.name}
+      </h2>
+      <span class="scheme-desc">${s.desc}</span>
+    </div>
+    <div class="scheme-body">
+
+      <!-- Hero -->
+      <div>
+        <div class="section-label">Hero Section</div>
+        <div class="hero-mock" style="background: linear-gradient(135deg, rgba(${r},0.05), transparent, rgba(${r},0.05));">
+          <h3>Healthcare Made ${isGrad
+            ? `<span class="gradient-text" style="background: ${s.gradient};">Simple, Safe & Transparent</span>`
+            : `<span style="color: ${h};">Simple, Safe</span> & Transparent`}</h3>
+          <p>Find verified specialists. Book appointments 24/7.</p>
+          <button class="hero-cta" style="background: ${bg};">Find a Doctor &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Doctor Card -->
+      <div>
+        <div class="section-label">Doctor Card</div>
+        <div class="doctor-card">
+          <div class="avatar">SM</div>
+          <div class="doc-info">
+            <div class="doc-name-row">
+              <span class="doc-name">Dr. Sarah Mueller</span>
+              ${shieldSvg}
+            </div>
+            <div class="doc-specialty">Cardiology</div>
+            <div class="doc-meta">
+              <span>Berlin</span>
+              <span class="doc-rating">&#9733; 4.9 <span style="color: var(--muted);">(127)</span></span>
+            </div>
+            <div class="doc-bottom">
+              <span class="doc-price">&euro;85 <small>+ fee</small></span>
+              <button class="book-btn" style="background: ${bg};">Book Now</button>
+            </div>
+            <div class="slots-row">
+              ${["09:00","10:30","14:00"].map(t =>
+                `<span class="slot-pill" style="background: rgba(${r},0.06); color: ${h}; border-color: rgba(${r},0.2);"
+                  onmouseover="this.style.background='${h}'; this.style.borderColor='${h}'"
+                  onmouseout="this.style.background='rgba(${r},0.06)'; this.style.borderColor='rgba(${r},0.2)'; this.style.color='${h}'">${t}</span>`
+              ).join("\n              ")}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar -->
+      <div>
+        <div class="section-label">Calendar Days</div>
+        <div class="calendar-row">
+          <div class="cal-day disabled">2</div>
+          <div class="cal-day normal">3</div>
+          <div class="cal-day available">4</div>
+          <div class="cal-day few-slots">5</div>
+          <div class="cal-day selected" style="background: ${bg};">6</div>
+          <div class="cal-day today" style="color: ${h}; box-shadow: inset 0 0 0 2px rgba(${r},0.3);">7</div>
+          <div class="cal-day available">8</div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div>
+        <div class="section-label">Buttons</div>
+        <div class="buttons-row">
+          <button class="btn btn-filled" style="background: ${bg};">Primary</button>
+          <button class="btn btn-outline" style="border: 1px solid ${h}; color: ${h};">Outline</button>
+          <button class="btn btn-ghost" style="color: ${h};">Ghost</button>
+          <button class="btn btn-destructive">Destructive</button>
+        </div>
+      </div>
+
+      <!-- Links + Badge -->
+      <div>
+        <div class="section-label">Links & Badges</div>
+        <div class="links-row">
+          <a class="link" style="color: ${h};">View full calendar</a>
+          <span class="badge" style="background: rgba(${r},0.1); color: ${s.darker};">98% Match</span>
+          <span class="badge" style="background: #ecfdf5; color: #047857;">Verified</span>
+        </div>
+      </div>
+
+      <!-- Swatches -->
+      <div>
+        <div class="section-label">Palette</div>
+        <div class="swatches-row">
+          <div class="swatch"><div class="swatch-circle" style="background: ${isGrad ? s.gradient : h};"></div><span class="swatch-label">${isGrad ? "Gradient" : "Primary"}</span></div>
+          <div class="swatch"><div class="swatch-circle" style="background: ${s.s2};"></div><span class="swatch-label">${s.s2n}</span></div>
+          <div class="swatch"><div class="swatch-circle" style="background: ${s.s3};"></div><span class="swatch-label">${s.s3n}</span></div>
+          <div class="swatch"><div class="swatch-circle" style="background: ${s.s4};"></div><span class="swatch-label">${s.s4n}</span></div>
+          <div class="swatch"><div class="swatch-circle" style="background: ${s.s5};"></div><span class="swatch-label">${s.s5n}</span></div>
+          <div class="swatch"><div class="swatch-circle" style="background: ${s.s6};"></div><span class="swatch-label">${s.s6n}</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+}
+
+// Inject card accent CSS
+const styleEl = document.createElement('style');
+styleEl.textContent = schemes.map(s =>
+  `#scheme-${s.num} .doctor-card::before { background: ${s.gradient || s.hex}; }`
+).join('\n');
+document.head.appendChild(styleEl);
+
+// Render all panels
+document.getElementById('grid').innerHTML = schemes.map(buildPanel).join('\n');
+
+// ── Interactive Colour Picker ──────────────────
+const colorPicker = document.getElementById('colorPicker');
+const hexInput = document.getElementById('hexInput');
+const presetChips = document.getElementById('presetChips');
+const pickerPreview = document.getElementById('pickerPreview');
+
+// Helper: hex to RGB string
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `${r},${g},${b}`;
+}
+
+// Helper: darken a hex colour
+function darkenHex(hex, amount) {
+  let r = parseInt(hex.slice(1,3), 16);
+  let g = parseInt(hex.slice(3,5), 16);
+  let b = parseInt(hex.slice(5,7), 16);
+  r = Math.max(0, Math.round(r * (1 - amount)));
+  g = Math.max(0, Math.round(g * (1 - amount)));
+  b = Math.max(0, Math.round(b * (1 - amount)));
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+
+// Helper: lighten a hex colour
+function lightenHex(hex, amount) {
+  let r = parseInt(hex.slice(1,3), 16);
+  let g = parseInt(hex.slice(3,5), 16);
+  let b = parseInt(hex.slice(5,7), 16);
+  r = Math.min(255, Math.round(r + (255 - r) * amount));
+  g = Math.min(255, Math.round(g + (255 - g) * amount));
+  b = Math.min(255, Math.round(b + (255 - b) * amount));
+  return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+}
+
+// Build preset chips from all schemes
+const presetColors = schemes.filter(s => !s.gradient).map(s => ({ hex: s.hex, name: s.name }));
+// Add extra blue presets not already in schemes
+[
+  { hex: "#0ea5e9", name: "Sky 500" },
+  { hex: "#0284c7", name: "Sky 600" },
+  { hex: "#0369a1", name: "Sky 700" },
+  { hex: "#1d4ed8", name: "Blue 700" },
+  { hex: "#1e3a8a", name: "Blue 900" },
+  { hex: "#3730a3", name: "Indigo 800" },
+  { hex: "#0c4a6e", name: "Sky 900" },
+  { hex: "#155e75", name: "Cyan 800" },
+  { hex: "#164e63", name: "Cyan 900" },
+  { hex: "#1a56db", name: "Blue Alt" },
+].forEach(p => {
+  if (!presetColors.find(c => c.hex === p.hex)) presetColors.push(p);
+});
+
+presetChips.innerHTML = presetColors.map(p =>
+  `<div class="preset-chip" data-color="${p.hex}" title="${p.name}" style="background: ${p.hex};" onclick="applyPickerColor('${p.hex}')"></div>`
+).join('');
+
+function updatePreview(hex) {
+  const rgb = hexToRgb(hex);
+  const darker = darkenHex(hex, 0.15);
+  const light = lightenHex(hex, 0.85);
+
+  pickerPreview.innerHTML = `
+    <!-- Hero -->
+    <div>
+      <div class="section-label">Hero Section</div>
+      <div class="hero-mock" style="background: linear-gradient(135deg, rgba(${rgb},0.05), transparent, rgba(${rgb},0.05));">
+        <h3>Healthcare Made <span style="color: ${hex};">Simple, Safe</span> & Transparent</h3>
+        <p>Find verified specialists. Book appointments 24/7.</p>
+        <button class="hero-cta" style="background: ${hex};">Find a Doctor &rarr;</button>
+      </div>
+    </div>
+
+    <!-- Doctor Card + Calendar + Buttons in a row -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+      <div>
+        <div class="section-label">Doctor Card</div>
+        <div class="doctor-card" id="picker-doc-card">
+          <div class="avatar">SM</div>
+          <div class="doc-info">
+            <div class="doc-name-row">
+              <span class="doc-name">Dr. Sarah Mueller</span>
+              ${shieldSvg}
+            </div>
+            <div class="doc-specialty">Cardiology</div>
+            <div class="doc-meta">
+              <span>Berlin</span>
+              <span class="doc-rating">&#9733; 4.9 <span style="color: var(--muted);">(127)</span></span>
+            </div>
+            <div class="doc-bottom">
+              <span class="doc-price">&euro;85 <small>+ fee</small></span>
+              <button class="book-btn" style="background: ${hex};">Book Now</button>
+            </div>
+            <div class="slots-row">
+              ${["09:00","10:30","14:00"].map(t =>
+                `<span class="slot-pill" style="background: rgba(${rgb},0.06); color: ${hex}; border-color: rgba(${rgb},0.2);"
+                  onmouseover="this.style.background='${hex}'; this.style.borderColor='${hex}'"
+                  onmouseout="this.style.background='rgba(${rgb},0.06)'; this.style.borderColor='rgba(${rgb},0.2)'; this.style.color='${hex}'">${t}</span>`
+              ).join("")}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <div class="section-label">Calendar Days</div>
+          <div class="calendar-row">
+            <div class="cal-day disabled">2</div>
+            <div class="cal-day normal">3</div>
+            <div class="cal-day available">4</div>
+            <div class="cal-day few-slots">5</div>
+            <div class="cal-day selected" style="background: ${hex};">6</div>
+            <div class="cal-day today" style="color: ${hex}; box-shadow: inset 0 0 0 2px rgba(${rgb},0.3);">7</div>
+            <div class="cal-day available">8</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label">Buttons</div>
+          <div class="buttons-row">
+            <button class="btn btn-filled" style="background: ${hex};">Primary</button>
+            <button class="btn btn-outline" style="border: 1px solid ${hex}; color: ${hex};">Outline</button>
+            <button class="btn btn-ghost" style="color: ${hex};">Ghost</button>
+            <button class="btn btn-destructive">Destructive</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label">Links & Badges</div>
+          <div class="links-row">
+            <a class="link" style="color: ${hex};">View full calendar</a>
+            <span class="badge" style="background: rgba(${rgb},0.1); color: ${darker};">98% Match</span>
+            <span class="badge" style="background: #ecfdf5; color: #047857;">Verified</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-label">Palette</div>
+          <div class="swatches-row">
+            <div class="swatch"><div class="swatch-circle" style="background: ${hex};"></div><span class="swatch-label">Primary</span></div>
+            <div class="swatch"><div class="swatch-circle" style="background: ${lightenHex(hex, 0.2)};"></div><span class="swatch-label">Light</span></div>
+            <div class="swatch"><div class="swatch-circle" style="background: ${light};"></div><span class="swatch-label">Bg</span></div>
+            <div class="swatch"><div class="swatch-circle" style="background: ${darker};"></div><span class="swatch-label">Dark</span></div>
+            <div class="swatch"><div class="swatch-circle" style="background: #10b981;"></div><span class="swatch-label">Emerald</span></div>
+            <div class="swatch"><div class="swatch-circle" style="background: #f59e0b;"></div><span class="swatch-label">Amber</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Dynamic card accent
+  const card = document.getElementById('picker-doc-card');
+  if (card) {
+    card.style.setProperty('--accent', hex);
+    // Inject a style for the ::before pseudo-element
+    let accentStyle = document.getElementById('picker-accent-style');
+    if (!accentStyle) {
+      accentStyle = document.createElement('style');
+      accentStyle.id = 'picker-accent-style';
+      document.head.appendChild(accentStyle);
+    }
+    accentStyle.textContent = '#picker-doc-card::before { background: ' + hex + '; }';
+  }
+
+  // Update active preset chip
+  document.querySelectorAll('.preset-chip').forEach(chip => {
+    chip.classList.toggle('active', chip.dataset.color.toLowerCase() === hex.toLowerCase());
+  });
+}
+
+function applyPickerColor(hex) {
+  hex = hex.toLowerCase();
+  colorPicker.value = hex;
+  hexInput.value = hex;
+  updatePreview(hex);
+}
+
+// Event listeners
+colorPicker.addEventListener('input', (e) => {
+  hexInput.value = e.target.value;
+  updatePreview(e.target.value);
+});
+
+hexInput.addEventListener('input', (e) => {
+  let val = e.target.value;
+  if (!val.startsWith('#')) val = '#' + val;
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    colorPicker.value = val;
+    updatePreview(val);
+  }
+});
+
+// Initial render
+updatePreview('#2563eb');
+</script>
 
 </body>
 </html>
