@@ -26,7 +26,23 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
+// Domains that should only serve the coming-soon page
+const COMING_SOON_HOSTS = [
+  "mydoctors360.com",
+  "www.mydoctors360.com",
+  "mydoctors360.co.uk",
+  "www.mydoctors360.co.uk",
+  "mydoctors360.eu",
+  "www.mydoctors360.eu",
+];
+
 export async function middleware(request: NextRequest) {
+  // Gate coming-soon domains — block all production routes
+  const host = request.headers.get("host")?.replace(/:\d+$/, "") || "";
+  if (COMING_SOON_HOSTS.includes(host)) {
+    return NextResponse.rewrite(new URL("/coming-soon/index.html", request.url));
+  }
+
   // Run intl middleware first
   const intlResponse = intlMiddleware(request);
 
@@ -89,6 +105,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|coming-soon|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

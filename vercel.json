@@ -8,5 +8,37 @@
       "path": "/api/cron/cleanup-expired",
       "schedule": "*/5 * * * *"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "mydoctors360.com" }],
+      "destination": "/coming-soon/index.html"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.mydoctors360.com" }],
+      "destination": "/coming-soon/index.html"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "mydoctors360.co.uk" }],
+      "destination": "/coming-soon/index.html"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.mydoctors360.co.uk" }],
+      "destination": "/coming-soon/index.html"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "mydoctors360.eu" }],
+      "destination": "/coming-soon/index.html"
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.mydoctors360.eu" }],
+      "destination": "/coming-soon/index.html"
+    }
   ]
 }
