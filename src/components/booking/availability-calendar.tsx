@@ -207,7 +207,7 @@ export function AvailabilityCalendar({
   const dateFnsLocale = localeMap[locale] || localeMap.en;
 
   return (
-    <div className={cn("space-y-3", compact && "space-y-1.5")}>
+    <div className={cn("space-y-3", compact && "space-y-1.5 flex flex-col h-full")}>
       {/* Consultation type toggle */}
       {showTypeToggle && (
         <div className="flex gap-1.5 rounded-lg bg-muted p-1">
@@ -299,7 +299,7 @@ export function AvailabilityCalendar({
       </div>
 
       {/* Time slots section */}
-      <div className={compact ? "min-h-[60px]" : "min-h-[80px]"}>
+      <div className={compact ? "min-h-[60px] flex-1 overflow-y-auto" : "min-h-[80px]"}>
         {!selectedDate && (
           <div className={cn(
             "flex items-center justify-center rounded-md border border-dashed",
