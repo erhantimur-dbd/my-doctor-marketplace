@@ -245,7 +245,7 @@ export function AvailabilityCalendar({
       )}
 
       {/* Calendar */}
-      <div className={cn("relative", compact && "max-w-[340px] mx-auto")}>
+      <div className={cn("relative", compact && "max-w-[420px] mx-auto")}>
         {loadingDates && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 rounded-md">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -276,12 +276,10 @@ export function AvailabilityCalendar({
             Week: ({ week, ...props }) => <div role="row" {...props} />,
             Weeks: (props) => <div role="rowgroup" {...props} />,
           }}
-          className={cn("rounded-md border w-full", compact && "p-1.5 [--cell-size:--spacing(6)]")}
+          className={cn("rounded-md border w-full", compact && "p-2 [--cell-size:--spacing(7)]")}
           classNames={compact ? {
             month: "flex flex-col w-full gap-2",
-            week: "flex w-full mt-1",
-            weekday: "text-muted-foreground rounded-md flex-1 font-normal text-[0.7rem] select-none",
-            caption_label: "select-none font-medium text-xs",
+            week: "flex w-full mt-1.5",
           } : undefined}
         />
       </div>
@@ -317,9 +315,9 @@ export function AvailabilityCalendar({
               <Clock className="mr-1.5 inline-block h-3.5 w-3.5" />
               {t("available_times")}
             </p>
-            <div className={cn("grid", compact ? "grid-cols-4 gap-1" : "grid-cols-3 gap-1.5 sm:grid-cols-4")}>
-              {Array.from({ length: 8 }).map((_, i) => (
-                <Skeleton key={i} className={cn("w-full rounded-md", compact ? "h-7" : "h-9")} />
+            <div className={cn("grid", compact ? "grid-cols-3 gap-1.5" : "grid-cols-3 gap-1.5 sm:grid-cols-4")}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className={cn("w-full rounded-md", compact ? "h-8" : "h-9")} />
               ))}
             </div>
           </div>
@@ -344,7 +342,7 @@ export function AvailabilityCalendar({
             </p>
             <div className={cn(
               "grid",
-              compact ? "grid-cols-4 gap-1" : "grid-cols-3 gap-1.5 sm:grid-cols-4"
+              compact ? "grid-cols-3 gap-1.5" : "grid-cols-3 gap-1.5 sm:grid-cols-4"
             )}>
               {slots.map((slot) => (
                 <Button
@@ -353,7 +351,7 @@ export function AvailabilityCalendar({
                   size="sm"
                   className={cn(
                     "font-medium border-primary/20 bg-primary/5 text-primary hover:bg-primary hover:text-primary-foreground",
-                    compact ? "h-7 text-xs" : "h-9 text-sm"
+                    compact ? "h-8 text-sm" : "h-9 text-sm"
                   )}
                   onClick={() => handleSlotClick(slot)}
                 >

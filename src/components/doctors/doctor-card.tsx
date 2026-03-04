@@ -480,125 +480,113 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
               <div className="overflow-y-auto md:overflow-hidden min-h-0 -mx-1 px-1 flex-1">
                 <div className="flex flex-col md:grid md:grid-cols-[2fr_3fr] md:gap-6 h-full">
                   {/* ── Left Panel: Doctor Profile (desktop only) ── */}
-                  <div className="hidden md:flex md:flex-col md:justify-between md:border-r md:pr-6 md:overflow-hidden">
-                    {/* Top: Avatar + Name + Details */}
+                  <div className="hidden md:flex md:flex-col md:items-center md:justify-center md:text-center md:border-r md:pr-6 md:overflow-hidden md:gap-3">
+                    <Avatar className={cn("h-20 w-20", isTestingService && "rounded-xl")}>
+                      {doctor.profile.avatar_url ? (
+                        <AvatarImage
+                          src={doctor.profile.avatar_url}
+                          alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
+                        />
+                      ) : null}
+                      <AvatarFallback className={cn("text-2xl", isTestingService && "rounded-xl bg-teal-50 dark:bg-teal-950/30")}>
+                        {isTestingService ? (
+                          <FlaskConical className="h-8 w-8 text-teal-600" />
+                        ) : (
+                          <User className="h-8 w-8" />
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+
                     <div>
-                      <div className="flex flex-col items-center text-center">
-                        <Avatar className={cn("h-16 w-16", isTestingService && "rounded-xl")}>
-                          {doctor.profile.avatar_url ? (
-                            <AvatarImage
-                              src={doctor.profile.avatar_url}
-                              alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
-                            />
-                          ) : null}
-                          <AvatarFallback className={cn("text-xl", isTestingService && "rounded-xl bg-teal-50 dark:bg-teal-950/30")}>
-                            {isTestingService ? (
-                              <FlaskConical className="h-6 w-6 text-teal-600" />
-                            ) : (
-                              <User className="h-6 w-6" />
-                            )}
-                          </AvatarFallback>
-                        </Avatar>
+                      <h3 className="text-lg font-semibold leading-tight">
+                        {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
+                      </h3>
+                      {primarySpecialty && (
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          {primarySpecialty.name_key
+                            .replace("specialty.", "")
+                            .replace(/_/g, " ")
+                            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        </p>
+                      )}
+                    </div>
 
-                        <h3 className="mt-2 text-base font-semibold leading-tight">
-                          {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
-                        </h3>
+                    {doctor.avg_rating > 0 && (
+                      <StarRating
+                        rating={doctor.avg_rating}
+                        totalReviews={doctor.total_reviews}
+                        size="sm"
+                        showCount
+                      />
+                    )}
 
-                        {primarySpecialty && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {primarySpecialty.name_key
-                              .replace("specialty.", "")
-                              .replace(/_/g, " ")
-                              .replace(/\b\w/g, (l: string) => l.toUpperCase())}
-                          </p>
-                        )}
-
-                        {doctor.avg_rating > 0 && (
-                          <div className="mt-1.5">
-                            <StarRating
-                              rating={doctor.avg_rating}
-                              totalReviews={doctor.total_reviews}
-                              size="sm"
-                              showCount
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Detail rows — centered */}
-                      <div className="mt-3 flex flex-col items-center gap-2 text-xs">
-                        {doctor.location && (
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            <span>{doctor.location.city}, {doctor.location.country_code}</span>
-                          </div>
-                        )}
-
-                        {doctor.verification_status === "verified" && (
-                          <div className="flex items-center gap-1.5 text-green-600">
-                            <Shield className="h-3.5 w-3.5 shrink-0" />
-                            <span>Verified</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-2.5">
-                          {doctor.consultation_types?.includes("video") && (
-                            <div className="flex items-center gap-1 text-purple-600">
-                              <Video className="h-3.5 w-3.5" />
-                              <span>Video</span>
-                            </div>
-                          )}
-                          {doctor.consultation_types?.includes("in_person") && (
-                            <div className="flex items-center gap-1 text-blue-600">
-                              <User className="h-3.5 w-3.5" />
-                              <span>In Person</span>
-                            </div>
-                          )}
+                    {/* Detail rows */}
+                    <div className="flex flex-col items-center gap-1.5 text-sm">
+                      {doctor.location && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="h-4 w-4 shrink-0" />
+                          <span>{doctor.location.city}, {doctor.location.country_code}</span>
                         </div>
-
-                        {doctor.languages && doctor.languages.length > 0 && (
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <Globe className="h-3.5 w-3.5 shrink-0" />
-                            <span>{doctor.languages.map((l) => l.toUpperCase()).join(", ")}</span>
+                      )}
+                      {doctor.verification_status === "verified" && (
+                        <div className="flex items-center gap-2 text-green-600">
+                          <Shield className="h-4 w-4 shrink-0" />
+                          <span>Verified</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-3">
+                        {doctor.consultation_types?.includes("video") && (
+                          <div className="flex items-center gap-1.5 text-purple-600">
+                            <Video className="h-4 w-4" />
+                            <span>Video</span>
+                          </div>
+                        )}
+                        {doctor.consultation_types?.includes("in_person") && (
+                          <div className="flex items-center gap-1.5 text-blue-600">
+                            <User className="h-4 w-4" />
+                            <span>In Person</span>
                           </div>
                         )}
                       </div>
-
-                      {/* Featured review quote */}
-                      {featuredReview && (
-                        <div className="mt-3 rounded-lg bg-primary/5 border border-primary/10 p-2.5">
-                          <Quote className="h-3 w-3 text-primary/40 mb-1" />
-                          <p className="text-[11px] leading-relaxed text-muted-foreground italic line-clamp-3">
-                            {featuredReview.comment}
-                          </p>
-                          <p className="mt-1 text-[10px] text-muted-foreground/70 font-medium">
-                            — {featuredReview.firstName} {featuredReview.lastInitial}.
-                          </p>
+                      {doctor.languages && doctor.languages.length > 0 && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Globe className="h-4 w-4 shrink-0" />
+                          <span>{doctor.languages.map((l) => l.toUpperCase()).join(", ")}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* Bottom: Fee + link */}
-                    <div>
-                      {/* Fee card */}
-                      <div className="mt-3 rounded-lg bg-muted/50 p-2.5 text-center">
-                        <span className="text-lg font-bold">
-                          {formatCurrency(doctor.consultation_fee_cents, doctor.base_currency, locale)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {" "}/ {isTestingService ? "test" : "session"}
-                        </span>
-                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">+ booking fee</p>
+                    {/* Featured review quote */}
+                    {featuredReview && (
+                      <div className="w-full rounded-lg bg-primary/5 border border-primary/10 p-3 text-left">
+                        <Quote className="h-3.5 w-3.5 text-primary/40 mb-1" />
+                        <p className="text-xs leading-relaxed text-muted-foreground italic line-clamp-3">
+                          {featuredReview.comment}
+                        </p>
+                        <p className="mt-1.5 text-[11px] text-muted-foreground/70 font-medium">
+                          — {featuredReview.firstName} {featuredReview.lastInitial}.
+                        </p>
                       </div>
+                    )}
 
-                      {/* View profile link */}
-                      <Link
-                        href={`/doctors/${doctor.slug}`}
-                        className="mt-2 inline-flex items-center justify-center w-full text-xs font-medium text-primary hover:underline"
-                      >
-                        View Full Profile →
-                      </Link>
+                    {/* Fee card */}
+                    <div className="w-full rounded-lg bg-muted/50 p-3 text-center">
+                      <span className="text-xl font-bold">
+                        {formatCurrency(doctor.consultation_fee_cents, doctor.base_currency, locale)}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {" "}/ {isTestingService ? "test" : "session"}
+                      </span>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5">+ booking fee</p>
                     </div>
+
+                    {/* View profile link */}
+                    <Link
+                      href={`/doctors/${doctor.slug}`}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      View Full Profile →
+                    </Link>
                   </div>
 
                   {/* ── Right Panel: Calendar + Times (always visible) ── */}
