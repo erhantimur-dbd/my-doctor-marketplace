@@ -8,12 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, Quote } from "lucide-react";
+import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, Quote, X } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
@@ -462,7 +463,13 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
           <Dialog open={showFullAvailability} onOpenChange={setShowFullAvailability}>
-            <DialogContent className="max-w-sm md:max-w-5xl p-4 md:p-6 gap-2 md:h-[70vh] max-h-[90vh] flex flex-col">
+            <DialogContent showCloseButton={false} className="max-w-sm md:max-w-5xl p-4 md:p-6 gap-2 md:h-[70vh] max-h-[90vh] flex flex-col">
+              {/* Custom close button */}
+              <DialogClose className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/80 text-white shadow-md transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </DialogClose>
+
               {/* Mobile header (hidden on desktop where left panel shows name) */}
               <DialogHeader className="pb-0 shrink-0 md:hidden">
                 <DialogTitle className="text-base">
@@ -590,7 +597,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   </div>
 
                   {/* ── Right Panel: Calendar + Times (always visible) ── */}
-                  <div className="min-w-0 flex flex-col">
+                  <div className="min-w-0 flex flex-col md:justify-center">
                     <AvailabilityCalendar
                       doctorId={doctor.id}
                       doctorSlug={doctor.slug}
