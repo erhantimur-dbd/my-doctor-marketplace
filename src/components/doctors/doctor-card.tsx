@@ -443,21 +443,23 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
           <Dialog open={showFullAvailability} onOpenChange={setShowFullAvailability}>
-            <DialogContent className="max-w-sm p-4 gap-2">
-              <DialogHeader className="pb-0">
+            <DialogContent className="max-w-sm p-4 gap-2 max-h-[90vh] flex flex-col">
+              <DialogHeader className="pb-0 shrink-0">
                 <DialogTitle className="text-base">
                   {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
                 </DialogTitle>
               </DialogHeader>
-              <AvailabilityCalendar
-                doctorId={doctor.id}
-                doctorSlug={doctor.slug}
-                consultationType={activeConsultationType}
-                consultationTypes={doctor.consultation_types}
-                initialDate={cardAvailability?.days[0]?.date}
-                locale={locale}
-                compact
-              />
+              <div className="overflow-y-auto min-h-0 -mx-1 px-1">
+                <AvailabilityCalendar
+                  doctorId={doctor.id}
+                  doctorSlug={doctor.slug}
+                  consultationType={activeConsultationType}
+                  consultationTypes={doctor.consultation_types}
+                  initialDate={cardAvailability?.days[0]?.date}
+                  locale={locale}
+                  compact
+                />
+              </div>
             </DialogContent>
           </Dialog>
         )}
