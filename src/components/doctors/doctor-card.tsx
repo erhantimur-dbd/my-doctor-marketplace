@@ -462,7 +462,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
           <Dialog open={showFullAvailability} onOpenChange={setShowFullAvailability}>
-            <DialogContent className="max-w-sm md:max-w-4xl p-4 md:p-6 gap-2 md:h-[80vh] max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-sm md:max-w-5xl p-4 md:p-6 gap-2 max-h-[90vh] flex flex-col">
               {/* Mobile header (hidden on desktop where left panel shows name) */}
               <DialogHeader className="pb-0 shrink-0 md:hidden">
                 <DialogTitle className="text-base">
@@ -477,8 +477,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                 View availability and book an appointment
               </DialogDescription>
 
-              <div className="overflow-y-auto md:overflow-hidden min-h-0 -mx-1 px-1">
-                <div className="flex flex-col md:grid md:grid-cols-[240px_1fr] md:gap-6 md:h-full">
+              <div className="overflow-y-auto min-h-0 -mx-1 px-1">
+                <div className="flex flex-col md:grid md:grid-cols-[2fr_3fr] md:gap-6">
                   {/* ── Left Panel: Doctor Profile (desktop only) ── */}
                   <div className="hidden md:flex md:flex-col md:justify-between md:border-r md:pr-6 md:overflow-hidden">
                     {/* Top: Avatar + Name + Details */}
