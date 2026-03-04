@@ -29,7 +29,7 @@ interface DoctorMapProps {
   centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
 }
 
-const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 /* ── Auto-fit bounds when doctors change ── */
 function FitBounds({
@@ -177,6 +177,14 @@ export function DoctorMap({
       setInfoDoctor(null);
     }
   }, [hoveredDoctorId, doctors]);
+
+  if (!API_KEY) {
+    return (
+      <div className="flex h-full items-center justify-center bg-muted/30 text-sm text-muted-foreground">
+        Map unavailable — Google Maps API key not configured
+      </div>
+    );
+  }
 
   if (doctors.length === 0) {
     return (

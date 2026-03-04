@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Header } from "@/components/layout/header";
+import { Header } from "@/components/layout/dynamic-header";
 import { Footer } from "@/components/layout/footer";
 import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { getSpecialties, getLocations } from "@/actions/search";

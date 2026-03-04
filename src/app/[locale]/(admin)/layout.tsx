@@ -1,4 +1,4 @@
-import { Header } from "@/components/layout/header";
+import { Header } from "@/components/layout/dynamic-header";
 import { Link } from "@/i18n/navigation";
 import {
   LayoutDashboard,

@@ -261,7 +261,14 @@
     "payment_credit_card": "Kreditkarte",
     "payment_debit_card": "Debitkarte",
     "payment_cash": "Bargeld",
-    "payment_paypal": "PayPal"
+    "payment_paypal": "PayPal",
+    "more_filters": "Weitere Filter",
+    "apply_filters": "Anwenden",
+    "clear_these_filters": "Zurücksetzen",
+    "price_min": "Mindestpreis",
+    "price_max": "Höchstpreis",
+    "price_range_label": "Preis pro Sitzung",
+    "min_rating": "Mindestbewertung"
   },
   "booking": {
     "select_date": "Datum wahlen",

@@ -222,7 +222,14 @@
     "payment_credit_card": "Carte de crédit",
     "payment_debit_card": "Carte de débit",
     "payment_cash": "Espèces",
-    "payment_paypal": "PayPal"
+    "payment_paypal": "PayPal",
+    "more_filters": "Plus de filtres",
+    "apply_filters": "Appliquer",
+    "clear_these_filters": "Effacer",
+    "price_min": "Prix min",
+    "price_max": "Prix max",
+    "price_range_label": "Prix par séance",
+    "min_rating": "Note minimum"
   },
   "booking": {
     "select_date": "Choisir une date",

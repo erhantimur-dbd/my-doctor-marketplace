@@ -222,7 +222,14 @@
     "payment_credit_card": "Kredi Kartı",
     "payment_debit_card": "Banka Kartı",
     "payment_cash": "Nakit",
-    "payment_paypal": "PayPal"
+    "payment_paypal": "PayPal",
+    "more_filters": "Daha Fazla Filtre",
+    "apply_filters": "Uygula",
+    "clear_these_filters": "Temizle",
+    "price_min": "Min Fiyat",
+    "price_max": "Max Fiyat",
+    "price_range_label": "Seans başına ücret",
+    "min_rating": "Minimum Puan"
   },
   "booking": {
     "select_date": "Tarih Secin",

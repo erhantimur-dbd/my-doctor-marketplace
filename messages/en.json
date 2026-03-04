@@ -185,7 +185,14 @@
     "payment_credit_card": "Credit Card",
     "payment_debit_card": "Debit Card",
     "payment_cash": "Cash",
-    "payment_paypal": "PayPal"
+    "payment_paypal": "PayPal",
+    "more_filters": "More Filters",
+    "apply_filters": "Apply",
+    "clear_these_filters": "Clear",
+    "price_min": "Min Price",
+    "price_max": "Max Price",
+    "price_range_label": "Price per session",
+    "min_rating": "Minimum Rating"
   },
   "booking": {
     "select_date": "Select Date",

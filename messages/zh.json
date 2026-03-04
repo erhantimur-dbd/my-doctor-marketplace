@@ -185,7 +185,14 @@
     "payment_credit_card": "信用卡",
     "payment_debit_card": "借记卡",
     "payment_cash": "现金",
-    "payment_paypal": "PayPal"
+    "payment_paypal": "PayPal",
+    "more_filters": "更多筛选",
+    "apply_filters": "应用",
+    "clear_these_filters": "清除",
+    "price_min": "最低价格",
+    "price_max": "最高价格",
+    "price_range_label": "每次就诊价格",
+    "min_rating": "最低评分"
   },
   "booking": {
     "select_date": "选择日期",

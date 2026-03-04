@@ -10,9 +10,17 @@ interface ProfileMapProps {
   interactive?: boolean;
 }
 
-const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 export function ProfileMap({ lat, lng, className, interactive = false }: ProfileMapProps) {
+  if (!API_KEY) {
+    return (
+      <div className={`flex items-center justify-center bg-muted/30 text-sm text-muted-foreground ${className || "h-48 w-full"}`}>
+        Map unavailable
+      </div>
+    );
+  }
+
   return (
     <APIProvider apiKey={API_KEY}>
       <Map

@@ -110,6 +110,24 @@ export function DoctorSearchFilters({
       k !== "aiParsed"
   ).length;
 
+  // Keys managed by the "More Filters" dialog
+  const MORE_FILTER_KEYS = ["providerType", "acceptedPayment", "minRating", "language", "minPrice", "maxPrice"] as const;
+
+  const moreFilterCount = MORE_FILTER_KEYS.filter(
+    (k) => currentFilters[k] && currentFilters[k] !== "all"
+  ).length;
+
+  const clearMoreFilters = useCallback(() => {
+    const params = new URLSearchParams();
+    Object.entries(currentFilters).forEach(([k, v]) => {
+      if (v && k !== "page" && !(MORE_FILTER_KEYS as readonly string[]).includes(k)) {
+        params.set(k, v);
+      }
+    });
+    params.delete("page");
+    router.push(`${pathname}?${params.toString()}`);
+  }, [currentFilters, pathname, router]);
+
   // Track whether the user clicked "Use my location" to apply coords when they arrive
   const pendingGeoRef = useRef(false);
   // Track whether the user selected "nearest" sort and we're waiting for coords
@@ -248,6 +266,8 @@ export function DoctorSearchFilters({
           onUseMyLocation={handleUseMyLocation}
           detectingLocation={t("detecting_location")}
           useMyLocationLabel={t("use_my_location")}
+          moreFilterCount={moreFilterCount}
+          clearMoreFilters={clearMoreFilters}
         />
       </div>
     </>

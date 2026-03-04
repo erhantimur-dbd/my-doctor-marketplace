@@ -10,7 +10,13 @@ import {
 } from "@vis.gl/react-google-maps";
 import type { Pharmacy } from "@/types/pharmacy";
 
-const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+
+if (!API_KEY && typeof window !== "undefined") {
+  console.warn(
+    "[PharmacyMap] NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not set. The map will not load."
+  );
+}
 
 interface PharmacyMapProps {
   pharmacies: Pharmacy[];
@@ -124,6 +130,14 @@ export function PharmacyMap({
   }, [hoveredPharmacyId, pharmacies]);
 
   const validPharmacies = pharmacies.filter((p) => p.lat && p.lng);
+
+  if (!API_KEY) {
+    return (
+      <div className="flex h-full items-center justify-center bg-muted/30 text-sm text-muted-foreground">
+        Map unavailable — Google Maps API key not configured
+      </div>
+    );
+  }
 
   if (validPharmacies.length === 0) {
     return (

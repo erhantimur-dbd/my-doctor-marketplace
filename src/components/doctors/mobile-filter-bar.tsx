@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -23,6 +24,25 @@ import {
 import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility, FlaskConical, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/lib/constants/payment-methods";
+
+/** Language names as stored in doctors.languages TEXT[] column */
+const DOCTOR_LANGUAGES = [
+  "English",
+  "German",
+  "Turkish",
+  "French",
+  "Dutch",
+  "Spanish",
+  "Italian",
+  "Arabic",
+  "Russian",
+  "Hindi",
+  "Japanese",
+  "Welsh",
+  "Scottish Gaelic",
+  "Gujarati",
+  "Punjabi",
+] as const;
 
 interface MobileFilterBarProps {
   specialties: { id: string; name_key: string; slug: string }[];
@@ -62,6 +82,46 @@ export function MobileFilterBar({
 }: MobileFilterBarProps) {
   const t = useTranslations("search");
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Local state for price inputs with debounce
+  const [localMinPrice, setLocalMinPrice] = useState(
+    currentFilters.minPrice || ""
+  );
+  const [localMaxPrice, setLocalMaxPrice] = useState(
+    currentFilters.maxPrice || ""
+  );
+
+  // Sync from URL params when they change externally
+  useEffect(() => {
+    setLocalMinPrice(currentFilters.minPrice || "");
+  }, [currentFilters.minPrice]);
+  useEffect(() => {
+    setLocalMaxPrice(currentFilters.maxPrice || "");
+  }, [currentFilters.maxPrice]);
+
+  // Debounce min price → URL
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const current = currentFilters.minPrice || "";
+      if (localMinPrice !== current) {
+        updateFilter("minPrice", localMinPrice || undefined);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localMinPrice]);
+
+  // Debounce max price → URL
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const current = currentFilters.maxPrice || "";
+      if (localMaxPrice !== current) {
+        updateFilter("maxPrice", localMaxPrice || undefined);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localMaxPrice]);
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -288,6 +348,53 @@ export function MobileFilterBar({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Language */}
+            <div className="space-y-2">
+              <Label className="text-sm">{t("language")}</Label>
+              <Select
+                value={currentFilters.language || "all"}
+                onValueChange={(v) => updateFilter("language", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("any_language")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("any_language")}</SelectItem>
+                  {DOCTOR_LANGUAGES.map((lang) => (
+                    <SelectItem key={lang} value={lang}>
+                      {lang}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Price Range */}
+            <div className="space-y-2">
+              <Label className="text-sm">{t("price_range_label")}</Label>
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder={t("price_min")}
+                    value={localMinPrice}
+                    onChange={(e) => setLocalMinPrice(e.target.value)}
+                  />
+                </div>
+                <span className="text-muted-foreground">–</span>
+                <div className="flex-1">
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder={t("price_max")}
+                    value={localMaxPrice}
+                    onChange={(e) => setLocalMaxPrice(e.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Wheelchair Accessible */}
