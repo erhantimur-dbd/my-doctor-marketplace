@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, Maximize2 } from "lucide-react";
+import { MapPin, Maximize2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CompactDoctorCard } from "./compact-doctor-card";
 import { DoctorCard } from "./doctor-card";
@@ -116,7 +116,7 @@ function MapViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[96vw] sm:max-w-[96vw] w-[96vw] h-[90vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-[96vw] sm:max-w-[96vw] w-[96vw] h-[90vh] p-0 gap-0 overflow-hidden" showCloseButton={false}>
         {/* Visually hidden title for a11y */}
         <DialogTitle className="sr-only">
           {t("map_view")}
@@ -156,6 +156,14 @@ function MapViewDialog({
               onClickDoctor={handleClickDoctor}
               centerLocation={centerLocation}
             />
+            {/* Prominent close button */}
+            <button
+              onClick={() => onOpenChange(false)}
+              className="absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+              aria-label="Close map view"
+            >
+              <X className="h-5 w-5 text-gray-700" />
+            </button>
           </div>
         </div>
       </DialogContent>
