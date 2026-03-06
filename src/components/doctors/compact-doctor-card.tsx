@@ -56,11 +56,11 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
       ?.specialty || doctor.specialties?.[0]?.specialty;
 
-    // Extract "next available" snippet from availability
+    // Extract "next available" day and slots for availability snapshot
     const nextAvail = availability?.days?.[0];
-    const nextSlotLabel = nextAvail
-      ? `${formatShortDateLabel(nextAvail.date)}, ${formatSlotTime(nextAvail.slots[0]?.start)}`
-      : null;
+    const nextDateLabel = nextAvail ? formatShortDateLabel(nextAvail.date) : null;
+    const nextSlots = nextAvail?.slots?.slice(0, 6) ?? [];
+    const remainingCount = (nextAvail?.slots?.length ?? 0) - nextSlots.length;
 
     return (
       <div
@@ -128,26 +128,43 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between mt-2">
-                    <div>
-                      <span className="text-sm font-bold">
-                        {formatCurrency(
-                          doctor.consultation_fee_cents,
-                          doctor.base_currency,
-                          locale
-                        )}
-                      </span>
-                      <span className="text-[9px] text-muted-foreground/70 ml-0.5">
-                        + fee
-                      </span>
-                    </div>
-                    {nextSlotLabel && (
-                      <span className="text-xs text-green-600 flex items-center gap-0.5">
-                        <Clock className="h-3 w-3" />
-                        {nextSlotLabel}
-                      </span>
-                    )}
+                  <div className="mt-2">
+                    <span className="text-sm font-bold">
+                      {formatCurrency(
+                        doctor.consultation_fee_cents,
+                        doctor.base_currency,
+                        locale
+                      )}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/70 ml-0.5">
+                      + fee
+                    </span>
                   </div>
+
+                  {/* Availability snapshot */}
+                  {nextDateLabel && nextSlots.length > 0 && (
+                    <div className="mt-1.5">
+                      <p className="text-xs text-green-600 flex items-center gap-1 mb-1">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        Next: {nextDateLabel}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {nextSlots.map((slot) => (
+                          <span
+                            key={slot.start}
+                            className="text-[11px] bg-green-50 text-green-700 rounded px-1.5 py-0.5 font-medium"
+                          >
+                            {formatSlotTime(slot.start)}
+                          </span>
+                        ))}
+                        {remainingCount > 0 && (
+                          <span className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">
+                            +{remainingCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>
