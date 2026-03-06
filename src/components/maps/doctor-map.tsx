@@ -214,7 +214,8 @@ export function DoctorMap({
         defaultZoom={centerLocation ? 12 : 10}
         mapId="doctor-search-map"
         gestureHandling="greedy"
-        disableDefaultUI={false}
+        disableDefaultUI={true}
+        zoomControl={true}
         mapTypeControl={false}
         streetViewControl={false}
         fullscreenControl={false}
