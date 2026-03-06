@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
+import { useRouter } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -52,11 +53,13 @@ interface CompactDoctorCardProps {
 
 export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardProps>(
   function CompactDoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability }, ref) {
+    const router = useRouter();
     const isTestingService = doctor.provider_type === "testing_service";
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
       ?.specialty || doctor.specialties?.[0]?.specialty;
 
     // Extract "next available" day and slots for availability snapshot
+    const consultationType = availability?.consultationType || "in_person";
     const nextAvail = availability?.days?.[0];
     const nextDateLabel = nextAvail ? formatShortDateLabel(nextAvail.date) : null;
     const nextSlots = nextAvail?.slots?.slice(0, 6) ?? [];
@@ -141,27 +144,38 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
                     </span>
                   </div>
 
-                  {/* Availability snapshot — informational only, prevent Link navigation */}
+                  {/* Availability snapshot — time pills navigate to booking */}
                   {nextDateLabel && nextSlots.length > 0 && (
-                    <div
-                      className="mt-1.5"
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                    >
-                      <p className="text-xs text-green-600 flex items-center gap-1 mb-1">
+                    <div className="mt-1.5">
+                      <p
+                        className="text-xs text-green-600 flex items-center gap-1 mb-1"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                      >
                         <Clock className="h-3 w-3 shrink-0" />
                         Next: {nextDateLabel}
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {nextSlots.map((slot) => (
-                          <span
+                          <button
                             key={slot.start}
-                            className="text-[11px] bg-green-50 text-green-700 rounded px-1.5 py-0.5 font-medium"
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              router.push(
+                                `/doctors/${doctor.slug}/book?date=${nextAvail!.date}&type=${consultationType}&time=${encodeURIComponent(slot.start)}`
+                              );
+                            }}
+                            className="text-[11px] bg-green-50 text-green-700 rounded px-1.5 py-0.5 font-medium hover:bg-green-100 transition-colors cursor-pointer"
                           >
                             {formatSlotTime(slot.start)}
-                          </span>
+                          </button>
                         ))}
                         {remainingCount > 0 && (
-                          <span className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">
+                          <span
+                            className="text-[11px] bg-muted text-muted-foreground rounded px-1.5 py-0.5"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          >
                             +{remainingCount}
                           </span>
                         )}
