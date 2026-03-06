@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/dynamic-header";
 import { Link } from "@/i18n/navigation";
 import {
   Calendar,
+  ClipboardList,
   Heart,
   HelpCircle,
   MessageSquare,
@@ -15,6 +16,7 @@ import { UnreadBadge } from "@/components/shared/unread-badge";
 const sidebarLinks = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
   { href: "/dashboard/bookings", icon: Calendar, label: "Bookings" },
+  { href: "/dashboard/treatment-plans", icon: ClipboardList, label: "Treatment Plans" },
   { href: "/dashboard/favorites", icon: Heart, label: "Saved Doctors" },
   { href: "/dashboard/reviews", icon: Star, label: "My Reviews" },
   { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },

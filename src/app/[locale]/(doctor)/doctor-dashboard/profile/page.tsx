@@ -32,11 +32,20 @@ import {
   ExternalLink,
   CheckCircle2,
   Accessibility,
+  Stethoscope,
+  Clock,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { centsToAmount, amountToCents } from "@/lib/utils/currency";
+import { centsToAmount, amountToCents, formatCurrency } from "@/lib/utils/currency";
 import { LANGUAGES } from "@/lib/constants/countries";
-import type { Education, Certification, Doctor } from "@/types";
+import {
+  createDoctorService,
+  updateDoctorService,
+  deleteDoctorService,
+} from "@/actions/doctor-services";
+import type { Education, Certification, Doctor, DoctorService } from "@/types";
 
 function createSupabase() {
   return createBrowserClient(
@@ -67,9 +76,77 @@ export default function ProfilePage() {
   const [cancellationHours, setCancellationHours] = useState(24);
   const [isWheelchairAccessible, setIsWheelchairAccessible] = useState(false);
 
+  // Services state
+  const [services, setServices] = useState<DoctorService[]>([]);
+  const [editingService, setEditingService] = useState<DoctorService | null>(null);
+  const [showServiceForm, setShowServiceForm] = useState(false);
+  const [savingService, setSavingService] = useState(false);
+  const [svcName, setSvcName] = useState("");
+  const [svcDescription, setSvcDescription] = useState("");
+  const [svcPriceCents, setSvcPriceCents] = useState(0);
+  const [svcDuration, setSvcDuration] = useState("30");
+  const [svcType, setSvcType] = useState("in_person");
+
   useEffect(() => {
     loadData();
   }, []);
+
+  function resetServiceForm() {
+    setSvcName("");
+    setSvcDescription("");
+    setSvcPriceCents(0);
+    setSvcDuration("30");
+    setSvcType("in_person");
+    setEditingService(null);
+    setShowServiceForm(false);
+  }
+
+  function startEditService(svc: DoctorService) {
+    setSvcName(svc.name);
+    setSvcDescription(svc.description || "");
+    setSvcPriceCents(svc.price_cents);
+    setSvcDuration(String(svc.duration_minutes));
+    setSvcType(svc.consultation_type);
+    setEditingService(svc);
+    setShowServiceForm(true);
+  }
+
+  async function handleSaveService() {
+    setSavingService(true);
+    const input = {
+      name: svcName,
+      description: svcDescription || null,
+      price_cents: svcPriceCents,
+      duration_minutes: parseInt(svcDuration),
+      consultation_type: svcType as "in_person" | "video" | "both",
+      is_active: true,
+      display_order: editingService?.display_order ?? services.length,
+    };
+
+    if (editingService) {
+      const result = await updateDoctorService(editingService.id, input);
+      if (result.service) {
+        setServices((prev) =>
+          prev.map((s) => (s.id === editingService.id ? result.service! : s))
+        );
+      }
+    } else {
+      const result = await createDoctorService(input);
+      if (result.service) {
+        setServices((prev) => [...prev, result.service!]);
+      }
+    }
+
+    setSavingService(false);
+    resetServiceForm();
+  }
+
+  async function handleDeleteService(serviceId: string) {
+    const result = await deleteDoctorService(serviceId);
+    if (result.success) {
+      setServices((prev) => prev.filter((s) => s.id !== serviceId));
+    }
+  }
 
   async function loadData() {
     const supabase = createSupabase();
@@ -101,6 +178,17 @@ export default function ProfilePage() {
     setCancellationPolicy(data.cancellation_policy || "flexible");
     setCancellationHours(data.cancellation_hours || 24);
     setIsWheelchairAccessible(data.is_wheelchair_accessible || false);
+
+    // Load services
+    const { data: svcData } = await supabase
+      .from("doctor_services")
+      .select("*")
+      .eq("doctor_id", data.id)
+      .eq("is_active", true)
+      .order("display_order", { ascending: true });
+
+    if (svcData) setServices(svcData as DoctorService[]);
+
     setLoading(false);
   }
 
@@ -559,6 +647,183 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Services */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5" />
+              Services
+            </CardTitle>
+            <CardDescription>
+              Add services you offer. Returning patients can select these when booking.
+            </CardDescription>
+          </div>
+          {!showServiceForm && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                resetServiceForm();
+                setShowServiceForm(true);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Service
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Inline add / edit form */}
+          {showServiceForm && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Service Name</Label>
+                  <Input
+                    placeholder="e.g., ECG Review, Follow-up Consultation"
+                    value={svcName}
+                    onChange={(e) => setSvcName(e.target.value)}
+                    maxLength={200}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Price ({doctor?.base_currency || "EUR"})</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                      {doctor?.base_currency || "EUR"}
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      className="pl-14"
+                      value={centsToAmount(svcPriceCents)}
+                      onChange={(e) =>
+                        setSvcPriceCents(amountToCents(parseFloat(e.target.value) || 0))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Duration</Label>
+                  <Select value={svcDuration} onValueChange={setSvcDuration}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="45">45 minutes</SelectItem>
+                      <SelectItem value="60">60 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Consultation Type</Label>
+                  <Select value={svcType} onValueChange={setSvcType}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_person">In-Person</SelectItem>
+                      <SelectItem value="video">Video</SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Description (optional)</Label>
+                <Textarea
+                  placeholder="Brief description of this service..."
+                  value={svcDescription}
+                  onChange={(e) => setSvcDescription(e.target.value)}
+                  maxLength={500}
+                  rows={2}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={resetServiceForm}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSaveService}
+                  disabled={savingService || !svcName.trim() || svcPriceCents <= 0}
+                >
+                  {savingService ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  {editingService ? "Update Service" : "Save Service"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Service list */}
+          {services.length === 0 && !showServiceForm ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No services configured. Patients will book using your default consultation fee.
+            </p>
+          ) : (
+            services.map((svc) => (
+              <div
+                key={svc.id}
+                className="flex items-center justify-between rounded-lg border p-3"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm">{svc.name}</span>
+                    <Badge variant="secondary" className="text-xs">
+                      <Clock className="mr-1 h-3 w-3" />
+                      {svc.duration_minutes} min
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {svc.consultation_type === "both"
+                        ? "In-Person & Video"
+                        : svc.consultation_type === "video"
+                          ? "Video"
+                          : "In-Person"}
+                    </Badge>
+                  </div>
+                  {svc.description && (
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                      {svc.description}
+                    </p>
+                  )}
+                  <p className="text-sm font-semibold mt-1">
+                    {formatCurrency(svc.price_cents, doctor?.base_currency || "EUR")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => startEditService(svc)}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handleDeleteService(svc.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 

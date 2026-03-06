@@ -42,8 +42,166 @@ export async function POST(request: NextRequest) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       const bookingId = session.metadata?.booking_id;
+      const invitationId = session.metadata?.invitation_id;
 
-      if (bookingId && session.mode === "payment") {
+      if (invitationId && session.mode === "payment") {
+        const firstBookingId = session.metadata?.first_booking_id;
+
+        // 1. Update invitation → accepted, paid_at, sessions_booked = 1
+        await supabase
+          .from("follow_up_invitations")
+          .update({
+            status: "accepted",
+            stripe_checkout_session_id: session.id,
+            stripe_payment_intent_id: session.payment_intent as string,
+            paid_at: new Date().toISOString(),
+            sessions_booked: 1,
+          })
+          .eq("id", invitationId);
+
+        // 2. Confirm first booking
+        if (firstBookingId) {
+          await supabase
+            .from("bookings")
+            .update({
+              status: "confirmed",
+              stripe_payment_intent_id: session.payment_intent as string,
+              paid_at: new Date().toISOString(),
+            })
+            .eq("id", firstBookingId);
+
+          // Fetch full booking for email, video room, calendar export
+          const { data: booking } = await supabase
+            .from("bookings")
+            .select(`
+              id,
+              booking_number,
+              doctor_id,
+              appointment_date,
+              start_time,
+              end_time,
+              consultation_type,
+              consultation_fee_cents,
+              platform_fee_cents,
+              total_amount_cents,
+              currency,
+              patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
+              doctor:doctors!inner(
+                id,
+                clinic_name,
+                address,
+                profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+              )
+            `)
+            .eq("id", firstBookingId)
+            .single();
+
+          if (booking) {
+            // Record platform fee (for entire treatment plan)
+            const { data: invitation } = await supabase
+              .from("follow_up_invitations")
+              .select("platform_fee_cents, currency")
+              .eq("id", invitationId)
+              .single();
+
+            if (invitation) {
+              await supabase.from("platform_fees").insert({
+                booking_id: firstBookingId,
+                doctor_id: booking.doctor_id,
+                fee_type: "commission",
+                amount_cents: invitation.platform_fee_cents,
+                currency: invitation.currency,
+              });
+            }
+
+            // Export to Google Calendar (non-blocking)
+            exportBookingToGoogleCalendar(firstBookingId).catch((err) =>
+              console.error("Google Calendar export error (follow-up):", err)
+            );
+
+            // Create video room if video consultation
+            if (booking.consultation_type === "video") {
+              try {
+                const roomName = `md-${booking.booking_number.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
+                const endTime = new Date(`${booking.appointment_date}T${booking.end_time}`);
+                const expiresAt = Math.floor(endTime.getTime() / 1000) + 3600;
+
+                const room = await createRoom({
+                  name: roomName,
+                  expiresAt,
+                  maxParticipants: 2,
+                });
+
+                await supabase
+                  .from("bookings")
+                  .update({
+                    video_room_url: room.url,
+                    daily_room_name: room.name,
+                  })
+                  .eq("id", firstBookingId);
+              } catch (err) {
+                console.error("Daily.co room creation error (follow-up):", err);
+              }
+            }
+
+            // Send confirmation email
+            const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
+            const doctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
+            const doctorProfile: any = doctor?.profile
+              ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
+              : null;
+
+            if (patient?.email && doctorProfile) {
+              const consultationLabel = booking.consultation_type === "video"
+                ? "Video Consultation"
+                : "In-Person Consultation";
+
+              const { subject, html } = bookingConfirmationEmail({
+                patientName: patient.first_name || "Patient",
+                doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+                date: booking.appointment_date,
+                time: booking.start_time,
+                consultationType: consultationLabel,
+                bookingNumber: booking.booking_number,
+                amount: booking.total_amount_cents / 100,
+                currency: booking.currency.toUpperCase(),
+                videoRoomUrl: booking.consultation_type === "video" ? null : undefined,
+                clinicName: doctor.clinic_name,
+                address: doctor.address,
+              });
+
+              sendEmail({ to: patient.email, subject, html }).catch((err) =>
+                console.error("Confirmation email error (follow-up):", err)
+              );
+
+              // WhatsApp notification
+              if (patient.notification_whatsapp && patient.phone) {
+                const dateFormatted = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
+                  weekday: "short",
+                  day: "numeric",
+                  month: "short",
+                });
+
+                sendWhatsAppTemplate({
+                  to: patient.phone,
+                  templateName: TEMPLATE_BOOKING_CONFIRMATION,
+                  languageCode: mapLocaleToWhatsApp(patient.preferred_locale),
+                  components: buildBookingConfirmationComponents({
+                    patientName: patient.first_name || "there",
+                    bookingNumber: booking.booking_number,
+                    date: dateFormatted,
+                    time: booking.start_time,
+                    doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+                    amount: formatCurrency(booking.total_amount_cents, booking.currency),
+                  }),
+                }).catch((err) =>
+                  console.error("WhatsApp confirmation error (follow-up):", err)
+                );
+              }
+            }
+          }
+        }
+      } else if (bookingId && session.mode === "payment") {
         await supabase
           .from("bookings")
           .update({

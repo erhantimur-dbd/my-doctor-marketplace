@@ -101,6 +101,47 @@ export interface Location {
   is_active: boolean;
 }
 
+export interface DoctorService {
+  id: string;
+  doctor_id: string;
+  name: string;
+  description: string | null;
+  price_cents: number;
+  duration_minutes: number;
+  consultation_type: string;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FollowUpInvitation {
+  id: string;
+  token: string;
+  doctor_id: string;
+  patient_id: string;
+  service_id: string | null;
+  service_name: string;
+  consultation_type: string;
+  duration_minutes: number;
+  unit_price_cents: number;
+  total_sessions: number;
+  discount_type: "percentage" | "fixed_amount" | null;
+  discount_value: number | null;
+  discounted_total_cents: number;
+  platform_fee_cents: number;
+  currency: string;
+  status: string;
+  sessions_booked: number;
+  doctor_note: string | null;
+  stripe_checkout_session_id: string | null;
+  stripe_payment_intent_id: string | null;
+  paid_at: string | null;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Booking {
   id: string;
   booking_number: string;
@@ -120,6 +161,9 @@ export interface Booking {
   stripe_payment_intent_id: string | null;
   paid_at: string | null;
   patient_notes: string | null;
+  service_id: string | null;
+  service_name: string | null;
+  invitation_id: string | null;
   cancelled_at: string | null;
   cancellation_reason: string | null;
   created_at: string;

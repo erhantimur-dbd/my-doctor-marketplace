@@ -14,6 +14,7 @@ import {
 import { Users, Search, User, Mail, Calendar } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
+import { FollowUpInvitationDialog } from "@/components/doctor/follow-up-invitation-dialog";
 
 interface PatientRow {
   patient_id: string;
@@ -60,6 +61,14 @@ export default async function PatientsPage({
 
   const params = await searchParams;
   const searchQuery = params.q || "";
+
+  // Fetch doctor's active services for the follow-up dialog
+  const { data: servicesData } = await supabase
+    .from("doctor_services")
+    .select("id, name, price_cents, duration_minutes, consultation_type")
+    .eq("doctor_id", doctor.id)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
 
   // Fetch all bookings for this doctor with patient profiles
   const { data: bookings } = await supabase
@@ -206,6 +215,7 @@ export default async function PatientsPage({
                   <TableHead>Total Visits</TableHead>
                   <TableHead>Last Visit</TableHead>
                   <TableHead className="text-right">Total Revenue</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -249,6 +259,14 @@ export default async function PatientsPage({
                         patient.total_revenue,
                         doctor.base_currency
                       )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <FollowUpInvitationDialog
+                        patientId={patient.patient_id}
+                        patientName={`${patient.first_name} ${patient.last_name}`}
+                        doctorCurrency={doctor.base_currency}
+                        services={servicesData || []}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

@@ -17,6 +17,7 @@ interface SlotPickerProps {
   onSlotSelect: (date: string, startTime: string, endTime: string) => void;
   initialDate?: string; // "YYYY-MM-DD" — auto-select this date on mount
   initialTime?: string; // "HH:MM:SS" — auto-select this time slot on mount
+  slotDurationOverride?: number; // override schedule's default slot duration (e.g. 15, 30, 45, 60)
 }
 
 export function SlotPicker({
@@ -25,6 +26,7 @@ export function SlotPicker({
   onSlotSelect,
   initialDate,
   initialTime,
+  slotDurationOverride,
 }: SlotPickerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     initialDate ? new Date(initialDate + "T00:00:00") : undefined
@@ -51,7 +53,8 @@ export function SlotPicker({
       const result = await getDoctorAvailableSlots(
         doctorId,
         dateStr,
-        consultationType
+        consultationType,
+        slotDurationOverride
       );
 
       if (result.error) {
@@ -72,7 +75,7 @@ export function SlotPicker({
       }
       setLoading(false);
     },
-    [doctorId, consultationType, initialTime, onSlotSelect]
+    [doctorId, consultationType, slotDurationOverride, initialTime, onSlotSelect]
   );
 
   useEffect(() => {

@@ -111,6 +111,14 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     );
   }
 
+  // Fetch services for this doctor (for returning-patient flow)
+  const { data: servicesData } = await supabase
+    .from("doctor_services")
+    .select("id, name, price_cents, duration_minutes, consultation_type")
+    .eq("doctor_id", doctor.id)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+
   if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
     return (
       <div className="container mx-auto px-4 py-16">
@@ -157,7 +165,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
       </div>
 
       {/* Booking Wizard */}
-      <BookingWizard doctor={doctor} />
+      <BookingWizard doctor={doctor} services={servicesData || []} />
     </div>
   );
 }

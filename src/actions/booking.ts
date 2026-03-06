@@ -127,12 +127,34 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
-    // Calculate fees
-    const consultationFeeCents =
-      parsed.data.consultation_type === "video" &&
-      doctor.video_consultation_fee_cents
-        ? doctor.video_consultation_fee_cents
-        : doctor.consultation_fee_cents;
+    // Calculate fees — service-aware pricing
+    let consultationFeeCents: number;
+    let serviceName: string | null = null;
+    const serviceId: string | null = parsed.data.service_id || null;
+
+    if (serviceId) {
+      // Returning patient with selected service — use service price
+      const { data: service } = await supabase
+        .from("doctor_services")
+        .select("*")
+        .eq("id", serviceId)
+        .eq("doctor_id", parsed.data.doctor_id)
+        .single();
+
+      if (!service || !service.is_active) {
+        return { error: "Selected service is no longer available." };
+      }
+
+      consultationFeeCents = service.price_cents;
+      serviceName = service.name;
+    } else {
+      // First visit or doctor has no services — use default fee
+      consultationFeeCents =
+        parsed.data.consultation_type === "video" &&
+        doctor.video_consultation_fee_cents
+          ? doctor.video_consultation_fee_cents
+          : doctor.consultation_fee_cents;
+    }
 
     const platformFeeCents = getBookingFeeCents(doctor.base_currency);
     const totalAmountCents = consultationFeeCents + platformFeeCents;
@@ -153,6 +175,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         consultation_fee_cents: consultationFeeCents,
         platform_fee_cents: platformFeeCents,
         total_amount_cents: totalAmountCents,
+        service_id: serviceId,
+        service_name: serviceName,
       })
       .select("id, booking_number")
       .single();
@@ -165,8 +189,9 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     // Compose a readable description for the checkout line item
     const profile = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
     const doctorName = `${profile.first_name} ${profile.last_name}`;
-    const consultationLabel =
-      parsed.data.consultation_type === "video"
+    const consultationLabel = serviceName
+      ? serviceName
+      : parsed.data.consultation_type === "video"
         ? "Video Consultation"
         : "In-Person Consultation";
 
@@ -490,7 +515,8 @@ export async function getDoctorAvailableDates(
 export async function getDoctorAvailableSlots(
   doctorId: string,
   date: string,
-  consultationType: string
+  consultationType: string,
+  slotDurationOverride?: number
 ): Promise<{ slots: AvailableSlot[]; error?: string }> {
   try {
     // Use admin client so the RPC is callable regardless of the user's role
@@ -501,6 +527,7 @@ export async function getDoctorAvailableSlots(
       p_doctor_id: doctorId,
       p_date: date,
       p_consultation_type: consultationType,
+      p_slot_duration_override: slotDurationOverride ?? null,
     });
 
     if (error) {
