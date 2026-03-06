@@ -20,6 +20,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { formatSpecialtyName } from "@/lib/utils";
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
 import { ReviewSummaryCard } from "@/components/doctors/review-summary-card";
 import type { Metadata } from "next";
@@ -154,10 +155,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
 
                     {primarySpecialty && (
                       <p className="mt-1 text-muted-foreground">
-                        {primarySpecialty.name_key
-                          .replace("specialty.", "")
-                          .replace(/_/g, " ")
-                          .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                        {formatSpecialtyName(primarySpecialty.name_key)}
                       </p>
                     )}
 

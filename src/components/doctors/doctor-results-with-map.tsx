@@ -3,8 +3,10 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { DoctorCard } from "./doctor-card";
+import { MapViewButton } from "./map-view-dialog";
 import type { MapDoctor } from "@/components/maps/doctor-map";
 import type { DoctorMultiDayAvailability } from "@/actions/search";
+import { formatSpecialtyName } from "@/lib/utils";
 
 // Dynamic import — Google Maps requires window
 const DoctorMap = dynamic(
@@ -78,10 +80,7 @@ export function DoctorResultsWithMap({
           slug: d.slug,
           name: `${d.title || ""} ${d.profile.first_name} ${d.profile.last_name}`.trim(),
           specialty: primarySpec
-            ? primarySpec.name_key
-                .replace("specialty.", "")
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (l: string) => l.toUpperCase())
+            ? formatSpecialtyName(primarySpec.name_key)
             : "",
           lat,
           lng,
@@ -141,7 +140,7 @@ export function DoctorResultsWithMap({
       {/* Map — right side (only if we have location data) */}
       {hasMapData && (
         <div className="hidden w-[40%] xl:w-[35%] lg:block">
-          <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-hidden rounded-lg border">
+          <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-hidden rounded-lg border relative">
             <DoctorMap
               doctors={mapDoctors}
               hoveredDoctorId={hoveredDoctorId}
@@ -149,6 +148,15 @@ export function DoctorResultsWithMap({
               onClickDoctor={handleClickDoctor}
               centerLocation={centerLocation}
             />
+            {/* Expand to full-screen map dialog */}
+            <div className="absolute top-3 left-3 z-10">
+              <MapViewButton
+                doctors={doctors}
+                locale={locale}
+                availability={availability}
+                centerLocation={centerLocation}
+              />
+            </div>
           </div>
         </div>
       )}

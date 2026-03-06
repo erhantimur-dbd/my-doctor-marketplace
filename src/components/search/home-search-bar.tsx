@@ -30,7 +30,7 @@ import {
   Video,
   Sparkles,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatSpecialtyName } from "@/lib/utils";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { findNearestLocation } from "@/lib/utils/geo";
 import { searchSuggestions } from "@/actions/search";
@@ -309,10 +309,7 @@ export function HomeSearchBar({
       items.push({
         type: "specialty",
         slug: s.slug,
-        label: s.name_key
-          .replace("specialty.", "")
-          .replace(/_/g, " ")
-          .replace(/\b\w/g, (l: string) => l.toUpperCase()),
+        label: formatSpecialtyName(s.name_key),
       });
     }
     // Symptoms
@@ -387,12 +384,7 @@ export function HomeSearchBar({
     switch (item.type) {
       case "specialty":
         // Populate search field so user can pick consultation type before searching
-        setQuery(
-          item.label
-            .replace("specialty.", "")
-            .replace(/_/g, " ")
-            .replace(/\b\w/g, (l: string) => l.toUpperCase())
-        );
+        setQuery(item.label);
         break;
       case "doctor":
         // Doctor links still navigate directly to their profile

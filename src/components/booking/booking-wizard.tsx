@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { createBookingAndCheckout } from "@/actions/booking";
 import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
+import { formatSpecialtyName } from "@/lib/utils";
 import { formatSlotTime } from "@/lib/utils/availability";
 import { toast } from "sonner";
 import {
@@ -106,10 +107,7 @@ export function BookingWizard({ doctor }: BookingWizardProps) {
     doctor.specialties?.[0]?.specialty;
 
   const specialtyName = primarySpecialty
-    ? primarySpecialty.name_key
-        .replace("specialty.", "")
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (l: string) => l.toUpperCase())
+    ? formatSpecialtyName(primarySpecialty.name_key)
     : null;
 
   // Fee calculations

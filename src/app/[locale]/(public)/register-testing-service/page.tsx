@@ -25,6 +25,7 @@ import {
 import { Link } from "@/i18n/navigation";
 import { registerTestingService } from "@/actions/auth";
 import { getTestingSpecialties } from "@/lib/constants/specialties";
+import { formatSpecialtyName } from "@/lib/utils";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
 import {
   Loader2,
@@ -287,10 +288,7 @@ export default function RegisterTestingServicePage() {
                 <div className="grid grid-cols-2 gap-2">
                   {TESTING_SPECIALTIES.map((spec) => {
                     const isSelected = selectedTestTypes.includes(spec.slug);
-                    const displayName = spec.nameKey
-                      .replace("specialty.", "")
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (l) => l.toUpperCase());
+                    const displayName = formatSpecialtyName(spec.nameKey);
                     return (
                       <div
                         key={spec.slug}
@@ -413,10 +411,7 @@ export default function RegisterTestingServicePage() {
                           (s) => s.slug === slug
                         );
                         const displayName = spec
-                          ? spec.nameKey
-                              .replace("specialty.", "")
-                              .replace(/_/g, " ")
-                              .replace(/\b\w/g, (l) => l.toUpperCase())
+                          ? formatSpecialtyName(spec.nameKey)
                           : slug;
                         return (
                           <Badge

@@ -8,12 +8,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin } from "lucide-react";
+import { MapPin, Maximize2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CompactDoctorCard } from "./compact-doctor-card";
 import { DoctorCard } from "./doctor-card";
 import type { MapDoctor } from "@/components/maps/doctor-map";
 import type { DoctorMultiDayAvailability } from "@/actions/search";
+import { formatSpecialtyName } from "@/lib/utils";
 
 // Dynamic import — Google Maps requires window
 const DoctorMap = dynamic(
@@ -84,10 +85,7 @@ function MapViewDialog({
           slug: d.slug,
           name: `${d.title || ""} ${d.profile.first_name} ${d.profile.last_name}`.trim(),
           specialty: primarySpec
-            ? primarySpec.name_key
-                .replace("specialty.", "")
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (l: string) => l.toUpperCase())
+            ? formatSpecialtyName(primarySpec.name_key)
             : "",
           lat,
           lng,
@@ -199,15 +197,13 @@ export function MapViewButton({
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
+      <button
         onClick={() => setOpen(true)}
-        className="gap-1.5"
+        className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 shadow-lg border border-gray-200 hover:bg-gray-50 hover:shadow-xl transition-all duration-200"
       >
-        <MapPin className="h-4 w-4" />
+        <Maximize2 className="h-4 w-4" />
         {t("map_view")}
-      </Button>
+      </button>
       <MapViewDialog
         open={open}
         onOpenChange={setOpen}

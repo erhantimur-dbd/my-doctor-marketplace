@@ -30,6 +30,7 @@ import { validateReferralCode } from "@/actions/referral";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
 import { centsToAmount, amountToCents } from "@/lib/utils/currency";
+import { formatSpecialtyName } from "@/lib/utils";
 import {
   Loader2,
   ChevronRight,
@@ -468,10 +469,7 @@ export default function RegisterDoctorPage() {
                 </p>
                 <div className="flex flex-wrap gap-2 pt-2">
                   {SPECIALTIES.map((specialty) => {
-                    const label = specialty.nameKey
-                      .replace("specialty.", "")
-                      .replace(/_/g, " ")
-                      .replace(/\b\w/g, (l) => l.toUpperCase());
+                    const label = formatSpecialtyName(specialty.nameKey);
                     const isSelected = selectedSpecialties.includes(
                       specialty.slug
                     );
@@ -662,10 +660,7 @@ export default function RegisterDoctorPage() {
                       {selectedSpecialties.map((slug) => {
                         const spec = SPECIALTIES.find((s) => s.slug === slug);
                         const label = spec
-                          ? spec.nameKey
-                              .replace("specialty.", "")
-                              .replace(/_/g, " ")
-                              .replace(/\b\w/g, (l) => l.toUpperCase())
+                          ? formatSpecialtyName(spec.nameKey)
                           : slug;
                         return (
                           <Badge key={slug} variant="secondary" className="text-xs">

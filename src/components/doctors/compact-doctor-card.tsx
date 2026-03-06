@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Shield, User, FlaskConical, Clock } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
-import { cn } from "@/lib/utils";
+import { cn, formatSpecialtyName } from "@/lib/utils";
 import { formatShortDateLabel, formatSlotTime } from "@/lib/utils/availability";
 import type { DoctorMultiDayAvailability } from "@/actions/search";
 
@@ -107,10 +107,7 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
 
                   {primarySpecialty && (
                     <p className="text-xs text-muted-foreground truncate">
-                      {primarySpecialty.name_key
-                        .replace("specialty.", "")
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                      {formatSpecialtyName(primarySpecialty.name_key)}
                     </p>
                   )}
 

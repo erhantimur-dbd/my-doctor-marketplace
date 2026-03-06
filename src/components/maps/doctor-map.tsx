@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   APIProvider,
   Map,
@@ -8,6 +8,7 @@ import {
   InfoWindow,
   useMap,
 } from "@vis.gl/react-google-maps";
+import { Plus, Minus } from "lucide-react";
 
 export interface MapDoctor {
   id: string;
@@ -160,6 +161,42 @@ function PinMarker({
   );
 }
 
+/* ── Custom zoom controls ── */
+function ZoomControls() {
+  const map = useMap();
+
+  const handleZoomIn = useCallback(() => {
+    if (!map) return;
+    const current = map.getZoom() ?? 10;
+    map.setZoom(current + 1);
+  }, [map]);
+
+  const handleZoomOut = useCallback(() => {
+    if (!map) return;
+    const current = map.getZoom() ?? 10;
+    map.setZoom(current - 1);
+  }, [map]);
+
+  return (
+    <div className="absolute bottom-6 right-3 z-10 flex flex-col gap-0.5">
+      <button
+        onClick={handleZoomIn}
+        className="flex h-10 w-10 items-center justify-center rounded-t-lg bg-white shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+        aria-label="Zoom in"
+      >
+        <Plus className="h-5 w-5 text-gray-700" />
+      </button>
+      <button
+        onClick={handleZoomOut}
+        className="flex h-10 w-10 items-center justify-center rounded-b-lg bg-white shadow-md border border-t-0 border-gray-200 hover:bg-gray-50 transition-colors"
+        aria-label="Zoom out"
+      >
+        <Minus className="h-5 w-5 text-gray-700" />
+      </button>
+    </div>
+  );
+}
+
 /* ── Main map component ── */
 export function DoctorMap({
   doctors,
@@ -209,47 +246,50 @@ export function DoctorMap({
 
   return (
     <APIProvider apiKey={API_KEY}>
-      <Map
-        defaultCenter={center}
-        defaultZoom={centerLocation ? 12 : 10}
-        mapId="doctor-search-map"
-        gestureHandling="greedy"
-        disableDefaultUI={true}
-        zoomControl={true}
-        mapTypeControl={false}
-        streetViewControl={false}
-        fullscreenControl={false}
-        className="h-full w-full"
-        style={{ minHeight: "400px" }}
-      >
-        <FitBounds doctors={doctors} centerLocation={centerLocation} />
+      <div className="relative h-full w-full">
+        <Map
+          defaultCenter={center}
+          defaultZoom={centerLocation ? 12 : 10}
+          mapId="doctor-search-map"
+          gestureHandling="greedy"
+          disableDefaultUI={true}
+          mapTypeControl={false}
+          streetViewControl={false}
+          fullscreenControl={false}
+          className="h-full w-full"
+          style={{ minHeight: "400px" }}
+        >
+          <FitBounds doctors={doctors} centerLocation={centerLocation} />
 
-        {doctors.map((doctor) => (
-          <PinMarker
-            key={doctor.id}
-            doctor={doctor}
-            isHovered={hoveredDoctorId === doctor.id}
-            onHover={onHoverDoctor}
-            onClick={onClickDoctor}
-          />
-        ))}
+          {doctors.map((doctor) => (
+            <PinMarker
+              key={doctor.id}
+              doctor={doctor}
+              isHovered={hoveredDoctorId === doctor.id}
+              onHover={onHoverDoctor}
+              onClick={onClickDoctor}
+            />
+          ))}
 
-        {infoDoctor && (
-          <InfoWindow
-            position={{ lat: infoDoctor.lat, lng: infoDoctor.lng }}
-            pixelOffset={[0, -45]}
-            onCloseClick={() => setInfoDoctor(null)}
-            headerDisabled
-          >
-            <div className="text-sm" style={{ minWidth: 120 }}>
-              <p className="font-semibold">{infoDoctor.name}</p>
-              {infoDoctor.specialty && (
-                <p className="text-xs text-gray-500">{infoDoctor.specialty}</p>
-              )}
-            </div>
-          </InfoWindow>
-        )}
-      </Map>
+          {infoDoctor && (
+            <InfoWindow
+              position={{ lat: infoDoctor.lat, lng: infoDoctor.lng }}
+              pixelOffset={[0, -45]}
+              onCloseClick={() => setInfoDoctor(null)}
+              headerDisabled
+            >
+              <div className="text-sm" style={{ minWidth: 120 }}>
+                <p className="font-semibold">{infoDoctor.name}</p>
+                {infoDoctor.specialty && (
+                  <p className="text-xs text-gray-500">{infoDoctor.specialty}</p>
+                )}
+              </div>
+            </InfoWindow>
+          )}
+
+          <ZoomControls />
+        </Map>
+      </div>
     </APIProvider>
   );
 }

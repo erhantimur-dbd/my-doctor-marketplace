@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "@/i18n/navigation";
 import { formatCurrency } from "@/lib/utils/currency";
+import { formatSpecialtyName } from "@/lib/utils";
 import {
   Calendar,
   CheckCircle2,
@@ -108,10 +109,7 @@ export default async function BookingConfirmationPage({
     )?.specialty || doctor.specialties?.[0]?.specialty;
 
   const specialtyName = primarySpecialty
-    ? primarySpecialty.name_key
-        .replace("specialty.", "")
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (l: string) => l.toUpperCase())
+    ? formatSpecialtyName(primarySpecialty.name_key)
     : null;
 
   function formatDate(dateStr: string): string {

@@ -7,7 +7,6 @@ import {
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
-import { MapViewButton } from "@/components/doctors/map-view-dialog";
 import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
@@ -112,20 +111,10 @@ export default async function DoctorsPage({
 
         {/* Results */}
         <div>
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4">
             <span className="text-sm text-muted-foreground">
               {t("results_count", { count: result.total })}
             </span>
-            {result.doctors.length > 0 && (
-              <div className="hidden lg:block">
-                <MapViewButton
-                  doctors={typedDoctors}
-                  locale={locale}
-                  availability={availability}
-                  centerLocation={centerLocation}
-                />
-              </div>
-            )}
           </div>
 
           {result.doctors.length === 0 ? (

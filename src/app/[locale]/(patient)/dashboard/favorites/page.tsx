@@ -15,6 +15,7 @@ import {
   Search,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { formatSpecialtyName } from "@/lib/utils";
 import { RemoveFavoriteButton } from "./remove-favorite-button";
 import type { Metadata } from "next";
 
@@ -139,10 +140,7 @@ export default async function FavoritesPage({ params }: FavoritesPageProps) {
                       <h3 className="font-semibold">{doctorName}</h3>
                       {primarySpecialty && (
                         <p className="text-sm text-muted-foreground">
-                          {primarySpecialty.name_key
-                            .replace("specialty.", "")
-                            .replace(/_/g, " ")
-                            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {formatSpecialtyName(primarySpecialty.name_key)}
                         </p>
                       )}
                     </div>

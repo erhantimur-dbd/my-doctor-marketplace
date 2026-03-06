@@ -22,7 +22,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility, FlaskConical, CreditCard } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatSpecialtyName } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/lib/constants/payment-methods";
 
 /** Language names as stored in doctors.languages TEXT[] column */
@@ -260,10 +260,7 @@ export function MobileFilterBar({
                   <SelectItem value="all">{t("any_specialty")}</SelectItem>
                   {specialties.map((s) => (
                     <SelectItem key={s.id} value={s.slug}>
-                      {s.name_key
-                        .replace("specialty.", "")
-                        .replace(/_/g, " ")
-                        .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                      {formatSpecialtyName(s.name_key)}
                     </SelectItem>
                   ))}
                 </SelectContent>

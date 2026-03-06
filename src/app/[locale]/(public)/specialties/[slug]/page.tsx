@@ -8,6 +8,7 @@ import { DoctorCard } from "@/components/doctors/doctor-card";
 import { getSpecialtyBySlug, getMultiDayAvailabilityBatch } from "@/actions/search";
 import { getSpecialtyMeta, SPECIALTIES } from "@/lib/constants/specialties";
 import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
+import { formatSpecialtyName } from "@/lib/utils";
 import {
   ArrowRight,
   Users,
@@ -64,10 +65,7 @@ export async function generateMetadata({
   const meta = getSpecialtyMeta(slug);
   if (!meta) return { title: "Specialty Not Found" };
 
-  const name = meta.nameKey
-    .replace("specialty.", "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (l) => l.toUpperCase());
+  const name = formatSpecialtyName(meta.nameKey);
 
   return {
     title: `${name} Doctors — Find & Book Online`,
@@ -288,10 +286,7 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
                 if (!related) return null;
                 const RelIcon = iconMap[related.icon] || Stethoscope;
                 const rc = getSpecialtyColor(related.slug);
-                const relName = related.nameKey
-                  .replace("specialty.", "")
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (l) => l.toUpperCase());
+                const relName = formatSpecialtyName(related.nameKey);
 
                 return (
                   <Link

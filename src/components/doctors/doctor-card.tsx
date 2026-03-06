@@ -17,7 +17,7 @@ import {
 import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, Quote, X } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
-import { cn } from "@/lib/utils";
+import { cn, formatSpecialtyName } from "@/lib/utils";
 import { formatShortDateLabel, formatSlotTime } from "@/lib/utils/availability";
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
 import { getMultiDayAvailabilityBatch } from "@/actions/search";
@@ -170,10 +170,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                           </h3>
                           {primarySpecialty && (
                             <p className="text-sm text-muted-foreground">
-                              {primarySpecialty.name_key
-                                .replace("specialty.", "")
-                                .replace(/_/g, " ")
-                                .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                              {formatSpecialtyName(primarySpecialty.name_key)}
                             </p>
                           )}
                           {doctor.avg_rating > 0 && (
@@ -510,10 +507,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       </h3>
                       {primarySpecialty && (
                         <p className="text-sm text-muted-foreground mt-0.5">
-                          {primarySpecialty.name_key
-                            .replace("specialty.", "")
-                            .replace(/_/g, " ")
-                            .replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                          {formatSpecialtyName(primarySpecialty.name_key)}
                         </p>
                       )}
                     </div>
