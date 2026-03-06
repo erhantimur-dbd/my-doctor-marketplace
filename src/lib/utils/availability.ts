@@ -42,6 +42,7 @@ export function formatShortDateLabel(dateStr: string): string {
   return date.toLocaleDateString("en-GB", {
     weekday: "short",
     day: "numeric",
+    month: "short",
   });
 }
 
