@@ -141,9 +141,12 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
                     </span>
                   </div>
 
-                  {/* Availability snapshot */}
+                  {/* Availability snapshot — informational only, prevent Link navigation */}
                   {nextDateLabel && nextSlots.length > 0 && (
-                    <div className="mt-1.5">
+                    <div
+                      className="mt-1.5"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    >
                       <p className="text-xs text-green-600 flex items-center gap-1 mb-1">
                         <Clock className="h-3 w-3 shrink-0" />
                         Next: {nextDateLabel}
