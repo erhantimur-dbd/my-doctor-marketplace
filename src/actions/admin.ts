@@ -234,6 +234,43 @@ export async function sendUpgradeInvite(doctorId: string) {
   return { success: true };
 }
 
+// ===================== Patient Management =====================
+
+export async function adminResetPatientPassword(patientId: string) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  // Fetch patient email
+  const { data: patient } = await supabase
+    .from("profiles")
+    .select("email")
+    .eq("id", patientId)
+    .single();
+
+  if (!patient?.email) return { error: "Patient not found or has no email" };
+
+  // Send password reset email via Supabase Auth
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+    patient.email,
+    { redirectTo: `${appUrl}/en/reset-password` }
+  );
+
+  if (resetError) return { error: resetError.message };
+
+  await logAdminAction(
+    supabase,
+    user.id,
+    "patient_password_reset",
+    "patient",
+    patientId,
+    { email: patient.email }
+  );
+
+  revalidatePath(`/admin/patients/${patientId}`);
+  return { success: true };
+}
+
 // ===================== Coupon Management =====================
 
 export async function createCoupon(data: {

@@ -19,6 +19,7 @@ import {
   Clock,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { Link } from "@/i18n/navigation";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -205,104 +206,118 @@ export default async function AdminDashboard() {
 
       {/* Primary KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-blue-50 p-3">
-              <Stethoscope className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Doctors</p>
-              <p className="text-2xl font-bold">{totalDoctors || 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-purple-50 p-3">
-              <Users className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Patients</p>
-              <p className="text-2xl font-bold">{totalPatients || 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-amber-50 p-3">
-              <Calendar className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Bookings</p>
-              <p className="text-2xl font-bold">{totalBookings || 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-green-50 p-3">
-              <DollarSign className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Platform Revenue</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(totalRevenue, "EUR")}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/doctors" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-blue-50 p-3">
+                <Stethoscope className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Doctors</p>
+                <p className="text-2xl font-bold">{totalDoctors || 0}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/patients" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-purple-50 p-3">
+                <Users className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Patients</p>
+                <p className="text-2xl font-bold">{totalPatients || 0}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/bookings" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-amber-50 p-3">
+                <Calendar className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Bookings</p>
+                <p className="text-2xl font-bold">{totalBookings || 0}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/revenue" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-green-50 p-3">
+                <DollarSign className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Platform Revenue</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(totalRevenue, "EUR")}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Secondary Stats - Action Items */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-yellow-50 p-3">
-              <Star className="h-5 w-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Pending Reviews</p>
-              <p className="text-2xl font-bold">{pendingReviews || 0}</p>
-              <p className="text-xs text-muted-foreground">
-                Awaiting moderation
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-orange-50 p-3">
-              <ShieldAlert className="h-5 w-5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Pending Verifications
-              </p>
-              <p className="text-2xl font-bold">
-                {pendingVerifications || 0}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Doctors awaiting review
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-teal-50 p-3">
-              <Crown className="h-5 w-5 text-teal-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Active Subscriptions
-              </p>
-              <p className="text-2xl font-bold">
-                {activeSubscriptions || 0}
-              </p>
-              <p className="text-xs text-muted-foreground">Recurring revenue</p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/reviews" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-yellow-50 p-3">
+                <Star className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Pending Reviews</p>
+                <p className="text-2xl font-bold">{pendingReviews || 0}</p>
+                <p className="text-xs text-muted-foreground">
+                  Awaiting moderation
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/doctors" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-orange-50 p-3">
+                <ShieldAlert className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Pending Verifications
+                </p>
+                <p className="text-2xl font-bold">
+                  {pendingVerifications || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Doctors awaiting review
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/subscriptions" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-teal-50 p-3">
+                <Crown className="h-5 w-5 text-teal-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Active Subscriptions
+                </p>
+                <p className="text-2xl font-bold">
+                  {activeSubscriptions || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">Recurring revenue</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Monthly Revenue Chart */}
@@ -357,46 +372,49 @@ export default async function AdminDashboard() {
           ) : (
             <div className="space-y-3">
               {recentBookingsWithNames.map((booking) => (
-                <div
+                <Link
                   key={booking.id}
-                  className="flex items-center justify-between rounded-lg border p-4"
+                  href={`/admin/bookings/${booking.id}`}
+                  className="block"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-medium">
-                        {booking.patientName}
-                      </p>
-                      <span className="text-xs text-muted-foreground">→</span>
-                      <p className="truncate text-sm text-muted-foreground">
-                        Dr. {booking.doctorName}
+                  <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-medium">
+                          {booking.patientName}
+                        </p>
+                        <span className="text-xs text-muted-foreground">→</span>
+                        <p className="truncate text-sm text-muted-foreground">
+                          Dr. {booking.doctorName}
+                        </p>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {booking.booking_number} ·{" "}
+                        {new Date(booking.appointment_date).toLocaleDateString(
+                          "en-GB",
+                          { day: "numeric", month: "short", year: "numeric" }
+                        )}
                       </p>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {booking.booking_number} ·{" "}
-                      {new Date(booking.appointment_date).toLocaleDateString(
-                        "en-GB",
-                        { day: "numeric", month: "short", year: "numeric" }
-                      )}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">
+                        {formatCurrency(
+                          booking.total_amount_cents,
+                          booking.currency
+                        )}
+                      </span>
+                      <Badge
+                        variant="secondary"
+                        className={
+                          statusColors[booking.status] ||
+                          "bg-gray-100 text-gray-700"
+                        }
+                      >
+                        {booking.status.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium">
-                      {formatCurrency(
-                        booking.total_amount_cents,
-                        booking.currency
-                      )}
-                    </span>
-                    <Badge
-                      variant="secondary"
-                      className={
-                        statusColors[booking.status] ||
-                        "bg-gray-100 text-gray-700"
-                      }
-                    >
-                      {booking.status.replace(/_/g, " ")}
-                    </Badge>
-                  </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

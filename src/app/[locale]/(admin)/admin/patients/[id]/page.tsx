@@ -20,6 +20,7 @@ import {
   Phone,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { ResetPasswordButton } from "./reset-password-button";
 
 const statusColors: Record<string, string> = {
   confirmed: "bg-blue-100 text-blue-700",
@@ -97,26 +98,29 @@ export default async function AdminPatientDetailPage({
       </Link>
 
       {/* Patient Header */}
-      <div className="flex items-center gap-4">
-        <Avatar className="h-16 w-16">
-          {patient.avatar_url && <AvatarImage src={patient.avatar_url} />}
-          <AvatarFallback className="text-lg">
-            {patient.first_name?.[0]}
-            {patient.last_name?.[0]}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="text-2xl font-bold">
-            {patient.first_name} {patient.last_name}
-          </h1>
-          <p className="text-muted-foreground">
-            Patient since{" "}
-            {new Date(patient.created_at).toLocaleDateString("en-GB", {
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Avatar className="h-16 w-16">
+            {patient.avatar_url && <AvatarImage src={patient.avatar_url} />}
+            <AvatarFallback className="text-lg">
+              {patient.first_name?.[0]}
+              {patient.last_name?.[0]}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-2xl font-bold">
+              {patient.first_name} {patient.last_name}
+            </h1>
+            <p className="text-muted-foreground">
+              Patient since{" "}
+              {new Date(patient.created_at).toLocaleDateString("en-GB", {
+                month: "long",
+                year: "numeric",
+              })}
+            </p>
+          </div>
         </div>
+        <ResetPasswordButton patientId={id} email={patient.email} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -139,13 +143,30 @@ export default async function AdminPatientDetailPage({
               <span className="text-sm">{patient.phone || "Not provided"}</span>
             </div>
             <Separator />
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">
-                {[patient.city, patient.state, patient.country]
-                  .filter(Boolean)
-                  .join(", ") || "Not provided"}
-              </span>
+            <div className="flex gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="text-sm">
+                {patient.address_line1 ||
+                patient.address_line2 ||
+                patient.city ||
+                patient.state ||
+                patient.postal_code ||
+                patient.country ? (
+                  <div className="space-y-0.5">
+                    {patient.address_line1 && <p>{patient.address_line1}</p>}
+                    {patient.address_line2 && <p>{patient.address_line2}</p>}
+                    {(patient.city || patient.state || patient.postal_code) && (
+                      <p>
+                        {[patient.city, patient.state].filter(Boolean).join(", ")}
+                        {patient.postal_code ? ` ${patient.postal_code}` : ""}
+                      </p>
+                    )}
+                    {patient.country && <p>{patient.country}</p>}
+                  </div>
+                ) : (
+                  <span>Not provided</span>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
