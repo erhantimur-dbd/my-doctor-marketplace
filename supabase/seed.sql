@@ -31,6 +31,9 @@ DELETE FROM public.doctor_photos WHERE doctor_id IN (
 DELETE FROM public.doctor_documents WHERE doctor_id IN (
   SELECT id FROM public.doctors WHERE id::TEXT LIKE 'e0000000-0000-0000-0000-%'
 );
+DELETE FROM public.doctor_subscriptions WHERE doctor_id IN (
+  SELECT id FROM public.doctors WHERE id::TEXT LIKE 'e0000000-0000-0000-0000-%'
+);
 DELETE FROM public.doctors WHERE id::TEXT LIKE 'e0000000-0000-0000-0000-%';
 DELETE FROM public.profiles WHERE id::TEXT LIKE 'c0000000-0000-0000-0000-%' OR id::TEXT LIKE 'd0000000-0000-0000-0000-%';
 DELETE FROM auth.identities WHERE user_id::TEXT LIKE 'c0000000-0000-0000-0000-%' OR user_id::TEXT LIKE 'd0000000-0000-0000-0000-%';
@@ -335,6 +338,18 @@ INSERT INTO public.doctor_specialties (doctor_id, specialty_id, is_primary) VALU
   ('e0000000-0000-0000-0000-000000000005', (SELECT id FROM specialties WHERE slug='allergy'), FALSE),
   ('e0000000-0000-0000-0000-000000000006', (SELECT id FROM specialties WHERE slug='orthopedics'), TRUE),
   ('e0000000-0000-0000-0000-000000000006', (SELECT id FROM specialties WHERE slug='physiotherapy'), FALSE)
+ON CONFLICT DO NOTHING;
+
+-- ============================================================================
+-- 7b. DOCTOR SUBSCRIPTIONS (demo: all doctors on Professional plan)
+-- ============================================================================
+INSERT INTO public.doctor_subscriptions (doctor_id, stripe_subscription_id, stripe_customer_id, plan_id, status, current_period_start, current_period_end) VALUES
+  ('e0000000-0000-0000-0000-000000000001', 'sub_seed_001', 'cus_seed_001', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-000000000002', 'sub_seed_002', 'cus_seed_002', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-000000000003', 'sub_seed_003', 'cus_seed_003', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-000000000004', 'sub_seed_004', 'cus_seed_004', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-000000000005', 'sub_seed_005', 'cus_seed_005', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-000000000006', 'sub_seed_006', 'cus_seed_006', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================

@@ -461,6 +461,7 @@
     "faq": "FAQ",
     "support": "Support",
     "find_pharmacy": "Trouver une pharmacie",
+    "help_center": "Centre d'aide",
     "copyright": "Tous droits réservés."
   },
   "findPharmacy": {
@@ -688,5 +689,34 @@
     "match_reason_reviews": "Nombreux avis positifs",
     "clear_ai_filters": "Effacer les filtres IA",
     "not_what_you_meant": "Ce n'est pas ce que vous cherchiez ?"
+  },
+  "messaging": {
+    "title": "Messages",
+    "newMessage": "Nouveau message",
+    "selectPatient": "Sélectionnez un patient ayant terminé une consultation avec vous.",
+    "noEligiblePatients": "Aucun patient éligible pour le moment. Les patients deviennent disponibles pour la messagerie après avoir terminé une consultation.",
+    "noConversations": "Aucune conversation pour le moment. Commencez par envoyer un message à un patient ayant terminé une consultation.",
+    "noConversationsPatient": "Pas encore de messages. Vos médecins pourront vous envoyer un message après avoir terminé une consultation.",
+    "selectConversation": "Sélectionnez une conversation pour commencer à écrire",
+    "typeMessage": "Écrivez un message...",
+    "typeReply": "Écrivez une réponse...",
+    "noMessages": "Pas encore de messages. Commencez la conversation ci-dessous.",
+    "existing": "Existant"
+  },
+  "calendarIntegration": {
+    "microsoftTitle": "Calendrier Microsoft Outlook / 365",
+    "microsoftDescription": "Connectez votre calendrier Microsoft Outlook ou Office 365 pour une synchronisation bidirectionnelle.",
+    "microsoftConnected": "Calendrier Microsoft connecté",
+    "connectMicrosoft": "Connecter le calendrier Microsoft",
+    "microsoftInfo": "Importez les événements Outlook/Office 365 pour bloquer les créneaux indisponibles. Les réservations seront également synchronisées avec votre calendrier Microsoft.",
+    "icsTitle": "Abonnement calendrier (flux ICS)",
+    "icsDescription": "Abonnez-vous à vos réservations depuis n'importe quelle application de calendrier — Apple Calendar, Outlook, Google Calendar, Thunderbird, et plus encore.",
+    "feedUrl": "URL du flux",
+    "generateFeed": "Générer le flux calendrier",
+    "generateFeedUrl": "Générer l'URL du flux",
+    "revokeFeed": "Révoquer l'URL du flux",
+    "icsInfo": "Créez une URL privée à laquelle n'importe quelle application de calendrier peut s'abonner. Vos prochaines réservations apparaîtront automatiquement.",
+    "icsCopyHint": "Collez cette URL dans la fonctionnalité « S'abonner au calendrier » ou « Ajouter par URL » de votre application de calendrier.",
+    "revokeConfirm": "Révoquer cette URL de flux ? Toutes les applications de calendrier qui l'utilisent cesseront de se mettre à jour."
   }
 }

@@ -16,6 +16,7 @@ import {
   MessageSquare,
   UserPlus,
   HelpCircle,
+  BookOpen,
 } from "lucide-react";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 
@@ -45,6 +46,11 @@ const sidebarLinks = [
     label: "Messages",
   },
   { href: "/doctor-dashboard/settings", icon: Settings, label: "Settings" },
+  {
+    href: "/help-center",
+    icon: BookOpen,
+    label: "Help Center",
+  },
   {
     href: "/doctor-dashboard/support",
     icon: HelpCircle,

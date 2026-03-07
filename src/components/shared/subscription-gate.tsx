@@ -29,34 +29,38 @@ export function SubscriptionGate({
 
   useEffect(() => {
     async function checkSubscription() {
-      const supabase = createSupabase();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      try {
+        const supabase = createSupabase();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          setStatus("free");
+          return;
+        }
+
+        const { data: doctor } = await supabase
+          .from("doctors")
+          .select("id")
+          .eq("profile_id", user.id)
+          .single();
+        if (!doctor) {
+          setStatus("free");
+          return;
+        }
+
+        const { data: sub } = await supabase
+          .from("doctor_subscriptions")
+          .select("id")
+          .eq("doctor_id", doctor.id)
+          .in("status", ["active", "trialing", "past_due"])
+          .limit(1)
+          .maybeSingle();
+
+        setStatus(sub ? "subscribed" : "free");
+      } catch {
         setStatus("free");
-        return;
       }
-
-      const { data: doctor } = await supabase
-        .from("doctors")
-        .select("id")
-        .eq("profile_id", user.id)
-        .single();
-      if (!doctor) {
-        setStatus("free");
-        return;
-      }
-
-      const { data: sub } = await supabase
-        .from("doctor_subscriptions")
-        .select("id")
-        .eq("doctor_id", doctor.id)
-        .in("status", ["active", "trialing", "past_due"])
-        .limit(1)
-        .maybeSingle();
-
-      setStatus(sub ? "subscribed" : "free");
     }
 
     checkSubscription();

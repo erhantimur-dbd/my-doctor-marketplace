@@ -461,6 +461,7 @@
     "faq": "FAQ",
     "support": "Support",
     "find_pharmacy": "Find a Pharmacy",
+    "help_center": "Help Center",
     "copyright": "All rights reserved."
   },
   "findPharmacy": {
@@ -688,5 +689,34 @@
     "match_reason_reviews": "Many positive reviews",
     "clear_ai_filters": "Clear AI filters",
     "not_what_you_meant": "Not what you meant?"
+  },
+  "messaging": {
+    "title": "Messages",
+    "newMessage": "New Message",
+    "selectPatient": "Select a patient who has completed a consultation with you.",
+    "noEligiblePatients": "No eligible patients yet. Patients become available for messaging after completing a consultation.",
+    "noConversations": "No conversations yet. Start by messaging a patient who has completed a consultation.",
+    "noConversationsPatient": "No messages yet. Your doctors will be able to message you after completing a consultation.",
+    "selectConversation": "Select a conversation to start messaging",
+    "typeMessage": "Type a message...",
+    "typeReply": "Type a reply...",
+    "noMessages": "No messages yet. Start the conversation below.",
+    "existing": "Existing"
+  },
+  "calendarIntegration": {
+    "microsoftTitle": "Microsoft Outlook / 365 Calendar",
+    "microsoftDescription": "Connect your Microsoft Outlook or Office 365 calendar for bidirectional sync.",
+    "microsoftConnected": "Microsoft Calendar Connected",
+    "connectMicrosoft": "Connect Microsoft Calendar",
+    "microsoftInfo": "Import Outlook/Office 365 events to block unavailable times. Bookings will also sync to your Microsoft Calendar.",
+    "icsTitle": "Calendar Subscription (ICS Feed)",
+    "icsDescription": "Subscribe to your bookings from any calendar app — Apple Calendar, Outlook, Google Calendar, Thunderbird, and more.",
+    "feedUrl": "Feed URL",
+    "generateFeed": "Generate Calendar Feed",
+    "generateFeedUrl": "Generate Feed URL",
+    "revokeFeed": "Revoke Feed URL",
+    "icsInfo": "Create a private URL that any calendar app can subscribe to. Your upcoming bookings will appear automatically.",
+    "icsCopyHint": "Paste this URL into your calendar app\u0027s \u0022Subscribe to Calendar\u0022 or \u0022Add by URL\u0022 feature.",
+    "revokeConfirm": "Revoke this feed URL? Any calendar apps using it will stop updating."
   }
 }

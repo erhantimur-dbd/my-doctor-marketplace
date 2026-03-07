@@ -14,6 +14,8 @@ import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import type { AvailableSlot } from "@/types/index";
 import { headers } from "next/headers";
 import { removeBookingFromGoogleCalendar } from "@/lib/google/sync";
+import { removeBookingFromMicrosoftCalendar } from "@/lib/microsoft/sync";
+import { removeBookingFromCalDAV } from "@/lib/caldav/sync";
 import { deleteRoom } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
 import { bookingCancellationEmail } from "@/lib/email/templates";
@@ -344,9 +346,15 @@ export async function cancelBooking(input: CancelBookingInput) {
       return { error: "Failed to update booking status." };
     }
 
-    // Remove event from doctor's Google Calendar (non-blocking)
+    // Remove event from doctor's connected calendars (non-blocking)
     removeBookingFromGoogleCalendar(booking.id).catch((err) =>
       console.error("Google Calendar removal error:", err)
+    );
+    removeBookingFromMicrosoftCalendar(booking.id).catch((err) =>
+      console.error("Microsoft Calendar removal error:", err)
+    );
+    removeBookingFromCalDAV(booking.id).catch((err) =>
+      console.error("CalDAV removal error:", err)
     );
 
     // Delete Daily.co video room if one was created (non-blocking)

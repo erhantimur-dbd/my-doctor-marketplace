@@ -461,6 +461,7 @@
     "faq": "SSS",
     "support": "Destek",
     "find_pharmacy": "Eczane Bul",
+    "help_center": "Yardım Merkezi",
     "copyright": "Tüm hakları saklıdır."
   },
   "findPharmacy": {
@@ -688,5 +689,34 @@
     "match_reason_reviews": "Birçok olumlu değerlendirme",
     "clear_ai_filters": "AI filtrelerini temizle",
     "not_what_you_meant": "Doğru değil mi?"
+  },
+  "messaging": {
+    "title": "Mesajlar",
+    "newMessage": "Yeni Mesaj",
+    "selectPatient": "Sizinle bir konsültasyonu tamamlamış bir hasta seçin.",
+    "noEligiblePatients": "Henüz uygun hasta yok. Hastalar bir konsültasyonu tamamladıktan sonra mesajlaşma için uygun hale gelir.",
+    "noConversations": "Henüz görüşme yok. Konsültasyonu tamamlamış bir hastaya mesaj göndererek başlayın.",
+    "noConversationsPatient": "Henüz mesaj yok. Doktorlarınız bir konsültasyon tamamlandıktan sonra size mesaj gönderebilecektir.",
+    "selectConversation": "Mesajlaşmaya başlamak için bir görüşme seçin",
+    "typeMessage": "Bir mesaj yazın...",
+    "typeReply": "Bir yanıt yazın...",
+    "noMessages": "Henüz mesaj yok. Aşağıdan sohbeti başlatın.",
+    "existing": "Mevcut"
+  },
+  "calendarIntegration": {
+    "microsoftTitle": "Microsoft Outlook / 365 Takvim",
+    "microsoftDescription": "Çift yönlü senkronizasyon için Microsoft Outlook veya Office 365 takviminizi bağlayın.",
+    "microsoftConnected": "Microsoft Takvim Bağlandı",
+    "connectMicrosoft": "Microsoft Takvimi Bağla",
+    "microsoftInfo": "Müsait olmadığınız zamanları engellemek için Outlook/Office 365 etkinliklerini içe aktarın. Randevular ayrıca Microsoft Takviminizle senkronize edilecektir.",
+    "icsTitle": "Takvim Aboneliği (ICS Akışı)",
+    "icsDescription": "Randevularınızı herhangi bir takvim uygulamasından takip edin — Apple Takvim, Outlook, Google Takvim, Thunderbird ve daha fazlası.",
+    "feedUrl": "Akış URL'si",
+    "generateFeed": "Takvim Akışı Oluştur",
+    "generateFeedUrl": "Akış URL'si Oluştur",
+    "revokeFeed": "Akış URL'sini İptal Et",
+    "icsInfo": "Herhangi bir takvim uygulamasının abone olabileceği özel bir URL oluşturun. Yaklaşan randevularınız otomatik olarak görünecektir.",
+    "icsCopyHint": "Bu URL'yi takvim uygulamanızın \"Takvime Abone Ol\" veya \"URL ile Ekle\" özelliğine yapıştırın.",
+    "revokeConfirm": "Bu akış URL'si iptal edilsin mi? Bunu kullanan tüm takvim uygulamaları güncellenmeyi durduracaktır."
   }
 }

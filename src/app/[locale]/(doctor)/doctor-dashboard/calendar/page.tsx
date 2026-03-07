@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { toast } from "sonner";
 import { SubscriptionGate } from "@/components/shared/subscription-gate";
+import { triggerAllCalendarSyncs } from "@/actions/calendar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +19,17 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -42,6 +55,7 @@ import {
   Clock,
   Loader2,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 const DAYS_OF_WEEK = [
@@ -77,7 +91,7 @@ interface DateOverride {
   id: string;
   doctor_id: string;
   override_date: string;
-  is_blocked: boolean;
+  is_available: boolean;
   start_time: string | null;
   end_time: string | null;
   reason: string | null;
@@ -105,6 +119,8 @@ function CalendarContent() {
   const [loading, setLoading] = useState(true);
   const [isPending, startTransition] = useTransition();
 
+  const [syncing, setSyncing] = useState(false);
+
   // Schedule form state
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
@@ -120,7 +136,7 @@ function CalendarContent() {
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
   const [overrideForm, setOverrideForm] = useState({
     override_date: "",
-    is_blocked: true,
+    is_available: false,
     start_time: "",
     end_time: "",
     reason: "",
@@ -131,37 +147,48 @@ function CalendarContent() {
   }, []);
 
   async function loadData() {
-    const supabase = createSupabase();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const supabase = createSupabase();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-    const { data: doctor } = await supabase
-      .from("doctors")
-      .select("id")
-      .eq("profile_id", user.id)
-      .single();
-    if (!doctor) return;
+      const { data: doctor } = await supabase
+        .from("doctors")
+        .select("id")
+        .eq("profile_id", user.id)
+        .single();
+      if (!doctor) {
+        setLoading(false);
+        return;
+      }
 
-    setDoctorId(doctor.id);
+      setDoctorId(doctor.id);
 
-    const [schedulesRes, overridesRes] = await Promise.all([
-      supabase
-        .from("availability_schedules")
-        .select("*")
-        .eq("doctor_id", doctor.id)
-        .order("day_of_week"),
-      supabase
-        .from("availability_overrides")
-        .select("*")
-        .eq("doctor_id", doctor.id)
-        .order("override_date", { ascending: false }),
-    ]);
+      const [schedulesRes, overridesRes] = await Promise.all([
+        supabase
+          .from("availability_schedules")
+          .select("*")
+          .eq("doctor_id", doctor.id)
+          .order("day_of_week"),
+        supabase
+          .from("availability_overrides")
+          .select("*")
+          .eq("doctor_id", doctor.id)
+          .order("override_date", { ascending: false }),
+      ]);
 
-    setSchedules(schedulesRes.data || []);
-    setOverrides(overridesRes.data || []);
-    setLoading(false);
+      setSchedules(schedulesRes.data || []);
+      setOverrides(overridesRes.data || []);
+    } catch {
+      // Allow page to render even if data fetch fails
+    } finally {
+      setLoading(false);
+    }
   }
 
   function openAddSchedule() {
@@ -203,12 +230,16 @@ function CalendarContent() {
     };
 
     if (editingSchedule) {
-      await supabase
+      const { error } = await supabase
         .from("availability_schedules")
         .update(payload)
         .eq("id", editingSchedule.id);
+      if (error) { toast.error("Failed to update schedule"); return; }
+      toast.success("Schedule updated");
     } else {
-      await supabase.from("availability_schedules").insert(payload);
+      const { error } = await supabase.from("availability_schedules").insert(payload);
+      if (error) { toast.error("Failed to add schedule"); return; }
+      toast.success("Schedule added");
     }
 
     setScheduleDialogOpen(false);
@@ -217,7 +248,9 @@ function CalendarContent() {
 
   async function deleteSchedule(id: string) {
     const supabase = createSupabase();
-    await supabase.from("availability_schedules").delete().eq("id", id);
+    const { error } = await supabase.from("availability_schedules").delete().eq("id", id);
+    if (error) { toast.error("Failed to delete schedule"); return; }
+    toast.success("Schedule deleted");
     loadData();
   }
 
@@ -234,19 +267,21 @@ function CalendarContent() {
     if (!doctorId) return;
     const supabase = createSupabase();
 
-    await supabase.from("availability_overrides").insert({
+    const { error } = await supabase.from("availability_overrides").insert({
       doctor_id: doctorId,
       override_date: overrideForm.override_date,
-      is_blocked: overrideForm.is_blocked,
-      start_time: overrideForm.is_blocked ? null : overrideForm.start_time || null,
-      end_time: overrideForm.is_blocked ? null : overrideForm.end_time || null,
+      is_available: overrideForm.is_available,
+      start_time: !overrideForm.is_available ? null : overrideForm.start_time || null,
+      end_time: !overrideForm.is_available ? null : overrideForm.end_time || null,
       reason: overrideForm.reason || null,
     });
 
+    if (error) { toast.error("Failed to add override"); return; }
+    toast.success("Date override added");
     setOverrideDialogOpen(false);
     setOverrideForm({
       override_date: "",
-      is_blocked: true,
+      is_available: false,
       start_time: "",
       end_time: "",
       reason: "",
@@ -256,8 +291,27 @@ function CalendarContent() {
 
   async function deleteOverride(id: string) {
     const supabase = createSupabase();
-    await supabase.from("availability_overrides").delete().eq("id", id);
+    const { error } = await supabase.from("availability_overrides").delete().eq("id", id);
+    if (error) { toast.error("Failed to delete override"); return; }
+    toast.success("Override removed");
     loadData();
+  }
+
+  async function handleSyncNow() {
+    setSyncing(true);
+    try {
+      const result = await triggerAllCalendarSyncs();
+      if (result.success) {
+        toast.success(`Calendars synced (${result.synced} providers)`);
+        loadData();
+      } else {
+        toast.error(result.error || "Sync failed");
+      }
+    } catch {
+      toast.error("Sync failed");
+    } finally {
+      setSyncing(false);
+    }
   }
 
   if (loading) {
@@ -277,6 +331,15 @@ function CalendarContent() {
             Manage your weekly schedule and date overrides
           </p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSyncNow}
+          disabled={syncing}
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+          {syncing ? "Syncing..." : "Sync Calendars"}
+        </Button>
       </div>
 
       {/* Weekly Schedule */}
@@ -496,7 +559,7 @@ function CalendarContent() {
                 onClick={() => {
                   setOverrideForm({
                     override_date: "",
-                    is_blocked: true,
+                    is_available: false,
                     start_time: "",
                     end_time: "",
                     reason: "",
@@ -535,17 +598,17 @@ function CalendarContent() {
                     </p>
                   </div>
                   <Switch
-                    checked={overrideForm.is_blocked}
+                    checked={!overrideForm.is_available}
                     onCheckedChange={(checked) =>
                       setOverrideForm((prev) => ({
                         ...prev,
-                        is_blocked: checked,
+                        is_available: !checked,
                       }))
                     }
                   />
                 </div>
 
-                {!overrideForm.is_blocked && (
+                {overrideForm.is_available && (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Custom Start Time</Label>
@@ -637,27 +700,53 @@ function CalendarContent() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={override.is_blocked ? "destructive" : "secondary"}
+                        variant={!override.is_available ? "destructive" : "secondary"}
                       >
-                        {override.is_blocked ? "Blocked" : "Custom Hours"}
+                        {!override.is_available ? "Blocked" : "Custom Hours"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {override.is_blocked
+                      {!override.is_available
                         ? "---"
                         : `${override.start_time?.slice(0, 5) || ""} - ${override.end_time?.slice(0, 5) || ""}`}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {override.reason || "---"}
+                      <div className="flex items-center gap-2">
+                        {override.reason?.includes("_calendar_sync") ? (
+                          <Badge variant="outline" className="text-xs">
+                            {override.reason.replace("_calendar_sync", "").replace("_", " ").replace(/^\w/, (c: string) => c.toUpperCase())} Sync
+                          </Badge>
+                        ) : (
+                          override.reason || "---"
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteOverride(override.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      {override.reason?.includes("_calendar_sync") ? (
+                        <span className="text-xs text-muted-foreground">Auto-synced</span>
+                      ) : (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Override?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will remove the date override and restore normal availability for this day.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => deleteOverride(override.id)}>
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

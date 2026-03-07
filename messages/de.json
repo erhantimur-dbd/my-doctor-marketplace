@@ -166,6 +166,7 @@
     "faq": "FAQ",
     "support": "Support",
     "find_pharmacy": "Apotheke finden",
+    "help_center": "Hilfezentrum",
     "copyright": "Alle Rechte vorbehalten."
   },
   "findPharmacy": {
@@ -688,5 +689,34 @@
     "match_reason_reviews": "Viele positive Bewertungen",
     "clear_ai_filters": "KI-Filter löschen",
     "not_what_you_meant": "Nicht das Richtige?"
+  },
+  "messaging": {
+    "title": "Nachrichten",
+    "newMessage": "Neue Nachricht",
+    "selectPatient": "Wählen Sie einen Patienten aus, der eine Konsultation bei Ihnen abgeschlossen hat.",
+    "noEligiblePatients": "Noch keine berechtigten Patienten. Patienten werden nach Abschluss einer Konsultation für Nachrichten verfügbar.",
+    "noConversations": "Noch keine Unterhaltungen. Beginnen Sie, indem Sie einem Patienten schreiben, der eine Konsultation abgeschlossen hat.",
+    "noConversationsPatient": "Noch keine Nachrichten. Ihre Ärzte können Ihnen nach Abschluss einer Konsultation schreiben.",
+    "selectConversation": "Wählen Sie eine Unterhaltung aus, um mit dem Schreiben zu beginnen",
+    "typeMessage": "Nachricht eingeben...",
+    "typeReply": "Antwort eingeben...",
+    "noMessages": "Noch keine Nachrichten. Starten Sie die Unterhaltung unten.",
+    "existing": "Bestehend"
+  },
+  "calendarIntegration": {
+    "microsoftTitle": "Microsoft Outlook / 365 Kalender",
+    "microsoftDescription": "Verbinden Sie Ihren Microsoft Outlook- oder Office 365-Kalender für bidirektionale Synchronisierung.",
+    "microsoftConnected": "Microsoft-Kalender verbunden",
+    "connectMicrosoft": "Microsoft-Kalender verbinden",
+    "microsoftInfo": "Importieren Sie Outlook/Office 365-Termine, um nicht verfügbare Zeiten zu blockieren. Buchungen werden auch mit Ihrem Microsoft-Kalender synchronisiert.",
+    "icsTitle": "Kalenderabonnement (ICS-Feed)",
+    "icsDescription": "Abonnieren Sie Ihre Buchungen in jeder Kalender-App — Apple Kalender, Outlook, Google Kalender, Thunderbird und mehr.",
+    "feedUrl": "Feed-URL",
+    "generateFeed": "Kalender-Feed generieren",
+    "generateFeedUrl": "Feed-URL generieren",
+    "revokeFeed": "Feed-URL widerrufen",
+    "icsInfo": "Erstellen Sie eine private URL, die jede Kalender-App abonnieren kann. Ihre kommenden Buchungen erscheinen automatisch.",
+    "icsCopyHint": "Fügen Sie diese URL in die Funktion \u201EKalender abonnieren\u201C oder \u201EPer URL hinzufügen\u201C Ihrer Kalender-App ein.",
+    "revokeConfirm": "Diese Feed-URL widerrufen? Alle Kalender-Apps, die sie verwenden, werden nicht mehr aktualisiert."
   }
 }

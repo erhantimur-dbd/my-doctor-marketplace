@@ -1,7 +1,8 @@
 /**
- * Google Calendar sync logic
- * Import: Google Calendar → Platform (blocked times → availability_overrides)
- * Export: Platform → Google Calendar (bookings → calendar events)
+ * Microsoft Calendar sync logic
+ * Import: Microsoft Calendar → Platform (blocked times → availability_overrides)
+ * Export: Platform → Microsoft Calendar (bookings → calendar events)
+ * Mirrors the Google Calendar sync pattern.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,8 +12,8 @@ import {
   listEvents,
   createEvent,
   deleteEvent,
-  watchCalendar,
-  type GoogleTokens,
+  createSubscription,
+  type MicrosoftTokens,
 } from "./calendar";
 
 const SYNC_DAYS_AHEAD = 30;
@@ -31,20 +32,18 @@ interface CalendarConnection {
 }
 
 /**
- * Import sync: Read Google Calendar events and create availability_overrides
- * for busy times so those slots become unavailable on the platform.
+ * Import sync: Read Microsoft Calendar events and create availability_overrides
  */
-export async function importGoogleCalendarEvents(
+export async function importMicrosoftCalendarEvents(
   doctorId: string
 ): Promise<{ success: boolean; eventsProcessed: number; error?: string }> {
   const supabase = createAdminClient();
 
-  // Get calendar connection
   const { data: connection, error: connError } = await supabase
     .from("doctor_calendar_connections")
     .select("*")
     .eq("doctor_id", doctorId)
-    .eq("provider", "google")
+    .eq("provider", "microsoft")
     .single();
 
   if (connError || !connection) {
@@ -58,51 +57,42 @@ export async function importGoogleCalendarEvents(
   }
 
   try {
-    // Get valid access token (refresh if needed)
-    const tokens: GoogleTokens = {
+    const tokens: MicrosoftTokens = {
       access_token: conn.access_token,
       refresh_token: conn.refresh_token,
       expires_at: conn.token_expires_at,
     };
 
-    const { access_token, refreshed, new_expires_at } =
+    const { access_token, refreshed, new_expires_at, new_refresh_token } =
       await getValidAccessToken(tokens);
 
-    // Update tokens if refreshed
-    if (refreshed && new_expires_at) {
+    if (refreshed) {
+      const updateData: Record<string, string> = { access_token };
+      if (new_expires_at) updateData.token_expires_at = new_expires_at;
+      if (new_refresh_token) updateData.refresh_token = new_refresh_token;
       await supabase
         .from("doctor_calendar_connections")
-        .update({
-          access_token,
-          token_expires_at: new_expires_at,
-        })
+        .update(updateData)
         .eq("id", conn.id);
     }
 
-    // Fetch events for the next 30 days
     const now = new Date();
     const timeMin = now.toISOString();
     const timeMax = new Date(
       now.getTime() + SYNC_DAYS_AHEAD * 24 * 60 * 60 * 1000
     ).toISOString();
 
-    const events = await listEvents(
-      access_token,
-      conn.calendar_id,
-      timeMin,
-      timeMax
-    );
+    const events = await listEvents(access_token, conn.calendar_id, timeMin, timeMax);
 
-    // Remove old google_calendar_sync overrides for this doctor (for upcoming dates only)
+    // Remove old microsoft_calendar_sync overrides
     const todayStr = now.toISOString().split("T")[0];
     await supabase
       .from("availability_overrides")
       .delete()
       .eq("doctor_id", doctorId)
-      .eq("reason", "google_calendar_sync")
+      .eq("reason", "microsoft_calendar_sync")
       .gte("override_date", todayStr);
 
-    // Group events by date and create overrides for each busy period
     const overrides: {
       doctor_id: string;
       override_date: string;
@@ -113,12 +103,12 @@ export async function importGoogleCalendarEvents(
     }[] = [];
 
     for (const event of events) {
-      if (!event.start.dateTime || !event.end.dateTime) continue; // Skip all-day events
+      if (!event.start.dateTime || !event.end.dateTime) continue;
 
-      const startDt = new Date(event.start.dateTime);
-      const endDt = new Date(event.end.dateTime);
+      const startDt = new Date(event.start.dateTime + "Z"); // MS Graph returns UTC when we request it
+      const endDt = new Date(event.end.dateTime + "Z");
       const dateStr = startDt.toISOString().split("T")[0];
-      const startTime = startDt.toTimeString().substring(0, 5); // "HH:MM"
+      const startTime = startDt.toTimeString().substring(0, 5);
       const endTime = endDt.toTimeString().substring(0, 5);
 
       overrides.push({
@@ -127,18 +117,16 @@ export async function importGoogleCalendarEvents(
         is_available: false,
         start_time: startTime,
         end_time: endTime,
-        reason: "google_calendar_sync",
+        reason: "microsoft_calendar_sync",
       });
     }
 
-    // Batch insert overrides
     if (overrides.length > 0) {
       const { error: insertError } = await supabase
         .from("availability_overrides")
         .insert(overrides);
 
       if (insertError) {
-        console.error("Failed to insert overrides:", insertError);
         return {
           success: false,
           eventsProcessed: 0,
@@ -149,12 +137,11 @@ export async function importGoogleCalendarEvents(
 
     // Check for conflicts with existing bookings
     if (overrides.length > 0) {
-      detectAndNotifyConflicts(doctorId, overrides, "Google").catch((err) =>
+      detectAndNotifyConflicts(doctorId, overrides, "Microsoft").catch((err) =>
         console.error("Conflict detection error:", err)
       );
     }
 
-    // Update last_synced_at
     await supabase
       .from("doctor_calendar_connections")
       .update({ last_synced_at: new Date().toISOString() })
@@ -162,7 +149,7 @@ export async function importGoogleCalendarEvents(
 
     return { success: true, eventsProcessed: events.length };
   } catch (err) {
-    console.error("Import sync error:", err);
+    console.error("Microsoft import sync error:", err);
     return {
       success: false,
       eventsProcessed: 0,
@@ -172,14 +159,13 @@ export async function importGoogleCalendarEvents(
 }
 
 /**
- * Export a booking to Google Calendar as an event
+ * Export a booking to Microsoft Calendar as an event
  */
-export async function exportBookingToGoogleCalendar(
+export async function exportBookingToMicrosoftCalendar(
   bookingId: string
 ): Promise<{ success: boolean; eventId?: string; error?: string }> {
   const supabase = createAdminClient();
 
-  // Fetch booking with doctor info
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
     .select(
@@ -191,7 +177,7 @@ export async function exportBookingToGoogleCalendar(
       end_time,
       consultation_type,
       patient_notes,
-      google_event_id,
+      microsoft_event_id,
       doctor_id,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name),
       doctor:doctors!inner(
@@ -208,87 +194,80 @@ export async function exportBookingToGoogleCalendar(
     return { success: false, error: "Booking not found" };
   }
 
-  // Already exported?
-  if (booking.google_event_id) {
-    return { success: true, eventId: booking.google_event_id };
+  if ((booking as any).microsoft_event_id) {
+    return { success: true, eventId: (booking as any).microsoft_event_id };
   }
 
-  const doctorData: Record<string, unknown> = Array.isArray(booking.doctor)
+  const doctorData: any = Array.isArray(booking.doctor)
     ? booking.doctor[0]
     : booking.doctor;
   const doctorId = doctorData.id as string;
 
-  // Get calendar connection
   const { data: connection } = await supabase
     .from("doctor_calendar_connections")
     .select("*")
     .eq("doctor_id", doctorId)
-    .eq("provider", "google")
+    .eq("provider", "microsoft")
     .single();
 
   if (!connection || !connection.sync_enabled || !connection.calendar_id) {
-    // No connection — not an error, just skip
-    return { success: true };
+    return { success: true }; // No connection — skip
   }
 
   const conn = connection as CalendarConnection;
 
   try {
-    const tokens: GoogleTokens = {
+    const tokens: MicrosoftTokens = {
       access_token: conn.access_token,
       refresh_token: conn.refresh_token,
       expires_at: conn.token_expires_at,
     };
 
-    const { access_token, refreshed, new_expires_at } =
+    const { access_token, refreshed, new_expires_at, new_refresh_token } =
       await getValidAccessToken(tokens);
 
-    if (refreshed && new_expires_at) {
+    if (refreshed) {
+      const updateData: Record<string, string> = { access_token };
+      if (new_expires_at) updateData.token_expires_at = new_expires_at;
+      if (new_refresh_token) updateData.refresh_token = new_refresh_token;
       await supabase
         .from("doctor_calendar_connections")
-        .update({ access_token, token_expires_at: new_expires_at })
+        .update(updateData)
         .eq("id", conn.id);
     }
 
-    // Build event
-    const patientData: Record<string, unknown> = Array.isArray(booking.patient)
+    const patientData: any = Array.isArray(booking.patient)
       ? booking.patient[0]
       : booking.patient;
     const patientName = `${patientData.first_name} ${patientData.last_name}`;
     const consultationType =
       booking.consultation_type === "video" ? "Video" : "In-Person";
 
-    const locationData: Record<string, unknown> = Array.isArray(
-      (doctorData as Record<string, unknown>).location
-    )
-      ? ((doctorData as Record<string, unknown>).location as Record<string, unknown>[])[0]
-      : (doctorData as Record<string, unknown>).location as Record<string, unknown>;
-    const timezone = (locationData?.timezone as string) || "Europe/London";
+    const locationData: any = Array.isArray(doctorData.location)
+      ? doctorData.location[0]
+      : doctorData.location;
+    const timezone = locationData?.timezone || "UTC";
 
     const event = await createEvent(access_token, conn.calendar_id, {
-      summary: `${consultationType} Appointment — ${patientName}`,
-      description: `Booking #${booking.booking_number}\nPatient: ${patientName}\nType: ${consultationType}${booking.patient_notes ? `\nNotes: ${booking.patient_notes}` : ""}`,
-      start: {
-        dateTime: booking.start_time,
-        timeZone: timezone,
+      subject: `${consultationType} Appointment — ${patientName}`,
+      body: {
+        contentType: "text",
+        content: `Booking #${booking.booking_number}\nPatient: ${patientName}\nType: ${consultationType}${booking.patient_notes ? `\nNotes: ${booking.patient_notes}` : ""}`,
       },
-      end: {
-        dateTime: booking.end_time,
-        timeZone: timezone,
-      },
+      start: { dateTime: booking.start_time, timeZone: timezone },
+      end: { dateTime: booking.end_time, timeZone: timezone },
     });
 
-    // Store event ID on booking
     if (event.id) {
       await supabase
         .from("bookings")
-        .update({ google_event_id: event.id })
+        .update({ microsoft_event_id: event.id })
         .eq("id", bookingId);
     }
 
     return { success: true, eventId: event.id };
   } catch (err) {
-    console.error("Export booking to Google Calendar error:", err);
+    console.error("Export booking to Microsoft Calendar error:", err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -297,28 +276,28 @@ export async function exportBookingToGoogleCalendar(
 }
 
 /**
- * Remove a booking event from Google Calendar (on cancellation)
+ * Remove a booking event from Microsoft Calendar
  */
-export async function removeBookingFromGoogleCalendar(
+export async function removeBookingFromMicrosoftCalendar(
   bookingId: string
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createAdminClient();
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, google_event_id, doctor_id")
+    .select("id, microsoft_event_id, doctor_id")
     .eq("id", bookingId)
     .single();
 
-  if (!booking || !booking.google_event_id) {
-    return { success: true }; // Nothing to remove
+  if (!booking || !(booking as any).microsoft_event_id) {
+    return { success: true };
   }
 
   const { data: connection } = await supabase
     .from("doctor_calendar_connections")
     .select("*")
     .eq("doctor_id", booking.doctor_id)
-    .eq("provider", "google")
+    .eq("provider", "microsoft")
     .single();
 
   if (!connection || !connection.calendar_id) {
@@ -328,33 +307,35 @@ export async function removeBookingFromGoogleCalendar(
   const conn = connection as CalendarConnection;
 
   try {
-    const tokens: GoogleTokens = {
+    const tokens: MicrosoftTokens = {
       access_token: conn.access_token,
       refresh_token: conn.refresh_token,
       expires_at: conn.token_expires_at,
     };
 
-    const { access_token, refreshed, new_expires_at } =
+    const { access_token, refreshed, new_expires_at, new_refresh_token } =
       await getValidAccessToken(tokens);
 
-    if (refreshed && new_expires_at) {
+    if (refreshed) {
+      const updateData: Record<string, string> = { access_token };
+      if (new_expires_at) updateData.token_expires_at = new_expires_at;
+      if (new_refresh_token) updateData.refresh_token = new_refresh_token;
       await supabase
         .from("doctor_calendar_connections")
-        .update({ access_token, token_expires_at: new_expires_at })
+        .update(updateData)
         .eq("id", conn.id);
     }
 
-    await deleteEvent(access_token, conn.calendar_id, booking.google_event_id);
+    await deleteEvent(access_token, (booking as any).microsoft_event_id);
 
-    // Clear event ID
     await supabase
       .from("bookings")
-      .update({ google_event_id: null })
+      .update({ microsoft_event_id: null })
       .eq("id", bookingId);
 
     return { success: true };
   } catch (err) {
-    console.error("Remove Google Calendar event error:", err);
+    console.error("Remove Microsoft Calendar event error:", err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -363,9 +344,9 @@ export async function removeBookingFromGoogleCalendar(
 }
 
 /**
- * Set up a push notification webhook for a doctor's calendar
+ * Set up a webhook subscription for a doctor's Microsoft calendar
  */
-export async function setupCalendarWebhook(
+export async function setupMicrosoftWebhook(
   doctorId: string
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createAdminClient();
@@ -374,7 +355,7 @@ export async function setupCalendarWebhook(
     .from("doctor_calendar_connections")
     .select("*")
     .eq("doctor_id", doctorId)
-    .eq("provider", "google")
+    .eq("provider", "microsoft")
     .single();
 
   if (!connection || !connection.calendar_id) {
@@ -384,44 +365,44 @@ export async function setupCalendarWebhook(
   const conn = connection as CalendarConnection;
 
   try {
-    const tokens: GoogleTokens = {
+    const tokens: MicrosoftTokens = {
       access_token: conn.access_token,
       refresh_token: conn.refresh_token,
       expires_at: conn.token_expires_at,
     };
 
-    const { access_token, refreshed, new_expires_at } =
+    const { access_token, refreshed, new_expires_at, new_refresh_token } =
       await getValidAccessToken(tokens);
 
-    if (refreshed && new_expires_at) {
+    if (refreshed) {
+      const updateData: Record<string, string> = { access_token };
+      if (new_expires_at) updateData.token_expires_at = new_expires_at;
+      if (new_refresh_token) updateData.refresh_token = new_refresh_token;
       await supabase
         .from("doctor_calendar_connections")
-        .update({ access_token, token_expires_at: new_expires_at })
+        .update(updateData)
         .eq("id", conn.id);
     }
 
-    const channelId = `mydoctor-${doctorId}-${Date.now()}`;
-    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/google-calendar`;
+    const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/microsoft-calendar`;
 
-    const watch = await watchCalendar(
+    const sub = await createSubscription(
       access_token,
       conn.calendar_id,
-      channelId,
       webhookUrl
     );
 
     await supabase
       .from("doctor_calendar_connections")
       .update({
-        webhook_channel_id: watch.id,
-        webhook_resource_id: watch.resourceId,
-        webhook_expiration: watch.expiration,
+        webhook_channel_id: sub.id,
+        webhook_expiration: sub.expirationDateTime,
       })
       .eq("id", conn.id);
 
     return { success: true };
   } catch (err) {
-    console.error("Setup webhook error:", err);
+    console.error("Setup Microsoft webhook error:", err);
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -430,9 +411,9 @@ export async function setupCalendarWebhook(
 }
 
 /**
- * Sync all connected doctors (for cron job)
+ * Sync all connected Microsoft Calendar doctors (for cron job)
  */
-export async function syncAllConnectedDoctors(): Promise<{
+export async function syncAllMicrosoftDoctors(): Promise<{
   synced: number;
   errors: number;
 }> {
@@ -441,7 +422,7 @@ export async function syncAllConnectedDoctors(): Promise<{
   const { data: connections } = await supabase
     .from("doctor_calendar_connections")
     .select("doctor_id")
-    .eq("provider", "google")
+    .eq("provider", "microsoft")
     .eq("sync_enabled", true)
     .not("calendar_id", "is", null);
 
@@ -453,13 +434,13 @@ export async function syncAllConnectedDoctors(): Promise<{
   let errors = 0;
 
   for (const conn of connections) {
-    const result = await importGoogleCalendarEvents(conn.doctor_id);
+    const result = await importMicrosoftCalendarEvents(conn.doctor_id);
     if (result.success) {
       synced++;
     } else {
       errors++;
       console.error(
-        `Sync failed for doctor ${conn.doctor_id}: ${result.error}`
+        `Microsoft sync failed for doctor ${conn.doctor_id}: ${result.error}`
       );
     }
   }

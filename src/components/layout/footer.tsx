@@ -45,6 +45,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/help-center" className="hover:text-foreground">
+                  {t("help_center")}
+                </Link>
+              </li>
+              <li>
                 <Link href="/find-pharmacy" className="hover:text-foreground">
                   {t("find_pharmacy")}
                 </Link>
@@ -69,6 +74,11 @@ export function Footer() {
               <li>
                 <Link href="/contact" className="hover:text-foreground">
                   {t("contact")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/help-center" className="hover:text-foreground">
+                  {t("help_center")}
                 </Link>
               </li>
             </ul>

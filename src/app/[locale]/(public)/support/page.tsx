@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Link } from "@/i18n/navigation";
-import { Mail, FileText, MessageCircle, HelpCircle } from "lucide-react";
+import { Mail, FileText, MessageCircle, HelpCircle, BookOpen, ArrowRight } from "lucide-react";
 
 const supportEmail =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@mydoctors360.com";
@@ -62,6 +62,36 @@ export default function SupportPage() {
             Reach our support team through email, support tickets, or WhatsApp.
             We&apos;re here to make your experience seamless.
           </p>
+        </div>
+      </section>
+
+      {/* Help Center Banner */}
+      <section className="px-4 py-8">
+        <div className="container mx-auto max-w-5xl">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">
+                    Looking for guides and troubleshooting?
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Visit our Help Center for step-by-step guides, calendar
+                    setup instructions, and more.
+                  </p>
+                </div>
+              </div>
+              <Button className="shrink-0 rounded-full" asChild>
+                <Link href="/help-center">
+                  Browse Help Center{" "}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </section>
 

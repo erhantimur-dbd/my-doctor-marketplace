@@ -8,6 +8,7 @@ import {
   Gift,
   Heart,
   HelpCircle,
+  BookOpen,
   MessageSquare,
   Settings,
   Star,
@@ -25,6 +26,7 @@ const sidebarLinks = [
   { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
   { href: "/dashboard/referrals", icon: Gift, label: "Referrals" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+  { href: "/help-center", icon: BookOpen, label: "Help Center" },
   { href: "/dashboard/support", icon: HelpCircle, label: "Support" },
 ];
 

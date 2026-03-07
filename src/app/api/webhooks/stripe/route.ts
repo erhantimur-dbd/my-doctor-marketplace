@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe/client";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exportBookingToGoogleCalendar } from "@/lib/google/sync";
+import { exportBookingToMicrosoftCalendar } from "@/lib/microsoft/sync";
+import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
@@ -114,9 +116,15 @@ export async function POST(request: NextRequest) {
               });
             }
 
-            // Export to Google Calendar (non-blocking)
+            // Export to connected calendars (non-blocking)
             exportBookingToGoogleCalendar(firstBookingId).catch((err) =>
               console.error("Google Calendar export error (follow-up):", err)
+            );
+            exportBookingToMicrosoftCalendar(firstBookingId).catch((err) =>
+              console.error("Microsoft Calendar export error (follow-up):", err)
+            );
+            exportBookingToCalDAV(firstBookingId).catch((err) =>
+              console.error("CalDAV export error (follow-up):", err)
             );
 
             // Create video room if video consultation
@@ -247,9 +255,15 @@ export async function POST(request: NextRequest) {
             currency: booking.currency,
           });
 
-          // Export confirmed booking to doctor's Google Calendar (non-blocking)
+          // Export confirmed booking to doctor's connected calendars (non-blocking)
           exportBookingToGoogleCalendar(bookingId).catch((err) =>
             console.error("Google Calendar export error:", err)
+          );
+          exportBookingToMicrosoftCalendar(bookingId).catch((err) =>
+            console.error("Microsoft Calendar export error:", err)
+          );
+          exportBookingToCalDAV(bookingId).catch((err) =>
+            console.error("CalDAV export error:", err)
           );
 
           // Create Daily.co video room for video consultations

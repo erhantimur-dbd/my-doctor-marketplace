@@ -18,6 +18,8 @@ import { sendEmail } from "@/lib/email/client";
 import { followUpInvitationEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { exportBookingToGoogleCalendar } from "@/lib/google/sync";
+import { exportBookingToMicrosoftCalendar } from "@/lib/microsoft/sync";
+import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
 
@@ -527,9 +529,15 @@ export async function bookFollowUpSession(
       }
     }
 
-    // Export to Google Calendar (non-blocking)
+    // Export to connected calendars (non-blocking)
     exportBookingToGoogleCalendar(booking.id).catch((err) =>
       console.error("Google Calendar export error:", err)
+    );
+    exportBookingToMicrosoftCalendar(booking.id).catch((err) =>
+      console.error("Microsoft Calendar export error:", err)
+    );
+    exportBookingToCalDAV(booking.id).catch((err) =>
+      console.error("CalDAV export error:", err)
     );
 
     // Send confirmation email (non-blocking)

@@ -9,20 +9,40 @@ export async function UnreadBadge() {
 
   if (!user) return null;
 
-  const { count } = await supabase
+  // Count unread notifications
+  const { count: notifCount } = await supabase
     .from("notifications")
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id)
     .eq("read", false);
 
-  if (!count || count === 0) return null;
+  // Count unread direct messages
+  const { data: conversations } = await supabase
+    .from("conversations")
+    .select("id");
+
+  let msgCount = 0;
+  if (conversations && conversations.length > 0) {
+    const convIds = conversations.map((c) => c.id);
+    const { count } = await supabase
+      .from("direct_messages")
+      .select("id", { count: "exact", head: true })
+      .in("conversation_id", convIds)
+      .neq("sender_id", user.id)
+      .is("read_at", null);
+    msgCount = count || 0;
+  }
+
+  const total = (notifCount || 0) + msgCount;
+
+  if (total === 0) return null;
 
   return (
     <Badge
       variant="destructive"
       className="ml-auto h-5 min-w-5 px-1.5 text-xs"
     >
-      {count > 99 ? "99+" : count}
+      {total > 99 ? "99+" : total}
     </Badge>
   );
 }
