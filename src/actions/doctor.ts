@@ -25,6 +25,10 @@ export async function updateDoctorProfile(formData: FormData) {
   const { error: authError, supabase, doctor } = await requireDoctor();
   if (authError || !supabase || !doctor) return { error: authError };
 
+  if (doctor.verification_status === "verified") {
+    return { error: "Your profile is locked after GMC verification. Please open a support ticket to request changes." };
+  }
+
   const updates: Record<string, unknown> = {};
 
   const title = formData.get("title") as string;

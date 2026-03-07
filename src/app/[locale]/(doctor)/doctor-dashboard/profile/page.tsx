@@ -36,6 +36,7 @@ import {
   Clock,
   Pencil,
   Trash2,
+  Lock,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import { centsToAmount, amountToCents, formatCurrency } from "@/lib/utils/currency";
@@ -59,6 +60,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
 
   // Form state
   const [title, setTitle] = useState("Dr.");
@@ -164,6 +166,7 @@ export default function ProfilePage() {
     if (!data) return;
 
     setDoctor(data as Doctor);
+    setIsVerified(data.verification_status === "verified");
     setTitle(data.title || "Dr.");
     setBio(data.bio || "");
     setYearsOfExperience(data.years_of_experience || 0);
@@ -193,7 +196,7 @@ export default function ProfilePage() {
   }
 
   async function handleSave() {
-    if (!doctor) return;
+    if (!doctor || isVerified) return;
     setSaving(true);
     setSaved(false);
 
@@ -296,18 +299,45 @@ export default function ProfilePage() {
               </Link>
             </Button>
           )}
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : saved ? (
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            {saved ? "Saved" : "Save All Changes"}
-          </Button>
+          {!isVerified && (
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : saved ? (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              {saved ? "Saved" : "Save All Changes"}
+            </Button>
+          )}
         </div>
       </div>
+
+      {isVerified && (
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardContent className="flex items-center justify-between p-5">
+            <div className="flex items-center gap-3">
+              <div className="rounded-full bg-amber-100 p-2.5 dark:bg-amber-900/50">
+                <Lock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-amber-900 dark:text-amber-100">
+                  Profile Locked
+                </p>
+                <p className="text-sm text-amber-800/80 dark:text-amber-200/70">
+                  Your profile details are locked after GMC verification. To request changes, please open a support ticket.
+                </p>
+              </div>
+            </div>
+            <Button size="sm" variant="outline" asChild>
+              <Link href="/doctor-dashboard/support/new">
+                Open Ticket
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Basic Info */}
       <Card>
@@ -321,7 +351,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Title</Label>
-              <Select value={title} onValueChange={setTitle}>
+              <Select value={title} onValueChange={setTitle} disabled={isVerified}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -343,6 +373,7 @@ export default function ProfilePage() {
                 onChange={(e) =>
                   setYearsOfExperience(parseInt(e.target.value) || 0)
                 }
+                disabled={isVerified}
               />
             </div>
           </div>
@@ -353,6 +384,7 @@ export default function ProfilePage() {
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={5}
+              disabled={isVerified}
             />
             <p className="text-xs text-muted-foreground">
               {bio.length}/2000 characters
@@ -377,6 +409,7 @@ export default function ProfilePage() {
                 placeholder="e.g., City Medical Center"
                 value={clinicName}
                 onChange={(e) => setClinicName(e.target.value)}
+                disabled={isVerified}
               />
             </div>
             <div className="space-y-2">
@@ -385,6 +418,7 @@ export default function ProfilePage() {
                 placeholder="Full clinic address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
+                disabled={isVerified}
               />
             </div>
           </div>
@@ -398,8 +432,8 @@ export default function ProfilePage() {
                 <Badge
                   key={lang.code}
                   variant={languages.includes(lang.code) ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => toggleLanguage(lang.code)}
+                  className={isVerified ? "opacity-60" : "cursor-pointer"}
+                  onClick={() => !isVerified && toggleLanguage(lang.code)}
                 >
                   {lang.name}
                 </Badge>
@@ -416,6 +450,7 @@ export default function ProfilePage() {
                 <Checkbox
                   checked={consultationTypes.includes("in_person")}
                   onCheckedChange={() => toggleConsultationType("in_person")}
+                  disabled={isVerified}
                 />
                 <span className="text-sm">In Person</span>
               </label>
@@ -423,6 +458,7 @@ export default function ProfilePage() {
                 <Checkbox
                   checked={consultationTypes.includes("video")}
                   onCheckedChange={() => toggleConsultationType("video")}
+                  disabled={isVerified}
                 />
                 <span className="text-sm">Video Consultation</span>
               </label>
@@ -446,6 +482,7 @@ export default function ProfilePage() {
               <Switch
                 checked={isWheelchairAccessible}
                 onCheckedChange={setIsWheelchairAccessible}
+                disabled={isVerified}
               />
             </div>
           </div>
@@ -459,7 +496,7 @@ export default function ProfilePage() {
             <GraduationCap className="h-5 w-5" />
             Education
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={addEducation}>
+          <Button variant="outline" size="sm" onClick={addEducation} disabled={isVerified}>
             <Plus className="mr-2 h-4 w-4" />
             Add Education
           </Button>
@@ -481,6 +518,7 @@ export default function ProfilePage() {
                       onChange={(e) =>
                         updateEducation(index, "degree", e.target.value)
                       }
+                      disabled={isVerified}
                     />
                   </div>
                   <div className="space-y-1">
@@ -491,6 +529,7 @@ export default function ProfilePage() {
                       onChange={(e) =>
                         updateEducation(index, "institution", e.target.value)
                       }
+                      disabled={isVerified}
                     />
                   </div>
                   <div className="space-y-1">
@@ -503,6 +542,7 @@ export default function ProfilePage() {
                       onChange={(e) =>
                         updateEducation(index, "year", parseInt(e.target.value) || 0)
                       }
+                      disabled={isVerified}
                     />
                   </div>
                 </div>
@@ -511,6 +551,7 @@ export default function ProfilePage() {
                   size="icon"
                   className="shrink-0"
                   onClick={() => removeEducation(index)}
+                  disabled={isVerified}
                 >
                   <X className="h-4 w-4 text-destructive" />
                 </Button>
@@ -527,7 +568,7 @@ export default function ProfilePage() {
             <Award className="h-5 w-5" />
             Certifications
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={addCertification}>
+          <Button variant="outline" size="sm" onClick={addCertification} disabled={isVerified}>
             <Plus className="mr-2 h-4 w-4" />
             Add Certification
           </Button>
@@ -549,6 +590,7 @@ export default function ProfilePage() {
                       onChange={(e) =>
                         updateCertification(index, "name", e.target.value)
                       }
+                      disabled={isVerified}
                     />
                   </div>
                   <div className="space-y-1">
@@ -559,6 +601,7 @@ export default function ProfilePage() {
                       onChange={(e) =>
                         updateCertification(index, "issuer", e.target.value)
                       }
+                      disabled={isVerified}
                     />
                   </div>
                   <div className="space-y-1">
@@ -575,6 +618,7 @@ export default function ProfilePage() {
                           parseInt(e.target.value) || 0
                         )
                       }
+                      disabled={isVerified}
                     />
                   </div>
                 </div>
@@ -583,6 +627,7 @@ export default function ProfilePage() {
                   size="icon"
                   className="shrink-0"
                   onClick={() => removeCertification(index)}
+                  disabled={isVerified}
                 >
                   <X className="h-4 w-4 text-destructive" />
                 </Button>
@@ -623,6 +668,7 @@ export default function ProfilePage() {
                       amountToCents(parseFloat(e.target.value) || 0)
                     )
                   }
+                  disabled={isVerified}
                 />
               </div>
             </div>
@@ -643,6 +689,7 @@ export default function ProfilePage() {
                       amountToCents(parseFloat(e.target.value) || 0)
                     )
                   }
+                  disabled={isVerified}
                 />
               </div>
             </div>
@@ -839,7 +886,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Policy Type</Label>
-              <Select value={cancellationPolicy} onValueChange={setCancellationPolicy}>
+              <Select value={cancellationPolicy} onValueChange={setCancellationPolicy} disabled={isVerified}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -860,6 +907,7 @@ export default function ProfilePage() {
                 onChange={(e) =>
                   setCancellationHours(parseInt(e.target.value) || 24)
                 }
+                disabled={isVerified}
               />
             </div>
           </div>
@@ -867,18 +915,20 @@ export default function ProfilePage() {
       </Card>
 
       {/* Bottom Save */}
-      <div className="flex justify-end pb-8">
-        <Button onClick={handleSave} disabled={saving} size="lg">
-          {saving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : saved ? (
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          {saved ? "Changes Saved" : "Save All Changes"}
-        </Button>
-      </div>
+      {!isVerified && (
+        <div className="flex justify-end pb-8">
+          <Button onClick={handleSave} disabled={saving} size="lg">
+            {saving ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : saved ? (
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {saved ? "Changes Saved" : "Save All Changes"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

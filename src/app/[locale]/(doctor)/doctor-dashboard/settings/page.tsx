@@ -45,6 +45,18 @@ import {
   disconnectCalendar,
   triggerCalendarSync,
   toggleCalendarSync,
+  getMicrosoftCalendarConnection,
+  disconnectMicrosoftCalendar,
+  triggerMicrosoftCalendarSync,
+  toggleMicrosoftCalendarSync,
+  getIcsFeedUrl,
+  generateIcsFeedToken,
+  revokeIcsFeedToken,
+  getCalDAVConnection,
+  connectCalDAV,
+  disconnectCalDAV,
+  triggerCalDAVSync,
+  toggleCalDAVSync,
 } from "@/actions/calendar";
 import {
   getDoctorReminderPreferences,
@@ -80,6 +92,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isVerified, setIsVerified] = useState(false);
 
   // Personal info
   const [firstName, setFirstName] = useState("");
@@ -110,6 +123,33 @@ export default function SettingsPage() {
   const [calendarLastSynced, setCalendarLastSynced] = useState<string | null>(null);
   const [syncingCalendar, setSyncingCalendar] = useState(false);
   const [disconnectingCalendar, setDisconnectingCalendar] = useState(false);
+
+  // Microsoft Calendar
+  const [msCalendarConnected, setMsCalendarConnected] = useState(false);
+  const [msCalendarSyncEnabled, setMsCalendarSyncEnabled] = useState(true);
+  const [msCalendarLastSynced, setMsCalendarLastSynced] = useState<string | null>(null);
+  const [syncingMsCalendar, setSyncingMsCalendar] = useState(false);
+  const [disconnectingMsCalendar, setDisconnectingMsCalendar] = useState(false);
+
+  // CalDAV
+  const [caldavConnected, setCaldavConnected] = useState(false);
+  const [caldavSyncEnabled, setCaldavSyncEnabled] = useState(true);
+  const [caldavLastSynced, setCaldavLastSynced] = useState<string | null>(null);
+  const [caldavProviderName, setCaldavProviderName] = useState("");
+  const [syncingCaldav, setSyncingCaldav] = useState(false);
+  const [disconnectingCaldav, setDisconnectingCaldav] = useState(false);
+  const [caldavDialogOpen, setCaldavDialogOpen] = useState(false);
+  const [caldavProvider, setCaldavProvider] = useState("apple");
+  const [caldavServerUrl, setCaldavServerUrl] = useState("");
+  const [caldavUsername, setCaldavUsername] = useState("");
+  const [caldavPassword, setCaldavPassword] = useState("");
+  const [caldavConnecting, setCaldavConnecting] = useState(false);
+  const [caldavError, setCaldavError] = useState("");
+
+  // ICS Feed
+  const [icsFeedUrl, setIcsFeedUrl] = useState<string | null>(null);
+  const [generatingFeed, setGeneratingFeed] = useState(false);
+  const [copiedFeed, setCopiedFeed] = useState(false);
 
   // Reminders
   const [reminders, setReminders] = useState<ReminderPreference[]>([]);
@@ -154,13 +194,14 @@ export default function SettingsPage() {
 
     const { data: doctor } = await supabase
       .from("doctors")
-      .select("id, is_active")
+      .select("id, is_active, verification_status")
       .eq("profile_id", user.id)
       .single();
 
     if (doctor) {
       setDoctorId(doctor.id);
       setIsActive(doctor.is_active);
+      setIsVerified(doctor.verification_status === "verified");
     }
 
     // Load calendar connection
@@ -171,12 +212,39 @@ export default function SettingsPage() {
       setCalendarLastSynced(calConn.last_synced_at);
     }
 
+    // Load Microsoft Calendar connection
+    const msCalConn = await getMicrosoftCalendarConnection();
+    if (msCalConn) {
+      setMsCalendarConnected(true);
+      setMsCalendarSyncEnabled(msCalConn.sync_enabled);
+      setMsCalendarLastSynced(msCalConn.last_synced_at);
+    }
+
+    // Load CalDAV connection
+    const caldavConn = await getCalDAVConnection();
+    if (caldavConn) {
+      setCaldavConnected(true);
+      setCaldavSyncEnabled(caldavConn.sync_enabled);
+      setCaldavLastSynced(caldavConn.last_synced_at);
+      setCaldavProviderName(caldavConn.caldav_provider || "CalDAV");
+    }
+
+    // Load ICS Feed URL
+    const feedResult = await getIcsFeedUrl();
+    if (feedResult.url) {
+      setIcsFeedUrl(feedResult.url);
+    }
+
     // Check URL params for calendar connection result
     const params = new URLSearchParams(window.location.search);
     if (params.get("calendar_connected") === "true") {
       setCalendarConnected(true);
       setCalendarSyncEnabled(true);
-      // Clean URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (params.get("microsoft_calendar_connected") === "true") {
+      setMsCalendarConnected(true);
+      setMsCalendarSyncEnabled(true);
       window.history.replaceState({}, "", window.location.pathname);
     }
 
@@ -191,7 +259,7 @@ export default function SettingsPage() {
   }
 
   async function savePersonalInfo() {
-    if (!userId) return;
+    if (!userId || isVerified) return;
     setSavingPersonal(true);
     setSavedPersonal(false);
 
@@ -374,6 +442,16 @@ export default function SettingsPage() {
             <User className="h-5 w-5" />
             Personal Information
           </CardTitle>
+          {isVerified && (
+            <CardDescription className="flex items-center gap-2 text-amber-600">
+              <Lock className="h-3.5 w-3.5" />
+              Locked after GMC verification.{" "}
+              <a href="/en/doctor-dashboard/support/new" className="underline hover:text-amber-700">
+                Open a support ticket
+              </a>{" "}
+              to request changes.
+            </CardDescription>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -383,6 +461,7 @@ export default function SettingsPage() {
                 id="firstName"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                disabled={isVerified}
               />
             </div>
             <div className="space-y-2">
@@ -391,6 +470,7 @@ export default function SettingsPage() {
                 id="lastName"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                disabled={isVerified}
               />
             </div>
           </div>
@@ -410,21 +490,24 @@ export default function SettingsPage() {
                 placeholder="+49 123 456 7890"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                disabled={isVerified}
               />
             </div>
           </div>
-          <div className="flex justify-end">
-            <Button onClick={savePersonalInfo} disabled={savingPersonal}>
-              {savingPersonal ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : savedPersonal ? (
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-              ) : (
-                <Save className="mr-2 h-4 w-4" />
-              )}
-              {savedPersonal ? "Saved" : "Save"}
-            </Button>
-          </div>
+          {!isVerified && (
+            <div className="flex justify-end">
+              <Button onClick={savePersonalInfo} disabled={savingPersonal}>
+                {savingPersonal ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : savedPersonal ? (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                {savedPersonal ? "Saved" : "Save"}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -808,6 +891,443 @@ export default function SettingsPage() {
                     Connect Google Calendar
                   </a>
                 </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Microsoft Calendar Integration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Microsoft Outlook / 365 Calendar
+          </CardTitle>
+          <CardDescription>
+            Connect your Microsoft Outlook or Office 365 calendar for bidirectional sync.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {msCalendarConnected ? (
+            <>
+              <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div className="flex-1">
+                  <p className="font-medium text-green-800 dark:text-green-200">
+                    Microsoft Calendar Connected
+                  </p>
+                  {msCalendarLastSynced && (
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      Last synced: {new Date(msCalendarLastSynced).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Auto-sync</p>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically import calendar events as blocked times
+                  </p>
+                </div>
+                <Switch
+                  checked={msCalendarSyncEnabled}
+                  onCheckedChange={async (checked) => {
+                    setMsCalendarSyncEnabled(checked);
+                    await toggleMicrosoftCalendarSync(checked);
+                  }}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={syncingMsCalendar}
+                  onClick={async () => {
+                    setSyncingMsCalendar(true);
+                    const result = await triggerMicrosoftCalendarSync();
+                    if (result.success) {
+                      setMsCalendarLastSynced(new Date().toISOString());
+                    } else {
+                      alert(result.error || "Sync failed");
+                    }
+                    setSyncingMsCalendar(false);
+                  }}
+                >
+                  {syncingMsCalendar ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Sync Now
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={disconnectingMsCalendar}
+                  onClick={async () => {
+                    if (!confirm("Disconnect Microsoft Calendar? Synced blocked times will be removed.")) return;
+                    setDisconnectingMsCalendar(true);
+                    const result = await disconnectMicrosoftCalendar();
+                    if (result.success) {
+                      setMsCalendarConnected(false);
+                      setMsCalendarLastSynced(null);
+                    } else {
+                      alert(result.error || "Failed to disconnect");
+                    }
+                    setDisconnectingMsCalendar(false);
+                  }}
+                >
+                  {disconnectingMsCalendar ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Unlink className="mr-2 h-4 w-4" />
+                  )}
+                  Disconnect
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <Calendar className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-3 font-medium">
+                Connect Microsoft Calendar
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Import Outlook/Office 365 events to block unavailable times.
+                Bookings will also sync to your Microsoft Calendar.
+              </p>
+              <Button className="mt-4" asChild>
+                <a href="/api/calendar/microsoft/connect">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Connect Microsoft Calendar
+                </a>
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ICS Calendar Feed */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Calendar Subscription (ICS Feed)
+          </CardTitle>
+          <CardDescription>
+            Subscribe to your bookings from any calendar app — Apple Calendar, Outlook, Google Calendar, Thunderbird, and more.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {icsFeedUrl ? (
+            <>
+              <div className="space-y-2">
+                <Label>Feed URL</Label>
+                <div className="flex gap-2">
+                  <Input value={icsFeedUrl} readOnly className="font-mono text-xs" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(icsFeedUrl);
+                      setCopiedFeed(true);
+                      setTimeout(() => setCopiedFeed(false), 2000);
+                    }}
+                  >
+                    {copiedFeed ? (
+                      <CheckCircle2 className="h-4 w-4" />
+                    ) : (
+                      "Copy"
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Paste this URL into your calendar app&apos;s &quot;Subscribe to Calendar&quot; or &quot;Add by URL&quot; feature. Your bookings will refresh automatically.
+                </p>
+              </div>
+
+              <Separator />
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={async () => {
+                  if (!confirm("Revoke this feed URL? Any calendar apps using it will stop updating.")) return;
+                  const result = await revokeIcsFeedToken();
+                  if (result.success) setIcsFeedUrl(null);
+                }}
+              >
+                <Unlink className="mr-2 h-4 w-4" />
+                Revoke Feed URL
+              </Button>
+            </>
+          ) : (
+            <div className="rounded-lg border border-dashed p-6 text-center">
+              <Calendar className="mx-auto h-10 w-10 text-muted-foreground" />
+              <h3 className="mt-3 font-medium">
+                Generate Calendar Feed
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Create a private URL that any calendar app can subscribe to.
+                Your upcoming bookings will appear automatically.
+              </p>
+              <Button
+                className="mt-4"
+                disabled={generatingFeed}
+                onClick={async () => {
+                  setGeneratingFeed(true);
+                  const result = await generateIcsFeedToken();
+                  if (result.url) setIcsFeedUrl(result.url);
+                  setGeneratingFeed(false);
+                }}
+              >
+                {generatingFeed ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="mr-2 h-4 w-4" />
+                )}
+                Generate Feed URL
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* CalDAV Calendar (Apple, Fastmail, Nextcloud, etc.) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Apple / CalDAV Calendar
+          </CardTitle>
+          <CardDescription>
+            Connect Apple iCloud Calendar, Fastmail, Nextcloud, or any CalDAV-compatible calendar.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {caldavConnected ? (
+            <>
+              <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div className="flex-1">
+                  <p className="font-medium text-green-800 dark:text-green-200">
+                    {caldavProviderName === "apple" ? "Apple iCloud" : caldavProviderName === "fastmail" ? "Fastmail" : caldavProviderName === "nextcloud" ? "Nextcloud" : "CalDAV"} Calendar Connected
+                  </p>
+                  {caldavLastSynced && (
+                    <p className="text-sm text-green-600 dark:text-green-400">
+                      Last synced: {new Date(caldavLastSynced).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium">Auto-sync</p>
+                  <p className="text-sm text-muted-foreground">
+                    Automatically import calendar events as blocked times
+                  </p>
+                </div>
+                <Switch
+                  checked={caldavSyncEnabled}
+                  onCheckedChange={async (checked) => {
+                    setCaldavSyncEnabled(checked);
+                    await toggleCalDAVSync(checked);
+                  }}
+                />
+              </div>
+
+              <Separator />
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={syncingCaldav}
+                  onClick={async () => {
+                    setSyncingCaldav(true);
+                    const result = await triggerCalDAVSync();
+                    if (result.success) {
+                      setCaldavLastSynced(new Date().toISOString());
+                    } else {
+                      alert(result.error || "Sync failed");
+                    }
+                    setSyncingCaldav(false);
+                  }}
+                >
+                  {syncingCaldav ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Sync Now
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  disabled={disconnectingCaldav}
+                  onClick={async () => {
+                    if (!confirm("Disconnect CalDAV Calendar? Synced blocked times will be removed.")) return;
+                    setDisconnectingCaldav(true);
+                    const result = await disconnectCalDAV();
+                    if (result.success) {
+                      setCaldavConnected(false);
+                      setCaldavLastSynced(null);
+                    } else {
+                      alert(result.error || "Failed to disconnect");
+                    }
+                    setDisconnectingCaldav(false);
+                  }}
+                >
+                  {disconnectingCaldav ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Unlink className="mr-2 h-4 w-4" />
+                  )}
+                  Disconnect
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-lg border border-dashed p-6 text-center">
+                <Calendar className="mx-auto h-10 w-10 text-muted-foreground" />
+                <h3 className="mt-3 font-medium">
+                  Connect CalDAV Calendar
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Connect your Apple iCloud, Fastmail, Nextcloud, or other CalDAV calendar to sync availability.
+                </p>
+                <Dialog open={caldavDialogOpen} onOpenChange={setCaldavDialogOpen}>
+                  <Button className="mt-4" onClick={() => setCaldavDialogOpen(true)}>
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Connect CalDAV Calendar
+                  </Button>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Connect CalDAV Calendar</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-2">
+                      <div className="space-y-2">
+                        <Label>Provider</Label>
+                        <Select
+                          value={caldavProvider}
+                          onValueChange={(val) => {
+                            setCaldavProvider(val);
+                            const providers: Record<string, string> = {
+                              apple: "https://caldav.icloud.com",
+                              fastmail: "https://caldav.fastmail.com/dav/calendars",
+                              nextcloud: "",
+                              other: "",
+                            };
+                            setCaldavServerUrl(providers[val] || "");
+                            setCaldavError("");
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="apple">Apple iCloud</SelectItem>
+                            <SelectItem value="fastmail">Fastmail</SelectItem>
+                            <SelectItem value="nextcloud">Nextcloud</SelectItem>
+                            <SelectItem value="other">Other CalDAV</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {(caldavProvider === "nextcloud" || caldavProvider === "other") && (
+                        <div className="space-y-2">
+                          <Label>Server URL</Label>
+                          <Input
+                            placeholder="https://cloud.example.com/remote.php/dav"
+                            value={caldavServerUrl}
+                            onChange={(e) => setCaldavServerUrl(e.target.value)}
+                          />
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label>{caldavProvider === "apple" ? "Apple ID Email" : "Username / Email"}</Label>
+                        <Input
+                          placeholder={caldavProvider === "apple" ? "your@icloud.com" : "username"}
+                          value={caldavUsername}
+                          onChange={(e) => setCaldavUsername(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>{caldavProvider === "apple" ? "App-Specific Password" : "Password / App Password"}</Label>
+                        <Input
+                          type="password"
+                          placeholder="xxxx-xxxx-xxxx-xxxx"
+                          value={caldavPassword}
+                          onChange={(e) => setCaldavPassword(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {caldavProvider === "apple"
+                            ? "Generate an app-specific password at appleid.apple.com > Sign-In and Security > App-Specific Passwords."
+                            : caldavProvider === "fastmail"
+                              ? "Generate an app password from Fastmail Settings > Privacy & Security > Integrations."
+                              : "Use your account password or generate an app-specific password from your provider."}
+                        </p>
+                      </div>
+
+                      {caldavError && (
+                        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          {caldavError}
+                        </div>
+                      )}
+                    </div>
+
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                      </DialogClose>
+                      <Button
+                        disabled={caldavConnecting || !caldavUsername || !caldavPassword || !caldavServerUrl}
+                        onClick={async () => {
+                          setCaldavConnecting(true);
+                          setCaldavError("");
+                          const result = await connectCalDAV(
+                            caldavProvider,
+                            caldavServerUrl,
+                            caldavUsername,
+                            caldavPassword
+                          );
+                          if (result.success) {
+                            setCaldavConnected(true);
+                            setCaldavSyncEnabled(true);
+                            setCaldavProviderName(caldavProvider);
+                            setCaldavDialogOpen(false);
+                            setCaldavUsername("");
+                            setCaldavPassword("");
+                          } else {
+                            setCaldavError(result.error || "Connection failed");
+                          }
+                          setCaldavConnecting(false);
+                        }}
+                      >
+                        {caldavConnecting ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                        )}
+                        Connect
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
             </>
           )}
