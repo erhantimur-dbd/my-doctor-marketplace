@@ -5,8 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, Video, User, MapPin, Search } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Video,
+  User,
+  Search,
+  List,
+  CalendarDays,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { CalendarView } from "./calendar-view";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -168,10 +177,16 @@ function BookingCard({
 
 interface BookingsPageProps {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ view?: string }>;
 }
 
-export default async function BookingsPage({ params }: BookingsPageProps) {
+export default async function BookingsPage({
+  params,
+  searchParams,
+}: BookingsPageProps) {
   const { locale } = await params;
+  const { view: rawView } = await searchParams;
+  const view = rawView === "calendar" ? "calendar" : "list";
   const supabase = await createClient();
   const {
     data: { user },
@@ -230,72 +245,108 @@ export default async function BookingsPage({ params }: BookingsPageProps) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">My Bookings</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">My Bookings</h1>
 
-      <Tabs defaultValue="upcoming">
-        <TabsList>
-          <TabsTrigger value="upcoming">
-            Upcoming ({upcomingBookings.length})
-          </TabsTrigger>
-          <TabsTrigger value="past">
-            Past ({pastBookings.length})
-          </TabsTrigger>
-        </TabsList>
+        {/* View toggle */}
+        <div className="flex rounded-lg border p-0.5">
+          <Button
+            variant={view === "list" ? "default" : "ghost"}
+            size="sm"
+            className="gap-1.5"
+            asChild
+          >
+            <Link href="/dashboard/bookings?view=list">
+              <List className="h-4 w-4" />
+              <span className="hidden sm:inline">List</span>
+            </Link>
+          </Button>
+          <Button
+            variant={view === "calendar" ? "default" : "ghost"}
+            size="sm"
+            className="gap-1.5"
+            asChild
+          >
+            <Link href="/dashboard/bookings?view=calendar">
+              <CalendarDays className="h-4 w-4" />
+              <span className="hidden sm:inline">Calendar</span>
+            </Link>
+          </Button>
+        </div>
+      </div>
 
-        <TabsContent value="upcoming" className="mt-4">
-          {upcomingBookings.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center py-12 text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">No upcoming bookings</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  You don&apos;t have any upcoming appointments scheduled.
-                </p>
-                <Button className="mt-6" asChild>
-                  <Link href="/doctors">
-                    <Search className="mr-2 h-4 w-4" />
-                    Find a Doctor
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {upcomingBookings.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  locale={locale}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
+      {view === "calendar" ? (
+        <CalendarView bookings={typedBookings} locale={locale} />
+      ) : (
+        <Tabs defaultValue="upcoming">
+          <TabsList>
+            <TabsTrigger value="upcoming">
+              Upcoming ({upcomingBookings.length})
+            </TabsTrigger>
+            <TabsTrigger value="past">
+              Past ({pastBookings.length})
+            </TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="past" className="mt-4">
-          {pastBookings.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center py-12 text-center">
-                <Clock className="h-12 w-12 text-muted-foreground" />
-                <h3 className="mt-4 text-lg font-medium">No past bookings</h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Your completed and past bookings will appear here.
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {pastBookings.map((booking) => (
-                <BookingCard
-                  key={booking.id}
-                  booking={booking}
-                  locale={locale}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="upcoming" className="mt-4">
+            {upcomingBookings.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center py-12 text-center">
+                  <Calendar className="h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-medium">
+                    No upcoming bookings
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    You don&apos;t have any upcoming appointments scheduled.
+                  </p>
+                  <Button className="mt-6" asChild>
+                    <Link href="/doctors">
+                      <Search className="mr-2 h-4 w-4" />
+                      Find a Doctor
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {upcomingBookings.map((booking: BookingRow) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="past" className="mt-4">
+            {pastBookings.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center py-12 text-center">
+                  <Clock className="h-12 w-12 text-muted-foreground" />
+                  <h3 className="mt-4 text-lg font-medium">
+                    No past bookings
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Your completed and past bookings will appear here.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {pastBookings.map((booking: BookingRow) => (
+                  <BookingCard
+                    key={booking.id}
+                    booking={booking}
+                    locale={locale}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

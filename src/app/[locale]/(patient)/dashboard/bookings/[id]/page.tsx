@@ -17,10 +17,19 @@ import {
   FileText,
   Star,
   Stethoscope,
+  Wifi,
+  Camera,
+  Volume2,
+  IdCard,
+  ClipboardList,
+  Timer,
+  CheckCircle2,
+  Hourglass,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import { CancelBookingDialog } from "./cancel-booking-dialog";
+import { AddToCalendarButton } from "./add-to-calendar-button";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -39,6 +48,7 @@ type BookingDetail = {
   total_amount_cents: number;
   currency: string;
   patient_notes: string | null;
+  doctor_notes: string | null;
   cancellation_reason: string | null;
   payment_status: string | null;
   payment_intent_id: string | null;
@@ -137,6 +147,50 @@ function getPaymentStatusColor(status: string | null): string {
   }
 }
 
+/**
+ * Get a human-readable countdown label for the booking.
+ */
+function getCountdownLabel(
+  startDate: Date,
+  endDate: Date,
+  status: string
+): { label: string; variant: "default" | "secondary" | "outline" } | null {
+  if (
+    ["cancelled_patient", "cancelled_doctor", "no_show", "refunded"].includes(
+      status
+    )
+  ) {
+    return null;
+  }
+
+  if (status === "completed") {
+    return { label: "Completed", variant: "outline" };
+  }
+
+  const now = new Date();
+  const diffMs = startDate.getTime() - now.getTime();
+
+  if (now >= startDate && now <= endDate) {
+    return { label: "In Progress", variant: "default" };
+  }
+
+  if (diffMs < 0) {
+    return { label: "Completed", variant: "outline" };
+  }
+
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return { label: "Today", variant: "default" };
+  }
+
+  if (diffDays === 1) {
+    return { label: "Tomorrow", variant: "default" };
+  }
+
+  return { label: `In ${diffDays} days`, variant: "secondary" };
+}
+
 interface BookingDetailPageProps {
   params: Promise<{ locale: string; id: string }>;
 }
@@ -212,6 +266,30 @@ export default async function BookingDetailPage({
   const canWriteReview =
     typedBooking.status === "completed" && !existingReview;
 
+  const canAddToCalendar =
+    typedBooking.status === "confirmed" || typedBooking.status === "approved";
+
+  const isUpcoming = canAddToCalendar && startDate > now;
+
+  const countdown = getCountdownLabel(startDate, endDate, typedBooking.status);
+
+  // Build ICS description
+  const icsDescription = [
+    `Booking #${typedBooking.booking_number}`,
+    `Doctor: ${doctorName}`,
+    isVideo ? "Video Consultation" : "In-Person Consultation",
+    typedBooking.patient_notes
+      ? `Notes: ${typedBooking.patient_notes}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const icsLocation = isVideo
+    ? "Video Call"
+    : doctor.address ||
+      (doctor.location ? `${doctor.location.city}` : undefined);
+
   return (
     <div className="space-y-6">
       {/* Back link */}
@@ -230,12 +308,28 @@ export default async function BookingDetailPage({
             Booking #{typedBooking.booking_number}
           </p>
         </div>
-        <Badge
-          variant={getStatusBadgeVariant(typedBooking.status)}
-          className={`text-sm ${getStatusColor(typedBooking.status)}`}
-        >
-          {formatStatusLabel(typedBooking.status)}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {countdown && (
+            <Badge variant={countdown.variant} className="text-sm">
+              {countdown.variant === "default" && (
+                <Timer className="mr-1 h-3 w-3" />
+              )}
+              {countdown.label === "Completed" && (
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+              )}
+              {countdown.variant === "secondary" && (
+                <Hourglass className="mr-1 h-3 w-3" />
+              )}
+              {countdown.label}
+            </Badge>
+          )}
+          <Badge
+            variant={getStatusBadgeVariant(typedBooking.status)}
+            className={`text-sm ${getStatusColor(typedBooking.status)}`}
+          >
+            {formatStatusLabel(typedBooking.status)}
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -413,6 +507,114 @@ export default async function BookingDetailPage({
               )}
             </CardContent>
           </Card>
+
+          {/* Consultation Notes from Doctor */}
+          {typedBooking.status === "completed" && typedBooking.doctor_notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="h-4 w-4" />
+                  Consultation Notes
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap rounded-md bg-muted/50 p-4 text-sm leading-relaxed">
+                  {typedBooking.doctor_notes}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Preparation tips - only for upcoming confirmed/approved bookings */}
+          {isUpcoming && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ClipboardList className="h-4 w-4" />
+                  Preparation Tips
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isVideo ? (
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <Wifi className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          Ensure stable internet connection
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          A wired connection or strong Wi-Fi signal is
+                          recommended for uninterrupted video.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Camera className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          Test camera and microphone
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Check your audio and video settings before the
+                          appointment starts.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Volume2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          Find a quiet, well-lit space
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Choose a private area with good lighting so the doctor
+                          can see and hear you clearly.
+                        </p>
+                      </div>
+                    </li>
+                  </ul>
+                ) : (
+                  <ul className="space-y-3">
+                    <li className="flex items-start gap-3">
+                      <IdCard className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">Bring a valid ID</p>
+                        <p className="text-xs text-muted-foreground">
+                          You may be asked to verify your identity at the clinic
+                          reception.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <Clock className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          Arrive 10 minutes early
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Allow time for check-in and any paperwork that may be
+                          required.
+                        </p>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          Bring any relevant medical records
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Previous test results, prescriptions, or referral
+                          letters can help the doctor.
+                        </p>
+                      </div>
+                    </li>
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -505,6 +707,17 @@ export default async function BookingDetailPage({
                     </>
                   )}
                 </Button>
+              )}
+
+              {canAddToCalendar && (
+                <AddToCalendarButton
+                  title={`Appointment with ${doctorName}`}
+                  description={icsDescription}
+                  start={typedBooking.start_time}
+                  end={typedBooking.end_time}
+                  location={icsLocation}
+                  bookingNumber={typedBooking.booking_number}
+                />
               )}
 
               {canCancel && (

@@ -40,6 +40,12 @@ export default async function SettingsPage() {
     .eq("id", user.id)
     .single();
 
+  const { data: medicalProfile } = await supabase
+    .from("medical_profiles")
+    .select("*")
+    .eq("patient_id", user.id)
+    .single();
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
@@ -65,6 +71,7 @@ export default async function SettingsPage() {
           }
         }
         userEmail={user.email || ""}
+        medicalProfile={medicalProfile || null}
       />
     </div>
   );

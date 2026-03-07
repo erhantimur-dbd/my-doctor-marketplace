@@ -186,6 +186,49 @@ export async function uploadAvatar(
   }
 }
 
+export async function updateMedicalProfile(data: {
+  blood_type: string | null;
+  allergies: string[];
+  chronic_conditions: string[];
+  current_medications: string[];
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  notes: string | null;
+}): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { error } = await supabase
+    .from("medical_profiles")
+    .upsert(
+      {
+        patient_id: user.id,
+        blood_type: data.blood_type,
+        allergies: data.allergies,
+        chronic_conditions: data.chronic_conditions,
+        current_medications: data.current_medications,
+        emergency_contact_name: data.emergency_contact_name,
+        emergency_contact_phone: data.emergency_contact_phone,
+        notes: data.notes,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "patient_id" }
+    );
+
+  if (error) {
+    return { error: "Failed to update medical profile." };
+  }
+
+  revalidatePath("/dashboard/settings");
+  return {};
+}
+
 export async function updateNotifications(input: {
   notificationEmail: boolean;
   notificationSms: boolean;

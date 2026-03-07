@@ -4,6 +4,8 @@ import { Link } from "@/i18n/navigation";
 import {
   Calendar,
   ClipboardList,
+  CreditCard,
+  Gift,
   Heart,
   HelpCircle,
   MessageSquare,
@@ -17,9 +19,11 @@ const sidebarLinks = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
   { href: "/dashboard/bookings", icon: Calendar, label: "Bookings" },
   { href: "/dashboard/treatment-plans", icon: ClipboardList, label: "Treatment Plans" },
+  { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },
   { href: "/dashboard/favorites", icon: Heart, label: "Saved Doctors" },
   { href: "/dashboard/reviews", icon: Star, label: "My Reviews" },
   { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
+  { href: "/dashboard/referrals", icon: Gift, label: "Referrals" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
   { href: "/dashboard/support", icon: HelpCircle, label: "Support" },
 ];

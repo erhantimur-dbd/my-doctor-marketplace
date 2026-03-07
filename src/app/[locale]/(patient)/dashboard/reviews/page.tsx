@@ -181,6 +181,12 @@ export default async function ReviewsPage() {
                   year: "numeric",
                 });
 
+                // Check if review is within 30-day edit window
+                const createdAt = new Date(review.created_at);
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const canEdit = createdAt >= thirtyDaysAgo;
+
                 return (
                   <div key={review.id}>
                     {index > 0 && <Separator className="mb-4" />}
@@ -195,6 +201,18 @@ export default async function ReviewsPage() {
                             </span>
                           </div>
                         </div>
+                        {canEdit && (
+                          <WriteReviewDialog
+                            bookingId={review.booking_id}
+                            doctorId=""
+                            doctorName={doctorName}
+                            isEditing
+                            reviewId={review.id}
+                            initialRating={review.rating}
+                            initialTitle={review.title || ""}
+                            initialComment={review.comment || ""}
+                          />
+                        )}
                       </div>
 
                       {review.title && (

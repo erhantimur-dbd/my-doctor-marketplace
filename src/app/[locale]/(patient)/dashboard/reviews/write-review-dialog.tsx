@@ -17,12 +17,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Star, Loader2, Pencil } from "lucide-react";
 import { toast } from "sonner";
-import { submitReview } from "./actions";
+import { submitReview, updatePatientReview } from "./actions";
 
 interface WriteReviewDialogProps {
   bookingId: string;
   doctorId: string;
   doctorName: string;
+  isEditing?: boolean;
+  reviewId?: string;
+  initialRating?: number;
+  initialTitle?: string;
+  initialComment?: string;
 }
 
 function StarSelector({
@@ -67,11 +72,16 @@ export function WriteReviewDialog({
   bookingId,
   doctorId,
   doctorName,
+  isEditing = false,
+  reviewId,
+  initialRating = 0,
+  initialTitle = "",
+  initialComment = "",
 }: WriteReviewDialogProps) {
   const [open, setOpen] = useState(false);
-  const [rating, setRating] = useState(0);
-  const [title, setTitle] = useState("");
-  const [comment, setComment] = useState("");
+  const [rating, setRating] = useState(initialRating);
+  const [title, setTitle] = useState(initialTitle);
+  const [comment, setComment] = useState(initialComment);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -82,24 +92,43 @@ export function WriteReviewDialog({
     }
 
     startTransition(async () => {
-      const result = await submitReview({
-        bookingId,
-        doctorId,
-        rating,
-        title: title.trim() || null,
-        comment: comment.trim() || null,
-      });
+      if (isEditing && reviewId) {
+        const result = await updatePatientReview({
+          reviewId,
+          rating,
+          title: title.trim() || null,
+          comment: comment.trim() || null,
+        });
 
-      if (result.error) {
-        toast.error(result.error);
-        return;
+        if (result.error) {
+          toast.error(result.error);
+          return;
+        }
+
+        toast.success("Review updated successfully!");
+      } else {
+        const result = await submitReview({
+          bookingId,
+          doctorId,
+          rating,
+          title: title.trim() || null,
+          comment: comment.trim() || null,
+        });
+
+        if (result.error) {
+          toast.error(result.error);
+          return;
+        }
+
+        toast.success("Review submitted successfully!");
       }
 
-      toast.success("Review submitted successfully!");
       setOpen(false);
-      setRating(0);
-      setTitle("");
-      setComment("");
+      if (!isEditing) {
+        setRating(0);
+        setTitle("");
+        setComment("");
+      }
       router.refresh();
     });
   }
@@ -107,16 +136,18 @@ export function WriteReviewDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button size="sm" variant={isEditing ? "outline" : "default"}>
           <Pencil className="mr-1 h-3.5 w-3.5" />
-          Write Review
+          {isEditing ? "Edit" : "Write Review"}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Write a Review</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Review" : "Write a Review"}</DialogTitle>
           <DialogDescription>
-            Share your experience with {doctorName}
+            {isEditing
+              ? `Update your review for ${doctorName}`
+              : `Share your experience with ${doctorName}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -180,8 +211,10 @@ export function WriteReviewDialog({
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Submitting...
+                {isEditing ? "Updating..." : "Submitting..."}
               </>
+            ) : isEditing ? (
+              "Update Review"
             ) : (
               "Submit Review"
             )}

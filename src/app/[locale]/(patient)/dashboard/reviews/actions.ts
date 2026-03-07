@@ -79,3 +79,71 @@ export async function submitReview(
 
   return {};
 }
+
+interface UpdateReviewInput {
+  reviewId: string;
+  rating: number;
+  title: string | null;
+  comment: string | null;
+}
+
+export async function updatePatientReview(
+  input: UpdateReviewInput
+): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in to edit a review." };
+  }
+
+  // Validate rating
+  if (input.rating < 1 || input.rating > 5) {
+    return { error: "Rating must be between 1 and 5." };
+  }
+
+  // Fetch the review and verify ownership
+  const { data: review, error: fetchError } = await supabase
+    .from("reviews")
+    .select("id, patient_id, created_at")
+    .eq("id", input.reviewId)
+    .single();
+
+  if (fetchError || !review) {
+    return { error: "Review not found." };
+  }
+
+  if (review.patient_id !== user.id) {
+    return { error: "You are not authorized to edit this review." };
+  }
+
+  // Check 30-day edit window
+  const createdAt = new Date(review.created_at);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  if (createdAt < thirtyDaysAgo) {
+    return { error: "Reviews can only be edited within 30 days of posting." };
+  }
+
+  // Update the review
+  const { error: updateError } = await supabase
+    .from("reviews")
+    .update({
+      rating: input.rating,
+      title: input.title,
+      comment: input.comment,
+    })
+    .eq("id", input.reviewId);
+
+  if (updateError) {
+    return { error: "Failed to update review. Please try again." };
+  }
+
+  revalidatePath("/dashboard/reviews");
+  revalidatePath("/dashboard/bookings");
+
+  return {};
+}

@@ -1006,6 +1006,110 @@ export function subscriptionUpgradeInviteEmail({
 }
 
 // ---------------------------------------------------------------------------
+// Treatment Plan
+// ---------------------------------------------------------------------------
+
+interface TreatmentPlanParams {
+  patientName: string;
+  doctorName: string;
+  planTitle: string;
+  description: string | null;
+  totalSessions: number;
+  unitPrice: string;
+  discount: string | null;
+  totalPrice: string;
+  paymentType: string;
+  doctorNote: string | null;
+  planUrl: string;
+  expiresAt: string;
+}
+
+export function treatmentPlanEmail({
+  patientName,
+  doctorName,
+  planTitle,
+  description,
+  totalSessions,
+  unitPrice,
+  discount,
+  totalPrice,
+  paymentType,
+  doctorNote,
+  planUrl,
+  expiresAt,
+}: TreatmentPlanParams): { subject: string; html: string } {
+  const subject = `Treatment Plan from ${doctorName} — ${planTitle}`;
+
+  const noteBlock = doctorNote
+    ? `
+    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 16px 20px; border-radius: 4px; margin: 0 0 24px;">
+      <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280; font-weight: 600;">
+        Note from ${doctorName}:
+      </p>
+      <p style="margin: 0; font-size: 14px; color: #1e3a5f; line-height: 1.6; font-style: italic;">
+        &ldquo;${doctorNote}&rdquo;
+      </p>
+    </div>`
+    : "";
+
+  const descriptionBlock = description
+    ? `<p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+        ${description}
+      </p>`
+    : "";
+
+  const discountRow = discount
+    ? infoRow("Discount", `<span style="color: #059669;">-${discount}</span>`)
+    : "";
+
+  const paymentLabel =
+    paymentType === "pay_per_visit" ? "Pay Per Visit" : "Pay in Full";
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 16px; font-size: 20px; color: #111827; font-weight: 700;">
+      New Treatment Plan
+    </h2>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Hi ${patientName},
+    </p>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      <strong>${doctorName}</strong> has created a treatment plan for you.
+      Please review the details below and accept the plan to proceed.
+    </p>
+
+    ${noteBlock}
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+      <tr>
+        <td style="padding: 16px 20px; background-color: #f9fafb;">
+          <p style="margin: 0 0 12px; font-size: 16px; font-weight: 600; color: #111827;">
+            ${planTitle}
+          </p>
+          ${descriptionBlock}
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${infoRow("Sessions", `${totalSessions} session${totalSessions > 1 ? "s" : ""}`)}
+            ${infoRow("Price per Session", unitPrice)}
+            ${discountRow}
+            ${infoRow("Total", `<strong>${totalPrice}</strong>`)}
+            ${infoRow("Payment", paymentLabel)}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${button("View Treatment Plan", planUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      This treatment plan expires on <strong>${expiresAt}</strong>. If you have any questions, please contact your doctor directly.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
 // Follow-Up Invitation
 // ---------------------------------------------------------------------------
 

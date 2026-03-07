@@ -31,6 +31,9 @@ import {
 } from "./actions";
 import { AvatarUpload } from "./avatar-upload";
 import { AddressAutocomplete } from "./address-autocomplete";
+import { MedicalProfileSection } from "./medical-profile-section";
+import { SavedPaymentsSection } from "./saved-payments-section";
+import { DataPrivacySection } from "./data-privacy-section";
 
 interface ProfileData {
   id: string;
@@ -51,12 +54,23 @@ interface ProfileData {
   notification_whatsapp: boolean | null;
 }
 
+interface MedicalProfileData {
+  blood_type: string | null;
+  allergies: string[];
+  chronic_conditions: string[];
+  current_medications: string[];
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  notes: string | null;
+}
+
 interface SettingsFormProps {
   profile: ProfileData;
   userEmail: string;
+  medicalProfile: MedicalProfileData | null;
 }
 
-export function SettingsForm({ profile, userEmail }: SettingsFormProps) {
+export function SettingsForm({ profile, userEmail, medicalProfile }: SettingsFormProps) {
   return (
     <div className="space-y-6">
       <AvatarUpload
@@ -65,9 +79,12 @@ export function SettingsForm({ profile, userEmail }: SettingsFormProps) {
         lastName={profile.last_name}
       />
       <PersonalInfoSection profile={profile} userEmail={userEmail} />
+      <MedicalProfileSection medicalProfile={medicalProfile} />
       <PreferencesSection profile={profile} />
       <ChangePasswordSection />
       <NotificationsSection profile={profile} />
+      <SavedPaymentsSection />
+      <DataPrivacySection />
     </div>
   );
 }
