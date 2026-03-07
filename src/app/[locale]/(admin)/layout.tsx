@@ -12,6 +12,7 @@ import {
   Settings,
   ShieldCheck,
   HelpCircle,
+  ScrollText,
 } from "lucide-react";
 
 const sidebarLinks = [
@@ -24,6 +25,7 @@ const sidebarLinks = [
   { href: "/admin/subscriptions", icon: Crown, label: "Subscriptions" },
   { href: "/admin/coupons", icon: Tag, label: "Coupons" },
   { href: "/admin/support", icon: HelpCircle, label: "Support" },
+  { href: "/admin/audit-log", icon: ScrollText, label: "Audit Log" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 

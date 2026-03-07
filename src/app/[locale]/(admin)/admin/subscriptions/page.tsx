@@ -10,7 +10,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Crown, Users } from "lucide-react";
+import { Crown, Users, TrendingUp, DollarSign, BarChart3, UserMinus } from "lucide-react";
+
+// Plan prices in cents per month (EUR)
+const PLAN_PRICES: Record<string, number> = {
+  basic: 4900,
+  professional: 9900,
+  premium: 19900,
+};
 
 export default async function AdminSubscriptionsPage() {
   const supabase = await createClient();
@@ -29,19 +36,39 @@ export default async function AdminSubscriptionsPage() {
   const { data: subscriptions } = await supabase
     .from("doctor_subscriptions")
     .select(
-      `id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end,
+      `id, plan_id, status, current_period_start, current_period_end, cancel_at_period_end, created_at,
        doctor:doctors(profile:profiles!doctors_profile_id_fkey(first_name, last_name, email))`
     )
     .order("created_at", { ascending: false });
 
   const planCounts: Record<string, number> = {};
+  let activeCount = 0;
+  let mrrCents = 0;
+  let cancellingCount = 0;
   subscriptions?.forEach(
     (sub: any) => {
-      if (sub.status === "active") {
+      if (sub.status === "active" || sub.status === "trialing") {
         planCounts[sub.plan_id] = (planCounts[sub.plan_id] || 0) + 1;
+        activeCount++;
+        mrrCents += PLAN_PRICES[sub.plan_id] || 0;
+        if (sub.cancel_at_period_end) cancellingCount++;
       }
     }
   );
+
+  const arrCents = mrrCents * 12;
+
+  // Churn: subscriptions cancelled in last 30 days / active at start of period
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentlyCancelled = (subscriptions || []).filter(
+    (sub: any) =>
+      sub.status === "cancelled" &&
+      sub.current_period_end &&
+      new Date(sub.current_period_end) >= thirtyDaysAgo
+  ).length;
+  const churnBase = activeCount + recentlyCancelled;
+  const churnRate = churnBase > 0 ? ((recentlyCancelled / churnBase) * 100).toFixed(1) : "0.0";
 
   const statusColor: Record<string, "default" | "secondary" | "destructive"> = {
     active: "default",
@@ -56,12 +83,65 @@ export default async function AdminSubscriptionsPage() {
         <h1 className="text-2xl font-bold">Subscription Management</h1>
       </div>
 
+      {/* MRR/ARR KPI Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="rounded-full bg-green-50 p-3">
+              <DollarSign className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">MRR</p>
+              <p className="text-2xl font-bold">€{(mrrCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+              <p className="text-xs text-muted-foreground">monthly recurring</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="rounded-full bg-blue-50 p-3">
+              <TrendingUp className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">ARR</p>
+              <p className="text-2xl font-bold">€{(arrCents / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}</p>
+              <p className="text-xs text-muted-foreground">annual recurring</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="rounded-full bg-purple-50 p-3">
+              <Users className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Active Subscribers</p>
+              <p className="text-2xl font-bold">{activeCount}</p>
+              <p className="text-xs text-muted-foreground">{cancellingCount > 0 ? `${cancellingCount} cancelling` : "all renewing"}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="rounded-full bg-red-50 p-3">
+              <UserMinus className="h-5 w-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Churn Rate (30d)</p>
+              <p className="text-2xl font-bold">{churnRate}%</p>
+              <p className="text-xs text-muted-foreground">{recentlyCancelled} cancelled</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Plan Breakdown */}
       <div className="grid gap-4 sm:grid-cols-3">
         {["basic", "professional", "premium"].map((plan) => (
           <Card key={plan}>
             <CardContent className="flex items-center gap-4 p-6">
               <div className="rounded-full bg-purple-50 p-3">
-                <Users className="h-5 w-5 text-purple-600" />
+                <BarChart3 className="h-5 w-5 text-purple-600" />
               </div>
               <div>
                 <p className="text-sm capitalize text-muted-foreground">
@@ -71,7 +151,7 @@ export default async function AdminSubscriptionsPage() {
                   {planCounts[plan] || 0}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  active subscribers
+                  active · €{((PLAN_PRICES[plan] || 0) / 100).toFixed(0)}/mo
                 </p>
               </div>
             </CardContent>

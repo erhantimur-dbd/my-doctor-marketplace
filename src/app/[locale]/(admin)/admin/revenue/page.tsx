@@ -24,8 +24,17 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
+import { DateRangeSelector } from "../components/date-range-selector";
+import { ExportCSVButton } from "../components/export-csv-button";
+import { exportRevenueCSV } from "@/actions/admin";
 
-export default async function AdminRevenuePage() {
+export default async function AdminRevenuePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const { range } = await searchParams;
+  const rangeDays = parseInt(range || "365") || 365;
   const supabase = await createClient();
   const {
     data: { user },
@@ -76,10 +85,11 @@ export default async function AdminRevenuePage() {
     0
   );
 
-  // --- Monthly chart (last 12 months) ---
+  // --- Monthly chart (configurable range) ---
+  const chartMonths = Math.min(Math.ceil(rangeDays / 30), 24);
   const monthlyData: { month: string; revenue: number; bookings: number }[] =
     [];
-  for (let i = 11; i >= 0; i--) {
+  for (let i = chartMonths - 1; i >= 0; i--) {
     const d = new Date();
     d.setMonth(d.getMonth() - i);
     const mStart = new Date(d.getFullYear(), d.getMonth(), 1)
@@ -122,6 +132,17 @@ export default async function AdminRevenuePage() {
     .order("created_at", { ascending: false })
     .limit(25);
 
+  // Currency breakdown
+  const currencyBreakdown: Record<string, { gmv: number; fees: number; count: number }> = {};
+  (paidBookings || []).forEach((b: any) => {
+    const cur = (b.currency || "EUR").toUpperCase();
+    if (!currencyBreakdown[cur]) currencyBreakdown[cur] = { gmv: 0, fees: 0, count: 0 };
+    currencyBreakdown[cur].gmv += b.total_amount_cents;
+    currencyBreakdown[cur].fees += b.platform_fee_cents;
+    currencyBreakdown[cur].count += 1;
+  });
+  const currencies = Object.entries(currencyBreakdown).sort((a, b) => b[1].fees - a[1].fees);
+
   // Take rate
   const takeRate =
     totalGMV > 0
@@ -130,9 +151,15 @@ export default async function AdminRevenuePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <DollarSign className="h-6 w-6 text-green-600" />
-        <h1 className="text-2xl font-bold">Revenue & Payments</h1>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <DollarSign className="h-6 w-6 text-green-600" />
+          <h1 className="text-2xl font-bold">Revenue & Payments</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <DateRangeSelector />
+          <ExportCSVButton action={exportRevenueCSV} filename="revenue-export.csv" />
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -239,12 +266,38 @@ export default async function AdminRevenuePage() {
         </Link>
       </div>
 
+      {/* Currency Breakdown */}
+      {currencies.length > 1 && (
+        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(currencies.length, 4)}, minmax(0, 1fr))` }}>
+          {currencies.map(([cur, data]) => (
+            <Card key={cur}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="text-sm font-semibold">{cur}</Badge>
+                  <span className="text-xs text-muted-foreground">{data.count} bookings</span>
+                </div>
+                <div className="mt-3 space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">GMV</span>
+                    <span className="font-medium">{formatCurrency(data.gmv, cur)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Platform Fees</span>
+                    <span className="font-medium text-green-600">{formatCurrency(data.fees, cur)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
       {/* Monthly Revenue Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
-            Monthly Platform Revenue (Last 12 Months)
+            Monthly Platform Revenue (Last {chartMonths} Months)
           </CardTitle>
         </CardHeader>
         <CardContent>

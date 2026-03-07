@@ -12,8 +12,11 @@ import {
   Calendar,
   MapPin,
   ExternalLink,
+  CreditCard,
 } from "lucide-react";
 import { AdminDoctorActions } from "./actions-client";
+import { EditDoctorDialog } from "./edit-doctor-dialog";
+import { SendEmailDialog } from "../../components/send-email-dialog";
 
 export default async function AdminDoctorDetailPage({
   params,
@@ -69,6 +72,17 @@ export default async function AdminDoctorDetailPage({
 
   const currentPlan = (subscription as any)?.plan_id || "free";
 
+  // Stripe Connect health (if connected)
+  let stripeAccount: any = null;
+  if (doctor.stripe_account_id) {
+    try {
+      const { getStripe } = await import("@/lib/stripe/client");
+      stripeAccount = await getStripe().accounts.retrieve(doctor.stripe_account_id);
+    } catch {
+      // Ignore errors — just won't show Stripe card
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Link
@@ -101,8 +115,18 @@ export default async function AdminDoctorDetailPage({
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Doctor Info</CardTitle>
+            <EditDoctorDialog
+              doctorId={doctor.id}
+              currentValues={{
+                consultation_fee_cents: doctor.consultation_fee_cents || 0,
+                video_consultation_fee_cents: doctor.video_consultation_fee_cents || 0,
+                bio: doctor.bio || "",
+                languages: doctor.languages || [],
+                years_of_experience: doctor.years_of_experience || 0,
+              }}
+            />
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between">
@@ -229,6 +253,74 @@ export default async function AdminDoctorDetailPage({
         </Card>
       </div>
 
+      {/* Stripe Connect Health */}
+      {stripeAccount && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Stripe Connect
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Account Status</span>
+              <span className="flex items-center gap-1">
+                {stripeAccount.charges_enabled ? (
+                  <Badge className="bg-green-600">Active</Badge>
+                ) : (
+                  <Badge variant="destructive">Restricted</Badge>
+                )}
+              </span>
+            </div>
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Payouts Enabled</span>
+              <span>
+                {stripeAccount.payouts_enabled ? (
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-600" />
+                )}
+              </span>
+            </div>
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Country</span>
+              <span className="uppercase">{stripeAccount.country || "—"}</span>
+            </div>
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Default Currency</span>
+              <span className="uppercase">{stripeAccount.default_currency || "—"}</span>
+            </div>
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Payout Schedule</span>
+              <span className="text-sm">
+                {stripeAccount.settings?.payouts?.schedule?.interval === "manual"
+                  ? "Manual"
+                  : `${stripeAccount.settings?.payouts?.schedule?.interval || "—"} (${stripeAccount.settings?.payouts?.schedule?.delay_days || 0}d delay)`}
+              </span>
+            </div>
+            {stripeAccount.requirements?.currently_due?.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <span className="text-sm font-medium text-orange-600">
+                    Action Required: {stripeAccount.requirements.currently_due.length} items
+                  </span>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {stripeAccount.requirements.currently_due.slice(0, 3).join(", ")}
+                    {stripeAccount.requirements.currently_due.length > 3 ? "..." : ""}
+                  </p>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Admin Actions</CardTitle>
@@ -244,12 +336,17 @@ export default async function AdminDoctorDetailPage({
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <Link href={`/doctors/${doctor.slug}`}>
           <span className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
             <ExternalLink className="h-4 w-4" /> View Public Profile
           </span>
         </Link>
+        <SendEmailDialog
+          userId={doctor.profile_id}
+          userName={`Dr. ${doctor.profile.first_name} ${doctor.profile.last_name}`}
+          userEmail={doctor.profile.email}
+        />
       </div>
     </div>
   );

@@ -897,6 +897,42 @@ export function contactInquiryAutoReplyEmail(params: {
 }
 
 // ---------------------------------------------------------------------------
+// Admin Message to User
+// ---------------------------------------------------------------------------
+
+interface AdminMessageEmailParams {
+  recipientName: string;
+  subject: string;
+  message: string;
+}
+
+export function adminMessageEmail({
+  recipientName,
+  subject,
+  message,
+}: AdminMessageEmailParams): { subject: string; html: string } {
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Message from ${BRAND_NAME} Admin</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${recipientName || "there"},
+    </p>
+
+    <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #e5e7eb;">
+      <p style="margin: 0 0 8px; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">
+        ${subject}
+      </p>
+      <p style="margin: 0; font-size: 14px; color: #374151; line-height: 1.6; white-space: pre-wrap;">${message}</p>
+    </div>
+
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you have any questions, please reply to this email or contact us through the platform.
+    </p>
+  `);
+
+  return { subject: `[${BRAND_NAME}] ${subject}`, html };
+}
+
+// ---------------------------------------------------------------------------
 // Subscription Upgrade Invite
 // ---------------------------------------------------------------------------
 

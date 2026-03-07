@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CheckCircle, XCircle, Clock, Eye } from "lucide-react";
+import { DoctorFilters } from "./doctor-filters";
 
 const statusColors: Record<string, string> = {
   verified: "bg-green-100 text-green-800",
@@ -22,7 +23,18 @@ const statusColors: Record<string, string> = {
   suspended: "bg-gray-100 text-gray-800",
 };
 
-export default async function AdminDoctorsPage() {
+export default async function AdminDoctorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string;
+    verification?: string;
+    active?: string;
+    plan?: string;
+  }>;
+}) {
+  const { q, verification, active, plan } = await searchParams;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -36,12 +48,24 @@ export default async function AdminDoctorsPage() {
     .single();
   if (profile?.role !== "admin") redirect("/en");
 
-  const { data: doctors } = await supabase
+  let doctorQuery = supabase
     .from("doctors")
     .select(
       "id, slug, verification_status, is_active, is_featured, created_at, avg_rating, total_bookings, profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)"
     )
     .order("created_at", { ascending: false });
+
+  // Server-side filters
+  if (verification) {
+    doctorQuery = doctorQuery.eq("verification_status", verification);
+  }
+  if (active === "true") {
+    doctorQuery = doctorQuery.eq("is_active", true);
+  } else if (active === "false") {
+    doctorQuery = doctorQuery.eq("is_active", false);
+  }
+
+  const { data: allDoctors } = await doctorQuery;
 
   // Fetch active subscriptions to show plan per doctor
   const { data: subscriptions } = await supabase
@@ -53,6 +77,23 @@ export default async function AdminDoctorsPage() {
     (subscriptions || []).map((s: any) => [s.doctor_id, s.plan_id])
   );
 
+  // Client-side text search + plan filter
+  let doctors = allDoctors || [];
+  if (q) {
+    const lowerQ = q.toLowerCase();
+    doctors = doctors.filter((doc: any) => {
+      const name = `${doc.profile?.first_name || ""} ${doc.profile?.last_name || ""}`.toLowerCase();
+      const email = (doc.profile?.email || "").toLowerCase();
+      return name.includes(lowerQ) || email.includes(lowerQ);
+    });
+  }
+  if (plan) {
+    doctors = doctors.filter((doc: any) => {
+      const docPlan = subMap.get(doc.id) || "free";
+      return docPlan === plan;
+    });
+  }
+
   const { count: pendingCount } = await supabase
     .from("doctors")
     .select("*", { count: "exact", head: true })
@@ -62,16 +103,20 @@ export default async function AdminDoctorsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Doctor Management</h1>
-        {(pendingCount ?? 0) > 0 && (
-          <Badge variant="destructive">{pendingCount} pending verification</Badge>
-        )}
+        <div className="flex items-center gap-3">
+          {(pendingCount ?? 0) > 0 && (
+            <Badge variant="destructive">{pendingCount} pending verification</Badge>
+          )}
+          <span className="text-sm text-muted-foreground">
+            {doctors.length} doctor{doctors.length !== 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
+      <DoctorFilters />
+
       <Card>
-        <CardHeader>
-          <CardTitle>All Doctors</CardTitle>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -87,7 +132,7 @@ export default async function AdminDoctorsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {doctors?.map(
+              {doctors.map(
                 (doc: any) => (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">
@@ -98,10 +143,10 @@ export default async function AdminDoctorsPage() {
                     </TableCell>
                     <TableCell>
                       {(() => {
-                        const plan = subMap.get(doc.id);
-                        if (!plan || plan === "free") return <Badge variant="outline">Free</Badge>;
-                        if (plan === "professional") return <Badge className="bg-blue-600">Professional</Badge>;
-                        return <Badge variant="secondary" className="capitalize">{plan}</Badge>;
+                        const docPlan = subMap.get(doc.id);
+                        if (!docPlan || docPlan === "free") return <Badge variant="outline">Free</Badge>;
+                        if (docPlan === "professional") return <Badge className="bg-blue-600">Professional</Badge>;
+                        return <Badge variant="secondary" className="capitalize">{docPlan}</Badge>;
                       })()}
                     </TableCell>
                     <TableCell>
@@ -144,10 +189,12 @@ export default async function AdminDoctorsPage() {
                   </TableRow>
                 )
               )}
-              {(!doctors || doctors.length === 0) && (
+              {doctors.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="py-8 text-center text-muted-foreground">
-                    No doctors registered yet
+                    {q || verification || active || plan
+                      ? "No doctors match the current filters"
+                      : "No doctors registered yet"}
                   </TableCell>
                 </TableRow>
               )}

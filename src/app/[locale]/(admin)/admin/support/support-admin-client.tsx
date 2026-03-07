@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Send, StickyNote, MessageSquare } from "lucide-react";
+import { Loader2, Send, StickyNote, MessageSquare, Search, X } from "lucide-react";
 import {
   updateTicketStatus,
   updateTicketPriority,
@@ -54,6 +55,7 @@ export function TicketFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const currentQ = searchParams.get("q") || "";
   const currentStatus = searchParams.get("status") || "";
   const currentCategory = searchParams.get("category") || "";
   const currentPriority = searchParams.get("priority") || "";
@@ -72,10 +74,29 @@ export function TicketFilters() {
     router.push("?");
   }
 
-  const hasFilters = currentStatus || currentCategory || currentPriority;
+  const hasFilters = currentQ || currentStatus || currentCategory || currentPriority;
 
   return (
     <div className="flex flex-wrap items-center gap-3">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search tickets..."
+          defaultValue={currentQ}
+          className="w-[220px] pl-9"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              updateFilter("q", (e.target as HTMLInputElement).value);
+            }
+          }}
+          onBlur={(e) => {
+            if (e.target.value !== currentQ) {
+              updateFilter("q", e.target.value);
+            }
+          }}
+        />
+      </div>
+
       <Select
         value={currentStatus || "all"}
         onValueChange={(val) => updateFilter("status", val)}
@@ -129,7 +150,8 @@ export function TicketFilters() {
 
       {hasFilters && (
         <Button variant="ghost" size="sm" onClick={clearFilters}>
-          Clear Filters
+          <X className="mr-1 h-3.5 w-3.5" />
+          Clear
         </Button>
       )}
     </div>

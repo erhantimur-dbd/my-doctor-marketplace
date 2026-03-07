@@ -17,6 +17,9 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Calendar, Clock, CheckCircle, Eye } from "lucide-react";
+import { BookingFilters } from "./booking-filters";
+import { ExportCSVButton } from "../components/export-csv-button";
+import { exportBookingsCSV } from "@/actions/admin";
 
 const statusColors: Record<string, string> = {
   pending_payment: "bg-gray-100 text-gray-700",
@@ -36,9 +39,15 @@ type TabKey = "upcoming" | "past" | "all";
 export default async function AdminBookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    q?: string;
+    status?: string;
+    from?: string;
+    to?: string;
+  }>;
 }) {
-  const { tab: rawTab } = await searchParams;
+  const { tab: rawTab, q, status: filterStatus, from: fromDate, to: toDate } = await searchParams;
   const tab: TabKey =
     rawTab === "past" || rawTab === "all" ? rawTab : "upcoming";
 
@@ -88,7 +97,7 @@ export default async function AdminBookingsPage({
        patient:profiles!bookings_patient_id_fkey(first_name, last_name),
        doctor:doctors!inner(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
     )
-    .limit(50);
+    .limit(100);
 
   if (tab === "upcoming") {
     query = query
@@ -108,7 +117,34 @@ export default async function AdminBookingsPage({
     query = query.order("created_at", { ascending: false });
   }
 
-  const { data: bookings } = await query;
+  // Apply server-side filters
+  if (filterStatus) {
+    query = query.eq("status", filterStatus);
+  }
+  if (fromDate) {
+    query = query.gte("appointment_date", fromDate);
+  }
+  if (toDate) {
+    query = query.lte("appointment_date", toDate);
+  }
+
+  const { data: allBookings } = await query;
+
+  // Client-side text search
+  let bookings = (allBookings as any[]) || [];
+  if (q) {
+    const lowerQ = q.toLowerCase();
+    bookings = bookings.filter((b: any) => {
+      const bookingNum = (b.booking_number || "").toLowerCase();
+      const patientName = `${b.patient?.first_name || ""} ${b.patient?.last_name || ""}`.toLowerCase();
+      const doctorName = `${b.doctor?.profile?.first_name || ""} ${b.doctor?.profile?.last_name || ""}`.toLowerCase();
+      return (
+        bookingNum.includes(lowerQ) ||
+        patientName.includes(lowerQ) ||
+        doctorName.includes(lowerQ)
+      );
+    });
+  }
 
   const tabs: {
     key: TabKey;
@@ -126,9 +162,14 @@ export default async function AdminBookingsPage({
     { key: "all", label: "All", count: allCount, icon: Calendar },
   ];
 
+  const hasFilters = q || filterStatus || fromDate || toDate;
+
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Booking Management</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Booking Management</h1>
+        <ExportCSVButton action={exportBookingsCSV} filename="bookings-export.csv" />
+      </div>
 
       {/* Tab Navigation */}
       <div className="flex gap-2 border-b">
@@ -156,6 +197,9 @@ export default async function AdminBookingsPage({
         ))}
       </div>
 
+      {/* Filters */}
+      <BookingFilters />
+
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -173,7 +217,7 @@ export default async function AdminBookingsPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(bookings as any[])?.map((booking: any) => (
+              {bookings.map((booking: any) => (
                 <TableRow key={booking.id}>
                   <TableCell className="font-mono text-xs">
                     {booking.booking_number}
@@ -226,17 +270,19 @@ export default async function AdminBookingsPage({
                   </TableCell>
                 </TableRow>
               ))}
-              {(!bookings || bookings.length === 0) && (
+              {bookings.length === 0 && (
                 <TableRow>
                   <TableCell
                     colSpan={9}
                     className="py-12 text-center text-muted-foreground"
                   >
-                    {tab === "upcoming"
-                      ? "No upcoming bookings"
-                      : tab === "past"
-                        ? "No past bookings"
-                        : "No bookings yet"}
+                    {hasFilters
+                      ? "No bookings match the current filters"
+                      : tab === "upcoming"
+                        ? "No upcoming bookings"
+                        : tab === "past"
+                          ? "No past bookings"
+                          : "No bookings yet"}
                   </TableCell>
                 </TableRow>
               )}

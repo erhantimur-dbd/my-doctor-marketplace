@@ -45,15 +45,16 @@ export default async function AdminSupportPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    q?: string;
     status?: string;
     category?: string;
     priority?: string;
   }>;
 }) {
-  const { status, category, priority } = await searchParams;
+  const { q, status, category, priority } = await searchParams;
 
   const [{ tickets }, stats] = await Promise.all([
-    getAdminTickets({ status, category, priority }),
+    getAdminTickets({ q, status, category, priority }),
     getAdminTicketStats(),
   ]);
 

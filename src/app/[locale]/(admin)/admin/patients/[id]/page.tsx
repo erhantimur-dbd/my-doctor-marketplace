@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { ResetPasswordButton } from "./reset-password-button";
+import { SuspendPatientButton } from "./suspend-patient-button";
+import { SendEmailDialog } from "../../components/send-email-dialog";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const statusColors: Record<string, string> = {
   confirmed: "bg-blue-100 text-blue-700",
@@ -58,6 +61,19 @@ export default async function AdminPatientDetailPage({
     .single();
 
   if (!patient) redirect("/en/admin/patients");
+
+  // Check ban status
+  let isBanned = false;
+  try {
+    const adminSupabase = createAdminClient();
+    const { data: authUser } = await adminSupabase.auth.admin.getUserById(id);
+    if (authUser?.user?.banned_until) {
+      const bannedUntil = new Date(authUser.user.banned_until);
+      isBanned = bannedUntil > new Date();
+    }
+  } catch {
+    // Ignore errors — just show as not banned
+  }
 
   // Get bookings
   const { data: bookings } = await supabase
@@ -120,7 +136,14 @@ export default async function AdminPatientDetailPage({
             </p>
           </div>
         </div>
-        <ResetPasswordButton patientId={id} email={patient.email} />
+        <div className="flex items-center gap-2">
+          {isBanned && (
+            <Badge variant="destructive">Suspended</Badge>
+          )}
+          <SendEmailDialog userId={id} userName={`${patient.first_name} ${patient.last_name}`} userEmail={patient.email} />
+          <SuspendPatientButton patientId={id} isBanned={isBanned} />
+          <ResetPasswordButton patientId={id} email={patient.email} />
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">

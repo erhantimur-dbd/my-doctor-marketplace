@@ -430,3 +430,366 @@ export async function deleteCoupon(couponId: string) {
   revalidatePath("/admin/coupons");
   return { success: true };
 }
+
+// ===================== Booking Actions =====================
+
+export async function adminRefundBooking(
+  bookingId: string,
+  amountCents?: number,
+  reason?: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, status, total_amount_cents, stripe_payment_intent_id, paid_at, refunded_at, currency")
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return { error: "Booking not found" };
+  if (!booking.paid_at) return { error: "Booking has not been paid" };
+  if (booking.refunded_at) return { error: "Booking has already been refunded" };
+  if (!booking.stripe_payment_intent_id) return { error: "No Stripe payment intent found" };
+
+  const refundAmount = amountCents || booking.total_amount_cents;
+  if (refundAmount <= 0 || refundAmount > booking.total_amount_cents) {
+    return { error: "Invalid refund amount" };
+  }
+
+  try {
+    const { getStripe } = await import("@/lib/stripe/client");
+    await getStripe().refunds.create({
+      payment_intent: booking.stripe_payment_intent_id,
+      amount: refundAmount,
+      reverse_transfer: true,
+      refund_application_fee: true,
+    } as any);
+  } catch (err: any) {
+    return { error: `Stripe refund error: ${err.message}` };
+  }
+
+  const { error: updateError } = await supabase
+    .from("bookings")
+    .update({
+      status: "refunded",
+      refunded_at: new Date().toISOString(),
+      refund_amount_cents: refundAmount,
+    })
+    .eq("id", bookingId);
+
+  if (updateError) return { error: updateError.message };
+
+  await logAdminAction(supabase, user.id, "booking_refunded", "booking", bookingId, {
+    amount_cents: refundAmount,
+    reason,
+  });
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath("/admin/bookings");
+  return { success: true };
+}
+
+export async function adminUpdateBookingStatus(
+  bookingId: string,
+  newStatus: string,
+  reason?: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+    pending_approval: ["approved", "rejected"],
+    confirmed: ["completed", "no_show", "cancelled_doctor"],
+    approved: ["completed", "no_show", "cancelled_doctor"],
+  };
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("id, status")
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return { error: "Booking not found" };
+
+  const allowed = ALLOWED_TRANSITIONS[booking.status];
+  if (!allowed || !allowed.includes(newStatus)) {
+    return { error: `Cannot transition from ${booking.status} to ${newStatus}` };
+  }
+
+  const updateData: Record<string, unknown> = { status: newStatus };
+  if (newStatus === "completed") {
+    updateData.completed_at = new Date().toISOString();
+  }
+  if (reason) {
+    updateData.cancellation_reason = reason;
+  }
+
+  const { error: updateError } = await supabase
+    .from("bookings")
+    .update(updateData)
+    .eq("id", bookingId);
+
+  if (updateError) return { error: updateError.message };
+
+  await logAdminAction(supabase, user.id, `booking_status_${newStatus}`, "booking", bookingId, {
+    from: booking.status,
+    to: newStatus,
+    reason,
+  });
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath("/admin/bookings");
+  return { success: true };
+}
+
+// ===================== Patient Suspension =====================
+
+export async function adminTogglePatientSuspension(
+  patientId: string,
+  suspend: boolean
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminSupabase = createAdminClient();
+
+  try {
+    const { error: banError } = await adminSupabase.auth.admin.updateUserById(
+      patientId,
+      { ban_duration: suspend ? "876000h" : "none" }
+    );
+    if (banError) return { error: banError.message };
+  } catch (err: any) {
+    return { error: `Failed to update user: ${err.message}` };
+  }
+
+  await logAdminAction(
+    supabase,
+    user.id,
+    suspend ? "patient_suspended" : "patient_unsuspended",
+    "patient",
+    patientId
+  );
+
+  revalidatePath(`/admin/patients/${patientId}`);
+  return { success: true };
+}
+
+// ===================== Doctor Profile Editing =====================
+
+export async function adminUpdateDoctorProfile(
+  doctorId: string,
+  fields: Record<string, unknown>
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const ALLOWED_FIELDS = [
+    "consultation_fee_cents",
+    "video_consultation_fee_cents",
+    "bio",
+    "languages",
+    "years_of_experience",
+  ];
+
+  const updateData: Record<string, unknown> = {};
+  for (const key of ALLOWED_FIELDS) {
+    if (key in fields) {
+      updateData[key] = fields[key];
+    }
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    return { error: "No valid fields to update" };
+  }
+
+  const { error } = await supabase
+    .from("doctors")
+    .update(updateData)
+    .eq("id", doctorId);
+
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, "doctor_profile_updated", "doctor", doctorId, {
+    fields: Object.keys(updateData),
+  });
+
+  revalidatePath(`/admin/doctors/${doctorId}`);
+  revalidatePath("/admin/doctors");
+  return { success: true };
+}
+
+// ===================== CSV Export Actions =====================
+
+// ===================== Bulk Review Moderation =====================
+
+export async function adminBulkModerateReviews(
+  reviewIds: string[],
+  action: "approve" | "hide"
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  if (!reviewIds.length || reviewIds.length > 100) {
+    return { error: "Select between 1 and 100 reviews" };
+  }
+
+  const isVisible = action === "approve";
+
+  const { error } = await supabase
+    .from("reviews")
+    .update({ is_visible: isVisible })
+    .in("id", reviewIds);
+
+  if (error) return { error: error.message };
+
+  // Log each action
+  for (const id of reviewIds) {
+    await logAdminAction(
+      supabase,
+      user.id,
+      action === "approve" ? "review_approved" : "review_hidden",
+      "review",
+      id,
+      { bulk: true }
+    );
+  }
+
+  revalidatePath("/admin/reviews");
+  return { success: true };
+}
+
+// ===================== Admin Email =====================
+
+export async function adminSendEmail(
+  userId: string,
+  subject: string,
+  message: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  if (!subject.trim() || !message.trim()) {
+    return { error: "Subject and message are required" };
+  }
+
+  // Fetch recipient profile
+  const { data: recipient } = await supabase
+    .from("profiles")
+    .select("first_name, last_name, email")
+    .eq("id", userId)
+    .single();
+
+  if (!recipient?.email) return { error: "User not found or has no email" };
+
+  const recipientName = `${recipient.first_name || ""} ${recipient.last_name || ""}`.trim();
+
+  const { adminMessageEmail } = await import("@/lib/email/templates");
+  const { subject: emailSubject, html } = adminMessageEmail({
+    recipientName,
+    subject,
+    message,
+  });
+
+  const { sendEmail } = await import("@/lib/email/client");
+  try {
+    await sendEmail({ to: recipient.email, subject: emailSubject, html });
+  } catch (err: any) {
+    return { error: `Failed to send email: ${err.message}` };
+  }
+
+  await logAdminAction(supabase, user.id, "admin_email_sent", "user", userId, {
+    subject,
+    recipientEmail: recipient.email,
+  });
+
+  return { success: true };
+}
+
+// ===================== CSV Export Actions =====================
+
+export async function exportBookingsCSV() {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError, headers: [], rows: [] };
+
+  const { data: bookings } = await supabase
+    .from("bookings")
+    .select(
+      `booking_number, appointment_date, start_time, status, consultation_type,
+       total_amount_cents, platform_fee_cents, currency,
+       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+       doctor:doctors!inner(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+    )
+    .order("appointment_date", { ascending: false })
+    .limit(5000);
+
+  const headers = [
+    "Booking #", "Date", "Time", "Status", "Type",
+    "Patient", "Patient Email", "Doctor",
+    "Amount", "Platform Fee", "Currency",
+  ];
+  const rows = (bookings || []).map((b: any) => [
+    b.booking_number,
+    b.appointment_date,
+    b.start_time?.slice(0, 5),
+    b.status,
+    b.consultation_type,
+    `${b.patient?.first_name || ""} ${b.patient?.last_name || ""}`.trim(),
+    b.patient?.email || "",
+    `${b.doctor?.profile?.first_name || ""} ${b.doctor?.profile?.last_name || ""}`.trim(),
+    (b.total_amount_cents / 100).toFixed(2),
+    (b.platform_fee_cents / 100).toFixed(2),
+    b.currency,
+  ]);
+
+  return { headers, rows };
+}
+
+export async function exportPatientsCSV() {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError, headers: [], rows: [] };
+
+  const { data: patients } = await supabase
+    .from("profiles")
+    .select("first_name, last_name, email, phone, city, country, created_at")
+    .eq("role", "patient")
+    .order("created_at", { ascending: false })
+    .limit(10000);
+
+  const headers = ["First Name", "Last Name", "Email", "Phone", "City", "Country", "Joined"];
+  const rows = (patients || []).map((p: any) => [
+    p.first_name, p.last_name, p.email, p.phone || "", p.city || "", p.country || "",
+    new Date(p.created_at).toISOString().split("T")[0],
+  ]);
+
+  return { headers, rows };
+}
+
+export async function exportRevenueCSV() {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError, headers: [], rows: [] };
+
+  const { data: fees } = await supabase
+    .from("platform_fees")
+    .select(
+      `amount_cents, currency, fee_type, created_at,
+       booking:bookings(booking_number),
+       doctor:doctors(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+    )
+    .order("created_at", { ascending: false })
+    .limit(5000);
+
+  const headers = ["Date", "Booking #", "Doctor", "Fee Type", "Amount", "Currency"];
+  const rows = (fees || []).map((f: any) => [
+    new Date(f.created_at).toISOString().split("T")[0],
+    f.booking?.booking_number || "",
+    `${f.doctor?.profile?.first_name || ""} ${f.doctor?.profile?.last_name || ""}`.trim(),
+    f.fee_type,
+    (f.amount_cents / 100).toFixed(2),
+    f.currency,
+  ]);
+
+  return { headers, rows };
+}

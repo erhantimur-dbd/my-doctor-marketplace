@@ -18,8 +18,11 @@ import {
   CreditCard,
   User,
   Stethoscope,
+  Shield,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { RefundDialog } from "./refund-dialog";
+import { BookingActions } from "./booking-actions";
 
 const statusColors: Record<string, string> = {
   pending_payment: "bg-gray-100 text-gray-700",
@@ -327,6 +330,36 @@ export default async function AdminBookingDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Admin Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Admin Actions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-3">
+          <BookingActions
+            bookingId={booking.id}
+            currentStatus={booking.status}
+          />
+          {booking.paid_at && !booking.refunded_at && (
+            <RefundDialog
+              bookingId={booking.id}
+              totalAmountCents={booking.total_amount_cents}
+              currency={booking.currency}
+            />
+          )}
+          {!booking.paid_at &&
+            !booking.refunded_at &&
+            !["confirmed", "approved", "pending_approval"].includes(booking.status) && (
+              <span className="text-sm text-muted-foreground">
+                No actions available for this booking status
+              </span>
+            )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

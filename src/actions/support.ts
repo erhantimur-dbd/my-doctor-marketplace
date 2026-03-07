@@ -471,6 +471,7 @@ async function requireAdmin() {
 }
 
 export async function getAdminTickets(filters?: {
+  q?: string;
   status?: string;
   category?: string;
   priority?: string;
@@ -498,6 +499,10 @@ export async function getAdminTickets(filters?: {
     )
     .order("updated_at", { ascending: false });
 
+  if (filters?.q) {
+    const q = filters.q.trim();
+    query = query.or(`subject.ilike.%${q}%,ticket_number.ilike.%${q}%`);
+  }
   if (filters?.status && VALID_STATUSES.includes(filters.status as any)) {
     query = query.eq("status", filters.status);
   }
