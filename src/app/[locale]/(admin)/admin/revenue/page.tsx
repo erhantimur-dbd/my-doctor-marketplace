@@ -23,6 +23,7 @@ import {
   Users,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { Link } from "@/i18n/navigation";
 
 export default async function AdminRevenuePage() {
   const supabase = await createClient();
@@ -114,9 +115,9 @@ export default async function AdminRevenuePage() {
   const { data: fees } = await supabase
     .from("platform_fees")
     .select(
-      `id, amount_cents, currency, fee_type, created_at,
-       booking:bookings(booking_number),
-       doctor:doctors(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+      `id, amount_cents, currency, fee_type, created_at, booking_id,
+       booking:bookings(id, booking_number),
+       doctor:doctors(id, profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
     )
     .order("created_at", { ascending: false })
     .limit(25);
@@ -136,92 +137,106 @@ export default async function AdminRevenuePage() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-green-50 p-3">
-              <DollarSign className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Platform Revenue (All Time)
-              </p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(totalPlatformRevenue, "EUR")}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-blue-50 p-3">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">This Month</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(thisMonthRevenue, "EUR")}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-purple-50 p-3">
-              <CreditCard className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Take Rate</p>
-              <p className="text-2xl font-bold">{takeRate}%</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-amber-50 p-3">
-              <Users className="h-5 w-5 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Avg Fee / Booking
-              </p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(avgFeePerBooking, "EUR")}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <Link href="/admin/bookings" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-green-50 p-3">
+                <DollarSign className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Platform Revenue (All Time)
+                </p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(totalPlatformRevenue, "EUR")}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/bookings" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-blue-50 p-3">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">This Month</p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(thisMonthRevenue, "EUR")}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/bookings" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-purple-50 p-3">
+                <CreditCard className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Take Rate</p>
+                <p className="text-2xl font-bold">{takeRate}%</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/bookings" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-amber-50 p-3">
+                <Users className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Avg Fee / Booking
+                </p>
+                <p className="text-2xl font-bold">
+                  {formatCurrency(avgFeePerBooking, "EUR")}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* GMV Breakdown */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-sm text-muted-foreground">Total GMV</p>
-            <p className="mt-1 text-xl font-bold">
-              {formatCurrency(totalGMV, "EUR")}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Doctor Payouts
-            </p>
-            <p className="mt-1 text-xl font-bold">
-              {formatCurrency(totalDoctorPayouts, "EUR")}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Total Bookings (Paid)
-            </p>
-            <p className="mt-1 text-xl font-bold">
-              {paidBookings?.length || 0}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/bookings" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="p-6 text-center">
+              <p className="text-sm text-muted-foreground">Total GMV</p>
+              <p className="mt-1 text-xl font-bold">
+                {formatCurrency(totalGMV, "EUR")}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/doctors" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="p-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Doctor Payouts
+              </p>
+              <p className="mt-1 text-xl font-bold">
+                {formatCurrency(totalDoctorPayouts, "EUR")}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/bookings" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="p-6 text-center">
+              <p className="text-sm text-muted-foreground">
+                Total Bookings (Paid)
+              </p>
+              <p className="mt-1 text-xl font-bold">
+                {paidBookings?.length || 0}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Monthly Revenue Chart */}
@@ -277,33 +292,41 @@ export default async function AdminRevenuePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {fees?.map((fee: any) => (
-                <TableRow key={fee.id}>
-                  <TableCell className="font-mono text-xs">
-                    {fee.booking?.booking_number || "-"}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {fee.doctor
-                      ? `Dr. ${fee.doctor.profile?.first_name} ${fee.doctor.profile?.last_name}`
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {fee.fee_type}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {formatCurrency(fee.amount_cents, fee.currency)}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {new Date(fee.created_at).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </TableCell>
-                </TableRow>
-              ))}
+              {fees?.map((fee: any) => {
+                const bookingId = fee.booking?.id || fee.booking_id;
+                const row = (
+                  <TableRow key={fee.id} className={bookingId ? "cursor-pointer hover:bg-muted/50" : ""}>
+                    <TableCell className="font-mono text-xs">
+                      {fee.booking?.booking_number || "-"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {fee.doctor
+                        ? `Dr. ${fee.doctor.profile?.first_name} ${fee.doctor.profile?.last_name}`
+                        : "-"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs">
+                        {fee.fee_type}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatCurrency(fee.amount_cents, fee.currency)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {new Date(fee.created_at).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                  </TableRow>
+                );
+                return bookingId ? (
+                  <Link key={fee.id} href={`/admin/bookings/${bookingId}`} className="contents">
+                    {row}
+                  </Link>
+                ) : row;
+              })}
               {(!fees || fees.length === 0) && (
                 <TableRow>
                   <TableCell
