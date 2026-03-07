@@ -54,11 +54,13 @@ export function FollowUpInvitationDialog({
   const [serviceId, setServiceId] = useState<string>("");
   const [customServiceName, setCustomServiceName] = useState("");
   const [customPriceCents, setCustomPriceCents] = useState<number>(0);
+  const [customPriceDisplay, setCustomPriceDisplay] = useState("");
   const [consultationType, setConsultationType] = useState<"in_person" | "video">("in_person");
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
   const [totalSessions, setTotalSessions] = useState<number>(1);
   const [discountType, setDiscountType] = useState<string>("none");
   const [discountValue, setDiscountValue] = useState<number>(0);
+  const [discountDisplay, setDiscountDisplay] = useState("");
   const [doctorNote, setDoctorNote] = useState("");
 
   const isCustom = serviceId === "custom";
@@ -102,11 +104,13 @@ export function FollowUpInvitationDialog({
     setServiceId("");
     setCustomServiceName("");
     setCustomPriceCents(0);
+    setCustomPriceDisplay("");
     setConsultationType("in_person");
     setDurationMinutes(30);
     setTotalSessions(1);
     setDiscountType("none");
     setDiscountValue(0);
+    setDiscountDisplay("");
     setDoctorNote("");
   };
 
@@ -193,8 +197,11 @@ export function FollowUpInvitationDialog({
                   placeholder="0.00"
                   min={1}
                   step={0.01}
-                  value={customPriceCents > 0 ? (customPriceCents / 100).toFixed(2) : ""}
-                  onChange={(e) => setCustomPriceCents(Math.round(parseFloat(e.target.value || "0") * 100))}
+                  value={customPriceDisplay}
+                  onChange={(e) => {
+                    setCustomPriceDisplay(e.target.value);
+                    setCustomPriceCents(Math.round(parseFloat(e.target.value || "0") * 100));
+                  }}
                 />
               </div>
             </>
@@ -260,7 +267,7 @@ export function FollowUpInvitationDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Discount</Label>
-              <Select value={discountType} onValueChange={setDiscountType}>
+              <Select value={discountType} onValueChange={(v) => { setDiscountType(v); setDiscountValue(0); setDiscountDisplay(""); }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -278,14 +285,9 @@ export function FollowUpInvitationDialog({
                   type="number"
                   min={0}
                   max={discountType === "percentage" ? 100 : undefined}
-                  value={
-                    discountType === "percentage"
-                      ? discountValue || ""
-                      : discountValue > 0
-                        ? (discountValue / 100).toFixed(2)
-                        : ""
-                  }
+                  value={discountDisplay}
                   onChange={(e) => {
+                    setDiscountDisplay(e.target.value);
                     const val = parseFloat(e.target.value || "0");
                     if (discountType === "percentage") {
                       setDiscountValue(Math.min(100, Math.max(0, Math.round(val))));
