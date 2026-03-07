@@ -112,6 +112,7 @@ export default function RegisterDoctorPage() {
 
   // Step 2: Professional info
   const [title, setTitle] = useState("Dr.");
+  const [gmcNumber, setGmcNumber] = useState("");
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [yearsOfExperience, setYearsOfExperience] = useState<number>(0);
 
@@ -147,6 +148,10 @@ export default function RegisterDoctorPage() {
     }
 
     if (step === 2) {
+      if (!gmcNumber || !/^\d{7}$/.test(gmcNumber)) {
+        setError("Please enter a valid 7-digit GMC reference number");
+        return;
+      }
       if (selectedSpecialties.length === 0) {
         setError("Please select at least one specialty");
         return;
@@ -197,6 +202,9 @@ export default function RegisterDoctorPage() {
     formData.set("password", password);
 
     formData.set("locale", locale);
+
+    // Professional data
+    formData.set("gmc_number", gmcNumber);
 
     // Referral data
     if (referralCode) formData.set("referral_code", referralCode);
@@ -461,6 +469,21 @@ export default function RegisterDoctorPage() {
                   />
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="gmcNumber">GMC Reference Number *</Label>
+                <Input
+                  id="gmcNumber"
+                  value={gmcNumber}
+                  onChange={(e) => setGmcNumber(e.target.value.replace(/\D/g, "").slice(0, 7))}
+                  placeholder="e.g. 1234567"
+                  maxLength={7}
+                  inputMode="numeric"
+                  required
+                />
+                <p className="text-xs text-muted-foreground">
+                  Your 7-digit General Medical Council reference number. This will be verified against the GMC register before your account is approved.
+                </p>
+              </div>
               <Separator />
               <div className="space-y-2">
                 <Label>Specialties *</Label>
@@ -651,6 +674,10 @@ export default function RegisterDoctorPage() {
                 <h3 className="mb-3 font-semibold">Professional Details</h3>
                 <div className="space-y-2 text-sm">
                   <div>
+                    <span className="text-muted-foreground">GMC Number: </span>
+                    {gmcNumber}
+                  </div>
+                  <div>
                     <span className="text-muted-foreground">Experience: </span>
                     {yearsOfExperience} years
                   </div>
@@ -794,9 +821,9 @@ export default function RegisterDoctorPage() {
                   <div className="text-sm text-emerald-800">
                     <p className="font-medium">You&apos;re starting on the Free Plan</p>
                     <p className="mt-1">
-                      Your profile will be live in our doctor directory immediately.
-                      To start accepting online bookings, manage appointments, and access
-                      analytics, upgrade to Professional or Premium from your dashboard.
+                      Your GMC registration will be verified by our team before your profile goes live.
+                      You&apos;ll receive an email once your account is approved. In the meantime,
+                      you can complete your profile from your dashboard.
                     </p>
                   </div>
                 </div>

@@ -78,6 +78,44 @@ export async function updateDoctorVerification(
 
   await logAdminAction(supabase, user.id, `doctor_verification_${status}`, "doctor", doctorId);
 
+  // Send email notification on verification or rejection
+  if (status === "verified" || status === "rejected") {
+    const { data: doctor } = await supabase
+      .from("doctors")
+      .select("profile_id, profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)")
+      .eq("id", doctorId)
+      .single();
+
+    if (doctor) {
+      const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
+      const doctorName = `${profile.first_name} ${profile.last_name}`;
+
+      if (status === "verified") {
+        const { doctorVerifiedEmail } = await import("@/lib/email/templates");
+        const { subject, html } = doctorVerifiedEmail({ doctorName });
+        await createNotification({
+          userId: doctor.profile_id,
+          type: "doctor_verified",
+          title: "Account Verified",
+          message: "Your GMC registration has been verified. Your profile is now live!",
+          channels: ["in_app", "email"],
+          email: { to: profile.email, subject, html },
+        });
+      } else {
+        const { doctorRejectedEmail } = await import("@/lib/email/templates");
+        const { subject, html } = doctorRejectedEmail({ doctorName });
+        await createNotification({
+          userId: doctor.profile_id,
+          type: "doctor_rejected",
+          title: "Verification Unsuccessful",
+          message: "We were unable to verify your GMC registration. Please contact support.",
+          channels: ["in_app", "email"],
+          email: { to: profile.email, subject, html },
+        });
+      }
+    }
+  }
+
   revalidatePath("/admin/doctors");
   return { success: true };
 }

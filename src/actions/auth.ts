@@ -99,6 +99,7 @@ export async function registerDoctor(formData: FormData) {
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
+  const gmcNumber = (formData.get("gmc_number") as string)?.trim() || "";
   const referralCode = (formData.get("referral_code") as string)?.trim().toUpperCase() || "";
   const locale = (formData.get("locale") as string) || "en";
   const colleagueName = (formData.get("colleague_name") as string)?.trim() || "";
@@ -188,6 +189,7 @@ export async function registerDoctor(formData: FormData) {
         slug,
         consultation_fee_cents: 0,
         referral_code: newReferralCode,
+        ...(gmcNumber && { gmc_number: gmcNumber }),
       })
       .select("id")
       .single();

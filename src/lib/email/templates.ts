@@ -454,6 +454,41 @@ export function doctorVerifiedEmail({
 }
 
 // ---------------------------------------------------------------------------
+// Doctor Verification Rejected Email
+// ---------------------------------------------------------------------------
+
+interface DoctorRejectedParams {
+  doctorName: string;
+}
+
+export function doctorRejectedEmail({
+  doctorName,
+}: DoctorRejectedParams): { subject: string; html: string } {
+  const subject = `${BRAND_NAME} — Account Verification Update`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Verification Update</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Dear Dr. ${doctorName}, we were unable to verify your GMC registration with the details provided.
+    </p>
+
+    <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 13px; color: #991b1b; line-height: 1.5;">
+        <strong>Your account has not been approved.</strong> This may be due to an incorrect GMC reference number or your details not matching the GMC register.
+      </p>
+    </div>
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      If you believe this is an error, please contact our support team with your correct GMC reference number and we will review your application again.
+    </p>
+
+    ${button("Contact Support")}
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
 // Review Received Email
 // ---------------------------------------------------------------------------
 
@@ -1190,6 +1225,41 @@ export function followUpInvitationEmail({
 
     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       This invitation expires on <strong>${expiresAt}</strong>. If you have any questions, please contact your doctor directly or reply to this email.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+export function newMessageEmail({
+  recipientName,
+  senderName,
+  messagesUrl,
+}: {
+  recipientName: string;
+  senderName: string;
+  messagesUrl: string;
+}): { subject: string; html: string } {
+  const subject = `New message from ${senderName} — MyDoctors360`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 16px; font-size: 20px; color: #111827; font-weight: 700;">
+      You Have a New Message
+    </h2>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Hi ${recipientName},
+    </p>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      <strong>${senderName}</strong> has sent you a message on MyDoctors360.
+      Log in to your account to read and reply.
+    </p>
+
+    ${button("View Messages", messagesUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      For your privacy, the message content is not included in this email. Please log in to the platform to read your messages.
     </p>
   `);
 

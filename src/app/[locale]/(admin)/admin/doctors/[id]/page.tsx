@@ -130,6 +130,23 @@ export default async function AdminDoctorDetailPage({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex justify-between">
+              <span className="text-muted-foreground">GMC Number</span>
+              <span className="flex items-center gap-2">
+                <span className="font-mono text-sm font-medium">{doctor.gmc_number || "Not provided"}</span>
+                {doctor.gmc_number && (
+                  <a
+                    href="https://www.gmc-uk.org/registration-and-licensing/the-medical-register"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    Verify on GMC <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </span>
+            </div>
+            <Separator />
+            <div className="flex justify-between">
               <span className="text-muted-foreground">Slug</span>
               <span className="font-mono text-sm">{doctor.slug}</span>
             </div>
