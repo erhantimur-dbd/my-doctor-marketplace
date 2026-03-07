@@ -42,6 +42,13 @@ export async function login(formData: FormData) {
     };
   }
 
+  // Check if user has MFA enrolled — if so, redirect to verify-mfa
+  const { data: aal } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.nextLevel === "aal2" && aal?.currentLevel === "aal1") {
+    return { mfaRequired: true, locale };
+  }
+
   revalidatePath("/", "layout");
 
   // If there's an explicit redirect (e.g. from middleware), honour it

@@ -749,5 +749,33 @@
     "match_reason_reviews": "多数の良いレビュー",
     "clear_ai_filters": "AI フィルターをクリア",
     "not_what_you_meant": "お探しのものと違いますか？"
+  },
+  "twoFactor": {
+    "title": "二要素認証",
+    "description": "サインイン時に認証アプリからの確認コードを要求することで、アカウントにセキュリティの追加レイヤーを設定できます。",
+    "enable": "2FA を有効にする",
+    "disable": "2FA を無効にする",
+    "enabled_status": "二要素認証は有効です",
+    "disabled_status": "二要素認証は有効になっていません",
+    "enroll_title": "二要素認証のセットアップ",
+    "enroll_desc": "認証アプリ（Google Authenticator、Authy、Microsoft Authenticator など）で以下の QR コードをスキャンし、6桁のコードを入力して確認してください。",
+    "scan_qr": "認証アプリでこの QR コードをスキャンしてください",
+    "manual_key": "スキャンできませんか？このキーをアプリに手動で入力してください：",
+    "enter_code": "確認コード",
+    "verify_enable": "確認して有効にする",
+    "disable_title": "二要素認証の無効化",
+    "disable_desc": "二要素認証を無効にすることを確認するため、認証アプリの6桁のコードを入力してください。",
+    "confirm_disable": "無効化を確認",
+    "cancel": "キャンセル",
+    "verify_page_title": "二要素認証の確認",
+    "verify_page_desc": "サインインを完了するため、認証アプリの6桁のコードを入力してください。",
+    "verify_button": "確認",
+    "back_to_login": "ログインに戻る",
+    "error_invalid_code": "確認コードが無効です。もう一度お試しください。",
+    "error_enroll_failed": "2FA のセットアップを開始できませんでした。もう一度お試しください。",
+    "success_enabled": "二要素認証が有効になりました！",
+    "success_disabled": "二要素認証が無効になりました。",
+    "recommendation_title": "二要素認証でアカウントを保護しましょう",
+    "recommendation_desc": "医療従事者として、アカウントと患者データを保護するため、2FA の有効化を強くお勧めします。"
   }
 }

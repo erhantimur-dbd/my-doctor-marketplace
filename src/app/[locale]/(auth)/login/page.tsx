@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { login, signInWithGoogle, signInWithApple } from "@/actions/auth";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
@@ -27,6 +27,7 @@ export default function LoginPage() {
   const verified = searchParams.get("verified") === "true";
   const callbackError = searchParams.get("error") === "auth_callback_error";
   const locale = useLocale();
+  const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +37,11 @@ export default function LoginPage() {
     formData.append("redirect", redirectTo);
     formData.append("locale", locale);
     const result = await login(formData);
+    if (result && "mfaRequired" in result && result.mfaRequired) {
+      // Redirect to MFA verification page
+      router.push(`/${locale}/verify-mfa`);
+      return;
+    }
     if (result?.error) {
       setError(result.error);
       setLoading(false);

@@ -756,5 +756,33 @@
     "match_reason_reviews": "好评众多",
     "clear_ai_filters": "清除 AI 筛选",
     "not_what_you_meant": "不是您想找的？"
+  },
+  "twoFactor": {
+    "title": "双重身份验证",
+    "description": "通过在登录时要求输入身份验证应用中的验证码，为您的账户添加额外的安全保护。",
+    "enable": "启用 2FA",
+    "disable": "停用 2FA",
+    "enabled_status": "双重身份验证已启用",
+    "disabled_status": "双重身份验证未启用",
+    "enroll_title": "设置双重身份验证",
+    "enroll_desc": "请使用您的身份验证应用（Google Authenticator、Authy、Microsoft Authenticator 等）扫描下方的 QR 码，然后输入6位验证码进行确认。",
+    "scan_qr": "请使用您的身份验证应用扫描此 QR 码",
+    "manual_key": "无法扫描？请在您的应用中手动输入此密钥：",
+    "enter_code": "验证码",
+    "verify_enable": "验证并启用",
+    "disable_title": "停用双重身份验证",
+    "disable_desc": "请输入您身份验证应用中的6位验证码，以确认停用双重身份验证。",
+    "confirm_disable": "确认停用",
+    "cancel": "取消",
+    "verify_page_title": "双重身份验证",
+    "verify_page_desc": "请输入您身份验证应用中的6位验证码以完成登录。",
+    "verify_button": "验证",
+    "back_to_login": "返回登录",
+    "error_invalid_code": "验证码无效。请重试。",
+    "error_enroll_failed": "无法启动 2FA 设置。请重试。",
+    "success_enabled": "双重身份验证已成功启用！",
+    "success_disabled": "双重身份验证已停用。",
+    "recommendation_title": "使用双重身份验证保护您的账户",
+    "recommendation_desc": "作为医疗服务提供者，我们强烈建议您启用 2FA 以保护您的账户和患者数据。"
   }
 }

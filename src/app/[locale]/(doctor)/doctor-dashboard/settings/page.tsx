@@ -63,6 +63,7 @@ import {
   saveDoctorReminderPreferences,
   type ReminderPreference,
 } from "@/actions/doctor";
+import { TwoFactorSection } from "@/components/settings/two-factor-section";
 
 const REMINDER_TIME_PRESETS = [
   { value: 15, label: "15 minutes before" },
@@ -174,7 +175,7 @@ export default function SettingsPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
 
     setUserId(user.id);
     setEmail(user.email || "");
@@ -204,35 +205,48 @@ export default function SettingsPage() {
       setIsVerified(doctor.verification_status === "verified");
     }
 
-    // Load calendar connection
-    const calConn = await getCalendarConnection();
-    if (calConn) {
-      setCalendarConnected(true);
-      setCalendarSyncEnabled(calConn.sync_enabled);
-      setCalendarLastSynced(calConn.last_synced_at);
+    // Load calendar connections (wrapped in try/catch to prevent infinite spinner)
+    try {
+      const calConn = await getCalendarConnection();
+      if (calConn) {
+        setCalendarConnected(true);
+        setCalendarSyncEnabled(calConn.sync_enabled);
+        setCalendarLastSynced(calConn.last_synced_at);
+      }
+    } catch (err) {
+      console.error("Failed to load Google Calendar connection:", err);
     }
 
-    // Load Microsoft Calendar connection
-    const msCalConn = await getMicrosoftCalendarConnection();
-    if (msCalConn) {
-      setMsCalendarConnected(true);
-      setMsCalendarSyncEnabled(msCalConn.sync_enabled);
-      setMsCalendarLastSynced(msCalConn.last_synced_at);
+    try {
+      const msCalConn = await getMicrosoftCalendarConnection();
+      if (msCalConn) {
+        setMsCalendarConnected(true);
+        setMsCalendarSyncEnabled(msCalConn.sync_enabled);
+        setMsCalendarLastSynced(msCalConn.last_synced_at);
+      }
+    } catch (err) {
+      console.error("Failed to load Microsoft Calendar connection:", err);
     }
 
-    // Load CalDAV connection
-    const caldavConn = await getCalDAVConnection();
-    if (caldavConn) {
-      setCaldavConnected(true);
-      setCaldavSyncEnabled(caldavConn.sync_enabled);
-      setCaldavLastSynced(caldavConn.last_synced_at);
-      setCaldavProviderName(caldavConn.caldav_provider || "CalDAV");
+    try {
+      const caldavConn = await getCalDAVConnection();
+      if (caldavConn) {
+        setCaldavConnected(true);
+        setCaldavSyncEnabled(caldavConn.sync_enabled);
+        setCaldavLastSynced(caldavConn.last_synced_at);
+        setCaldavProviderName(caldavConn.caldav_provider || "CalDAV");
+      }
+    } catch (err) {
+      console.error("Failed to load CalDAV connection:", err);
     }
 
-    // Load ICS Feed URL
-    const feedResult = await getIcsFeedUrl();
-    if (feedResult.url) {
-      setIcsFeedUrl(feedResult.url);
+    try {
+      const feedResult = await getIcsFeedUrl();
+      if (feedResult.url) {
+        setIcsFeedUrl(feedResult.url);
+      }
+    } catch (err) {
+      console.error("Failed to load ICS feed URL:", err);
     }
 
     // Check URL params for calendar connection result
@@ -248,11 +262,14 @@ export default function SettingsPage() {
       window.history.replaceState({}, "", window.location.pathname);
     }
 
-    // Load reminder preferences
-    const reminderResult = await getDoctorReminderPreferences();
-    if (reminderResult.data) {
-      setReminders(reminderResult.data.length > 0 ? reminderResult.data : DEFAULT_REMINDERS);
-      setRemindersLoaded(true);
+    try {
+      const reminderResult = await getDoctorReminderPreferences();
+      if (reminderResult.data) {
+        setReminders(reminderResult.data.length > 0 ? reminderResult.data : DEFAULT_REMINDERS);
+        setRemindersLoaded(true);
+      }
+    } catch (err) {
+      console.error("Failed to load reminder preferences:", err);
     }
 
     setLoading(false);
@@ -771,6 +788,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Two-Factor Authentication */}
+      <TwoFactorSection showRecommendation />
 
       {/* Calendar Integration */}
       <Card>

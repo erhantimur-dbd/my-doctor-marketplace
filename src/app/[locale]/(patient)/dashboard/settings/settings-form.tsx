@@ -34,6 +34,7 @@ import { AddressAutocomplete } from "./address-autocomplete";
 import { MedicalProfileSection } from "./medical-profile-section";
 import { SavedPaymentsSection } from "./saved-payments-section";
 import { DataPrivacySection } from "./data-privacy-section";
+import { TwoFactorSection } from "@/components/settings/two-factor-section";
 
 interface ProfileData {
   id: string;
@@ -82,6 +83,7 @@ export function SettingsForm({ profile, userEmail, medicalProfile }: SettingsFor
       <MedicalProfileSection medicalProfile={medicalProfile} />
       <PreferencesSection profile={profile} />
       <ChangePasswordSection />
+      <TwoFactorSection />
       <NotificationsSection profile={profile} />
       <SavedPaymentsSection />
       <DataPrivacySection />

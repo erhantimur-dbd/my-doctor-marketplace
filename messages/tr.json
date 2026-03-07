@@ -882,5 +882,33 @@
     "icsInfo": "Herhangi bir takvim uygulamasının abone olabileceği özel bir URL oluşturun. Yaklaşan randevularınız otomatik olarak görünecektir.",
     "icsCopyHint": "Bu URL'yi takvim uygulamanızın \"Takvime Abone Ol\" veya \"URL ile Ekle\" özelliğine yapıştırın.",
     "revokeConfirm": "Bu akış URL'si iptal edilsin mi? Bunu kullanan tüm takvim uygulamaları güncellenmeyi durduracaktır."
+  },
+  "twoFactor": {
+    "title": "İki Faktörlü Kimlik Doğrulama",
+    "description": "Giriş yaparken bir doğrulama uygulamasından doğrulama kodu gerektirerek hesabınıza ekstra bir güvenlik katmanı ekleyin.",
+    "enable": "2FA'yı Etkinleştir",
+    "disable": "2FA'yı Devre Dışı Bırak",
+    "enabled_status": "İki faktörlü kimlik doğrulama etkinleştirildi",
+    "disabled_status": "İki faktörlü kimlik doğrulama etkin değil",
+    "enroll_title": "İki Faktörlü Kimlik Doğrulamayı Ayarla",
+    "enroll_desc": "Aşağıdaki QR kodu doğrulama uygulamanızla (Google Authenticator, Authy, Microsoft Authenticator vb.) tarayın, ardından doğrulamak için 6 haneli kodu girin.",
+    "scan_qr": "Bu QR kodu doğrulama uygulamanızla tarayın",
+    "manual_key": "Tarayamıyor musunuz? Bu anahtarı uygulamanıza manuel olarak girin:",
+    "enter_code": "Doğrulama Kodu",
+    "verify_enable": "Doğrula ve Etkinleştir",
+    "disable_title": "İki Faktörlü Kimlik Doğrulamayı Devre Dışı Bırak",
+    "disable_desc": "İki faktörlü kimlik doğrulamayı devre dışı bırakmak istediğinizi onaylamak için doğrulama uygulamanızdaki 6 haneli kodu girin.",
+    "confirm_disable": "Devre Dışı Bırakmayı Onayla",
+    "cancel": "İptal",
+    "verify_page_title": "İki Faktörlü Doğrulama",
+    "verify_page_desc": "Girişi tamamlamak için doğrulama uygulamanızdaki 6 haneli kodu girin.",
+    "verify_button": "Doğrula",
+    "back_to_login": "Girişe dön",
+    "error_invalid_code": "Geçersiz doğrulama kodu. Lütfen tekrar deneyin.",
+    "error_enroll_failed": "2FA kurulumu başlatılamadı. Lütfen tekrar deneyin.",
+    "success_enabled": "İki faktörlü kimlik doğrulama etkinleştirildi!",
+    "success_disabled": "İki faktörlü kimlik doğrulama devre dışı bırakıldı.",
+    "recommendation_title": "Hesabınızı iki faktörlü kimlik doğrulama ile güvence altına alın",
+    "recommendation_desc": "Bir sağlık hizmeti sağlayıcısı olarak, hesabınızı ve hasta verilerinizi korumak için 2FA'yı etkinleştirmenizi şiddetle tavsiye ederiz."
   }
 }

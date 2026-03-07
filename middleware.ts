@@ -81,6 +81,20 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // MFA enforcement: if user has MFA enrolled but session is AAL1, redirect to verify-mfa
+  if (user && (isPatientRoute || isDoctorRoute || isAdminRoute)) {
+    const isMfaPage = pathnameWithoutLocale.startsWith("/verify-mfa");
+    if (!isMfaPage) {
+      const { data: aal } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal?.nextLevel === "aal2" && aal?.currentLevel === "aal1") {
+        return NextResponse.redirect(
+          new URL(`/${locale}/verify-mfa`, request.url)
+        );
+      }
+    }
+  }
+
   // Admin routes: verify role AND email allowlist at the edge
   if (isAdminRoute && user) {
     // Check email allowlist first (fast, no DB query)

@@ -882,5 +882,33 @@
     "icsInfo": "Erstellen Sie eine private URL, die jede Kalender-App abonnieren kann. Ihre kommenden Buchungen erscheinen automatisch.",
     "icsCopyHint": "Fügen Sie diese URL in die Funktion \u201EKalender abonnieren\u201C oder \u201EPer URL hinzufügen\u201C Ihrer Kalender-App ein.",
     "revokeConfirm": "Diese Feed-URL widerrufen? Alle Kalender-Apps, die sie verwenden, werden nicht mehr aktualisiert."
+  },
+  "twoFactor": {
+    "title": "Zwei-Faktor-Authentifizierung",
+    "description": "Fügen Sie Ihrem Konto eine zusätzliche Sicherheitsebene hinzu, indem Sie bei der Anmeldung einen Bestätigungscode aus einer Authenticator-App benötigen.",
+    "enable": "2FA aktivieren",
+    "disable": "2FA deaktivieren",
+    "enabled_status": "Zwei-Faktor-Authentifizierung ist aktiviert",
+    "disabled_status": "Zwei-Faktor-Authentifizierung ist nicht aktiviert",
+    "enroll_title": "Zwei-Faktor-Authentifizierung einrichten",
+    "enroll_desc": "Scannen Sie den QR-Code unten mit Ihrer Authenticator-App (Google Authenticator, Authy, Microsoft Authenticator usw.) und geben Sie dann den 6-stelligen Code zur Bestätigung ein.",
+    "scan_qr": "Scannen Sie diesen QR-Code mit Ihrer Authenticator-App",
+    "manual_key": "Scannen nicht möglich? Geben Sie diesen Schlüssel manuell in Ihrer App ein:",
+    "enter_code": "Bestätigungscode",
+    "verify_enable": "Bestätigen & Aktivieren",
+    "disable_title": "Zwei-Faktor-Authentifizierung deaktivieren",
+    "disable_desc": "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein, um zu bestätigen, dass Sie die Zwei-Faktor-Authentifizierung deaktivieren möchten.",
+    "confirm_disable": "Deaktivierung bestätigen",
+    "cancel": "Abbrechen",
+    "verify_page_title": "Zwei-Faktor-Verifizierung",
+    "verify_page_desc": "Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein, um die Anmeldung abzuschließen.",
+    "verify_button": "Bestätigen",
+    "back_to_login": "Zurück zur Anmeldung",
+    "error_invalid_code": "Ungültiger Bestätigungscode. Bitte versuchen Sie es erneut.",
+    "error_enroll_failed": "2FA-Einrichtung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.",
+    "success_enabled": "Zwei-Faktor-Authentifizierung wurde aktiviert!",
+    "success_disabled": "Zwei-Faktor-Authentifizierung wurde deaktiviert.",
+    "recommendation_title": "Sichern Sie Ihr Konto mit Zwei-Faktor-Authentifizierung",
+    "recommendation_desc": "Als Gesundheitsdienstleister empfehlen wir Ihnen dringend, 2FA zu aktivieren, um Ihr Konto und Patientendaten zu schützen."
   }
 }

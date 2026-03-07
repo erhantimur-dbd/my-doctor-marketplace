@@ -882,5 +882,33 @@
     "icsInfo": "Create a private URL that any calendar app can subscribe to. Your upcoming bookings will appear automatically.",
     "icsCopyHint": "Paste this URL into your calendar app\u0027s \u0022Subscribe to Calendar\u0022 or \u0022Add by URL\u0022 feature.",
     "revokeConfirm": "Revoke this feed URL? Any calendar apps using it will stop updating."
+  },
+  "twoFactor": {
+    "title": "Two-Factor Authentication",
+    "description": "Add an extra layer of security to your account by requiring a verification code from an authenticator app when you sign in.",
+    "enable": "Enable 2FA",
+    "disable": "Disable 2FA",
+    "enabled_status": "Two-factor authentication is enabled",
+    "disabled_status": "Two-factor authentication is not enabled",
+    "enroll_title": "Set Up Two-Factor Authentication",
+    "enroll_desc": "Scan the QR code below with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.), then enter the 6-digit code to verify.",
+    "scan_qr": "Scan this QR code with your authenticator app",
+    "manual_key": "Can't scan? Enter this key manually in your app:",
+    "enter_code": "Verification Code",
+    "verify_enable": "Verify & Enable",
+    "disable_title": "Disable Two-Factor Authentication",
+    "disable_desc": "Enter the 6-digit code from your authenticator app to confirm you want to disable two-factor authentication.",
+    "confirm_disable": "Confirm Disable",
+    "cancel": "Cancel",
+    "verify_page_title": "Two-Factor Verification",
+    "verify_page_desc": "Enter the 6-digit code from your authenticator app to complete sign-in.",
+    "verify_button": "Verify",
+    "back_to_login": "Back to login",
+    "error_invalid_code": "Invalid verification code. Please try again.",
+    "error_enroll_failed": "Failed to start 2FA setup. Please try again.",
+    "success_enabled": "Two-factor authentication has been enabled!",
+    "success_disabled": "Two-factor authentication has been disabled.",
+    "recommendation_title": "Secure your account with two-factor authentication",
+    "recommendation_desc": "As a healthcare provider, we strongly recommend enabling 2FA to protect your account and patient data."
   }
 }

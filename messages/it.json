@@ -749,5 +749,33 @@
     "match_reason_reviews": "Molte recensioni positive",
     "clear_ai_filters": "Cancella filtri AI",
     "not_what_you_meant": "Non era quello che cercavi?"
+  },
+  "twoFactor": {
+    "title": "Autenticazione a Due Fattori",
+    "description": "Aggiunga un ulteriore livello di sicurezza al Suo account richiedendo un codice di verifica da un'app di autenticazione quando accede.",
+    "enable": "Attiva 2FA",
+    "disable": "Disattiva 2FA",
+    "enabled_status": "L'autenticazione a due fattori è attivata",
+    "disabled_status": "L'autenticazione a due fattori non è attivata",
+    "enroll_title": "Configura l'Autenticazione a Due Fattori",
+    "enroll_desc": "Scansioni il codice QR sottostante con la Sua app di autenticazione (Google Authenticator, Authy, Microsoft Authenticator, ecc.), quindi inserisca il codice a 6 cifre per la verifica.",
+    "scan_qr": "Scansioni questo codice QR con la Sua app di autenticazione",
+    "manual_key": "Non riesce a scansionare? Inserisca manualmente questa chiave nella Sua app:",
+    "enter_code": "Codice di Verifica",
+    "verify_enable": "Verifica e Attiva",
+    "disable_title": "Disattiva l'Autenticazione a Due Fattori",
+    "disable_desc": "Inserisca il codice a 6 cifre dalla Sua app di autenticazione per confermare la disattivazione dell'autenticazione a due fattori.",
+    "confirm_disable": "Conferma Disattivazione",
+    "cancel": "Annulla",
+    "verify_page_title": "Verifica a Due Fattori",
+    "verify_page_desc": "Inserisca il codice a 6 cifre dalla Sua app di autenticazione per completare l'accesso.",
+    "verify_button": "Verifica",
+    "back_to_login": "Torna al login",
+    "error_invalid_code": "Codice di verifica non valido. La preghiamo di riprovare.",
+    "error_enroll_failed": "Impossibile avviare la configurazione 2FA. La preghiamo di riprovare.",
+    "success_enabled": "L'autenticazione a due fattori è stata attivata!",
+    "success_disabled": "L'autenticazione a due fattori è stata disattivata.",
+    "recommendation_title": "Protegga il Suo account con l'autenticazione a due fattori",
+    "recommendation_desc": "In qualità di operatore sanitario, Le consigliamo vivamente di attivare la 2FA per proteggere il Suo account e i dati dei pazienti."
   }
 }

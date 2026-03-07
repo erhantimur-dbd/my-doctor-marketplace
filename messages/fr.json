@@ -882,5 +882,33 @@
     "icsInfo": "Créez une URL privée à laquelle n'importe quelle application de calendrier peut s'abonner. Vos prochaines réservations apparaîtront automatiquement.",
     "icsCopyHint": "Collez cette URL dans la fonctionnalité « S'abonner au calendrier » ou « Ajouter par URL » de votre application de calendrier.",
     "revokeConfirm": "Révoquer cette URL de flux ? Toutes les applications de calendrier qui l'utilisent cesseront de se mettre à jour."
+  },
+  "twoFactor": {
+    "title": "Authentification à deux facteurs",
+    "description": "Ajoutez une couche de sécurité supplémentaire à votre compte en exigeant un code de vérification d'une application d'authentification lors de la connexion.",
+    "enable": "Activer la 2FA",
+    "disable": "Désactiver la 2FA",
+    "enabled_status": "L'authentification à deux facteurs est activée",
+    "disabled_status": "L'authentification à deux facteurs n'est pas activée",
+    "enroll_title": "Configurer l'authentification à deux facteurs",
+    "enroll_desc": "Scannez le QR code ci-dessous avec votre application d'authentification (Google Authenticator, Authy, Microsoft Authenticator, etc.), puis saisissez le code à 6 chiffres pour vérifier.",
+    "scan_qr": "Scannez ce QR code avec votre application d'authentification",
+    "manual_key": "Impossible de scanner ? Saisissez cette clé manuellement dans votre application :",
+    "enter_code": "Code de vérification",
+    "verify_enable": "Vérifier et activer",
+    "disable_title": "Désactiver l'authentification à deux facteurs",
+    "disable_desc": "Saisissez le code à 6 chiffres de votre application d'authentification pour confirmer que vous souhaitez désactiver l'authentification à deux facteurs.",
+    "confirm_disable": "Confirmer la désactivation",
+    "cancel": "Annuler",
+    "verify_page_title": "Vérification à deux facteurs",
+    "verify_page_desc": "Saisissez le code à 6 chiffres de votre application d'authentification pour terminer la connexion.",
+    "verify_button": "Vérifier",
+    "back_to_login": "Retour à la connexion",
+    "error_invalid_code": "Code de vérification invalide. Veuillez réessayer.",
+    "error_enroll_failed": "Impossible de démarrer la configuration de la 2FA. Veuillez réessayer.",
+    "success_enabled": "L'authentification à deux facteurs a été activée !",
+    "success_disabled": "L'authentification à deux facteurs a été désactivée.",
+    "recommendation_title": "Sécurisez votre compte avec l'authentification à deux facteurs",
+    "recommendation_desc": "En tant que professionnel de santé, nous vous recommandons vivement d'activer la 2FA pour protéger votre compte et les données de vos patients."
   }
 }

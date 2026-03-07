@@ -749,5 +749,33 @@
     "match_reason_reviews": "Muchas reseñas positivas",
     "clear_ai_filters": "Borrar filtros de IA",
     "not_what_you_meant": "¿No es lo que buscabas?"
+  },
+  "twoFactor": {
+    "title": "Autenticación de dos factores",
+    "description": "Añada una capa adicional de seguridad a su cuenta al requerir un código de verificación de una aplicación de autenticación cuando inicie sesión.",
+    "enable": "Activar 2FA",
+    "disable": "Desactivar 2FA",
+    "enabled_status": "La autenticación de dos factores está activada",
+    "disabled_status": "La autenticación de dos factores no está activada",
+    "enroll_title": "Configurar la autenticación de dos factores",
+    "enroll_desc": "Escanee el código QR de abajo con su aplicación de autenticación (Google Authenticator, Authy, Microsoft Authenticator, etc.) y luego introduzca el código de 6 dígitos para verificar.",
+    "scan_qr": "Escanee este código QR con su aplicación de autenticación",
+    "manual_key": "¿No puede escanear? Introduzca esta clave manualmente en su aplicación:",
+    "enter_code": "Código de verificación",
+    "verify_enable": "Verificar y activar",
+    "disable_title": "Desactivar la autenticación de dos factores",
+    "disable_desc": "Introduzca el código de 6 dígitos de su aplicación de autenticación para confirmar que desea desactivar la autenticación de dos factores.",
+    "confirm_disable": "Confirmar desactivación",
+    "cancel": "Cancelar",
+    "verify_page_title": "Verificación de dos factores",
+    "verify_page_desc": "Introduzca el código de 6 dígitos de su aplicación de autenticación para completar el inicio de sesión.",
+    "verify_button": "Verificar",
+    "back_to_login": "Volver al inicio de sesión",
+    "error_invalid_code": "Código de verificación no válido. Por favor, inténtelo de nuevo.",
+    "error_enroll_failed": "No se pudo iniciar la configuración de 2FA. Por favor, inténtelo de nuevo.",
+    "success_enabled": "¡La autenticación de dos factores ha sido activada!",
+    "success_disabled": "La autenticación de dos factores ha sido desactivada.",
+    "recommendation_title": "Proteja su cuenta con la autenticación de dos factores",
+    "recommendation_desc": "Como profesional de la salud, le recomendamos encarecidamente activar la 2FA para proteger su cuenta y los datos de sus pacientes."
   }
 }
