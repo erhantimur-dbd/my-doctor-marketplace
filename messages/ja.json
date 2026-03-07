@@ -357,7 +357,172 @@
     "faq": "よくある質問",
     "support": "サポート",
     "find_pharmacy": "薬局を探す",
+    "help_center": "ヘルプセンター",
     "copyright": "全著作権所有。"
+  },
+  "helpCenter": {
+    "title": "ヘルプセンター",
+    "subtitle": "予約、カレンダー同期、支払いなどに関するガイド、トラブルシューティングのヒント、よくある質問への回答をご覧ください。",
+    "search_placeholder": "ヘルプ記事を検索...",
+    "articles_found": "「{query}」で {count} {count, plural, one {件の記事} other {件の記事}}が見つかりました",
+    "no_results": "「{query}」に一致する記事が見つかりません。",
+    "no_results_hint": "別のキーワードで試すか、",
+    "contact_support_link": "サポートに問い合わせ",
+    "no_results_clear": "検索に一致する記事がありません。",
+    "no_results_clear_hint": "別のキーワードで試すか、すべてのカテゴリを閲覧してください。",
+    "clear_search": "検索をクリア",
+    "articles_count": "{count} 件の記事",
+    "still_need_help": "まだお困りですか？",
+    "still_need_help_desc": "お探しのものが見つかりませんか？サポートチームがお手伝いします。",
+    "contact_support": "サポートに問い合わせ",
+    "support_options": "サポートオプション",
+    "copy_link": "リンクをコピー",
+    "for_doctors": "医師向け",
+    "for_patients": "患者向け",
+    "everyone": "すべての方",
+    "help_center_banner_title": "ガイドやトラブルシューティングをお探しですか？",
+    "help_center_banner_desc": "ヘルプセンターでステップバイステップのガイド、カレンダー設定手順などをご覧ください。",
+    "browse_help_center": "ヘルプセンターを見る",
+    "cat_getting_started": "はじめに",
+    "cat_getting_started_desc": "患者または医師としてMyDoctors360を使用する基本を学びましょう。",
+    "cat_calendar": "カレンダーとスケジュール",
+    "cat_calendar_desc": "カレンダー同期、プロバイダー設定、ICSフィード、空き状況の管理。",
+    "cat_payments": "支払いと請求",
+    "cat_payments_desc": "支払いの仕組み、返金、Stripe Connect経由の医師への支払い。",
+    "cat_account": "アカウントと設定",
+    "cat_account_desc": "プロフィール管理、通知、セキュリティ、設定。",
+    "cat_troubleshooting": "トラブルシューティング",
+    "cat_troubleshooting_desc": "カレンダー同期、支払い、ビデオ通話に関する一般的な問題の解決策。"
+  },
+  "helpArticles": {
+    "how-to-book": {
+      "question": "予約はどのようにすればよいですか？",
+      "answer": "<strong>1.</strong> 検索バーを使用するか、専門分野を閲覧して医師を見つけます。\n<strong>2.</strong> 医師のプロフィール、レビュー、料金、空き時間を確認します。\n<strong>3.</strong> ご都合の良い日時を選択します。\n<strong>4.</strong> 対面診療またはビデオ診療（提供されている場合）を選択します。\n<strong>5.</strong> Stripeを通じて安全にお支払いを完了します。\n\n予約の詳細が記載された確認メールが即座に届きます。予約は患者ダッシュボードにも表示されます。"
+    },
+    "patient-account-setup": {
+      "question": "患者アカウントはどのように作成しますか？",
+      "answer": "ホームページの<strong>サインアップ</strong>をクリックし、患者として登録を選択します。メールアドレスとパスワードで登録するか、GoogleまたはAppleサインインを使用してより簡単にアクセスできます。\n\n登録後、お送りするリンクをクリックしてメールアドレスを確認してください。確認が完了すると、医師の検索、予約、ダッシュボードからのすべての管理が可能になります。"
+    },
+    "doctor-profile-setup": {
+      "question": "医師プロフィールはどのように設定しますか？",
+      "answer": "医師として登録後、専門プロフィールを完成させてください：\n\n<strong>1.</strong> 専門分野、資格、経験年数を追加します。\n<strong>2.</strong> プロフェッショナルな写真をアップロードし、自己紹介を記入します。\n<strong>3.</strong> 診察料と対応する診療タイプ（対面、ビデオ、または両方）を設定します。\n<strong>4.</strong> 診療可能スケジュールを設定します。\n<strong>5.</strong> 支払い受取のためにStripeアカウントを接続します。\n\nプロフィールは公開前に当社チームが24〜48時間以内に審査・認証いたします。"
+    },
+    "setting-availability": {
+      "question": "診療可能時間と勤務時間はどのように設定しますか？",
+      "answer": "医師ダッシュボードから<strong>カレンダー → 空き状況</strong>に移動します。\n\n曜日ごとの勤務時間を選択して、通常の週間スケジュールを設定できます。例：月曜日〜金曜日 9:00〜17:00。\n\n<strong>日付オーバーライド</strong>を作成して、特定の日をブロック（祝日、休日）したり、特定の日にカスタム時間を設定したりすることもできます。変更は即座に反映され、患者には空いている枠のみが表示されます。"
+    },
+    "video-consultation-how": {
+      "question": "ビデオ診療はどのように行われますか？",
+      "answer": "ビデオ診療を予約すると、安全なビデオ通話リンクが自動的に生成されます。\n\n<strong>予約前：</strong>リンクはメールで届き、ダッシュボードにも表示されます。\n<strong>予約時間になったら：</strong>リンクをクリックしてブラウザから直接通話に参加できます — ソフトウェアのインストールは不要です。\n<strong>必要なもの：</strong>カメラとマイク付きのデバイス、および安定したインターネット接続。\n\n患者も医師も、最新のWebブラウザ（Chrome、Firefox、Safari、Edge）から通話に参加できます。"
+    },
+    "supported-languages": {
+      "question": "MyDoctors360はどの言語に対応していますか？",
+      "answer": "MyDoctors360は<strong>9つの言語</strong>に対応しています：英語、ドイツ語、フランス語、トルコ語、スペイン語、イタリア語、日本語、ポルトガル語、中国語。\n\nプラットフォームはブラウザの言語を自動検出しますが、ナビゲーションバーの言語セレクターから切り替えることもできます。すべてのインターフェース要素、通知、ヘルプ記事が翻訳されています。\n\n医師はプロフィールに対応言語を掲載できるため、ご希望の言語を話す医師を見つけることができます。"
+    },
+    "calendar-sync-overview": {
+      "question": "カレンダー同期はどのように機能しますか？",
+      "answer": "カレンダー同期は、MyDoctors360のスケジュールと外部カレンダー（Google、Microsoft、またはApple）を連動させます。\n\n<strong>インポート（外部 → MyDoctors360）：</strong>外部カレンダーの予定がブロック済み時間枠としてインポートされます。これにより、すでに予定がある時間帯に患者が予約するのを防ぎます。\n\n<strong>エクスポート（MyDoctors360 → 外部）：</strong>患者が予約すると、自動的に外部カレンダーに表示されます。\n\n<strong>更新の仕組み：</strong>\n• <strong>Googleカレンダー：</strong>Webhookによるリアルタイム同期、10分間隔のフォールバック同期あり。\n• <strong>Microsoft Outlook：</strong>Graph APIサブスクリプションによるリアルタイム同期、10分間隔のフォールバック同期あり。\n• <strong>Apple iCloud：</strong>10分間隔のポーリング（CalDAVはWebhookをサポートしていません）。\n\nすべての同期はバックグラウンドで自動的に行われます。カレンダー設定から手動同期を実行することもできます。"
+    },
+    "google-calendar-setup": {
+      "question": "Googleカレンダーはどのように接続しますか？",
+      "answer": "<strong>1.</strong> 医師ダッシュボード → カレンダー → 連携に移動します。\n<strong>2.</strong> <strong>Googleカレンダーを接続</strong>をクリックします。\n<strong>3.</strong> Googleアカウントでサインインし、カレンダーへのアクセスを許可します。\n<strong>4.</strong> 同期するカレンダーを選択します（例：メインカレンダー）。\n\n接続後、<strong>Webhookによるリアルタイム</strong>同期が行われます。カレンダーに変更があると、Googleから即座に通知されます。フォールバックとして、10分ごとのバックグラウンド同期も実行されます。\n\n既存のGoogleカレンダーの予定は、接続後数分以内にブロック済み時間枠としてインポートされます。"
+    },
+    "microsoft-calendar-setup": {
+      "question": "Microsoft Outlook / Office 365はどのように接続しますか？",
+      "answer": "<strong>1.</strong> 医師ダッシュボード → カレンダー → 連携に移動します。\n<strong>2.</strong> <strong>Microsoftカレンダーを接続</strong>をクリックします。\n<strong>3.</strong> Microsoftアカウント（Outlook.comまたはOffice 365）でサインインし、アクセスを許可します。\n<strong>4.</strong> デフォルトのカレンダーが自動的に同期されます。\n\n同期は<strong>Microsoft Graph APIサブスクリプション</strong>を使用してリアルタイムで更新され、10分間隔のフォールバック同期もあります。Outlookカレンダーに変更があると、ほぼ即座に通知されます。\n\n個人用MicrosoftアカウントとOffice 365の職場・学校アカウントの両方に対応しています。"
+    },
+    "apple-icloud-setup": {
+      "question": "Apple iCloud / CalDAVカレンダーはどのように接続しますか？",
+      "answer": "<strong>1.</strong> 医師ダッシュボード → カレンダー → 連携に移動します。\n<strong>2.</strong> <strong>Appleカレンダーを接続</strong>をクリックします。\n<strong>3.</strong> <strong>appleid.apple.com</strong>で<strong>App用パスワード</strong>を生成します（サインインとセキュリティ → App用パスワード）。\n<strong>4.</strong> Apple IDのメールアドレスとApp用パスワードを入力します。\n\n<strong>重要：</strong>Apple iCloudはCalDAVプロトコルを使用しており、Webhookをサポートしていません。同期は<strong>10分間隔のポーリング</strong>で行われます。そのため、Appleカレンダーの変更がMyDoctors360に反映されるまで最大10分かかる場合があります。\n\nこの方法はFastmailやNextcloudなど他のCalDAVプロバイダーでも利用できます。"
+    },
+    "calendar-provider-comparison": {
+      "question": "カレンダープロバイダーの違いは何ですか？",
+      "answer": "対応する3つのプロバイダーの比較は以下の通りです：\n\n<strong>Googleカレンダー：</strong>\n• Webhookによるリアルタイム同期 ✓\n• OAuth認証 ✓\n• 最速の同期速度\n\n<strong>Microsoft Outlook / Office 365：</strong>\n• Graphサブスクリプションによるリアルタイム同期 ✓\n• OAuth認証 ✓\n• 個人アカウントと職場アカウントの両方に対応\n\n<strong>Apple iCloud / CalDAV：</strong>\n• 10分間隔のポーリング同期\n• App用パスワード認証\n• Fastmail、Nextcloud、その他のCalDAVサーバーでも利用可能\n\n3つのプロバイダーすべてが双方向同期（インポートとエクスポート）に対応しています。GoogleとMicrosoftはWebhookサポートにより最速の同期を提供します。"
+    },
+    "ics-feed": {
+      "question": "ICSカレンダーフィードとは何ですか？",
+      "answer": "ICSフィードは、あらゆるカレンダーアプリでMyDoctors360の予約を表示できる<strong>読み取り専用の購読URL</strong>です。\n\n<strong>設定方法：</strong>\n<strong>1.</strong> カレンダー → 連携 → ICSフィードに移動します。\n<strong>2.</strong> <strong>フィードURLを生成</strong>をクリックしてプライベートURLを作成します。\n<strong>3.</strong> URLをコピーし、カレンダーアプリの「カレンダーを購読」または「URLで追加」機能に貼り付けます。\n\nカレンダーアプリは定期的にフィードを更新して新しい予約を表示します。これは一方向のみで、MyDoctors360の予約をカレンダーに表示しますが、外部の予定はインポートしません。\n\n<strong>注意：</strong>フィードURLにはプライベートトークンが含まれています。他の人と共有しないでください。設定からいつでも取り消して再生成できます。"
+    },
+    "slot-locking": {
+      "question": "スロットロックはどのようにダブルブッキングを防止しますか？",
+      "answer": "患者が時間枠のチェックアウトプロセスを開始すると、その枠は<strong>15分間一時的にロック</strong>されます。この間、他の患者は同じ枠を予約できません。\n\nこれは<strong>悲観的ロック</strong>のアプローチを使用しています：\n• チェックアウト開始時に枠のステータスが<strong>pending_payment</strong>に変わります。\n• 支払いが正常に完了すると、予約が確定されます。\n• 患者が15分以内に支払いを完了しない場合、ロックが解除され、枠は再び利用可能になります。\n\nこれにより、2人の患者が同時に予約しようとしても、同じ時間枠を誤って予約することはありません。"
+    },
+    "conflict-detection": {
+      "question": "競合検出はどのように機能しますか？",
+      "answer": "カレンダー同期が既存の確定済み予約と重複する予定をインポートした場合、システムは<strong>自動的に競合を検出</strong>し、通知します。\n\nダッシュボードに重複を知らせる通知が届きます。これにより、競合している予約の一方をリスケジュールする時間が得られます。\n\n<strong>よくあるケース：</strong>\n• 患者の予約と重複する個人の予定を外部カレンダーに追加した場合。\n• 同期された外部の予定が予約と競合する時間に移動された場合。\n\n競合検出は、カレンダー同期が新しいまたは更新された予定を処理するたびに実行されます。"
+    },
+    "date-overrides": {
+      "question": "日付のブロックやカスタム時間の設定はどのようにしますか？",
+      "answer": "医師ダッシュボード → カレンダー → <strong>日付オーバーライド</strong>に移動します。\n\n<strong>日付をブロックするには：</strong>日付を選択し、利用不可に設定します。その日の枠は表示されなくなります。\n\n<strong>カスタム時間を設定するには：</strong>日付を選択し、カスタムの開始時間と終了時間を入力します。これにより、その特定の日の通常の週間スケジュールが上書きされます。\n\n<strong>使用例：</strong>\n• 祝日や休暇の日をブロック\n• 特定の日の営業時間を短縮\n• 通常休みの日に追加の診療時間を設定\n\n変更は即座に反映されます。ブロックされた日付の既存の確定済み予約は自動的にキャンセルされません — 手動でリスケジュールする必要があります。"
+    },
+    "how-payments-work": {
+      "question": "MyDoctors360での支払いはどのように機能しますか？",
+      "answer": "すべての支払いは、PCI準拠の決済サービス<strong>Stripe</strong>を通じて安全に処理されます。\n\n<strong>患者の方：</strong>\n• クレジットカード、デビットカード、またはStripeがサポートするその他の方法でお支払いいただけます。\n• 予約完了時にお支払いが行われます。\n• すべての料金は事前に表示されます — 隠れた手数料はありません。\n\n<strong>医師の方：</strong>\n• 患者からの支払いはStripeが収集・保管します。\n• プラットフォーム手数料（15%）を差し引いた後、残りの金額が接続されたStripeアカウントに送金されます。\n• 振込は定期的に自動で行われます。\n\nすべての取引は暗号化され安全です。カード情報の全体を当社サーバーに保存することはありません。"
+    },
+    "refund-policy": {
+      "question": "返金・キャンセルポリシーはどのようになっていますか？",
+      "answer": "各医師が独自のキャンセルポリシーを設定しており、プロフィールに表示されています。3つのポリシータイプがあります：\n\n<strong>フレキシブル：</strong>予約の2時間前まで無料でキャンセル可能。\n<strong>モデレート：</strong>予約の24時間前まで無料でキャンセル可能。\n<strong>ストリクト：</strong>予約の48時間前まで無料でキャンセル可能。\n\n許容期間内にキャンセルした場合、元の支払い方法に自動的に返金されます。返金は通常5〜10営業日以内に反映されます。\n\n医師が予約をキャンセルした場合、キャンセルポリシーに関係なく、常に<strong>全額返金</strong>が行われます。"
+    },
+    "doctor-payouts": {
+      "question": "医師への支払いはどのように行われますか？",
+      "answer": "医師への支払いは<strong>Stripe Connect</strong>を通じて処理されます。\n\n患者が予約の支払いを行うと：\n<strong>1.</strong> 全額がStripeにより収集されます。\n<strong>2.</strong> プラットフォーム手数料（15%）が差し引かれます。\n<strong>3.</strong> 残りの85%がお使いのStripeアカウントに送金されます。\n\n銀行口座への振込は、Stripeの標準スケジュールに従います（通常、支払いから2〜7営業日、国によって異なります）。\n\n医師ダッシュボード → 支払いセクションから、すべての収益、保留中の振込、取引履歴を確認できます。"
+    },
+    "stripe-onboarding": {
+      "question": "支払いを受け取るためのStripeの設定方法は？",
+      "answer": "患者からの支払いを受け取るには、Stripeアカウントの接続が必要です：\n\n<strong>1.</strong> 医師ダッシュボード → 支払いに移動します。\n<strong>2.</strong> <strong>支払い設定</strong>または<strong>Stripeを接続</strong>をクリックします。\n<strong>3.</strong> Stripeのオンボーディング画面にリダイレクトされます。\n<strong>4.</strong> 事業者情報、銀行口座情報、本人確認を入力します。\n<strong>5.</strong> 確認が完了すると、支払いの受け取りが可能になります。\n\n<strong>Stripe Connect Express</strong>を使用しているため、コンプライアンスや税務報告はStripeがすべて対応します。設定は通常5〜10分で完了します。"
+    },
+    "supported-currencies": {
+      "question": "どの通貨に対応していますか？",
+      "answer": "MyDoctors360は国際的な医療サービスのため、複数の通貨に対応しています：\n\n• <strong>EUR</strong>（ユーロ）\n• <strong>GBP</strong>（英ポンド）\n• <strong>TRY</strong>（トルコリラ）\n• <strong>USD</strong>（米ドル）\n\n医師は希望する通貨で診察料を設定します。患者には医師の通貨で料金が表示され、その通貨で支払います。Stripeが通貨処理を自動的に行います。\n\n需要に応じて、今後さらに多くの通貨が追加される可能性があります。"
+    },
+    "update-profile": {
+      "question": "プロフィールはどのように更新しますか？",
+      "answer": "ログインしてダッシュボードに移動し、<strong>設定</strong>または<strong>プロフィール</strong>に進みます。\n\n<strong>患者の方：</strong>氏名、メールアドレス、電話番号、その他の個人情報を更新できます。\n\n<strong>医師の方：</strong>自己紹介、資格、専門分野、診察料、プロフィール写真、クリニックの住所などを更新できます。\n\n変更は即座に保存されます。メールアドレスを変更した場合、新しいメールの確認が必要になることがあります。"
+    },
+    "notification-preferences": {
+      "question": "通知設定はどのように管理しますか？",
+      "answer": "ダッシュボード → <strong>設定 → 通知</strong>に移動します。\n\n以下の通知を管理できます：\n• <strong>メール：</strong>予約確認、リマインダー、キャンセル通知\n• <strong>SMS：</strong>予約リマインダーと緊急のお知らせ\n• <strong>WhatsApp：</strong>クイックリマインダーと予約通知\n\n各通知タイプは個別にオン・オフを切り替えられます。予約の見逃しを防ぐため、予約確認とリマインダーの通知は有効にしておくことをお勧めします。"
+    },
+    "cancel-reschedule-booking": {
+      "question": "予約のキャンセルまたは変更はどのようにしますか？",
+      "answer": "患者ダッシュボード → <strong>予約一覧</strong>に移動します。\n\n変更したい予約を見つけて、<strong>予約をキャンセル</strong>または<strong>日程変更</strong>をクリックします。\n\n<strong>キャンセル：</strong>医師のキャンセルポリシーの期間内にキャンセルすると、全額返金されます。それ以外の場合はキャンセル料が適用されます。\n\n<strong>日程変更：</strong>医師の空き枠から新しい日時を選択します。診察料に変更がなければ、追加のお支払いは不要です。\n\n予約がキャンセルまたは変更されると、患者と医師の両方にメール通知が届きます。"
+    },
+    "doctor-subscription": {
+      "question": "医師向けにはどのようなサブスクリプションプランがありますか？",
+      "answer": "MyDoctors360では、機能強化と認知度向上を求める医師向けにサブスクリプションプランを提供しています：\n\n<strong>フリープラン：</strong>基本プロフィール、標準検索表示、カレンダー連携、決済処理。\n\n<strong>プレミアムプラン：</strong>検索結果の優先表示、優先サポート、高度な分析ツール、診療拡大のためのマーケティングツール。\n\nすべてのプランにStripe Connectによる安全な決済処理が含まれています。医師ダッシュボード → サブスクリプションからいつでもプランのアップグレードまたはダウングレードが可能です。"
+    },
+    "account-security": {
+      "question": "アカウントの安全性を保つにはどうすればよいですか？",
+      "answer": "アカウントセキュリティのベストプラクティスは以下の通りです：\n\n<strong>1. 強力なパスワードを使用する：</strong>英字、数字、記号を組み合わせた8文字以上のパスワードを設定してください。\n<strong>2. ログイン情報を共有しない：</strong>アカウントは個人のものであり、共有すべきではありません。\n<strong>3. メールを確認する：</strong>メールアドレスが確認済みであることを確認してください。\n<strong>4. 共有デバイスではログアウトする：</strong>公共のまたは共有のコンピュータを使用する際は、必ずログアウトしてください。\n<strong>5. フィッシングに注意する：</strong>メールでパスワードをお尋ねすることは決してありません。不審なメールを受け取った場合は、サポートにご連絡ください。\n\nアカウントへの不正アクセスが疑われる場合は、直ちにパスワードを変更し、サポートチームにご連絡ください。"
+    },
+    "calendar-not-syncing": {
+      "question": "カレンダーが同期されません — どうすればよいですか？",
+      "answer": "カレンダー同期の問題をトラブルシューティングするには、以下の手順に従ってください：\n\n<strong>1. 接続状態を確認する：</strong>カレンダー → 連携に移動し、カレンダーが「接続済み」と表示されていることを確認します。\n\n<strong>2. 手動同期を試す：</strong><strong>今すぐ同期</strong>ボタンをクリックして、即座に同期を実行します。\n\n<strong>3. 認証情報を確認する：</strong>エラーが表示されている場合は、カレンダーを一度切断してから再接続してみてください。\n\n<strong>4. カレンダーの権限を確認する：</strong>MyDoctors360にカレンダーの読み取り/書き込みアクセスが許可されていることを確認します。\n\n<strong>5. Apple iCloudの場合：</strong>CalDAVの同期は10分間隔で行われるため、多少の遅延がある場合があります。\n\nこれらの手順を試しても問題が解決しない場合は、カレンダープロバイダーと表示されているエラーの詳細を添えてサポートチームにお問い合わせください。"
+    },
+    "google-auth-expired": {
+      "question": "Googleカレンダーの認証が期限切れになりました",
+      "answer": "Google OAuthトークンは、Googleのパスワードを変更した場合、アプリの権限を取り消した場合、または長期間の非アクティブ状態の後に期限切れになることがあります。\n\n<strong>修正方法：</strong>\n<strong>1.</strong> 医師ダッシュボード → カレンダー → 連携に移動します。\n<strong>2.</strong> Googleカレンダーの横にある<strong>切断</strong>をクリックします。\n<strong>3.</strong> 再度<strong>Googleカレンダーを接続</strong>をクリックします。\n<strong>4.</strong> サインインして権限を再度付与します。\n\n以前の同期データは保持されます。新しい接続により、即座に同期が再開されます。\n\n<strong>ヒント：</strong><strong>myaccount.google.com/permissions</strong>で接続されているアプリを確認し、MyDoctors360がアクセス権を持っていることを確認することもできます。"
+    },
+    "apple-password-revoked": {
+      "question": "Apple iCloudのApp用パスワードが取り消されました",
+      "answer": "Apple App用パスワードは、Apple IDのパスワードを変更した場合、またはAppleアカウントから手動で取り消した場合に無効になることがあります。\n\n<strong>修正方法：</strong>\n<strong>1.</strong> <strong>appleid.apple.com</strong>にアクセスしてサインインします。\n<strong>2.</strong> <strong>サインインとセキュリティ → App用パスワード</strong>に移動します。\n<strong>3.</strong> <strong>新しいApp用パスワード</strong>を生成します。\n<strong>4.</strong> MyDoctors360でカレンダー → 連携に移動します。\n<strong>5.</strong> Appleカレンダーの接続を切断します。\n<strong>6.</strong> Apple IDのメールアドレスと新しいApp用パスワードで再接続します。\n\n次のポーリングサイクル（10分以内）で同期が再開されます。"
+    },
+    "payment-failed": {
+      "question": "支払いに失敗しました — どうすればよいですか？",
+      "answer": "支払いの失敗にはいくつかの原因が考えられます：\n\n<strong>• 残高不足：</strong>カードに十分な残高があることを確認してください。\n<strong>• カード拒否：</strong>銀行が取引をブロックしている可能性があります。銀行に連絡して承認を依頼してください。\n<strong>• カード期限切れ：</strong>カード情報を更新して再度お試しください。\n<strong>• 3Dセキュア失敗：</strong>プロンプトが表示されたら、銀行の認証手順を完了してください。\n\n<strong>再試行するには：</strong>\n<strong>1.</strong> 失敗後15分間は時間枠がロックされたままです。\n<strong>2.</strong> 予約ページに戻り、別のカードで再試行するか、銀行との問題を解決してから再度お試しください。\n\n請求されたにもかかわらず予約確認が表示されない場合は、サポートチームにご連絡ください — 直ちに調査いたします。"
+    },
+    "video-call-issues": {
+      "question": "ビデオ通話に問題があります",
+      "answer": "ビデオ通話に問題が発生した場合は、以下の手順をお試しください：\n\n<strong>1. ブラウザを確認する：</strong>最新のブラウザ（Chrome、Firefox、Safari、またはEdge）を使用してください。最新バージョンに更新されていることを確認してください。\n\n<strong>2. カメラとマイクを許可する：</strong>プロンプトが表示されたら、「許可」をクリックしてブラウザの権限を付与してください。ブラウザの設定でも確認できます。\n\n<strong>3. インターネット接続を確認する：</strong>ビデオ通話には最低2Mbpsの安定した接続が推奨されます。\n\n<strong>4. 他のアプリを閉じる：</strong>他のビデオアプリ（Zoom、Teamsなど）がカメラを使用している場合があります。それらを閉じて再度お試しください。\n\n<strong>5. 別のブラウザを試す：</strong>問題が解決しない場合は、別のブラウザに切り替えてください。\n\n<strong>6. デバイスを再起動する：</strong>再起動により、他のソフトウェアが原因のカメラやマイクの問題が解決されることがあります。\n\nどちらも接続できない場合は、サポートにお問い合わせいただければ、予約の変更をお手伝いします。"
+    },
+    "booking-slot-unavailable": {
+      "question": "選択した予約枠が消えました",
+      "answer": "枠が利用できなくなる理由はいくつかあります：\n\n<strong>• 他の患者が予約した：</strong>閲覧中に他の患者がその枠のチェックアウトを完了した可能性があります。\n\n<strong>• 枠がロックされた：</strong>他の患者がチェックアウト中の可能性があります（支払い処理中、枠は15分間ロックされます）。\n\n<strong>• カレンダー同期の更新：</strong>医師の外部カレンダーが競合する予定で更新され、その時間が自動的にブロックされた可能性があります。\n\n<strong>• 医師が空き状況を変更した：</strong>医師がスケジュールを更新したか、日付オーバーライドを追加した可能性があります。\n\n<strong>対処法：</strong>ページを更新して最新の空き枠を確認し、別の時間を選択してください。空き状況が見つかりにくい場合は、異なる時間帯に再確認するか、医師のオフィスに直接お問い合わせください。"
+    },
+    "sync-delay-apple": {
+      "question": "Appleカレンダーの同期が遅れるのはなぜですか？",
+      "answer": "Apple iCloudカレンダーは<strong>CalDAVプロトコル</strong>を使用しており、リアルタイム通知（Webhook）をサポートしていません。代わりに、MyDoctors360は<strong>10分ごとにカレンダーをポーリング</strong>して変更を確認します。\n\nこれは以下を意味します：\n• Appleカレンダーの変更がMyDoctors360に反映されるまで<strong>最大10分</strong>かかる場合があります。\n• MyDoctors360の新しい予約がAppleカレンダーに表示されるまで最大10分かかる場合があります。\n\n<strong>遅延を最小限にするためのヒント：</strong>\n• カレンダー設定の<strong>今すぐ同期</strong>ボタンを使用して、即座に同期を実行できます。\n• タイミングが重要な場合は、リアルタイム同期のためにGoogleまたはMicrosoftカレンダーの使用をご検討ください。\n\nこれはCalDAVプロトコルの制限であり、バグではありません。GoogleとMicrosoftのカレンダーはWebhook通知をサポートしているため、リアルタイムで同期されます。"
+    }
   },
   "findPharmacy": {
     "title": "薬局を探す",

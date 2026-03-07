@@ -464,6 +464,170 @@
     "help_center": "Help Center",
     "copyright": "All rights reserved."
   },
+  "helpCenter": {
+    "title": "Help Center",
+    "subtitle": "Find guides, troubleshooting tips, and answers to common questions about booking, calendar sync, payments, and more.",
+    "search_placeholder": "Search for help articles...",
+    "articles_found": "{count} {count, plural, one {article} other {articles}} found for \"{query}\"",
+    "no_results": "No articles found for \"{query}\".",
+    "no_results_hint": "Try different keywords or",
+    "contact_support_link": "contact support",
+    "no_results_clear": "No articles match your search.",
+    "no_results_clear_hint": "Try different keywords or browse all categories.",
+    "clear_search": "Clear search",
+    "articles_count": "{count} articles",
+    "still_need_help": "Still Need Help?",
+    "still_need_help_desc": "Can't find what you're looking for? Our support team is here to help.",
+    "contact_support": "Contact Support",
+    "support_options": "Support Options",
+    "copy_link": "Copy link",
+    "for_doctors": "For Doctors",
+    "for_patients": "For Patients",
+    "everyone": "Everyone",
+    "help_center_banner_title": "Looking for guides and troubleshooting?",
+    "help_center_banner_desc": "Visit our Help Center for step-by-step guides, calendar setup instructions, and more.",
+    "browse_help_center": "Browse Help Center",
+    "cat_getting_started": "Getting Started",
+    "cat_getting_started_desc": "Learn the basics of using MyDoctors360 as a patient or doctor.",
+    "cat_calendar": "Calendar & Scheduling",
+    "cat_calendar_desc": "Calendar sync, provider setup, ICS feeds, and availability management.",
+    "cat_payments": "Payments & Billing",
+    "cat_payments_desc": "How payments work, refunds, and doctor payouts via Stripe Connect.",
+    "cat_account": "Account & Settings",
+    "cat_account_desc": "Profile management, notifications, security, and preferences.",
+    "cat_troubleshooting": "Troubleshooting",
+    "cat_troubleshooting_desc": "Solutions for common issues with calendar sync, payments, and video calls."
+  },
+  "helpArticles": {
+    "how-to-book": {
+      "question": "How do I book an appointment?",
+      "answer": "<strong>1.</strong> Use the search bar or browse specialties to find a doctor.\n<strong>2.</strong> View the doctor's profile, reviews, fees, and available times.\n<strong>3.</strong> Select a date and time slot that works for you.\n<strong>4.</strong> Choose between in-person or video consultation (if offered).\n<strong>5.</strong> Complete payment securely via Stripe.\n\nYou'll receive an instant email confirmation with all the details. The appointment also appears in your patient dashboard."
+    },
+    "patient-account-setup": {
+      "question": "How do I create a patient account?",
+      "answer": "Click <strong>Sign Up</strong> on the homepage and choose to register as a patient. You can sign up with your email and password, or use Google or Apple sign-in for faster access.\n\nAfter registering, verify your email address by clicking the link we send you. Once verified, you can browse doctors, book appointments, and manage everything from your dashboard."
+    },
+    "doctor-profile-setup": {
+      "question": "How do I set up my doctor profile?",
+      "answer": "After registering as a doctor, complete your professional profile:\n\n<strong>1.</strong> Add your medical specialties, qualifications, and years of experience.\n<strong>2.</strong> Upload a professional photo and write a bio.\n<strong>3.</strong> Set your consultation fee and accepted consultation types (in-person, video, or both).\n<strong>4.</strong> Configure your availability schedule.\n<strong>5.</strong> Connect your Stripe account to receive payments.\n\nYour profile will be reviewed and verified by our team within 24-48 hours before going live."
+    },
+    "setting-availability": {
+      "question": "How do I set my availability and working hours?",
+      "answer": "From your doctor dashboard, go to <strong>Calendar → Availability</strong>.\n\nYou can set your regular weekly schedule by choosing working hours for each day of the week. For example, Monday–Friday 9:00–17:00.\n\nYou can also create <strong>date overrides</strong> to block specific dates (holidays, days off) or set custom hours for particular days. Changes take effect immediately and patients will only see your available slots."
+    },
+    "video-consultation-how": {
+      "question": "How do video consultations work?",
+      "answer": "When you book a video consultation, a secure video call link is generated automatically.\n\n<strong>Before the appointment:</strong> You'll receive the link via email and it also appears in your dashboard.\n<strong>At the scheduled time:</strong> Click the link to join the call directly in your browser — no software installation required.\n<strong>Requirements:</strong> A device with a camera and microphone, and a stable internet connection.\n\nBoth patients and doctors can join the call from any modern web browser (Chrome, Firefox, Safari, Edge)."
+    },
+    "supported-languages": {
+      "question": "What languages does MyDoctors360 support?",
+      "answer": "MyDoctors360 is available in <strong>9 languages</strong>: English, German, French, Turkish, Spanish, Italian, Japanese, Portuguese, and Chinese.\n\nThe platform automatically detects your browser language, or you can switch languages from the language selector in the navigation bar. All interface elements, notifications, and help articles are translated.\n\nDoctors can also list which languages they speak on their profile, so you can find a doctor who speaks your preferred language."
+    },
+    "calendar-sync-overview": {
+      "question": "How does calendar sync work?",
+      "answer": "Calendar sync keeps your MyDoctors360 schedule in harmony with your external calendar (Google, Microsoft, or Apple).\n\n<strong>Import (External → MyDoctors360):</strong> Events from your external calendar are imported as blocked time slots. This prevents patients from booking during times you're already busy.\n\n<strong>Export (MyDoctors360 → External):</strong> When a patient books an appointment, it automatically appears in your external calendar.\n\n<strong>How it stays updated:</strong>\n• <strong>Google Calendar:</strong> Real-time via webhooks, with a 10-minute fallback sync.\n• <strong>Microsoft Outlook:</strong> Real-time via Graph API subscriptions, with a 10-minute fallback sync.\n• <strong>Apple iCloud:</strong> Polling every 10 minutes (CalDAV does not support webhooks).\n\nAll sync happens automatically in the background. You can also trigger a manual sync from your Calendar Settings."
+    },
+    "google-calendar-setup": {
+      "question": "How do I connect Google Calendar?",
+      "answer": "<strong>1.</strong> Go to your Doctor Dashboard → Calendar → Integrations.\n<strong>2.</strong> Click <strong>Connect Google Calendar</strong>.\n<strong>3.</strong> Sign in with your Google account and grant calendar permissions.\n<strong>4.</strong> Select which calendar to sync with (e.g., your primary calendar).\n\nOnce connected, sync happens in <strong>real-time via webhooks</strong>. Google notifies us instantly when your calendar changes. As a fallback, we also run a background sync every 10 minutes.\n\nYour existing Google Calendar events will be imported as blocked time slots within minutes of connecting."
+    },
+    "microsoft-calendar-setup": {
+      "question": "How do I connect Microsoft Outlook / Office 365?",
+      "answer": "<strong>1.</strong> Go to your Doctor Dashboard → Calendar → Integrations.\n<strong>2.</strong> Click <strong>Connect Microsoft Calendar</strong>.\n<strong>3.</strong> Sign in with your Microsoft account (Outlook.com or Office 365) and grant permissions.\n<strong>4.</strong> Your default calendar will be synced automatically.\n\nSync uses <strong>Microsoft Graph API subscriptions</strong> for real-time updates, with a 10-minute fallback sync. When your Outlook calendar changes, we're notified almost instantly.\n\nBoth personal Microsoft accounts and work/school Office 365 accounts are supported."
+    },
+    "apple-icloud-setup": {
+      "question": "How do I connect Apple iCloud / CalDAV calendar?",
+      "answer": "<strong>1.</strong> Go to your Doctor Dashboard → Calendar → Integrations.\n<strong>2.</strong> Click <strong>Connect Apple Calendar</strong>.\n<strong>3.</strong> Generate an <strong>app-specific password</strong> at <strong>appleid.apple.com</strong> (under Sign-In & Security → App-Specific Passwords).\n<strong>4.</strong> Enter your Apple ID email and the app-specific password.\n\n<strong>Important:</strong> Apple iCloud uses the CalDAV protocol, which does not support webhooks. Sync happens via <strong>polling every 10 minutes</strong>. This means changes in your Apple Calendar may take up to 10 minutes to appear on MyDoctors360.\n\nThis method also works with other CalDAV providers like Fastmail and Nextcloud."
+    },
+    "calendar-provider-comparison": {
+      "question": "What are the differences between calendar providers?",
+      "answer": "Here's how the three supported providers compare:\n\n<strong>Google Calendar:</strong>\n• Real-time sync via webhooks ✓\n• OAuth authentication ✓\n• Fastest sync speed\n\n<strong>Microsoft Outlook / Office 365:</strong>\n• Real-time sync via Graph subscriptions ✓\n• OAuth authentication ✓\n• Supports both personal and work accounts\n\n<strong>Apple iCloud / CalDAV:</strong>\n• Polling sync every 10 minutes\n• App-specific password authentication\n• Also works with Fastmail, Nextcloud, and other CalDAV servers\n\nAll three providers support bidirectional sync (import and export). Google and Microsoft offer the fastest sync due to webhook support."
+    },
+    "ics-feed": {
+      "question": "What is the ICS calendar feed?",
+      "answer": "The ICS feed is a <strong>read-only subscription URL</strong> that lets any calendar app display your MyDoctors360 bookings.\n\n<strong>How to set it up:</strong>\n<strong>1.</strong> Go to Calendar → Integrations → ICS Feed.\n<strong>2.</strong> Click <strong>Generate Feed URL</strong> to create your private URL.\n<strong>3.</strong> Copy the URL and paste it into your calendar app's \"Subscribe to Calendar\" or \"Add by URL\" feature.\n\nYour calendar app will periodically refresh the feed to show new bookings. This is one-way only — it shows your MyDoctors360 bookings in your calendar, but doesn't import external events.\n\n<strong>Note:</strong> The feed URL contains a private token. Don't share it with others. You can revoke and regenerate it at any time from your settings."
+    },
+    "slot-locking": {
+      "question": "How does slot locking prevent double-booking?",
+      "answer": "When a patient begins the checkout process for a time slot, that slot is <strong>temporarily locked for 15 minutes</strong>. During this time, no other patient can book the same slot.\n\nThis uses a <strong>pessimistic locking</strong> approach:\n• The slot status changes to <strong>pending_payment</strong> when checkout starts.\n• If payment completes successfully, the booking is confirmed.\n• If the patient doesn't complete payment within 15 minutes, the lock expires and the slot becomes available again.\n\nThis ensures that two patients can never accidentally book the same time slot, even if they're both trying to book at the same time."
+    },
+    "conflict-detection": {
+      "question": "How does conflict detection work?",
+      "answer": "When calendar sync imports an event that overlaps with an existing confirmed booking, the system <strong>automatically detects the conflict</strong> and notifies you.\n\nYou'll receive a notification in your dashboard alerting you to the overlap. This gives you time to reschedule one of the conflicting appointments.\n\n<strong>Common scenarios:</strong>\n• You add a personal event to your external calendar that overlaps with a patient booking.\n• A synced external event is moved to a time that conflicts with a booking.\n\nConflict detection runs every time calendar sync processes new or updated events."
+    },
+    "date-overrides": {
+      "question": "How do I block dates or set custom hours?",
+      "answer": "Go to your Doctor Dashboard → Calendar → <strong>Date Overrides</strong>.\n\n<strong>To block a date:</strong> Select the date and mark it as unavailable. No slots will be shown for that day.\n\n<strong>To set custom hours:</strong> Select the date and enter your custom start and end times. This overrides your regular weekly schedule for that specific day.\n\n<strong>Use cases:</strong>\n• Block dates for holidays or vacation\n• Set shorter hours for a specific day\n• Add extra hours on a day you're normally off\n\nChanges take effect immediately. Existing confirmed bookings on blocked dates are not automatically cancelled — you'll need to reschedule those manually."
+    },
+    "how-payments-work": {
+      "question": "How do payments work on MyDoctors360?",
+      "answer": "All payments are processed securely through <strong>Stripe</strong>, a PCI-compliant payment processor.\n\n<strong>For patients:</strong>\n• Pay with credit card, debit card, or other Stripe-supported methods.\n• Payment is collected when you complete your booking.\n• All prices are shown upfront — no hidden fees.\n\n<strong>For doctors:</strong>\n• Payments are collected from patients and held by Stripe.\n• After the platform fee (15%), the remaining amount is transferred to your connected Stripe account.\n• Payouts happen automatically on a regular schedule.\n\nAll transactions are encrypted and secure. We never store your full card details on our servers."
+    },
+    "refund-policy": {
+      "question": "What is the refund and cancellation policy?",
+      "answer": "Each doctor sets their own cancellation policy, which is displayed on their profile. The three policy types are:\n\n<strong>Flexible:</strong> Free cancellation up to 2 hours before the appointment.\n<strong>Moderate:</strong> Free cancellation up to 24 hours before.\n<strong>Strict:</strong> Free cancellation up to 48 hours before.\n\nIf you cancel within the allowed window, your refund is processed automatically to your original payment method. Refunds typically appear within 5-10 business days.\n\nIf a doctor cancels your appointment, you always receive a <strong>full refund</strong> regardless of the cancellation policy."
+    },
+    "doctor-payouts": {
+      "question": "How do doctor payouts work?",
+      "answer": "Doctor payouts are handled through <strong>Stripe Connect</strong>.\n\nWhen a patient pays for a booking:\n<strong>1.</strong> The full amount is collected by Stripe.\n<strong>2.</strong> The platform fee (15%) is deducted.\n<strong>3.</strong> The remaining 85% is transferred to your Stripe account.\n\nPayouts to your bank account follow Stripe's standard schedule (typically 2-7 business days after the payment, depending on your country).\n\nYou can view all your earnings, pending payouts, and transaction history from your Doctor Dashboard → Payments section."
+    },
+    "stripe-onboarding": {
+      "question": "How do I set up Stripe to receive payments?",
+      "answer": "To receive patient payments, you need to connect a Stripe account:\n\n<strong>1.</strong> Go to Doctor Dashboard → Payments.\n<strong>2.</strong> Click <strong>Set Up Payments</strong> or <strong>Connect Stripe</strong>.\n<strong>3.</strong> You'll be redirected to Stripe's onboarding flow.\n<strong>4.</strong> Provide your business details, bank account information, and identity verification.\n<strong>5.</strong> Once verified, you can start receiving payments.\n\nWe use <strong>Stripe Connect Express</strong>, which means Stripe handles all the compliance and tax reporting. The setup typically takes 5-10 minutes."
+    },
+    "supported-currencies": {
+      "question": "What currencies are supported?",
+      "answer": "MyDoctors360 supports multiple currencies for international healthcare:\n\n• <strong>EUR</strong> (Euro)\n• <strong>GBP</strong> (British Pound)\n• <strong>TRY</strong> (Turkish Lira)\n• <strong>USD</strong> (US Dollar)\n\nDoctors set their consultation fees in their preferred currency. Patients see prices in the doctor's currency and pay in that currency. Stripe handles currency processing automatically.\n\nMore currencies may be added in the future based on demand."
+    },
+    "update-profile": {
+      "question": "How do I update my profile?",
+      "answer": "Log in and go to your dashboard, then navigate to <strong>Settings</strong> or <strong>Profile</strong>.\n\n<strong>For patients:</strong> Update your name, email, phone number, and other personal details.\n\n<strong>For doctors:</strong> Update your bio, qualifications, specialties, consultation fees, profile photo, clinic address, and more.\n\nChanges are saved immediately. If you update your email address, you may need to verify the new email."
+    },
+    "notification-preferences": {
+      "question": "How do I manage notification preferences?",
+      "answer": "Go to your Dashboard → <strong>Settings → Notifications</strong>.\n\nYou can control notifications for:\n• <strong>Email:</strong> Booking confirmations, reminders, cancellations\n• <strong>SMS:</strong> Appointment reminders and urgent updates\n• <strong>WhatsApp:</strong> Quick reminders and booking notifications\n\nEach notification type can be toggled on or off independently. We recommend keeping booking confirmation and reminder notifications enabled to avoid missing appointments."
+    },
+    "cancel-reschedule-booking": {
+      "question": "How do I cancel or reschedule a booking?",
+      "answer": "Go to your Patient Dashboard → <strong>My Bookings</strong>.\n\nFind the booking you want to change and click <strong>Cancel Booking</strong> or <strong>Reschedule</strong>.\n\n<strong>Cancellation:</strong> If you cancel within the doctor's cancellation policy window, you'll receive a full refund. Otherwise, the cancellation fee applies.\n\n<strong>Rescheduling:</strong> Select a new date and time from the doctor's available slots. No additional payment is needed if the consultation fee hasn't changed.\n\nBoth patients and doctors receive email notifications when a booking is cancelled or rescheduled."
+    },
+    "doctor-subscription": {
+      "question": "What subscription plans are available for doctors?",
+      "answer": "MyDoctors360 offers subscription plans for doctors who want enhanced features and visibility:\n\n<strong>Free Plan:</strong> Basic profile, standard search listing, calendar integration, and payment processing.\n\n<strong>Premium Plan:</strong> Featured placement in search results, priority support, advanced analytics, and marketing tools to grow your practice.\n\nAll plans include secure payment processing via Stripe Connect. You can upgrade or downgrade your plan at any time from your Doctor Dashboard → Subscription."
+    },
+    "account-security": {
+      "question": "How do I keep my account secure?",
+      "answer": "Here are best practices for account security:\n\n<strong>1. Use a strong password:</strong> At least 8 characters with a mix of letters, numbers, and symbols.\n<strong>2. Don't share your login:</strong> Your account is personal and should not be shared.\n<strong>3. Verify your email:</strong> Make sure your email address is verified.\n<strong>4. Log out on shared devices:</strong> Always log out when using public or shared computers.\n<strong>5. Watch for phishing:</strong> We will never ask for your password by email. If you receive a suspicious email, contact support.\n\nIf you suspect unauthorized access to your account, change your password immediately and contact our support team."
+    },
+    "calendar-not-syncing": {
+      "question": "My calendar is not syncing — what should I do?",
+      "answer": "Follow these steps to troubleshoot calendar sync issues:\n\n<strong>1. Check the connection status:</strong> Go to Calendar → Integrations and verify your calendar shows as \"Connected\".\n\n<strong>2. Try a manual sync:</strong> Click the <strong>Sync Now</strong> button to trigger an immediate sync.\n\n<strong>3. Verify your credentials:</strong> If the status shows an error, try disconnecting and reconnecting your calendar.\n\n<strong>4. Check calendar permissions:</strong> Make sure MyDoctors360 has read/write access to your calendar.\n\n<strong>5. For Apple iCloud:</strong> Remember that CalDAV sync runs every 10 minutes, so there may be a short delay.\n\nIf the issue persists after trying these steps, contact our support team with details about your calendar provider and the error you're seeing."
+    },
+    "google-auth-expired": {
+      "question": "My Google Calendar authorization expired",
+      "answer": "Google OAuth tokens can expire if you change your Google password, revoke app permissions, or after a long period of inactivity.\n\n<strong>To fix this:</strong>\n<strong>1.</strong> Go to Doctor Dashboard → Calendar → Integrations.\n<strong>2.</strong> Click <strong>Disconnect</strong> next to Google Calendar.\n<strong>3.</strong> Click <strong>Connect Google Calendar</strong> again.\n<strong>4.</strong> Sign in and re-grant permissions.\n\nYour previous sync data will be preserved. The new connection will resume syncing immediately.\n\n<strong>Tip:</strong> You can also check your connected apps at <strong>myaccount.google.com/permissions</strong> to ensure MyDoctors360 still has access."
+    },
+    "apple-password-revoked": {
+      "question": "My Apple iCloud app-specific password was revoked",
+      "answer": "Apple app-specific passwords can be revoked if you change your Apple ID password or manually revoke them from your Apple account.\n\n<strong>To fix this:</strong>\n<strong>1.</strong> Go to <strong>appleid.apple.com</strong> and sign in.\n<strong>2.</strong> Navigate to <strong>Sign-In & Security → App-Specific Passwords</strong>.\n<strong>3.</strong> Generate a <strong>new app-specific password</strong>.\n<strong>4.</strong> On MyDoctors360, go to Calendar → Integrations.\n<strong>5.</strong> Disconnect your Apple Calendar connection.\n<strong>6.</strong> Reconnect using your Apple ID email and the new app-specific password.\n\nSync will resume on the next polling cycle (within 10 minutes)."
+    },
+    "payment-failed": {
+      "question": "My payment failed — what should I do?",
+      "answer": "Payment failures can happen for several reasons:\n\n<strong>• Insufficient funds:</strong> Check that your card has enough balance.\n<strong>• Card declined:</strong> Your bank may have blocked the transaction. Contact your bank to authorize it.\n<strong>• Expired card:</strong> Update your card details and try again.\n<strong>• 3D Secure failed:</strong> Complete the bank's authentication step when prompted.\n\n<strong>To retry:</strong>\n<strong>1.</strong> The time slot will remain locked for 15 minutes after a failed attempt.\n<strong>2.</strong> Go back to the booking page and try again with a different card or after resolving the issue with your bank.\n\nIf you were charged but don't see a booking confirmation, contact our support team — we'll investigate immediately."
+    },
+    "video-call-issues": {
+      "question": "I'm having issues with the video call",
+      "answer": "If you're experiencing video call problems, try these steps:\n\n<strong>1. Check your browser:</strong> Use a modern browser (Chrome, Firefox, Safari, or Edge). Make sure it's updated to the latest version.\n\n<strong>2. Allow camera and microphone:</strong> When prompted, click \"Allow\" to grant browser permissions. You can also check this in your browser settings.\n\n<strong>3. Check your internet connection:</strong> A stable connection of at least 2 Mbps is recommended for video calls.\n\n<strong>4. Close other apps:</strong> Other video apps (Zoom, Teams, etc.) may be using your camera. Close them and try again.\n\n<strong>5. Try a different browser:</strong> If the issue persists, switch to a different browser.\n\n<strong>6. Restart your device:</strong> A restart can fix camera or microphone issues caused by other software.\n\nIf neither you nor the doctor can connect, contact support and we'll help reschedule the appointment."
+    },
+    "booking-slot-unavailable": {
+      "question": "The booking slot I selected disappeared",
+      "answer": "There are a few reasons a slot may become unavailable:\n\n<strong>• Another patient booked it:</strong> Someone else may have completed checkout for that slot while you were browsing.\n\n<strong>• Slot was locked:</strong> Another patient may be in the checkout process (slots are locked for 15 minutes during payment).\n\n<strong>• Calendar sync update:</strong> The doctor's external calendar may have been updated with a conflicting event, automatically blocking that time.\n\n<strong>• Doctor changed availability:</strong> The doctor may have updated their schedule or added a date override.\n\n<strong>What to do:</strong> Refresh the page to see the latest available slots and choose a different time. If you're having recurring issues finding availability, try checking back at different times or contact the doctor's office directly."
+    },
+    "sync-delay-apple": {
+      "question": "Why is my Apple Calendar sync delayed?",
+      "answer": "Apple iCloud Calendar uses the <strong>CalDAV protocol</strong>, which does not support real-time notifications (webhooks). Instead, MyDoctors360 checks for changes by <strong>polling your calendar every 10 minutes</strong>.\n\nThis means:\n• Changes in your Apple Calendar may take <strong>up to 10 minutes</strong> to appear on MyDoctors360.\n• New bookings on MyDoctors360 may take up to 10 minutes to appear in your Apple Calendar.\n\n<strong>Tips to minimize delays:</strong>\n• Use the <strong>Sync Now</strong> button in Calendar Settings to trigger an immediate sync.\n• Consider using Google or Microsoft Calendar for real-time sync if timing is critical.\n\nThis is a limitation of the CalDAV protocol, not a bug. Google and Microsoft calendars sync in real-time because they support webhook notifications."
+    }
+  },
   "findPharmacy": {
     "title": "Find a Pharmacy",
     "subtitle": "Search for NHS pharmacies near you. Enter your UK postcode to find addresses, opening hours, and contact details.",

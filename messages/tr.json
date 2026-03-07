@@ -464,6 +464,170 @@
     "help_center": "Yardım Merkezi",
     "copyright": "Tüm hakları saklıdır."
   },
+  "helpCenter": {
+    "title": "Yardım Merkezi",
+    "subtitle": "Randevu alma, takvim senkronizasyonu, ödemeler ve daha fazlası hakkında kılavuzlar, sorun giderme ipuçları ve sık sorulan soruların yanıtlarını bulun.",
+    "search_placeholder": "Yardım makalelerinde ara...",
+    "articles_found": "\"{query}\" için {count} {count, plural, one {makale} other {makale}} bulundu",
+    "no_results": "\"{query}\" için makale bulunamadı.",
+    "no_results_hint": "Farklı anahtar kelimeler deneyin veya",
+    "contact_support_link": "destek ile iletişime geçin",
+    "no_results_clear": "Aramanızla eşleşen makale bulunamadı.",
+    "no_results_clear_hint": "Farklı anahtar kelimeler deneyin veya tüm kategorilere göz atın.",
+    "clear_search": "Aramayı temizle",
+    "articles_count": "{count} makale",
+    "still_need_help": "Hâlâ Yardıma mı İhtiyacınız Var?",
+    "still_need_help_desc": "Aradığınızı bulamıyor musunuz? Destek ekibimiz size yardımcı olmak için burada.",
+    "contact_support": "Destek ile İletişime Geç",
+    "support_options": "Destek Seçenekleri",
+    "copy_link": "Bağlantıyı kopyala",
+    "for_doctors": "Doktorlar İçin",
+    "for_patients": "Hastalar İçin",
+    "everyone": "Herkes",
+    "help_center_banner_title": "Kılavuzlar ve sorun giderme mi arıyorsunuz?",
+    "help_center_banner_desc": "Adım adım kılavuzlar, takvim kurulum talimatları ve daha fazlası için Yardım Merkezimizi ziyaret edin.",
+    "browse_help_center": "Yardım Merkezine Göz At",
+    "cat_getting_started": "Başlarken",
+    "cat_getting_started_desc": "MyDoctors360'ı hasta veya doktor olarak kullanmanın temellerini öğrenin.",
+    "cat_calendar": "Takvim ve Planlama",
+    "cat_calendar_desc": "Takvim senkronizasyonu, sağlayıcı kurulumu, ICS beslemeleri ve müsaitlik yönetimi.",
+    "cat_payments": "Ödemeler ve Faturalandırma",
+    "cat_payments_desc": "Ödemeler nasıl çalışır, iadeler ve Stripe Connect aracılığıyla doktor ödemeleri.",
+    "cat_account": "Hesap ve Ayarlar",
+    "cat_account_desc": "Profil yönetimi, bildirimler, güvenlik ve tercihler.",
+    "cat_troubleshooting": "Sorun Giderme",
+    "cat_troubleshooting_desc": "Takvim senkronizasyonu, ödemeler ve görüntülü aramalarla ilgili yaygın sorunların çözümleri."
+  },
+  "helpArticles": {
+    "how-to-book": {
+      "question": "Nasıl randevu alabilirim?",
+      "answer": "<strong>1.</strong> Arama çubuğunu kullanın veya uzmanlık alanlarına göz atarak bir doktor bulun.\n<strong>2.</strong> Doktorun profilini, yorumlarını, ücretlerini ve müsait zamanlarını görüntüleyin.\n<strong>3.</strong> Size uygun bir tarih ve saat dilimi seçin.\n<strong>4.</strong> Yüz yüze veya görüntülü görüşme arasında seçim yapın (sunuluyorsa).\n<strong>5.</strong> Stripe üzerinden güvenli bir şekilde ödemenizi tamamlayın.\n\nTüm detayları içeren bir e-posta onayı anında gönderilir. Randevu ayrıca hasta panelinizdede görünür."
+    },
+    "patient-account-setup": {
+      "question": "Hasta hesabı nasıl oluşturabilirim?",
+      "answer": "Ana sayfada <strong>Kayıt Ol</strong> butonuna tıklayın ve hasta olarak kaydolmayı seçin. E-posta ve şifrenizle kaydolabilir veya daha hızlı erişim için Google ya da Apple ile giriş yapabilirsiniz.\n\nKayıt olduktan sonra, size gönderdiğimiz bağlantıya tıklayarak e-posta adresinizi doğrulayın. Doğrulama tamamlandıktan sonra doktorlara göz atabilir, randevu alabilir ve her şeyi panelinizden yönetebilirsiniz."
+    },
+    "doctor-profile-setup": {
+      "question": "Doktor profilimi nasıl oluşturabilirim?",
+      "answer": "Doktor olarak kaydolduktan sonra profesyonel profilinizi tamamlayın:\n\n<strong>1.</strong> Tıbbi uzmanlık alanlarınızı, niteliklerinizi ve deneyim yıllarınızı ekleyin.\n<strong>2.</strong> Profesyonel bir fotoğraf yükleyin ve biyografinizi yazın.\n<strong>3.</strong> Muayene ücretinizi ve kabul ettiğiniz görüşme türlerini (yüz yüze, görüntülü veya her ikisi) belirleyin.\n<strong>4.</strong> Müsaitlik planınızı yapılandırın.\n<strong>5.</strong> Ödeme almak için Stripe hesabınızı bağlayın.\n\nProfiliniz yayına alınmadan önce ekibimiz tarafından 24-48 saat içinde incelenip doğrulanacaktır."
+    },
+    "setting-availability": {
+      "question": "Müsaitlik durumumu ve çalışma saatlerimi nasıl ayarlarım?",
+      "answer": "Doktor panelinizden <strong>Takvim → Müsaitlik</strong> bölümüne gidin.\n\nHaftanın her günü için çalışma saatlerinizi seçerek düzenli haftalık programınızı oluşturabilirsiniz. Örneğin, Pazartesi–Cuma 9:00–17:00.\n\nAyrıca belirli tarihleri engellemek (tatiller, izin günleri) veya belirli günler için özel saatler belirlemek amacıyla <strong>tarih geçersiz kılmaları</strong> oluşturabilirsiniz. Değişiklikler anında yürürlüğe girer ve hastalar yalnızca müsait olduğunuz zaman dilimlerini görebilir."
+    },
+    "video-consultation-how": {
+      "question": "Görüntülü görüşmeler nasıl çalışır?",
+      "answer": "Görüntülü görüşme randevusu aldığınızda, güvenli bir görüntülü arama bağlantısı otomatik olarak oluşturulur.\n\n<strong>Randevudan önce:</strong> Bağlantıyı e-posta ile alırsınız ve ayrıca panelinizdede görünür.\n<strong>Planlanan saatte:</strong> Tarayıcınızdan doğrudan aramaya katılmak için bağlantıya tıklayın — yazılım yüklemenize gerek yoktur.\n<strong>Gereksinimler:</strong> Kamera ve mikrofonu olan bir cihaz ve kararlı bir internet bağlantısı.\n\nHem hastalar hem de doktorlar herhangi bir modern web tarayıcısından (Chrome, Firefox, Safari, Edge) aramaya katılabilir."
+    },
+    "supported-languages": {
+      "question": "MyDoctors360 hangi dilleri destekliyor?",
+      "answer": "MyDoctors360 <strong>9 dilde</strong> kullanılabilir: İngilizce, Almanca, Fransızca, Türkçe, İspanyolca, İtalyanca, Japonca, Portekizce ve Çince.\n\nPlatform tarayıcı dilinizi otomatik olarak algılar veya gezinme çubuğundaki dil seçiciden dili değiştirebilirsiniz. Tüm arayüz öğeleri, bildirimler ve yardım makaleleri çevrilmiştir.\n\nDoktorlar ayrıca profillerinde hangi dilleri konuştuklarını listeleyebilir, böylece tercih ettiğiniz dili konuşan bir doktor bulabilirsiniz."
+    },
+    "calendar-sync-overview": {
+      "question": "Takvim senkronizasyonu nasıl çalışır?",
+      "answer": "Takvim senkronizasyonu, MyDoctors360 planınızı harici takviminizle (Google, Microsoft veya Apple) uyumlu tutar.\n\n<strong>İçe aktarma (Harici → MyDoctors360):</strong> Harici takviminizdeki etkinlikler, engellenmiş zaman dilimleri olarak içe aktarılır. Bu, hastaların zaten meşgul olduğunuz zamanlarda randevu almasını engeller.\n\n<strong>Dışa aktarma (MyDoctors360 → Harici):</strong> Bir hasta randevu aldığında, bu otomatik olarak harici takviminizde görünür.\n\n<strong>Nasıl güncel kalır:</strong>\n• <strong>Google Takvim:</strong> Webhook'lar aracılığıyla anlık, 10 dakikalık yedek senkronizasyonla.\n• <strong>Microsoft Outlook:</strong> Graph API abonelikleri aracılığıyla anlık, 10 dakikalık yedek senkronizasyonla.\n• <strong>Apple iCloud:</strong> Her 10 dakikada bir yoklama (CalDAV webhook desteklemez).\n\nTüm senkronizasyon arka planda otomatik olarak gerçekleşir. Takvim Ayarlarınızdan manuel senkronizasyonu da tetikleyebilirsiniz."
+    },
+    "google-calendar-setup": {
+      "question": "Google Takvim'i nasıl bağlarım?",
+      "answer": "<strong>1.</strong> Doktor Panelinize gidin → Takvim → Entegrasyonlar.\n<strong>2.</strong> <strong>Google Takvim'i Bağla</strong> butonuna tıklayın.\n<strong>3.</strong> Google hesabınızla giriş yapın ve takvim izinlerini verin.\n<strong>4.</strong> Hangi takvimle senkronize edeceğinizi seçin (ör. birincil takviminiz).\n\nBağlandıktan sonra senkronizasyon <strong>webhook'lar aracılığıyla anlık</strong> olarak gerçekleşir. Takviminiz değiştiğinde Google bizi anında bilgilendirir. Yedek olarak her 10 dakikada bir arka plan senkronizasyonu da çalıştırırız.\n\nMevcut Google Takvim etkinlikleriniz, bağlantı kurulduktan sonra birkaç dakika içinde engellenmiş zaman dilimleri olarak içe aktarılır."
+    },
+    "microsoft-calendar-setup": {
+      "question": "Microsoft Outlook / Office 365'i nasıl bağlarım?",
+      "answer": "<strong>1.</strong> Doktor Panelinize gidin → Takvim → Entegrasyonlar.\n<strong>2.</strong> <strong>Microsoft Takvimi Bağla</strong> butonuna tıklayın.\n<strong>3.</strong> Microsoft hesabınızla (Outlook.com veya Office 365) giriş yapın ve izinleri verin.\n<strong>4.</strong> Varsayılan takviminiz otomatik olarak senkronize edilir.\n\nSenkronizasyon, anlık güncellemeler için <strong>Microsoft Graph API aboneliklerini</strong> kullanır ve 10 dakikalık yedek senkronizasyon ile desteklenir. Outlook takviminiz değiştiğinde neredeyse anında bilgilendiriliriz.\n\nHem kişisel Microsoft hesapları hem de iş/okul Office 365 hesapları desteklenmektedir."
+    },
+    "apple-icloud-setup": {
+      "question": "Apple iCloud / CalDAV takvimini nasıl bağlarım?",
+      "answer": "<strong>1.</strong> Doktor Panelinize gidin → Takvim → Entegrasyonlar.\n<strong>2.</strong> <strong>Apple Takvim'i Bağla</strong> butonuna tıklayın.\n<strong>3.</strong> <strong>appleid.apple.com</strong> adresinde bir <strong>uygulamaya özel parola</strong> oluşturun (Oturum Açma ve Güvenlik → Uygulamaya Özel Parolalar altında).\n<strong>4.</strong> Apple ID e-posta adresinizi ve uygulamaya özel parolayı girin.\n\n<strong>Önemli:</strong> Apple iCloud, webhook desteklemeyen CalDAV protokolünü kullanır. Senkronizasyon <strong>her 10 dakikada bir yoklama</strong> ile gerçekleşir. Bu, Apple Takviminizdeki değişikliklerin MyDoctors360'ta görünmesinin 10 dakika kadar sürebileceği anlamına gelir.\n\nBu yöntem Fastmail ve Nextcloud gibi diğer CalDAV sağlayıcılarıyla da çalışır."
+    },
+    "calendar-provider-comparison": {
+      "question": "Takvim sağlayıcıları arasındaki farklar nelerdir?",
+      "answer": "Desteklenen üç sağlayıcının karşılaştırması:\n\n<strong>Google Takvim:</strong>\n• Webhook'lar aracılığıyla anlık senkronizasyon ✓\n• OAuth kimlik doğrulama ✓\n• En hızlı senkronizasyon hızı\n\n<strong>Microsoft Outlook / Office 365:</strong>\n• Graph abonelikleri aracılığıyla anlık senkronizasyon ✓\n• OAuth kimlik doğrulama ✓\n• Hem kişisel hem de iş hesaplarını destekler\n\n<strong>Apple iCloud / CalDAV:</strong>\n• Her 10 dakikada bir yoklama ile senkronizasyon\n• Uygulamaya özel parola ile kimlik doğrulama\n• Fastmail, Nextcloud ve diğer CalDAV sunucularıyla da çalışır\n\nÜç sağlayıcının tamamı çift yönlü senkronizasyonu (içe ve dışa aktarma) destekler. Google ve Microsoft, webhook desteği sayesinde en hızlı senkronizasyonu sunar."
+    },
+    "ics-feed": {
+      "question": "ICS takvim akışı nedir?",
+      "answer": "ICS akışı, herhangi bir takvim uygulamasının MyDoctors360 randevularınızı göstermesine olanak tanıyan <strong>salt okunur bir abonelik URL'sidir</strong>.\n\n<strong>Nasıl kurulur:</strong>\n<strong>1.</strong> Takvim → Entegrasyonlar → ICS Akışı bölümüne gidin.\n<strong>2.</strong> Özel URL'nizi oluşturmak için <strong>Akış URL'si Oluştur</strong> butonuna tıklayın.\n<strong>3.</strong> URL'yi kopyalayın ve takvim uygulamanızın \"Takvime Abone Ol\" veya \"URL ile Ekle\" özelliğine yapıştırın.\n\nTakvim uygulamanız yeni randevuları göstermek için akışı düzenli olarak yenileyecektir. Bu yalnızca tek yönlüdür — MyDoctors360 randevularınızı takviminizde gösterir, ancak harici etkinlikleri içe aktarmaz.\n\n<strong>Not:</strong> Akış URL'si özel bir belirteç içerir. Başkalarıyla paylaşmayın. Ayarlarınızdan istediğiniz zaman iptal edebilir ve yeniden oluşturabilirsiniz."
+    },
+    "slot-locking": {
+      "question": "Zaman dilimi kilitleme çift rezervasyonu nasıl önler?",
+      "answer": "Bir hasta bir zaman dilimi için ödeme sürecine başladığında, o zaman dilimi <strong>15 dakikalığına geçici olarak kilitlenir</strong>. Bu süre zarfında başka hiçbir hasta aynı dilimi rezerve edemez.\n\nBu <strong>kötümser kilitleme</strong> yaklaşımını kullanır:\n• Ödeme süreci başladığında zaman dilimi durumu <strong>ödeme_bekleniyor</strong> olarak değişir.\n• Ödeme başarıyla tamamlanırsa rezervasyon onaylanır.\n• Hasta 15 dakika içinde ödemeyi tamamlamazsa kilit süresi dolar ve zaman dilimi tekrar müsait hale gelir.\n\nBu, aynı anda rezervasyon yapmaya çalışsalar bile iki hastanın aynı zaman dilimini yanlışlıkla rezerve etmesini önler."
+    },
+    "conflict-detection": {
+      "question": "Çakışma algılama nasıl çalışır?",
+      "answer": "Takvim senkronizasyonu mevcut onaylanmış bir randevuyla örtüşen bir etkinlik içe aktardığında, sistem <strong>çakışmayı otomatik olarak algılar</strong> ve sizi bilgilendirir.\n\nPanelinizdeki bir bildirim aracılığıyla örtüşme konusunda uyarılırsınız. Bu size çakışan randevulardan birini yeniden planlamak için zaman tanır.\n\n<strong>Yaygın senaryolar:</strong>\n• Harici takviminize bir hasta randevusuyla örtüşen kişisel bir etkinlik eklersiniz.\n• Senkronize edilmiş harici bir etkinlik, bir randevuyla çakışan bir zamana taşınır.\n\nÇakışma algılama, takvim senkronizasyonu yeni veya güncellenmiş etkinlikleri her işlediğinde çalışır."
+    },
+    "date-overrides": {
+      "question": "Tarihleri nasıl engellerim veya özel saatler ayarlarım?",
+      "answer": "Doktor Panelinize gidin → Takvim → <strong>Tarih Geçersiz Kılmaları</strong>.\n\n<strong>Bir tarihi engellemek için:</strong> Tarihi seçin ve müsait değil olarak işaretleyin. O gün için herhangi bir zaman dilimi gösterilmeyecektir.\n\n<strong>Özel saatler belirlemek için:</strong> Tarihi seçin ve özel başlangıç ve bitiş saatlerinizi girin. Bu, söz konusu gün için düzenli haftalık programınızı geçersiz kılar.\n\n<strong>Kullanım alanları:</strong>\n• Tatiller veya izinler için tarihleri engelleyin\n• Belirli bir gün için daha kısa çalışma saatleri belirleyin\n• Normalde çalışmadığınız bir güne ek saatler ekleyin\n\nDeğişiklikler anında yürürlüğe girer. Engellenen tarihlerdeki mevcut onaylanmış randevular otomatik olarak iptal edilmez — bunları manuel olarak yeniden planlamanız gerekir."
+    },
+    "how-payments-work": {
+      "question": "MyDoctors360'ta ödemeler nasıl çalışır?",
+      "answer": "Tüm ödemeler PCI uyumlu bir ödeme işlemcisi olan <strong>Stripe</strong> aracılığıyla güvenli bir şekilde işlenir.\n\n<strong>Hastalar için:</strong>\n• Kredi kartı, banka kartı veya Stripe tarafından desteklenen diğer yöntemlerle ödeme yapın.\n• Ödeme, randevunuzu tamamladığınızda tahsil edilir.\n• Tüm fiyatlar önceden gösterilir — gizli ücret yoktur.\n\n<strong>Doktorlar için:</strong>\n• Ödemeler hastalardan tahsil edilir ve Stripe tarafından tutulur.\n• Platform ücreti (%15) düşüldükten sonra kalan tutar bağlı Stripe hesabınıza aktarılır.\n• Ödemeler düzenli bir programda otomatik olarak yapılır.\n\nTüm işlemler şifrelenmiş ve güvenlidir. Kart bilgilerinizin tamamını sunucularımızda asla saklamayız."
+    },
+    "refund-policy": {
+      "question": "İade ve iptal politikası nedir?",
+      "answer": "Her doktor, profilinde görüntülenen kendi iptal politikasını belirler. Üç politika türü vardır:\n\n<strong>Esnek:</strong> Randevudan 2 saat öncesine kadar ücretsiz iptal.\n<strong>Orta:</strong> Randevudan 24 saat öncesine kadar ücretsiz iptal.\n<strong>Katı:</strong> Randevudan 48 saat öncesine kadar ücretsiz iptal.\n\nİzin verilen süre içinde iptal ederseniz, iadeniz orijinal ödeme yönteminize otomatik olarak işlenir. İadeler genellikle 5-10 iş günü içinde görünür.\n\nBir doktor randevunuzu iptal ederse, iptal politikasından bağımsız olarak her zaman <strong>tam iade</strong> alırsınız."
+    },
+    "doctor-payouts": {
+      "question": "Doktor ödemeleri nasıl çalışır?",
+      "answer": "Doktor ödemeleri <strong>Stripe Connect</strong> aracılığıyla gerçekleştirilir.\n\nBir hasta randevu için ödeme yaptığında:\n<strong>1.</strong> Tam tutar Stripe tarafından tahsil edilir.\n<strong>2.</strong> Platform ücreti (%15) düşülür.\n<strong>3.</strong> Kalan %85 Stripe hesabınıza aktarılır.\n\nBanka hesabınıza yapılan ödemeler, Stripe'ın standart planını izler (genellikle ödemeden sonra 2-7 iş günü, ülkenize bağlı olarak).\n\nTüm kazançlarınızı, bekleyen ödemelerinizi ve işlem geçmişinizi Doktor Paneliniz → Ödemeler bölümünden görüntüleyebilirsiniz."
+    },
+    "stripe-onboarding": {
+      "question": "Ödeme almak için Stripe'ı nasıl kurarım?",
+      "answer": "Hasta ödemelerini almak için bir Stripe hesabı bağlamanız gerekir:\n\n<strong>1.</strong> Doktor Paneli → Ödemeler bölümüne gidin.\n<strong>2.</strong> <strong>Ödemeleri Kur</strong> veya <strong>Stripe'ı Bağla</strong> butonuna tıklayın.\n<strong>3.</strong> Stripe'ın kayıt akışına yönlendirileceksiniz.\n<strong>4.</strong> İşletme bilgilerinizi, banka hesap bilgilerinizi ve kimlik doğrulamanızı sağlayın.\n<strong>5.</strong> Doğrulandıktan sonra ödeme almaya başlayabilirsiniz.\n\nTüm uyumluluk ve vergi raporlamasını Stripe'ın yönettiği <strong>Stripe Connect Express</strong> kullanıyoruz. Kurulum genellikle 5-10 dakika sürer."
+    },
+    "supported-currencies": {
+      "question": "Hangi para birimleri destekleniyor?",
+      "answer": "MyDoctors360 uluslararası sağlık hizmetleri için birden fazla para birimini destekler:\n\n• <strong>EUR</strong> (Euro)\n• <strong>GBP</strong> (İngiliz Sterlini)\n• <strong>TRY</strong> (Türk Lirası)\n• <strong>USD</strong> (ABD Doları)\n\nDoktorlar muayene ücretlerini tercih ettikleri para biriminde belirler. Hastalar fiyatları doktorun para biriminde görür ve o para biriminde ödeme yapar. Stripe para birimi işlemlerini otomatik olarak yönetir.\n\nTalebe bağlı olarak gelecekte daha fazla para birimi eklenebilir."
+    },
+    "update-profile": {
+      "question": "Profilimi nasıl güncellerim?",
+      "answer": "Giriş yapın ve panelinize gidin, ardından <strong>Ayarlar</strong> veya <strong>Profil</strong> bölümüne gidin.\n\n<strong>Hastalar için:</strong> Adınızı, e-postanızı, telefon numaranızı ve diğer kişisel bilgilerinizi güncelleyin.\n\n<strong>Doktorlar için:</strong> Biyografinizi, niteliklerinizi, uzmanlık alanlarınızı, muayene ücretlerinizi, profil fotoğrafınızı, klinik adresinizi ve daha fazlasını güncelleyin.\n\nDeğişiklikler anında kaydedilir. E-posta adresinizi güncellerseniz yeni e-postayı doğrulamanız gerekebilir."
+    },
+    "notification-preferences": {
+      "question": "Bildirim tercihlerimi nasıl yönetirim?",
+      "answer": "Panelinize gidin → <strong>Ayarlar → Bildirimler</strong>.\n\nAşağıdaki bildirim türlerini kontrol edebilirsiniz:\n• <strong>E-posta:</strong> Randevu onayları, hatırlatmalar, iptaller\n• <strong>SMS:</strong> Randevu hatırlatmaları ve acil güncellemeler\n• <strong>WhatsApp:</strong> Hızlı hatırlatmalar ve randevu bildirimleri\n\nHer bildirim türü bağımsız olarak açılıp kapatılabilir. Randevuları kaçırmamak için randevu onayı ve hatırlatma bildirimlerini etkin tutmanızı öneririz."
+    },
+    "cancel-reschedule-booking": {
+      "question": "Bir randevuyu nasıl iptal eder veya yeniden planlarım?",
+      "answer": "Hasta Panelinize gidin → <strong>Randevularım</strong>.\n\nDeğiştirmek istediğiniz randevuyu bulun ve <strong>Randevuyu İptal Et</strong> veya <strong>Yeniden Planla</strong> butonuna tıklayın.\n\n<strong>İptal:</strong> Doktorun iptal politikası süresi içinde iptal ederseniz tam iade alırsınız. Aksi takdirde iptal ücreti uygulanır.\n\n<strong>Yeniden planlama:</strong> Doktorun müsait zaman dilimlerinden yeni bir tarih ve saat seçin. Muayene ücreti değişmediyse ek ödeme gerekmez.\n\nBir randevu iptal edildiğinde veya yeniden planlandığında hem hastalar hem de doktorlar e-posta bildirimi alır."
+    },
+    "doctor-subscription": {
+      "question": "Doktorlar için hangi abonelik planları mevcut?",
+      "answer": "MyDoctors360, gelişmiş özellikler ve görünürlük isteyen doktorlar için abonelik planları sunar:\n\n<strong>Ücretsiz Plan:</strong> Temel profil, standart arama listesi, takvim entegrasyonu ve ödeme işleme.\n\n<strong>Premium Plan:</strong> Arama sonuçlarında öne çıkan yerleşim, öncelikli destek, gelişmiş analitik ve pratiğinizi büyütmek için pazarlama araçları.\n\nTüm planlar Stripe Connect aracılığıyla güvenli ödeme işlemeyi içerir. Planınızı istediğiniz zaman Doktor Paneliniz → Abonelik bölümünden yükseltebilir veya düşürebilirsiniz."
+    },
+    "account-security": {
+      "question": "Hesabımı nasıl güvende tutarım?",
+      "answer": "Hesap güvenliği için en iyi uygulamalar:\n\n<strong>1. Güçlü bir parola kullanın:</strong> Harf, rakam ve sembollerden oluşan en az 8 karakter.\n<strong>2. Giriş bilgilerinizi paylaşmayın:</strong> Hesabınız kişiseldir ve paylaşılmamalıdır.\n<strong>3. E-postanızı doğrulayın:</strong> E-posta adresinizin doğrulanmış olduğundan emin olun.\n<strong>4. Paylaşılan cihazlarda çıkış yapın:</strong> Herkese açık veya paylaşılan bilgisayarları kullanırken her zaman çıkış yapın.\n<strong>5. Kimlik avına dikkat edin:</strong> Şifrenizi asla e-posta ile istemeyiz. Şüpheli bir e-posta alırsanız destek ekibiyle iletişime geçin.\n\nHesabınıza yetkisiz erişim olduğundan şüpheleniyorsanız, parolanızı hemen değiştirin ve destek ekibimizle iletişime geçin."
+    },
+    "calendar-not-syncing": {
+      "question": "Takvimim senkronize olmuyor — ne yapmalıyım?",
+      "answer": "Takvim senkronizasyonu sorunlarını gidermek için şu adımları izleyin:\n\n<strong>1. Bağlantı durumunu kontrol edin:</strong> Takvim → Entegrasyonlar bölümüne gidin ve takviminizin \"Bağlı\" olarak gösterildiğini doğrulayın.\n\n<strong>2. Manuel senkronizasyon deneyin:</strong> Anında senkronizasyon tetiklemek için <strong>Şimdi Senkronize Et</strong> butonuna tıklayın.\n\n<strong>3. Kimlik bilgilerinizi doğrulayın:</strong> Durum bir hata gösteriyorsa, takviminizin bağlantısını kesip yeniden bağlamayı deneyin.\n\n<strong>4. Takvim izinlerini kontrol edin:</strong> MyDoctors360'ın takviminize okuma/yazma erişimi olduğundan emin olun.\n\n<strong>5. Apple iCloud için:</strong> CalDAV senkronizasyonunun her 10 dakikada bir çalıştığını unutmayın, bu nedenle kısa bir gecikme olabilir.\n\nBu adımları denedikten sonra sorun devam ederse, takvim sağlayıcınız ve gördüğünüz hata hakkında ayrıntılarla destek ekibimize ulaşın."
+    },
+    "google-auth-expired": {
+      "question": "Google Takvim yetkilendirmem süresi doldu",
+      "answer": "Google OAuth belirteçleri, Google şifrenizi değiştirirseniz, uygulama izinlerini iptal ederseniz veya uzun bir süre etkinlik olmaması durumunda süreleri dolabilir.\n\n<strong>Bunu düzeltmek için:</strong>\n<strong>1.</strong> Doktor Paneli → Takvim → Entegrasyonlar bölümüne gidin.\n<strong>2.</strong> Google Takvim yanındaki <strong>Bağlantıyı Kes</strong> butonuna tıklayın.\n<strong>3.</strong> <strong>Google Takvim'i Bağla</strong> butonuna tekrar tıklayın.\n<strong>4.</strong> Giriş yapın ve izinleri yeniden verin.\n\nÖnceki senkronizasyon verileriniz korunacaktır. Yeni bağlantı hemen senkronizasyona devam edecektir.\n\n<strong>İpucu:</strong> MyDoctors360'ın hâlâ erişimi olduğundan emin olmak için <strong>myaccount.google.com/permissions</strong> adresinden bağlı uygulamalarınızı da kontrol edebilirsiniz."
+    },
+    "apple-password-revoked": {
+      "question": "Apple iCloud uygulamaya özel parolam iptal edildi",
+      "answer": "Apple uygulamaya özel parolaları, Apple ID parolanızı değiştirirseniz veya Apple hesabınızdan manuel olarak iptal ederseniz geçersiz hale gelebilir.\n\n<strong>Bunu düzeltmek için:</strong>\n<strong>1.</strong> <strong>appleid.apple.com</strong> adresine gidin ve oturum açın.\n<strong>2.</strong> <strong>Oturum Açma ve Güvenlik → Uygulamaya Özel Parolalar</strong> bölümüne gidin.\n<strong>3.</strong> Yeni bir <strong>uygulamaya özel parola</strong> oluşturun.\n<strong>4.</strong> MyDoctors360'ta Takvim → Entegrasyonlar bölümüne gidin.\n<strong>5.</strong> Apple Takvim bağlantınızı kesin.\n<strong>6.</strong> Apple ID e-postanız ve yeni uygulamaya özel parolayla yeniden bağlanın.\n\nSenkronizasyon bir sonraki yoklama döngüsünde (10 dakika içinde) devam edecektir."
+    },
+    "payment-failed": {
+      "question": "Ödemem başarısız oldu — ne yapmalıyım?",
+      "answer": "Ödeme başarısızlıkları çeşitli nedenlerle ortaya çıkabilir:\n\n<strong>• Yetersiz bakiye:</strong> Kartınızda yeterli bakiye olup olmadığını kontrol edin.\n<strong>• Kart reddedildi:</strong> Bankanız işlemi engellemiş olabilir. Yetkilendirmek için bankanızla iletişime geçin.\n<strong>• Süresi dolmuş kart:</strong> Kart bilgilerinizi güncelleyin ve tekrar deneyin.\n<strong>• 3D Secure başarısız oldu:</strong> İstendiğinde banka doğrulama adımını tamamlayın.\n\n<strong>Tekrar denemek için:</strong>\n<strong>1.</strong> Başarısız bir denemeden sonra zaman dilimi 15 dakika boyunca kilitli kalır.\n<strong>2.</strong> Randevu sayfasına geri dönün ve farklı bir kartla veya bankanızdaki sorunu çözdükten sonra tekrar deneyin.\n\nÜcret tahsil edildiyse ancak randevu onayı göremiyorsanız, destek ekibimizle iletişime geçin — hemen araştıracağız."
+    },
+    "video-call-issues": {
+      "question": "Görüntülü aramada sorun yaşıyorum",
+      "answer": "Görüntülü arama sorunları yaşıyorsanız şu adımları deneyin:\n\n<strong>1. Tarayıcınızı kontrol edin:</strong> Modern bir tarayıcı kullanın (Chrome, Firefox, Safari veya Edge). En son sürüme güncellenmiş olduğundan emin olun.\n\n<strong>2. Kamera ve mikrofon izni verin:</strong> İstendiğinde tarayıcı izinlerini vermek için \"İzin Ver\" butonuna tıklayın. Bunu tarayıcı ayarlarınızdan da kontrol edebilirsiniz.\n\n<strong>3. İnternet bağlantınızı kontrol edin:</strong> Görüntülü aramalar için en az 2 Mbps kararlı bağlantı önerilir.\n\n<strong>4. Diğer uygulamaları kapatın:</strong> Diğer video uygulamaları (Zoom, Teams vb.) kameranızı kullanıyor olabilir. Bunları kapatın ve tekrar deneyin.\n\n<strong>5. Farklı bir tarayıcı deneyin:</strong> Sorun devam ederse farklı bir tarayıcıya geçin.\n\n<strong>6. Cihazınızı yeniden başlatın:</strong> Yeniden başlatma, diğer yazılımların neden olduğu kamera veya mikrofon sorunlarını çözebilir.\n\nNe siz ne de doktor bağlanamıyorsa, destek ekibiyle iletişime geçin ve randevuyu yeniden planlamanıza yardımcı olacağız."
+    },
+    "booking-slot-unavailable": {
+      "question": "Seçtiğim randevu dilimi kayboldu",
+      "answer": "Bir zaman diliminin müsait olmamasının birkaç nedeni vardır:\n\n<strong>• Başka bir hasta rezerve etti:</strong> Siz göz atarken başka biri o dilim için ödemeyi tamamlamış olabilir.\n\n<strong>• Dilim kilitlendi:</strong> Başka bir hasta ödeme sürecinde olabilir (ödeme sırasında dilimler 15 dakika boyunca kilitlenir).\n\n<strong>• Takvim senkronizasyonu güncellemesi:</strong> Doktorun harici takvimi çakışan bir etkinlikle güncellenmiş ve o zamanı otomatik olarak engellemiş olabilir.\n\n<strong>• Doktor müsaitliğini değiştirdi:</strong> Doktor programını güncellemiş veya tarih geçersiz kılması eklemiş olabilir.\n\n<strong>Ne yapmalısınız:</strong> En güncel müsait dilimleri görmek için sayfayı yenileyin ve farklı bir zaman seçin. Müsaitlik bulmakta sürekli sorun yaşıyorsanız, farklı zamanlarda tekrar kontrol etmeyi deneyin veya doğrudan doktorun ofisiyle iletişime geçin."
+    },
+    "sync-delay-apple": {
+      "question": "Apple Takvim senkronizasyonum neden gecikmeli?",
+      "answer": "Apple iCloud Takvim, anlık bildirimleri (webhook) desteklemeyen <strong>CalDAV protokolünü</strong> kullanır. Bunun yerine MyDoctors360, <strong>takviminizi her 10 dakikada bir yoklayarak</strong> değişiklikleri kontrol eder.\n\nBu şu anlama gelir:\n• Apple Takviminizdeki değişikliklerin MyDoctors360'ta görünmesi <strong>10 dakikaya kadar</strong> sürebilir.\n• MyDoctors360'taki yeni randevuların Apple Takviminizde görünmesi 10 dakikaya kadar sürebilir.\n\n<strong>Gecikmeleri en aza indirmek için ipuçları:</strong>\n• Anında senkronizasyon tetiklemek için Takvim Ayarlarındaki <strong>Şimdi Senkronize Et</strong> butonunu kullanın.\n• Zamanlama kritikse anlık senkronizasyon için Google veya Microsoft Takvim kullanmayı değerlendirin.\n\nBu, CalDAV protokolünün bir sınırlamasıdır, hata değildir. Google ve Microsoft takvimleri webhook bildirimlerini desteklediği için anlık olarak senkronize olur."
+    }
+  },
   "findPharmacy": {
     "title": "Eczane Bul",
     "subtitle": "Yakininizdaki NHS eczanelerini arayin. Adres, calisma saatleri ve iletisim bilgilerini bulmak icin Ingiltere posta kodunuzu girin.",

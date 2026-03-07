@@ -2,18 +2,26 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { BookOpen, Search, X, Mail, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "@/i18n/navigation";
-import { helpCategories } from "./help-center-data";
+import { getHelpCategories } from "./help-center-data";
 import { HelpCenterCategory } from "./help-center-category";
 
 const supportEmail =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@mydoctors360.com";
 
 export function HelpCenterClient() {
+  const t = useTranslations("helpCenter");
+  const tArticles = useTranslations("helpArticles");
+  const helpCategories = useMemo(
+    () => getHelpCategories((k) => t(k), (k) => tArticles(k)),
+    [t, tArticles]
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [openArticleId, setOpenArticleId] = useState<string | null>(null);
@@ -55,7 +63,7 @@ export function HelpCenterClient() {
         ),
       }))
       .filter((category) => category.articles.length > 0);
-  }, [debouncedQuery]);
+  }, [debouncedQuery, helpCategories]);
 
   const totalResults = useMemo(
     () => filteredCategories.reduce((sum, cat) => sum + cat.articles.length, 0),
@@ -78,11 +86,10 @@ export function HelpCenterClient() {
             <BookOpen className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
-            Help Center
+            {t("title")}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Find guides, troubleshooting tips, and answers to common questions
-            about booking, calendar sync, payments, and more.
+            {t("subtitle")}
           </p>
 
           {/* Search */}
@@ -91,7 +98,7 @@ export function HelpCenterClient() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Search for help articles..."
+                placeholder={t("search_placeholder")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-12 rounded-full pl-10 pr-10 text-base"
@@ -112,18 +119,20 @@ export function HelpCenterClient() {
                     <Badge variant="secondary" className="mr-1">
                       {totalResults}
                     </Badge>
-                    {totalResults === 1 ? "article" : "articles"} found for
-                    &ldquo;{debouncedQuery}&rdquo;
+                    {t("articles_found", {
+                      count: totalResults,
+                      query: debouncedQuery,
+                    })}
                   </>
                 ) : (
                   <>
-                    No articles found for &ldquo;{debouncedQuery}&rdquo;. Try
-                    different keywords or{" "}
+                    {t("no_results", { query: debouncedQuery })}{" "}
+                    {t("no_results_hint")}{" "}
                     <Link
                       href="/support"
                       className="text-primary underline underline-offset-4"
                     >
-                      contact support
+                      {t("contact_support_link")}
                     </Link>
                     .
                   </>
@@ -157,7 +166,9 @@ export function HelpCenterClient() {
                         {category.title}
                       </h3>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {category.articles.length} articles
+                        {t("articles_count", {
+                          count: category.articles.length,
+                        })}
                       </p>
                     </div>
                   </button>
@@ -196,17 +207,17 @@ export function HelpCenterClient() {
           ) : (
             <div className="py-12 text-center">
               <p className="text-lg font-medium text-muted-foreground">
-                No articles match your search.
+                {t("no_results_clear")}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Try different keywords or browse all categories.
+                {t("no_results_clear_hint")}
               </p>
               <Button
                 variant="outline"
                 className="mt-4"
                 onClick={() => setSearchQuery("")}
               >
-                Clear search
+                {t("clear_search")}
               </Button>
             </div>
           )}
@@ -216,15 +227,16 @@ export function HelpCenterClient() {
       {/* Still Need Help? CTA */}
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto text-center">
-          <h2 className="text-2xl font-bold md:text-3xl">Still Need Help?</h2>
+          <h2 className="text-2xl font-bold md:text-3xl">
+            {t("still_need_help")}
+          </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Can&apos;t find what you&apos;re looking for? Our support team is
-            here to help.
+            {t("still_need_help_desc")}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <Button size="lg" className="rounded-full" asChild>
               <a href={`mailto:${supportEmail}`}>
-                Contact Support <Mail className="ml-2 h-4 w-4" />
+                {t("contact_support")} <Mail className="ml-2 h-4 w-4" />
               </a>
             </Button>
             <Button
@@ -234,7 +246,7 @@ export function HelpCenterClient() {
               asChild
             >
               <Link href="/support">
-                Support Options <ArrowRight className="ml-2 h-4 w-4" />
+                {t("support_options")} <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
           </div>

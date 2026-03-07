@@ -464,6 +464,170 @@
     "help_center": "Centre d'aide",
     "copyright": "Tous droits réservés."
   },
+  "helpCenter": {
+    "title": "Centre d'aide",
+    "subtitle": "Trouvez des guides, des conseils de dépannage et des réponses aux questions fréquentes sur la prise de rendez-vous, la synchronisation du calendrier, les paiements et bien plus encore.",
+    "search_placeholder": "Rechercher des articles d'aide...",
+    "articles_found": "{count} {count, plural, one {article} other {articles}} trouvé(s) pour \"{query}\"",
+    "no_results": "Aucun article trouvé pour \"{query}\".",
+    "no_results_hint": "Essayez d'autres mots-clés ou",
+    "contact_support_link": "contactez le support",
+    "no_results_clear": "Aucun article ne correspond à votre recherche.",
+    "no_results_clear_hint": "Essayez d'autres mots-clés ou parcourez toutes les catégories.",
+    "clear_search": "Effacer la recherche",
+    "articles_count": "{count} articles",
+    "still_need_help": "Besoin d'aide supplémentaire ?",
+    "still_need_help_desc": "Vous ne trouvez pas ce que vous cherchez ? Notre équipe de support est là pour vous aider.",
+    "contact_support": "Contacter le support",
+    "support_options": "Options de support",
+    "copy_link": "Copier le lien",
+    "for_doctors": "Pour les médecins",
+    "for_patients": "Pour les patients",
+    "everyone": "Tout le monde",
+    "help_center_banner_title": "Vous cherchez des guides et du dépannage ?",
+    "help_center_banner_desc": "Visitez notre Centre d'aide pour des guides étape par étape, des instructions de configuration du calendrier et bien plus encore.",
+    "browse_help_center": "Parcourir le Centre d'aide",
+    "cat_getting_started": "Premiers pas",
+    "cat_getting_started_desc": "Apprenez les bases de l'utilisation de MyDoctors360 en tant que patient ou médecin.",
+    "cat_calendar": "Calendrier et planification",
+    "cat_calendar_desc": "Synchronisation du calendrier, configuration du fournisseur, flux ICS et gestion des disponibilités.",
+    "cat_payments": "Paiements et facturation",
+    "cat_payments_desc": "Comment fonctionnent les paiements, les remboursements et les versements aux médecins via Stripe Connect.",
+    "cat_account": "Compte et paramètres",
+    "cat_account_desc": "Gestion du profil, notifications, sécurité et préférences.",
+    "cat_troubleshooting": "Dépannage",
+    "cat_troubleshooting_desc": "Solutions aux problèmes courants avec la synchronisation du calendrier, les paiements et les appels vidéo."
+  },
+  "helpArticles": {
+    "how-to-book": {
+      "question": "Comment prendre rendez-vous ?",
+      "answer": "<strong>1.</strong> Utilisez la barre de recherche ou parcourez les spécialités pour trouver un médecin.\n<strong>2.</strong> Consultez le profil du médecin, ses avis, ses tarifs et ses disponibilités.\n<strong>3.</strong> Sélectionnez une date et un créneau horaire qui vous conviennent.\n<strong>4.</strong> Choisissez entre une consultation en personne ou par vidéo (si proposé).\n<strong>5.</strong> Effectuez le paiement en toute sécurité via Stripe.\n\nVous recevrez immédiatement un e-mail de confirmation avec tous les détails. Le rendez-vous apparaît également dans votre tableau de bord patient."
+    },
+    "patient-account-setup": {
+      "question": "Comment créer un compte patient ?",
+      "answer": "Cliquez sur <strong>S'inscrire</strong> sur la page d'accueil et choisissez de vous enregistrer en tant que patient. Vous pouvez vous inscrire avec votre adresse e-mail et un mot de passe, ou utiliser la connexion Google ou Apple pour un accès plus rapide.\n\nAprès l'inscription, confirmez votre adresse e-mail en cliquant sur le lien que nous vous envoyons. Une fois vérifié, vous pouvez parcourir les médecins, prendre des rendez-vous et tout gérer depuis votre tableau de bord."
+    },
+    "doctor-profile-setup": {
+      "question": "Comment configurer mon profil de médecin ?",
+      "answer": "Après votre inscription en tant que médecin, complétez votre profil professionnel :\n\n<strong>1.</strong> Ajoutez vos spécialités médicales, qualifications et années d'expérience.\n<strong>2.</strong> Téléchargez une photo professionnelle et rédigez une biographie.\n<strong>3.</strong> Définissez vos honoraires de consultation et les types de consultation acceptés (en personne, vidéo ou les deux).\n<strong>4.</strong> Configurez votre planning de disponibilité.\n<strong>5.</strong> Connectez votre compte Stripe pour recevoir les paiements.\n\nVotre profil sera examiné et vérifié par notre équipe dans un délai de 24 à 48 heures avant d'être mis en ligne."
+    },
+    "setting-availability": {
+      "question": "Comment définir ma disponibilité et mes horaires de travail ?",
+      "answer": "Depuis votre tableau de bord médecin, accédez à <strong>Calendrier → Disponibilité</strong>.\n\nVous pouvez définir votre planning hebdomadaire habituel en choisissant les horaires de travail pour chaque jour de la semaine. Par exemple, lundi–vendredi de 9h00 à 17h00.\n\nVous pouvez également créer des <strong>exceptions de date</strong> pour bloquer des jours spécifiques (jours fériés, jours de congé) ou définir des horaires personnalisés pour certains jours. Les modifications prennent effet immédiatement et les patients ne verront que vos créneaux disponibles."
+    },
+    "video-consultation-how": {
+      "question": "Comment fonctionnent les consultations vidéo ?",
+      "answer": "Lorsque vous réservez une consultation vidéo, un lien d'appel vidéo sécurisé est généré automatiquement.\n\n<strong>Avant le rendez-vous :</strong> Vous recevrez le lien par e-mail et il apparaîtra également dans votre tableau de bord.\n<strong>À l'heure prévue :</strong> Cliquez sur le lien pour rejoindre l'appel directement dans votre navigateur — aucune installation de logiciel requise.\n<strong>Prérequis :</strong> Un appareil avec caméra et microphone, et une connexion Internet stable.\n\nLes patients comme les médecins peuvent rejoindre l'appel depuis n'importe quel navigateur web moderne (Chrome, Firefox, Safari, Edge)."
+    },
+    "supported-languages": {
+      "question": "Quelles langues sont prises en charge par MyDoctors360 ?",
+      "answer": "MyDoctors360 est disponible en <strong>9 langues</strong> : anglais, allemand, français, turc, espagnol, italien, japonais, portugais et chinois.\n\nLa plateforme détecte automatiquement la langue de votre navigateur, ou vous pouvez changer de langue depuis le sélecteur de langue dans la barre de navigation. Tous les éléments d'interface, les notifications et les articles d'aide sont traduits.\n\nLes médecins peuvent également indiquer les langues qu'ils parlent sur leur profil, afin que vous puissiez trouver un médecin qui parle votre langue préférée."
+    },
+    "calendar-sync-overview": {
+      "question": "Comment fonctionne la synchronisation du calendrier ?",
+      "answer": "La synchronisation du calendrier maintient votre planning MyDoctors360 en harmonie avec votre calendrier externe (Google, Microsoft ou Apple).\n\n<strong>Import (Externe → MyDoctors360) :</strong> Les événements de votre calendrier externe sont importés comme des créneaux bloqués. Cela empêche les patients de réserver pendant les périodes où vous êtes déjà occupé.\n\n<strong>Export (MyDoctors360 → Externe) :</strong> Lorsqu'un patient prend rendez-vous, celui-ci apparaît automatiquement dans votre calendrier externe.\n\n<strong>Comment la mise à jour se fait :</strong>\n• <strong>Google Calendar :</strong> En temps réel via des webhooks, avec une synchronisation de secours toutes les 10 minutes.\n• <strong>Microsoft Outlook :</strong> En temps réel via des abonnements Graph API, avec une synchronisation de secours toutes les 10 minutes.\n• <strong>Apple iCloud :</strong> Interrogation toutes les 10 minutes (CalDAV ne prend pas en charge les webhooks).\n\nToute la synchronisation s'effectue automatiquement en arrière-plan. Vous pouvez également déclencher une synchronisation manuelle depuis vos paramètres de calendrier."
+    },
+    "google-calendar-setup": {
+      "question": "Comment connecter Google Calendar ?",
+      "answer": "<strong>1.</strong> Accédez à votre tableau de bord médecin → Calendrier → Intégrations.\n<strong>2.</strong> Cliquez sur <strong>Connecter Google Calendar</strong>.\n<strong>3.</strong> Connectez-vous avec votre compte Google et accordez les autorisations de calendrier.\n<strong>4.</strong> Sélectionnez le calendrier à synchroniser (par exemple, votre calendrier principal).\n\nUne fois connecté, la synchronisation s'effectue en <strong>temps réel via des webhooks</strong>. Google nous notifie instantanément lorsque votre calendrier change. En secours, nous exécutons également une synchronisation en arrière-plan toutes les 10 minutes.\n\nVos événements Google Calendar existants seront importés comme des créneaux bloqués quelques minutes après la connexion."
+    },
+    "microsoft-calendar-setup": {
+      "question": "Comment connecter Microsoft Outlook / Office 365 ?",
+      "answer": "<strong>1.</strong> Accédez à votre tableau de bord médecin → Calendrier → Intégrations.\n<strong>2.</strong> Cliquez sur <strong>Connecter le calendrier Microsoft</strong>.\n<strong>3.</strong> Connectez-vous avec votre compte Microsoft (Outlook.com ou Office 365) et accordez les autorisations.\n<strong>4.</strong> Votre calendrier par défaut sera synchronisé automatiquement.\n\nLa synchronisation utilise les <strong>abonnements Microsoft Graph API</strong> pour des mises à jour en temps réel, avec une synchronisation de secours toutes les 10 minutes. Lorsque votre calendrier Outlook change, nous sommes notifiés presque instantanément.\n\nLes comptes Microsoft personnels et les comptes professionnels/scolaires Office 365 sont tous deux pris en charge."
+    },
+    "apple-icloud-setup": {
+      "question": "Comment connecter Apple iCloud / un calendrier CalDAV ?",
+      "answer": "<strong>1.</strong> Accédez à votre tableau de bord médecin → Calendrier → Intégrations.\n<strong>2.</strong> Cliquez sur <strong>Connecter le calendrier Apple</strong>.\n<strong>3.</strong> Générez un <strong>mot de passe spécifique à l'application</strong> sur <strong>appleid.apple.com</strong> (dans Connexion et sécurité → Mots de passe spécifiques aux applications).\n<strong>4.</strong> Saisissez votre adresse e-mail Apple ID et le mot de passe spécifique à l'application.\n\n<strong>Important :</strong> Apple iCloud utilise le protocole CalDAV, qui ne prend pas en charge les webhooks. La synchronisation s'effectue par <strong>interrogation toutes les 10 minutes</strong>. Cela signifie que les modifications dans votre calendrier Apple peuvent mettre jusqu'à 10 minutes pour apparaître sur MyDoctors360.\n\nCette méthode fonctionne également avec d'autres fournisseurs CalDAV comme Fastmail et Nextcloud."
+    },
+    "calendar-provider-comparison": {
+      "question": "Quelles sont les différences entre les fournisseurs de calendrier ?",
+      "answer": "Voici comment se comparent les trois fournisseurs pris en charge :\n\n<strong>Google Calendar :</strong>\n• Synchronisation en temps réel via webhooks ✓\n• Authentification OAuth ✓\n• Vitesse de synchronisation la plus rapide\n\n<strong>Microsoft Outlook / Office 365 :</strong>\n• Synchronisation en temps réel via abonnements Graph ✓\n• Authentification OAuth ✓\n• Prend en charge les comptes personnels et professionnels\n\n<strong>Apple iCloud / CalDAV :</strong>\n• Synchronisation par interrogation toutes les 10 minutes\n• Authentification par mot de passe spécifique à l'application\n• Fonctionne également avec Fastmail, Nextcloud et d'autres serveurs CalDAV\n\nLes trois fournisseurs prennent en charge la synchronisation bidirectionnelle (import et export). Google et Microsoft offrent la synchronisation la plus rapide grâce à la prise en charge des webhooks."
+    },
+    "ics-feed": {
+      "question": "Qu'est-ce que le flux de calendrier ICS ?",
+      "answer": "Le flux ICS est une <strong>URL d'abonnement en lecture seule</strong> qui permet à n'importe quelle application de calendrier d'afficher vos réservations MyDoctors360.\n\n<strong>Comment le configurer :</strong>\n<strong>1.</strong> Accédez à Calendrier → Intégrations → Flux ICS.\n<strong>2.</strong> Cliquez sur <strong>Générer l'URL du flux</strong> pour créer votre URL privée.\n<strong>3.</strong> Copiez l'URL et collez-la dans la fonction \u00ab S\u2019abonner \u00e0 un calendrier \u00bb ou \u00ab Ajouter par URL \u00bb de votre application de calendrier.\n\nVotre application de calendrier actualisera périodiquement le flux pour afficher les nouvelles réservations. C'est unidirectionnel uniquement — cela affiche vos réservations MyDoctors360 dans votre calendrier, mais n'importe pas les événements externes.\n\n<strong>Remarque :</strong> L'URL du flux contient un jeton privé. Ne le partagez pas avec d'autres personnes. Vous pouvez le révoquer et le régénérer à tout moment depuis vos paramètres."
+    },
+    "slot-locking": {
+      "question": "Comment le verrouillage des créneaux empêche-t-il les doubles réservations ?",
+      "answer": "Lorsqu'un patient commence le processus de paiement pour un créneau horaire, ce créneau est <strong>temporairement verrouillé pendant 15 minutes</strong>. Pendant cette période, aucun autre patient ne peut réserver le même créneau.\n\nCela utilise une approche de <strong>verrouillage pessimiste</strong> :\n• Le statut du créneau passe à <strong>paiement en attente</strong> au début du processus de paiement.\n• Si le paiement est complété avec succès, la réservation est confirmée.\n• Si le patient ne finalise pas le paiement dans les 15 minutes, le verrouillage expire et le créneau redevient disponible.\n\nCela garantit que deux patients ne peuvent jamais réserver accidentellement le même créneau horaire, même s'ils essaient de réserver en même temps."
+    },
+    "conflict-detection": {
+      "question": "Comment fonctionne la détection des conflits ?",
+      "answer": "Lorsque la synchronisation du calendrier importe un événement qui chevauche une réservation confirmée existante, le système <strong>détecte automatiquement le conflit</strong> et vous en informe.\n\nVous recevrez une notification dans votre tableau de bord vous alertant du chevauchement. Cela vous laisse le temps de reprogrammer l'un des rendez-vous en conflit.\n\n<strong>Scénarios courants :</strong>\n• Vous ajoutez un événement personnel à votre calendrier externe qui chevauche une réservation patient.\n• Un événement externe synchronisé est déplacé à un horaire qui entre en conflit avec une réservation.\n\nLa détection des conflits s'exécute à chaque fois que la synchronisation du calendrier traite des événements nouveaux ou mis à jour."
+    },
+    "date-overrides": {
+      "question": "Comment bloquer des dates ou définir des horaires personnalisés ?",
+      "answer": "Accédez à votre tableau de bord médecin → Calendrier → <strong>Exceptions de date</strong>.\n\n<strong>Pour bloquer une date :</strong> Sélectionnez la date et marquez-la comme indisponible. Aucun créneau ne sera affiché pour cette journée.\n\n<strong>Pour définir des horaires personnalisés :</strong> Sélectionnez la date et saisissez vos heures de début et de fin personnalisées. Cela remplace votre planning hebdomadaire habituel pour ce jour spécifique.\n\n<strong>Cas d'utilisation :</strong>\n• Bloquer des dates pour les jours fériés ou les vacances\n• Définir des horaires réduits pour un jour spécifique\n• Ajouter des heures supplémentaires un jour où vous êtes normalement en congé\n\nLes modifications prennent effet immédiatement. Les réservations confirmées existantes sur les dates bloquées ne sont pas automatiquement annulées — vous devrez les reprogrammer manuellement."
+    },
+    "how-payments-work": {
+      "question": "Comment fonctionnent les paiements sur MyDoctors360 ?",
+      "answer": "Tous les paiements sont traités en toute sécurité via <strong>Stripe</strong>, un processeur de paiement conforme PCI.\n\n<strong>Pour les patients :</strong>\n• Payez par carte de crédit, carte de débit ou d'autres méthodes prises en charge par Stripe.\n• Le paiement est prélevé lorsque vous finalisez votre réservation.\n• Tous les prix sont affichés à l'avance — pas de frais cachés.\n\n<strong>Pour les médecins :</strong>\n• Les paiements sont collectés auprès des patients et conservés par Stripe.\n• Après déduction des frais de plateforme (15 %), le montant restant est transféré sur votre compte Stripe connecté.\n• Les versements sont effectués automatiquement selon un calendrier régulier.\n\nToutes les transactions sont chiffrées et sécurisées. Nous ne stockons jamais les coordonnées complètes de votre carte sur nos serveurs."
+    },
+    "refund-policy": {
+      "question": "Quelle est la politique de remboursement et d'annulation ?",
+      "answer": "Chaque médecin définit ses propres conditions d'annulation, affichées sur son profil. Les trois types de politique sont :\n\n<strong>Flexible :</strong> Annulation gratuite jusqu'à 2 heures avant le rendez-vous.\n<strong>Modérée :</strong> Annulation gratuite jusqu'à 24 heures avant.\n<strong>Stricte :</strong> Annulation gratuite jusqu'à 48 heures avant.\n\nSi vous annulez dans le délai autorisé, votre remboursement est traité automatiquement sur votre mode de paiement d'origine. Les remboursements apparaissent généralement sous 5 à 10 jours ouvrables.\n\nSi un médecin annule votre rendez-vous, vous recevez toujours un <strong>remboursement intégral</strong>, quelle que soit la politique d'annulation."
+    },
+    "doctor-payouts": {
+      "question": "Comment fonctionnent les versements aux médecins ?",
+      "answer": "Les versements aux médecins sont gérés via <strong>Stripe Connect</strong>.\n\nLorsqu'un patient paie une réservation :\n<strong>1.</strong> Le montant total est collecté par Stripe.\n<strong>2.</strong> Les frais de plateforme (15 %) sont déduits.\n<strong>3.</strong> Les 85 % restants sont transférés sur votre compte Stripe.\n\nLes versements sur votre compte bancaire suivent le calendrier standard de Stripe (généralement 2 à 7 jours ouvrables après le paiement, selon votre pays).\n\nVous pouvez consulter tous vos revenus, versements en attente et l'historique des transactions depuis votre tableau de bord médecin → section Paiements."
+    },
+    "stripe-onboarding": {
+      "question": "Comment configurer Stripe pour recevoir des paiements ?",
+      "answer": "Pour recevoir les paiements des patients, vous devez connecter un compte Stripe :\n\n<strong>1.</strong> Accédez au tableau de bord médecin → Paiements.\n<strong>2.</strong> Cliquez sur <strong>Configurer les paiements</strong> ou <strong>Connecter Stripe</strong>.\n<strong>3.</strong> Vous serez redirigé vers le processus d'intégration de Stripe.\n<strong>4.</strong> Fournissez vos informations professionnelles, coordonnées bancaires et vérification d'identité.\n<strong>5.</strong> Une fois vérifié, vous pouvez commencer à recevoir des paiements.\n\nNous utilisons <strong>Stripe Connect Express</strong>, ce qui signifie que Stripe gère toute la conformité et les déclarations fiscales. La configuration prend généralement 5 à 10 minutes."
+    },
+    "supported-currencies": {
+      "question": "Quelles devises sont prises en charge ?",
+      "answer": "MyDoctors360 prend en charge plusieurs devises pour les soins de santé internationaux :\n\n• <strong>EUR</strong> (Euro)\n• <strong>GBP</strong> (Livre sterling)\n• <strong>TRY</strong> (Livre turque)\n• <strong>USD</strong> (Dollar américain)\n\nLes médecins fixent leurs honoraires de consultation dans leur devise préférée. Les patients voient les prix dans la devise du médecin et paient dans cette devise. Stripe gère automatiquement le traitement des devises.\n\nD'autres devises pourront être ajoutées à l'avenir en fonction de la demande."
+    },
+    "update-profile": {
+      "question": "Comment mettre à jour mon profil ?",
+      "answer": "Connectez-vous et accédez à votre tableau de bord, puis naviguez vers <strong>Paramètres</strong> ou <strong>Profil</strong>.\n\n<strong>Pour les patients :</strong> Mettez à jour votre nom, adresse e-mail, numéro de téléphone et autres informations personnelles.\n\n<strong>Pour les médecins :</strong> Mettez à jour votre biographie, qualifications, spécialités, honoraires de consultation, photo de profil, adresse du cabinet et plus encore.\n\nLes modifications sont enregistrées immédiatement. Si vous modifiez votre adresse e-mail, vous devrez peut-être vérifier la nouvelle adresse."
+    },
+    "notification-preferences": {
+      "question": "Comment gérer mes préférences de notification ?",
+      "answer": "Accédez à votre tableau de bord → <strong>Paramètres → Notifications</strong>.\n\nVous pouvez contrôler les notifications pour :\n• <strong>E-mail :</strong> Confirmations de réservation, rappels, annulations\n• <strong>SMS :</strong> Rappels de rendez-vous et mises à jour urgentes\n• <strong>WhatsApp :</strong> Rappels rapides et notifications de réservation\n\nChaque type de notification peut être activé ou désactivé indépendamment. Nous vous recommandons de garder les notifications de confirmation de réservation et de rappel activées pour ne manquer aucun rendez-vous."
+    },
+    "cancel-reschedule-booking": {
+      "question": "Comment annuler ou reprogrammer une réservation ?",
+      "answer": "Accédez à votre tableau de bord patient → <strong>Mes réservations</strong>.\n\nTrouvez la réservation que vous souhaitez modifier et cliquez sur <strong>Annuler la réservation</strong> ou <strong>Reprogrammer</strong>.\n\n<strong>Annulation :</strong> Si vous annulez dans le délai prévu par la politique d'annulation du médecin, vous recevrez un remboursement intégral. Sinon, des frais d'annulation s'appliquent.\n\n<strong>Reprogrammation :</strong> Sélectionnez une nouvelle date et un nouvel horaire parmi les créneaux disponibles du médecin. Aucun paiement supplémentaire n'est requis si les honoraires de consultation n'ont pas changé.\n\nLes patients comme les médecins reçoivent des notifications par e-mail lorsqu'une réservation est annulée ou reprogrammée."
+    },
+    "doctor-subscription": {
+      "question": "Quels sont les plans d'abonnement disponibles pour les médecins ?",
+      "answer": "MyDoctors360 propose des plans d'abonnement pour les médecins souhaitant des fonctionnalités avancées et une meilleure visibilité :\n\n<strong>Plan gratuit :</strong> Profil de base, référencement standard dans les recherches, intégration du calendrier et traitement des paiements.\n\n<strong>Plan Premium :</strong> Mise en avant dans les résultats de recherche, support prioritaire, analyses avancées et outils marketing pour développer votre cabinet.\n\nTous les plans incluent le traitement sécurisé des paiements via Stripe Connect. Vous pouvez mettre à niveau ou rétrograder votre plan à tout moment depuis votre tableau de bord médecin → Abonnement."
+    },
+    "account-security": {
+      "question": "Comment sécuriser mon compte ?",
+      "answer": "Voici les bonnes pratiques pour la sécurité de votre compte :\n\n<strong>1. Utilisez un mot de passe fort :</strong> Au moins 8 caractères avec un mélange de lettres, chiffres et symboles.\n<strong>2. Ne partagez pas vos identifiants :</strong> Votre compte est personnel et ne doit pas être partagé.\n<strong>3. Vérifiez votre e-mail :</strong> Assurez-vous que votre adresse e-mail est vérifiée.\n<strong>4. Déconnectez-vous sur les appareils partagés :</strong> Déconnectez-vous toujours lorsque vous utilisez des ordinateurs publics ou partagés.\n<strong>5. Méfiez-vous du hameçonnage :</strong> Nous ne vous demanderons jamais votre mot de passe par e-mail. Si vous recevez un e-mail suspect, contactez le support.\n\nSi vous soupçonnez un accès non autorisé à votre compte, changez immédiatement votre mot de passe et contactez notre équipe de support."
+    },
+    "calendar-not-syncing": {
+      "question": "Mon calendrier ne se synchronise pas — que dois-je faire ?",
+      "answer": "Suivez ces étapes pour résoudre les problèmes de synchronisation du calendrier :\n\n<strong>1. Vérifiez le statut de connexion :</strong> Accédez à Calendrier → Intégrations et vérifiez que votre calendrier affiche « Connecté ».\n\n<strong>2. Essayez une synchronisation manuelle :</strong> Cliquez sur le bouton <strong>Synchroniser maintenant</strong> pour déclencher une synchronisation immédiate.\n\n<strong>3. Vérifiez vos identifiants :</strong> Si le statut affiche une erreur, essayez de déconnecter puis de reconnecter votre calendrier.\n\n<strong>4. Vérifiez les autorisations du calendrier :</strong> Assurez-vous que MyDoctors360 dispose d'un accès en lecture/écriture à votre calendrier.\n\n<strong>5. Pour Apple iCloud :</strong> N'oubliez pas que la synchronisation CalDAV s'effectue toutes les 10 minutes, il peut donc y avoir un court délai.\n\nSi le problème persiste après avoir suivi ces étapes, contactez notre équipe de support avec les détails de votre fournisseur de calendrier et l'erreur rencontrée."
+    },
+    "google-auth-expired": {
+      "question": "Mon autorisation Google Calendar a expiré",
+      "answer": "Les jetons Google OAuth peuvent expirer si vous changez votre mot de passe Google, révoquez les autorisations d'application ou après une longue période d'inactivité.\n\n<strong>Pour résoudre ce problème :</strong>\n<strong>1.</strong> Accédez au tableau de bord médecin → Calendrier → Intégrations.\n<strong>2.</strong> Cliquez sur <strong>Déconnecter</strong> à côté de Google Calendar.\n<strong>3.</strong> Cliquez de nouveau sur <strong>Connecter Google Calendar</strong>.\n<strong>4.</strong> Connectez-vous et réaccordez les autorisations.\n\nVos données de synchronisation précédentes seront conservées. La nouvelle connexion reprendra la synchronisation immédiatement.\n\n<strong>Conseil :</strong> Vous pouvez également vérifier vos applications connectées sur <strong>myaccount.google.com/permissions</strong> pour vous assurer que MyDoctors360 a toujours accès."
+    },
+    "apple-password-revoked": {
+      "question": "Mon mot de passe spécifique à l'application Apple iCloud a été révoqué",
+      "answer": "Les mots de passe spécifiques aux applications Apple peuvent être révoqués si vous changez le mot de passe de votre Apple ID ou si vous les révoquez manuellement depuis votre compte Apple.\n\n<strong>Pour résoudre ce problème :</strong>\n<strong>1.</strong> Accédez à <strong>appleid.apple.com</strong> et connectez-vous.\n<strong>2.</strong> Naviguez vers <strong>Connexion et sécurité → Mots de passe spécifiques aux applications</strong>.\n<strong>3.</strong> Générez un <strong>nouveau mot de passe spécifique à l'application</strong>.\n<strong>4.</strong> Sur MyDoctors360, accédez à Calendrier → Intégrations.\n<strong>5.</strong> Déconnectez votre connexion au calendrier Apple.\n<strong>6.</strong> Reconnectez-vous avec votre adresse e-mail Apple ID et le nouveau mot de passe spécifique à l'application.\n\nLa synchronisation reprendra au prochain cycle d'interrogation (dans les 10 minutes)."
+    },
+    "payment-failed": {
+      "question": "Mon paiement a échoué — que dois-je faire ?",
+      "answer": "Les échecs de paiement peuvent survenir pour plusieurs raisons :\n\n<strong>• Fonds insuffisants :</strong> Vérifiez que votre carte dispose d'un solde suffisant.\n<strong>• Carte refusée :</strong> Votre banque a peut-être bloqué la transaction. Contactez votre banque pour l'autoriser.\n<strong>• Carte expirée :</strong> Mettez à jour les informations de votre carte et réessayez.\n<strong>• Échec 3D Secure :</strong> Complétez l'étape d'authentification de votre banque lorsque vous y êtes invité.\n\n<strong>Pour réessayer :</strong>\n<strong>1.</strong> Le créneau horaire reste verrouillé pendant 15 minutes après un échec.\n<strong>2.</strong> Retournez sur la page de réservation et réessayez avec une autre carte ou après avoir résolu le problème avec votre banque.\n\nSi un montant a été débité mais que vous ne voyez pas de confirmation de réservation, contactez notre équipe de support — nous enquêterons immédiatement."
+    },
+    "video-call-issues": {
+      "question": "J'ai des problèmes avec l'appel vidéo",
+      "answer": "Si vous rencontrez des problèmes avec l'appel vidéo, essayez ces étapes :\n\n<strong>1. Vérifiez votre navigateur :</strong> Utilisez un navigateur moderne (Chrome, Firefox, Safari ou Edge). Assurez-vous qu'il est à jour.\n\n<strong>2. Autorisez la caméra et le microphone :</strong> Lorsque vous y êtes invité, cliquez sur « Autoriser » pour accorder les autorisations du navigateur. Vous pouvez également vérifier cela dans les paramètres de votre navigateur.\n\n<strong>3. Vérifiez votre connexion Internet :</strong> Une connexion stable d'au moins 2 Mbit/s est recommandée pour les appels vidéo.\n\n<strong>4. Fermez les autres applications :</strong> D'autres applications vidéo (Zoom, Teams, etc.) peuvent utiliser votre caméra. Fermez-les et réessayez.\n\n<strong>5. Essayez un autre navigateur :</strong> Si le problème persiste, changez de navigateur.\n\n<strong>6. Redémarrez votre appareil :</strong> Un redémarrage peut résoudre les problèmes de caméra ou de microphone causés par d'autres logiciels.\n\nSi ni vous ni le médecin ne parvenez à vous connecter, contactez le support et nous vous aiderons à reprogrammer le rendez-vous."
+    },
+    "booking-slot-unavailable": {
+      "question": "Le créneau que j'ai sélectionné a disparu",
+      "answer": "Il y a plusieurs raisons pour lesquelles un créneau peut devenir indisponible :\n\n<strong>• Un autre patient l'a réservé :</strong> Quelqu'un d'autre a peut-être finalisé le paiement pour ce créneau pendant que vous naviguiez.\n\n<strong>• Le créneau était verrouillé :</strong> Un autre patient est peut-être en cours de paiement (les créneaux sont verrouillés pendant 15 minutes durant le processus de paiement).\n\n<strong>• Mise à jour de la synchronisation du calendrier :</strong> Le calendrier externe du médecin a peut-être été mis à jour avec un événement en conflit, bloquant automatiquement ce créneau.\n\n<strong>• Le médecin a modifié sa disponibilité :</strong> Le médecin a peut-être mis à jour son planning ou ajouté une exception de date.\n\n<strong>Que faire :</strong> Actualisez la page pour voir les derniers créneaux disponibles et choisissez un autre horaire. Si vous avez régulièrement du mal à trouver des disponibilités, essayez de consulter à différents moments ou contactez directement le cabinet du médecin."
+    },
+    "sync-delay-apple": {
+      "question": "Pourquoi la synchronisation de mon calendrier Apple est-elle retardée ?",
+      "answer": "Le calendrier Apple iCloud utilise le <strong>protocole CalDAV</strong>, qui ne prend pas en charge les notifications en temps réel (webhooks). À la place, MyDoctors360 vérifie les modifications en <strong>interrogeant votre calendrier toutes les 10 minutes</strong>.\n\nCela signifie :\n• Les modifications dans votre calendrier Apple peuvent mettre <strong>jusqu'à 10 minutes</strong> pour apparaître sur MyDoctors360.\n• Les nouvelles réservations sur MyDoctors360 peuvent mettre jusqu'à 10 minutes pour apparaître dans votre calendrier Apple.\n\n<strong>Conseils pour minimiser les délais :</strong>\n• Utilisez le bouton <strong>Synchroniser maintenant</strong> dans les paramètres du calendrier pour déclencher une synchronisation immédiate.\n• Envisagez d'utiliser Google ou Microsoft Calendar pour une synchronisation en temps réel si le respect des horaires est critique.\n\nCeci est une limitation du protocole CalDAV, pas un bug. Les calendriers Google et Microsoft se synchronisent en temps réel car ils prennent en charge les notifications par webhooks."
+    }
+  },
   "findPharmacy": {
     "title": "Trouver une pharmacie",
     "subtitle": "Recherchez des pharmacies NHS pres de chez vous. Entrez votre code postal britannique pour trouver les adresses, horaires et coordonnees.",

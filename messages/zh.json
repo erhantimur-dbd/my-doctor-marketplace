@@ -364,7 +364,172 @@
     "faq": "常见问题",
     "support": "客服支持",
     "find_pharmacy": "查找药店",
+    "help_center": "帮助中心",
     "copyright": "保留所有权利。"
+  },
+  "helpCenter": {
+    "title": "帮助中心",
+    "subtitle": "查找有关预约、日历同步、支付等常见问题的指南、故障排除提示和解答。",
+    "search_placeholder": "搜索帮助文章...",
+    "articles_found": "为 \"{query}\" 找到 {count} {count, plural, one {篇文章} other {篇文章}}",
+    "no_results": "未找到与 \"{query}\" 相关的文章。",
+    "no_results_hint": "尝试不同的关键词或",
+    "contact_support_link": "联系客服",
+    "no_results_clear": "没有文章与您的搜索匹配。",
+    "no_results_clear_hint": "尝试不同的关键词或浏览所有类别。",
+    "clear_search": "清除搜索",
+    "articles_count": "{count} 篇文章",
+    "still_need_help": "仍然需要帮助？",
+    "still_need_help_desc": "找不到您需要的内容？我们的客服团队随时为您提供帮助。",
+    "contact_support": "联系客服",
+    "support_options": "客服选项",
+    "copy_link": "复制链接",
+    "for_doctors": "医生专区",
+    "for_patients": "患者专区",
+    "everyone": "所有人",
+    "help_center_banner_title": "正在寻找指南和故障排除？",
+    "help_center_banner_desc": "访问我们的帮助中心，获取分步指南、日历设置说明等。",
+    "browse_help_center": "浏览帮助中心",
+    "cat_getting_started": "入门指南",
+    "cat_getting_started_desc": "了解作为患者或医生使用 MyDoctors360 的基础知识。",
+    "cat_calendar": "日历与排期",
+    "cat_calendar_desc": "日历同步、服务商设置、ICS 订阅源和可用时间管理。",
+    "cat_payments": "支付与账单",
+    "cat_payments_desc": "支付方式、退款以及通过 Stripe Connect 向医生付款。",
+    "cat_account": "账户与设置",
+    "cat_account_desc": "个人资料管理、通知、安全和偏好设置。",
+    "cat_troubleshooting": "故障排除",
+    "cat_troubleshooting_desc": "日历同步、支付和视频通话常见问题的解决方案。"
+  },
+  "helpArticles": {
+    "how-to-book": {
+      "question": "如何预约挂号？",
+      "answer": "<strong>1.</strong> 使用搜索栏或浏览专科分类来查找医生。\n<strong>2.</strong> 查看医生的个人资料、患者评价、收费标准和可预约时间。\n<strong>3.</strong> 选择适合您的日期和时间段。\n<strong>4.</strong> 选择面诊或视频问诊（如果提供）。\n<strong>5.</strong> 通过Stripe安全完成支付。\n\n您将立即收到包含所有详情的确认邮件。预约信息也会显示在您的患者控制面板中。"
+    },
+    "patient-account-setup": {
+      "question": "如何创建患者账户？",
+      "answer": "点击首页的<strong>注册</strong>按钮，选择以患者身份注册。您可以使用电子邮箱和密码注册，也可以使用Google或Apple快速登录。\n\n注册后，请点击我们发送给您的链接验证您的电子邮箱。验证完成后，您可以浏览医生、预约挂号，并在控制面板中管理所有事项。"
+    },
+    "doctor-profile-setup": {
+      "question": "如何设置医生个人资料？",
+      "answer": "以医生身份注册后，请完善您的专业资料：\n\n<strong>1.</strong> 添加您的专业领域、资质和从业年限。\n<strong>2.</strong> 上传专业照片并撰写个人简介。\n<strong>3.</strong> 设置诊费和接诊类型（面诊、视频或两者兼有）。\n<strong>4.</strong> 配置您的出诊时间表。\n<strong>5.</strong> 连接Stripe账户以接收付款。\n\n您的资料将在上线前由我们的团队在24-48小时内审核验证。"
+    },
+    "setting-availability": {
+      "question": "如何设置出诊时间和工作时间？",
+      "answer": "在医生控制面板中，进入<strong>日历 → 可预约状态</strong>。\n\n您可以通过选择每天的工作时间来设置常规的每周排班。例如：周一至周五 9:00-17:00。\n\n您还可以创建<strong>日期覆盖</strong>来屏蔽特定日期（节假日、休息日）或为特定日期设置自定义时间。更改会立即生效，患者只能看到您的可预约时段。"
+    },
+    "video-consultation-how": {
+      "question": "视频问诊是如何进行的？",
+      "answer": "当您预约视频问诊时，系统会自动生成一个安全的视频通话链接。\n\n<strong>预约前：</strong>链接将通过邮件发送给您，同时也会显示在您的控制面板中。\n<strong>预约时间到时：</strong>点击链接即可在浏览器中直接加入通话——无需安装任何软件。\n<strong>所需条件：</strong>一台配备摄像头和麦克风的设备，以及稳定的网络连接。\n\n患者和医生均可通过任何现代网络浏览器（Chrome、Firefox、Safari、Edge）加入通话。"
+    },
+    "supported-languages": {
+      "question": "MyDoctors360支持哪些语言？",
+      "answer": "MyDoctors360支持<strong>9种语言</strong>：英语、德语、法语、土耳其语、西班牙语、意大利语、日语、葡萄牙语和中文。\n\n平台会自动检测您的浏览器语言，您也可以通过导航栏中的语言选择器进行切换。所有界面元素、通知和帮助文章均已翻译。\n\n医生还可以在个人资料中列出其掌握的语言，方便您找到能用您偏好语言交流的医生。"
+    },
+    "calendar-sync-overview": {
+      "question": "日历同步是如何工作的？",
+      "answer": "日历同步可以让您的MyDoctors360日程与外部日历（Google、Microsoft或Apple）保持一致。\n\n<strong>导入（外部 → MyDoctors360）：</strong>外部日历中的事件将作为已占用时段导入，防止患者在您已有安排的时间段进行预约。\n\n<strong>导出（MyDoctors360 → 外部）：</strong>当患者完成预约后，该预约会自动显示在您的外部日历中。\n\n<strong>如何保持更新：</strong>\n• <strong>Google日历：</strong>通过Webhook实时同步，并有10分钟间隔的备用同步。\n• <strong>Microsoft Outlook：</strong>通过Graph API订阅实时同步，并有10分钟间隔的备用同步。\n• <strong>Apple iCloud：</strong>每10分钟轮询一次（CalDAV不支持Webhook）。\n\n所有同步均在后台自动进行。您也可以在日历设置中手动触发同步。"
+    },
+    "google-calendar-setup": {
+      "question": "如何连接Google日历？",
+      "answer": "<strong>1.</strong> 进入医生控制面板 → 日历 → 集成。\n<strong>2.</strong> 点击<strong>连接Google日历</strong>。\n<strong>3.</strong> 使用您的Google账户登录并授权日历访问权限。\n<strong>4.</strong> 选择要同步的日历（例如：主日历）。\n\n连接后，将通过<strong>Webhook实时同步</strong>。当您的日历发生变更时，Google会立即通知我们。作为备用，我们还会每10分钟执行一次后台同步。\n\n您现有的Google日历事件将在连接后几分钟内作为已占用时段导入。"
+    },
+    "microsoft-calendar-setup": {
+      "question": "如何连接Microsoft Outlook / Office 365？",
+      "answer": "<strong>1.</strong> 进入医生控制面板 → 日历 → 集成。\n<strong>2.</strong> 点击<strong>连接Microsoft日历</strong>。\n<strong>3.</strong> 使用您的Microsoft账户（Outlook.com或Office 365）登录并授权。\n<strong>4.</strong> 您的默认日历将自动同步。\n\n同步使用<strong>Microsoft Graph API订阅</strong>进行实时更新，并有10分钟间隔的备用同步。当您的Outlook日历发生变更时，我们几乎会立即收到通知。\n\n支持个人Microsoft账户和工作/学校Office 365账户。"
+    },
+    "apple-icloud-setup": {
+      "question": "如何连接Apple iCloud / CalDAV日历？",
+      "answer": "<strong>1.</strong> 进入医生控制面板 → 日历 → 集成。\n<strong>2.</strong> 点击<strong>连接Apple日历</strong>。\n<strong>3.</strong> 在<strong>appleid.apple.com</strong>生成<strong>App专用密码</strong>（在\u201c登录与安全\u201d → \u201cApp专用密码\u201d下）。\n<strong>4.</strong> 输入您的Apple ID邮箱和App专用密码。\n\n<strong>重要提示：</strong>Apple iCloud使用CalDAV协议，不支持Webhook。同步通过<strong>每10分钟轮询</strong>进行。这意味着Apple日历中的更改可能需要最多10分钟才能在MyDoctors360上显示。\n\n此方法同样适用于Fastmail和Nextcloud等其他CalDAV服务提供商。"
+    },
+    "calendar-provider-comparison": {
+      "question": "各日历服务提供商有什么区别？",
+      "answer": "以下是三个支持的日历服务提供商的对比：\n\n<strong>Google日历：</strong>\n• 通过Webhook实时同步 ✓\n• OAuth认证 ✓\n• 同步速度最快\n\n<strong>Microsoft Outlook / Office 365：</strong>\n• 通过Graph订阅实时同步 ✓\n• OAuth认证 ✓\n• 支持个人账户和工作账户\n\n<strong>Apple iCloud / CalDAV：</strong>\n• 每10分钟轮询同步\n• App专用密码认证\n• 同样适用于Fastmail、Nextcloud及其他CalDAV服务器\n\n三个服务提供商均支持双向同步（导入和导出）。Google和Microsoft由于支持Webhook，同步速度最快。"
+    },
+    "ics-feed": {
+      "question": "什么是ICS日历订阅源？",
+      "answer": "ICS订阅源是一个<strong>只读订阅链接</strong>，可以让任何日历应用显示您的MyDoctors360预约。\n\n<strong>设置方法：</strong>\n<strong>1.</strong> 进入日历 → 集成 → ICS订阅源。\n<strong>2.</strong> 点击<strong>生成订阅链接</strong>来创建您的私人链接。\n<strong>3.</strong> 复制链接并粘贴到日历应用的\u201c订阅日历\u201d或\u201c通过URL添加\u201d功能中。\n\n您的日历应用会定期刷新订阅源以显示新预约。这是单向的——仅将MyDoctors360的预约显示在您的日历中，不会导入外部事件。\n\n<strong>注意：</strong>订阅链接中包含私有令牌，请勿与他人分享。您可以随时在设置中撤销并重新生成。"
+    },
+    "slot-locking": {
+      "question": "时段锁定如何防止重复预约？",
+      "answer": "当患者开始对某个时段进行结账时，该时段会<strong>被临时锁定15分钟</strong>。在此期间，其他患者无法预约同一时段。\n\n这采用了<strong>悲观锁定</strong>机制：\n• 结账开始时，时段状态变为<strong>pending_payment</strong>。\n• 如果支付成功完成，预约即被确认。\n• 如果患者在15分钟内未完成支付，锁定将过期，该时段重新变为可预约状态。\n\n这确保了即使两位患者同时尝试预约，也不会意外预约到同一时段。"
+    },
+    "conflict-detection": {
+      "question": "冲突检测是如何工作的？",
+      "answer": "当日历同步导入的事件与现有已确认的预约时间重叠时，系统会<strong>自动检测冲突</strong>并通知您。\n\n您将在控制面板中收到关于时间重叠的通知。这样您就有时间重新安排其中一个冲突的预约。\n\n<strong>常见情况：</strong>\n• 您在外部日历中添加了与患者预约时间重叠的个人事件。\n• 同步的外部事件被移动到与预约冲突的时间。\n\n冲突检测在每次日历同步处理新的或更新的事件时都会运行。"
+    },
+    "date-overrides": {
+      "question": "如何屏蔽日期或设置自定义时间？",
+      "answer": "进入医生控制面板 → 日历 → <strong>日期覆盖</strong>。\n\n<strong>屏蔽某天：</strong>选择日期并将其标记为不可用。该日将不显示任何可预约时段。\n\n<strong>设置自定义时间：</strong>选择日期并输入自定义的开始和结束时间。这将覆盖该特定日期的常规每周排班。\n\n<strong>使用场景：</strong>\n• 屏蔽节假日或休假日期\n• 为特定日期设置缩短的工作时间\n• 在通常不出诊的日期添加额外的出诊时间\n\n更改会立即生效。被屏蔽日期上已确认的预约不会自动取消——您需要手动重新安排。"
+    },
+    "how-payments-work": {
+      "question": "MyDoctors360的支付是如何运作的？",
+      "answer": "所有支付均通过符合PCI标准的支付处理商<strong>Stripe</strong>安全处理。\n\n<strong>对于患者：</strong>\n• 可使用信用卡、借记卡或其他Stripe支持的支付方式。\n• 在完成预约时收取费用。\n• 所有价格透明公开——没有隐藏费用。\n\n<strong>对于医生：</strong>\n• 患者的付款由Stripe收取并代管。\n• 扣除平台费用（15%）后，剩余金额将转入您关联的Stripe账户。\n• 提现按固定时间自动进行。\n\n所有交易均经过加密，安全可靠。我们的服务器不会存储您的完整银行卡信息。"
+    },
+    "refund-policy": {
+      "question": "退款和取消政策是什么？",
+      "answer": "每位医生都会设置自己的取消政策，并显示在其个人资料中。三种政策类型分别为：\n\n<strong>灵活：</strong>预约前2小时内可免费取消。\n<strong>适中：</strong>预约前24小时内可免费取消。\n<strong>严格：</strong>预约前48小时内可免费取消。\n\n如果您在允许的时间范围内取消，退款将自动退回到您的原始支付方式。退款通常在5-10个工作日内到账。\n\n如果医生取消了您的预约，无论取消政策如何，您都将获得<strong>全额退款</strong>。"
+    },
+    "doctor-payouts": {
+      "question": "医生的收入是如何发放的？",
+      "answer": "医生收入的发放通过<strong>Stripe Connect</strong>处理。\n\n当患者支付预约费用时：\n<strong>1.</strong> 全额由Stripe收取。\n<strong>2.</strong> 扣除平台费用（15%）。\n<strong>3.</strong> 剩余的85%转入您的Stripe账户。\n\n到您银行账户的提现遵循Stripe的标准时间（通常在付款后2-7个工作日，因国家/地区而异）。\n\n您可以在医生控制面板 → 收入板块中查看所有收入、待处理的提现和交易记录。"
+    },
+    "stripe-onboarding": {
+      "question": "如何设置Stripe以接收付款？",
+      "answer": "要接收患者付款，您需要连接Stripe账户：\n\n<strong>1.</strong> 进入医生控制面板 → 收入。\n<strong>2.</strong> 点击<strong>设置收款</strong>或<strong>连接Stripe</strong>。\n<strong>3.</strong> 您将被重定向到Stripe的引导设置流程。\n<strong>4.</strong> 提供您的业务信息、银行账户信息和身份验证。\n<strong>5.</strong> 验证通过后即可开始接收付款。\n\n我们使用<strong>Stripe Connect Express</strong>，这意味着Stripe会处理所有合规和税务报告事宜。设置通常需要5-10分钟。"
+    },
+    "supported-currencies": {
+      "question": "支持哪些货币？",
+      "answer": "MyDoctors360为国际医疗服务支持多种货币：\n\n• <strong>EUR</strong>（欧元）\n• <strong>GBP</strong>（英镑）\n• <strong>TRY</strong>（土耳其里拉）\n• <strong>USD</strong>（美元）\n\n医生以其首选货币设定诊费。患者看到的价格为医生的定价货币，并以该货币支付。Stripe自动处理货币事务。\n\n未来可能会根据需求增加更多货币。"
+    },
+    "update-profile": {
+      "question": "如何更新个人资料？",
+      "answer": "登录后进入控制面板，然后导航到<strong>设置</strong>或<strong>个人资料</strong>。\n\n<strong>对于患者：</strong>可更新姓名、电子邮箱、电话号码和其他个人信息。\n\n<strong>对于医生：</strong>可更新个人简介、资质、专业领域、诊费、头像照片、诊所地址等。\n\n更改会立即保存。如果您更新了电子邮箱地址，可能需要验证新邮箱。"
+    },
+    "notification-preferences": {
+      "question": "如何管理通知偏好设置？",
+      "answer": "进入控制面板 → <strong>设置 → 通知</strong>。\n\n您可以管理以下通知：\n• <strong>电子邮件：</strong>预约确认、提醒、取消通知\n• <strong>短信：</strong>预约提醒和紧急通知\n• <strong>WhatsApp：</strong>快捷提醒和预约通知\n\n每种通知类型可独立开启或关闭。我们建议保持预约确认和提醒通知开启，以免错过预约。"
+    },
+    "cancel-reschedule-booking": {
+      "question": "如何取消或改约？",
+      "answer": "进入患者控制面板 → <strong>我的预约</strong>。\n\n找到您要更改的预约，点击<strong>取消预约</strong>或<strong>改约</strong>。\n\n<strong>取消：</strong>如果在医生取消政策的时间范围内取消，您将获得全额退款。否则将收取取消费用。\n\n<strong>改约：</strong>从医生的可用时段中选择新的日期和时间。如果诊费未变，则无需额外支付。\n\n预约被取消或改约时，患者和医生都会收到邮件通知。"
+    },
+    "doctor-subscription": {
+      "question": "医生有哪些订阅方案可选？",
+      "answer": "MyDoctors360为希望获得增强功能和更高曝光度的医生提供订阅方案：\n\n<strong>免费方案：</strong>基础个人资料、标准搜索排名、日历集成和收款功能。\n\n<strong>高级方案：</strong>搜索结果优先展示、优先客服支持、高级数据分析，以及帮助拓展诊所业务的营销工具。\n\n所有方案均包含通过Stripe Connect的安全支付处理。您可以随时在医生控制面板 → 订阅中升级或降级方案。"
+    },
+    "account-security": {
+      "question": "如何保障账户安全？",
+      "answer": "以下是账户安全最佳实践：\n\n<strong>1. 使用强密码：</strong>至少8个字符，包含字母、数字和符号的组合。\n<strong>2. 不要分享登录信息：</strong>您的账户是个人的，不应与他人共享。\n<strong>3. 验证邮箱：</strong>确保您的电子邮箱已通过验证。\n<strong>4. 在共享设备上注销：</strong>使用公共或共享计算机时，务必注销账户。\n<strong>5. 警惕钓鱼攻击：</strong>我们绝不会通过邮件索要您的密码。如果您收到可疑邮件，请联系客服。\n\n如果您怀疑账户被未授权访问，请立即更改密码并联系我们的客服团队。"
+    },
+    "calendar-not-syncing": {
+      "question": "日历没有同步——该怎么办？",
+      "answer": "请按以下步骤排查日历同步问题：\n\n<strong>1. 检查连接状态：</strong>进入日历 → 集成，确认您的日历显示为\u201c已连接\u201d。\n\n<strong>2. 尝试手动同步：</strong>点击<strong>立即同步</strong>按钮触发即时同步。\n\n<strong>3. 验证凭据：</strong>如果状态显示错误，请尝试断开连接后重新连接日历。\n\n<strong>4. 检查日历权限：</strong>确保MyDoctors360拥有您日历的读写权限。\n\n<strong>5. 对于Apple iCloud：</strong>请注意CalDAV同步每10分钟运行一次，可能会有短暂延迟。\n\n如果尝试以上步骤后问题仍未解决，请附上您使用的日历服务和所看到的错误信息，联系我们的客服团队。"
+    },
+    "google-auth-expired": {
+      "question": "Google日历授权已过期",
+      "answer": "如果您更改了Google密码、撤销了应用权限或长时间未使用，Google OAuth令牌可能会过期。\n\n<strong>解决方法：</strong>\n<strong>1.</strong> 进入医生控制面板 → 日历 → 集成。\n<strong>2.</strong> 点击Google日历旁的<strong>断开连接</strong>。\n<strong>3.</strong> 再次点击<strong>连接Google日历</strong>。\n<strong>4.</strong> 登录并重新授权。\n\n您之前的同步数据将被保留。新连接将立即恢复同步。\n\n<strong>提示：</strong>您也可以在<strong>myaccount.google.com/permissions</strong>检查已连接的应用，确保MyDoctors360仍有访问权限。"
+    },
+    "apple-password-revoked": {
+      "question": "Apple iCloud App专用密码已被撤销",
+      "answer": "如果您更改了Apple ID密码或从Apple账户中手动撤销，App专用密码可能会失效。\n\n<strong>解决方法：</strong>\n<strong>1.</strong> 前往<strong>appleid.apple.com</strong>并登录。\n<strong>2.</strong> 导航到<strong>登录与安全 → App专用密码</strong>。\n<strong>3.</strong> 生成一个<strong>新的App专用密码</strong>。\n<strong>4.</strong> 在MyDoctors360上，进入日历 → 集成。\n<strong>5.</strong> 断开Apple日历连接。\n<strong>6.</strong> 使用您的Apple ID邮箱和新的App专用密码重新连接。\n\n同步将在下一个轮询周期（10分钟内）恢复。"
+    },
+    "payment-failed": {
+      "question": "支付失败——该怎么办？",
+      "answer": "支付失败可能有以下原因：\n\n<strong>• 余额不足：</strong>请确认您的银行卡有足够的余额。\n<strong>• 银行卡被拒：</strong>您的银行可能拦截了该交易。请联系银行授权该笔交易。\n<strong>• 银行卡过期：</strong>请更新卡片信息后重试。\n<strong>• 3D Secure验证失败：</strong>出现提示时，请完成银行的身份验证步骤。\n\n<strong>重试方法：</strong>\n<strong>1.</strong> 支付失败后，该时段将保持锁定15分钟。\n<strong>2.</strong> 返回预约页面，使用其他银行卡重试，或在与银行解决问题后再次尝试。\n\n如果您已被扣费但未看到预约确认，请联系我们的客服团队——我们会立即调查处理。"
+    },
+    "video-call-issues": {
+      "question": "视频通话出现问题",
+      "answer": "如果您遇到视频通话问题，请尝试以下步骤：\n\n<strong>1. 检查浏览器：</strong>请使用现代浏览器（Chrome、Firefox、Safari或Edge），确保已更新到最新版本。\n\n<strong>2. 允许摄像头和麦克风：</strong>出现提示时，点击\u201c允许\u201d授予浏览器权限。您也可以在浏览器设置中检查此项。\n\n<strong>3. 检查网络连接：</strong>视频通话建议使用至少2Mbps的稳定网络连接。\n\n<strong>4. 关闭其他应用：</strong>其他视频应用（Zoom、Teams等）可能正在使用您的摄像头。关闭它们后重试。\n\n<strong>5. 尝试其他浏览器：</strong>如果问题持续存在，请切换到其他浏览器。\n\n<strong>6. 重启设备：</strong>重启可以修复由其他软件引起的摄像头或麦克风问题。\n\n如果双方都无法连接，请联系客服，我们将帮助您重新安排预约。"
+    },
+    "booking-slot-unavailable": {
+      "question": "我选择的预约时段消失了",
+      "answer": "时段变为不可用的原因可能有以下几种：\n\n<strong>• 其他患者已预约：</strong>在您浏览时，其他患者可能已完成该时段的结账。\n\n<strong>• 时段被锁定：</strong>其他患者可能正在结账中（支付期间时段会被锁定15分钟）。\n\n<strong>• 日历同步更新：</strong>医生的外部日历可能更新了与该时间冲突的事件，自动屏蔽了该时段。\n\n<strong>• 医生更改了出诊时间：</strong>医生可能更新了排班或添加了日期覆盖。\n\n<strong>解决方法：</strong>刷新页面查看最新的可用时段，并选择其他时间。如果您多次遇到找不到可用时段的问题，请尝试在不同时间查看，或直接联系医生诊所。"
+    },
+    "sync-delay-apple": {
+      "question": "为什么我的Apple日历同步有延迟？",
+      "answer": "Apple iCloud日历使用<strong>CalDAV协议</strong>，不支持实时通知（Webhook）。MyDoctors360通过<strong>每10分钟轮询您的日历</strong>来检查变更。\n\n这意味着：\n• Apple日历中的更改可能需要<strong>最多10分钟</strong>才能在MyDoctors360上显示。\n• MyDoctors360上的新预约可能需要最多10分钟才能在Apple日历中显示。\n\n<strong>减少延迟的建议：</strong>\n• 使用日历设置中的<strong>立即同步</strong>按钮触发即时同步。\n• 如果时效性很重要，建议考虑使用Google或Microsoft日历以获得实时同步。\n\n这是CalDAV协议的限制，不是Bug。Google和Microsoft日历支持Webhook通知，因此可以实时同步。"
+    }
   },
   "findPharmacy": {
     "title": "查找药店",

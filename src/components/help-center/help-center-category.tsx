@@ -9,6 +9,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { HelpCategory } from "./help-center-data";
 
 interface HelpCenterCategoryProps {
@@ -18,19 +19,23 @@ interface HelpCenterCategoryProps {
   onArticleToggle: (articleId: string | null) => void;
 }
 
-const audienceLabels: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-  doctor: { label: "For Doctors", variant: "default" },
-  patient: { label: "For Patients", variant: "secondary" },
-  all: { label: "Everyone", variant: "outline" },
-};
-
 export function HelpCenterCategory({
   category,
   searchQuery,
   openArticleId,
   onArticleToggle,
 }: HelpCenterCategoryProps) {
+  const t = useTranslations("helpCenter");
   const Icon = category.icon;
+
+  const audienceLabels: Record<
+    string,
+    { label: string; variant: "default" | "secondary" | "outline" }
+  > = {
+    doctor: { label: t("for_doctors"), variant: "default" },
+    patient: { label: t("for_patients"), variant: "secondary" },
+    all: { label: t("everyone"), variant: "outline" },
+  };
 
   const filteredArticles = searchQuery
     ? category.articles.filter((article) => {
@@ -110,10 +115,10 @@ export function HelpCenterCategory({
                     <button
                       onClick={() => copyLink(article.id)}
                       className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground/60 transition-colors hover:text-primary"
-                      title="Copy link to this article"
+                      title={t("copy_link")}
                     >
                       <Link2 className="h-3 w-3" />
-                      Copy link
+                      {t("copy_link")}
                     </button>
                   </AccordionContent>
                 </AccordionItem>

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/accordion";
 import { Link } from "@/i18n/navigation";
 import { Mail, FileText, MessageCircle, HelpCircle, BookOpen, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 const supportEmail =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@mydoctors360.com";
@@ -47,6 +48,7 @@ const faqs = [
 ];
 
 export default function SupportPage() {
+  const t = useTranslations("helpCenter");
   return (
     <>
       {/* Hero */}
@@ -76,17 +78,16 @@ export default function SupportPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold">
-                    Looking for guides and troubleshooting?
+                    {t("help_center_banner_title")}
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Visit our Help Center for step-by-step guides, calendar
-                    setup instructions, and more.
+                    {t("help_center_banner_desc")}
                   </p>
                 </div>
               </div>
               <Button className="shrink-0 rounded-full" asChild>
                 <Link href="/help-center">
-                  Browse Help Center{" "}
+                  {t("browse_help_center")}{" "}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

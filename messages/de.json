@@ -169,6 +169,170 @@
     "help_center": "Hilfezentrum",
     "copyright": "Alle Rechte vorbehalten."
   },
+  "helpCenter": {
+    "title": "Hilfezentrum",
+    "subtitle": "Finden Sie Anleitungen, Tipps zur Fehlerbehebung und Antworten auf häufige Fragen zu Buchungen, Kalender-Synchronisierung, Zahlungen und mehr.",
+    "search_placeholder": "Hilfeartikel durchsuchen...",
+    "articles_found": "{count} {count, plural, one {Artikel} other {Artikel}} gefunden für \"{query}\"",
+    "no_results": "Keine Artikel gefunden für \"{query}\".",
+    "no_results_hint": "Versuchen Sie andere Suchbegriffe oder",
+    "contact_support_link": "kontaktieren Sie den Support",
+    "no_results_clear": "Keine Artikel entsprechen Ihrer Suche.",
+    "no_results_clear_hint": "Versuchen Sie andere Suchbegriffe oder durchsuchen Sie alle Kategorien.",
+    "clear_search": "Suche löschen",
+    "articles_count": "{count} Artikel",
+    "still_need_help": "Brauchen Sie noch Hilfe?",
+    "still_need_help_desc": "Sie finden nicht, was Sie suchen? Unser Support-Team hilft Ihnen gerne weiter.",
+    "contact_support": "Support kontaktieren",
+    "support_options": "Support-Optionen",
+    "copy_link": "Link kopieren",
+    "for_doctors": "Für Ärzte",
+    "for_patients": "Für Patienten",
+    "everyone": "Alle",
+    "help_center_banner_title": "Suchen Sie Anleitungen und Fehlerbehebung?",
+    "help_center_banner_desc": "Besuchen Sie unser Hilfezentrum für Schritt-für-Schritt-Anleitungen, Kalender-Einrichtung und mehr.",
+    "browse_help_center": "Hilfezentrum durchsuchen",
+    "cat_getting_started": "Erste Schritte",
+    "cat_getting_started_desc": "Lernen Sie die Grundlagen der Nutzung von MyDoctors360 als Patient oder Arzt.",
+    "cat_calendar": "Kalender & Terminplanung",
+    "cat_calendar_desc": "Kalender-Synchronisierung, Anbieter-Einrichtung, ICS-Feeds und Verfügbarkeitsverwaltung.",
+    "cat_payments": "Zahlungen & Abrechnung",
+    "cat_payments_desc": "Wie Zahlungen funktionieren, Rückerstattungen und Arzt-Auszahlungen über Stripe Connect.",
+    "cat_account": "Konto & Einstellungen",
+    "cat_account_desc": "Profilverwaltung, Benachrichtigungen, Sicherheit und Einstellungen.",
+    "cat_troubleshooting": "Fehlerbehebung",
+    "cat_troubleshooting_desc": "Lösungen für häufige Probleme mit Kalender-Synchronisierung, Zahlungen und Videoanrufen."
+  },
+  "helpArticles": {
+    "how-to-book": {
+      "question": "Wie buche ich einen Termin?",
+      "answer": "<strong>1.</strong> Verwenden Sie die Suchleiste oder durchsuchen Sie Fachgebiete, um einen Arzt zu finden.\n<strong>2.</strong> Sehen Sie sich das Profil des Arztes, Bewertungen, Gebühren und verfügbare Zeiten an.\n<strong>3.</strong> Wählen Sie ein Datum und eine Uhrzeit, die Ihnen passen.\n<strong>4.</strong> Wählen Sie zwischen einer persönlichen oder einer Video-Konsultation (falls angeboten).\n<strong>5.</strong> Schließen Sie die Zahlung sicher über Stripe ab.\n\nSie erhalten sofort eine E-Mail-Bestätigung mit allen Details. Der Termin erscheint auch in Ihrem Patienten-Dashboard."
+    },
+    "patient-account-setup": {
+      "question": "Wie erstelle ich ein Patientenkonto?",
+      "answer": "Klicken Sie auf der Startseite auf <strong>Registrieren</strong> und wählen Sie die Registrierung als Patient. Sie können sich mit Ihrer E-Mail-Adresse und einem Passwort anmelden oder die Google- oder Apple-Anmeldung für einen schnelleren Zugang nutzen.\n\nBestätigen Sie nach der Registrierung Ihre E-Mail-Adresse, indem Sie auf den Link klicken, den wir Ihnen zusenden. Nach der Bestätigung können Sie Ärzte durchsuchen, Termine buchen und alles über Ihr Dashboard verwalten."
+    },
+    "doctor-profile-setup": {
+      "question": "Wie richte ich mein Arztprofil ein?",
+      "answer": "Vervollständigen Sie nach der Registrierung als Arzt Ihr professionelles Profil:\n\n<strong>1.</strong> Fügen Sie Ihre medizinischen Fachgebiete, Qualifikationen und Berufserfahrung hinzu.\n<strong>2.</strong> Laden Sie ein professionelles Foto hoch und schreiben Sie eine Biografie.\n<strong>3.</strong> Legen Sie Ihre Beratungsgebühr fest und wählen Sie die akzeptierten Konsultationsarten (persönlich, Video oder beides).\n<strong>4.</strong> Konfigurieren Sie Ihren Verfügbarkeitsplan.\n<strong>5.</strong> Verbinden Sie Ihr Stripe-Konto, um Zahlungen zu empfangen.\n\nIhr Profil wird von unserem Team innerhalb von 24–48 Stunden überprüft und verifiziert, bevor es freigeschaltet wird."
+    },
+    "setting-availability": {
+      "question": "Wie lege ich meine Verfügbarkeit und Arbeitszeiten fest?",
+      "answer": "Gehen Sie in Ihrem Arzt-Dashboard zu <strong>Kalender → Verfügbarkeit</strong>.\n\nSie können Ihren regulären Wochenplan festlegen, indem Sie Arbeitszeiten für jeden Wochentag wählen. Zum Beispiel Montag–Freitag 9:00–17:00.\n\nSie können auch <strong>Datumsausnahmen</strong> erstellen, um bestimmte Tage zu blockieren (Feiertage, freie Tage) oder individuelle Zeiten für bestimmte Tage festzulegen. Änderungen werden sofort wirksam und Patienten sehen nur Ihre verfügbaren Zeitfenster."
+    },
+    "video-consultation-how": {
+      "question": "Wie funktionieren Video-Konsultationen?",
+      "answer": "Wenn Sie eine Video-Konsultation buchen, wird automatisch ein sicherer Videoanruf-Link erstellt.\n\n<strong>Vor dem Termin:</strong> Sie erhalten den Link per E-Mail und er erscheint auch in Ihrem Dashboard.\n<strong>Zur geplanten Zeit:</strong> Klicken Sie auf den Link, um den Anruf direkt in Ihrem Browser zu starten — keine Software-Installation erforderlich.\n<strong>Voraussetzungen:</strong> Ein Gerät mit Kamera und Mikrofon sowie eine stabile Internetverbindung.\n\nSowohl Patienten als auch Ärzte können den Anruf von jedem modernen Webbrowser aus beitreten (Chrome, Firefox, Safari, Edge)."
+    },
+    "supported-languages": {
+      "question": "Welche Sprachen unterstützt MyDoctors360?",
+      "answer": "MyDoctors360 ist in <strong>9 Sprachen</strong> verfügbar: Englisch, Deutsch, Französisch, Türkisch, Spanisch, Italienisch, Japanisch, Portugiesisch und Chinesisch.\n\nDie Plattform erkennt automatisch Ihre Browsersprache, oder Sie können die Sprache über den Sprachauswähler in der Navigationsleiste wechseln. Alle Oberflächenelemente, Benachrichtigungen und Hilfeartikel sind übersetzt.\n\nÄrzte können in ihrem Profil auch angeben, welche Sprachen sie sprechen, damit Sie einen Arzt finden können, der Ihre bevorzugte Sprache spricht."
+    },
+    "calendar-sync-overview": {
+      "question": "Wie funktioniert die Kalender-Synchronisierung?",
+      "answer": "Die Kalender-Synchronisierung hält Ihren MyDoctors360-Terminplan mit Ihrem externen Kalender (Google, Microsoft oder Apple) in Einklang.\n\n<strong>Import (Extern → MyDoctors360):</strong> Termine aus Ihrem externen Kalender werden als blockierte Zeitfenster importiert. Dies verhindert, dass Patienten zu Zeiten buchen, in denen Sie bereits beschäftigt sind.\n\n<strong>Export (MyDoctors360 → Extern):</strong> Wenn ein Patient einen Termin bucht, erscheint dieser automatisch in Ihrem externen Kalender.\n\n<strong>So bleibt alles aktuell:</strong>\n• <strong>Google Calendar:</strong> Echtzeit über Webhooks, mit einem 10-Minuten-Fallback-Sync.\n• <strong>Microsoft Outlook:</strong> Echtzeit über Graph API-Abonnements, mit einem 10-Minuten-Fallback-Sync.\n• <strong>Apple iCloud:</strong> Abfrage alle 10 Minuten (CalDAV unterstützt keine Webhooks).\n\nDie gesamte Synchronisierung erfolgt automatisch im Hintergrund. Sie können auch eine manuelle Synchronisierung über Ihre Kalendereinstellungen auslösen."
+    },
+    "google-calendar-setup": {
+      "question": "Wie verbinde ich Google Calendar?",
+      "answer": "<strong>1.</strong> Gehen Sie zu Ihrem Arzt-Dashboard → Kalender → Integrationen.\n<strong>2.</strong> Klicken Sie auf <strong>Google Calendar verbinden</strong>.\n<strong>3.</strong> Melden Sie sich mit Ihrem Google-Konto an und erteilen Sie Kalenderberechtigungen.\n<strong>4.</strong> Wählen Sie den Kalender aus, der synchronisiert werden soll (z. B. Ihr Hauptkalender).\n\nNach der Verbindung erfolgt die Synchronisierung in <strong>Echtzeit über Webhooks</strong>. Google benachrichtigt uns sofort, wenn sich Ihr Kalender ändert. Als Fallback führen wir außerdem alle 10 Minuten eine Hintergrund-Synchronisierung durch.\n\nIhre bestehenden Google Calendar-Termine werden innerhalb weniger Minuten nach der Verbindung als blockierte Zeitfenster importiert."
+    },
+    "microsoft-calendar-setup": {
+      "question": "Wie verbinde ich Microsoft Outlook / Office 365?",
+      "answer": "<strong>1.</strong> Gehen Sie zu Ihrem Arzt-Dashboard → Kalender → Integrationen.\n<strong>2.</strong> Klicken Sie auf <strong>Microsoft-Kalender verbinden</strong>.\n<strong>3.</strong> Melden Sie sich mit Ihrem Microsoft-Konto (Outlook.com oder Office 365) an und erteilen Sie die Berechtigungen.\n<strong>4.</strong> Ihr Standardkalender wird automatisch synchronisiert.\n\nDie Synchronisierung nutzt <strong>Microsoft Graph API-Abonnements</strong> für Echtzeit-Updates, mit einem 10-Minuten-Fallback-Sync. Wenn sich Ihr Outlook-Kalender ändert, werden wir nahezu sofort benachrichtigt.\n\nSowohl persönliche Microsoft-Konten als auch Geschäfts-/Schulkonten von Office 365 werden unterstützt."
+    },
+    "apple-icloud-setup": {
+      "question": "Wie verbinde ich Apple iCloud / CalDAV-Kalender?",
+      "answer": "<strong>1.</strong> Gehen Sie zu Ihrem Arzt-Dashboard → Kalender → Integrationen.\n<strong>2.</strong> Klicken Sie auf <strong>Apple-Kalender verbinden</strong>.\n<strong>3.</strong> Erstellen Sie ein <strong>App-spezifisches Passwort</strong> unter <strong>appleid.apple.com</strong> (unter Anmeldung & Sicherheit → App-spezifische Passwörter).\n<strong>4.</strong> Geben Sie Ihre Apple-ID-E-Mail und das App-spezifische Passwort ein.\n\n<strong>Wichtig:</strong> Apple iCloud verwendet das CalDAV-Protokoll, das keine Webhooks unterstützt. Die Synchronisierung erfolgt durch <strong>Abfrage alle 10 Minuten</strong>. Das bedeutet, dass Änderungen in Ihrem Apple-Kalender bis zu 10 Minuten brauchen können, um auf MyDoctors360 zu erscheinen.\n\nDiese Methode funktioniert auch mit anderen CalDAV-Anbietern wie Fastmail und Nextcloud."
+    },
+    "calendar-provider-comparison": {
+      "question": "Was sind die Unterschiede zwischen den Kalenderanbietern?",
+      "answer": "So vergleichen sich die drei unterstützten Anbieter:\n\n<strong>Google Calendar:</strong>\n• Echtzeit-Synchronisierung über Webhooks ✓\n• OAuth-Authentifizierung ✓\n• Schnellste Synchronisierungsgeschwindigkeit\n\n<strong>Microsoft Outlook / Office 365:</strong>\n• Echtzeit-Synchronisierung über Graph-Abonnements ✓\n• OAuth-Authentifizierung ✓\n• Unterstützt sowohl persönliche als auch Geschäftskonten\n\n<strong>Apple iCloud / CalDAV:</strong>\n• Abfrage-Synchronisierung alle 10 Minuten\n• Authentifizierung über App-spezifisches Passwort\n• Funktioniert auch mit Fastmail, Nextcloud und anderen CalDAV-Servern\n\nAlle drei Anbieter unterstützen bidirektionale Synchronisierung (Import und Export). Google und Microsoft bieten die schnellste Synchronisierung dank Webhook-Unterstützung."
+    },
+    "ics-feed": {
+      "question": "Was ist der ICS-Kalender-Feed?",
+      "answer": "Der ICS-Feed ist eine <strong>schreibgeschützte Abonnement-URL</strong>, die es jeder Kalender-App ermöglicht, Ihre MyDoctors360-Buchungen anzuzeigen.\n\n<strong>So richten Sie ihn ein:</strong>\n<strong>1.</strong> Gehen Sie zu Kalender → Integrationen → ICS-Feed.\n<strong>2.</strong> Klicken Sie auf <strong>Feed-URL generieren</strong>, um Ihre private URL zu erstellen.\n<strong>3.</strong> Kopieren Sie die URL und fügen Sie sie in die Funktion \u201EKalender abonnieren\u201C oder \u201EPer URL hinzuf\u00FCgen\u201C Ihrer Kalender-App ein.\n\nIhre Kalender-App aktualisiert den Feed regelmäßig, um neue Buchungen anzuzeigen. Dies ist nur in eine Richtung möglich — es zeigt Ihre MyDoctors360-Buchungen in Ihrem Kalender an, importiert aber keine externen Termine.\n\n<strong>Hinweis:</strong> Die Feed-URL enthält einen privaten Token. Teilen Sie ihn nicht mit anderen. Sie können ihn jederzeit in Ihren Einstellungen widerrufen und neu generieren."
+    },
+    "slot-locking": {
+      "question": "Wie verhindert die Zeitfenster-Sperrung Doppelbuchungen?",
+      "answer": "Wenn ein Patient den Bezahlvorgang für ein Zeitfenster beginnt, wird dieses Zeitfenster <strong>vorübergehend für 15 Minuten gesperrt</strong>. In dieser Zeit kann kein anderer Patient dasselbe Zeitfenster buchen.\n\nDies verwendet einen Ansatz der <strong>pessimistischen Sperrung</strong>:\n• Der Status des Zeitfensters wechselt zu <strong>Zahlung ausstehend</strong>, wenn der Bezahlvorgang beginnt.\n• Wenn die Zahlung erfolgreich abgeschlossen wird, wird die Buchung bestätigt.\n• Wenn der Patient die Zahlung nicht innerhalb von 15 Minuten abschließt, läuft die Sperre ab und das Zeitfenster wird wieder verfügbar.\n\nDadurch wird sichergestellt, dass zwei Patienten niemals versehentlich dasselbe Zeitfenster buchen können, selbst wenn sie gleichzeitig versuchen zu buchen."
+    },
+    "conflict-detection": {
+      "question": "Wie funktioniert die Konflikterkennung?",
+      "answer": "Wenn die Kalender-Synchronisierung einen Termin importiert, der sich mit einer bestehenden bestätigten Buchung überschneidet, <strong>erkennt das System den Konflikt automatisch</strong> und benachrichtigt Sie.\n\nSie erhalten eine Benachrichtigung in Ihrem Dashboard, die Sie auf die Überschneidung hinweist. So haben Sie Zeit, einen der sich überschneidenden Termine umzubuchen.\n\n<strong>Häufige Szenarien:</strong>\n• Sie fügen Ihrem externen Kalender einen privaten Termin hinzu, der sich mit einer Patientenbuchung überschneidet.\n• Ein synchronisierter externer Termin wird auf eine Zeit verschoben, die mit einer Buchung in Konflikt steht.\n\nDie Konflikterkennung wird jedes Mal ausgeführt, wenn die Kalender-Synchronisierung neue oder aktualisierte Termine verarbeitet."
+    },
+    "date-overrides": {
+      "question": "Wie blockiere ich Tage oder lege individuelle Zeiten fest?",
+      "answer": "Gehen Sie in Ihrem Arzt-Dashboard zu Kalender → <strong>Datumsausnahmen</strong>.\n\n<strong>Um einen Tag zu blockieren:</strong> Wählen Sie das Datum aus und markieren Sie es als nicht verfügbar. Für diesen Tag werden keine Zeitfenster angezeigt.\n\n<strong>Um individuelle Zeiten festzulegen:</strong> Wählen Sie das Datum aus und geben Sie Ihre individuellen Start- und Endzeiten ein. Dies überschreibt Ihren regulären Wochenplan für diesen bestimmten Tag.\n\n<strong>Anwendungsfälle:</strong>\n• Tage für Feiertage oder Urlaub blockieren\n• Verkürzte Arbeitszeiten für einen bestimmten Tag festlegen\n• Zusätzliche Stunden an einem normalerweise freien Tag hinzufügen\n\nÄnderungen werden sofort wirksam. Bestehende bestätigte Buchungen an blockierten Tagen werden nicht automatisch storniert — diese müssen Sie manuell umbuchen."
+    },
+    "how-payments-work": {
+      "question": "Wie funktionieren Zahlungen auf MyDoctors360?",
+      "answer": "Alle Zahlungen werden sicher über <strong>Stripe</strong> abgewickelt, einen PCI-konformen Zahlungsdienstleister.\n\n<strong>Für Patienten:</strong>\n• Zahlen Sie mit Kreditkarte, Debitkarte oder anderen von Stripe unterstützten Zahlungsmethoden.\n• Die Zahlung wird bei Abschluss Ihrer Buchung eingezogen.\n• Alle Preise werden im Voraus angezeigt — keine versteckten Gebühren.\n\n<strong>Für Ärzte:</strong>\n• Zahlungen werden von Patienten eingezogen und von Stripe verwahrt.\n• Nach Abzug der Plattformgebühr (15 %) wird der verbleibende Betrag auf Ihr verbundenes Stripe-Konto überwiesen.\n• Auszahlungen erfolgen automatisch nach einem regelmäßigen Zeitplan.\n\nAlle Transaktionen sind verschlüsselt und sicher. Wir speichern niemals Ihre vollständigen Kartendaten auf unseren Servern."
+    },
+    "refund-policy": {
+      "question": "Wie lauten die Erstattungs- und Stornierungsbedingungen?",
+      "answer": "Jeder Arzt legt seine eigenen Stornierungsbedingungen fest, die auf seinem Profil angezeigt werden. Die drei Richtlinienarten sind:\n\n<strong>Flexibel:</strong> Kostenlose Stornierung bis zu 2 Stunden vor dem Termin.\n<strong>Moderat:</strong> Kostenlose Stornierung bis zu 24 Stunden vorher.\n<strong>Streng:</strong> Kostenlose Stornierung bis zu 48 Stunden vorher.\n\nWenn Sie innerhalb des zulässigen Zeitfensters stornieren, wird Ihre Erstattung automatisch auf Ihre ursprüngliche Zahlungsmethode überwiesen. Erstattungen erscheinen in der Regel innerhalb von 5–10 Werktagen.\n\nWenn ein Arzt Ihren Termin storniert, erhalten Sie unabhängig von den Stornierungsbedingungen immer eine <strong>vollständige Erstattung</strong>."
+    },
+    "doctor-payouts": {
+      "question": "Wie funktionieren Arzt-Auszahlungen?",
+      "answer": "Arzt-Auszahlungen werden über <strong>Stripe Connect</strong> abgewickelt.\n\nWenn ein Patient eine Buchung bezahlt:\n<strong>1.</strong> Der volle Betrag wird von Stripe eingezogen.\n<strong>2.</strong> Die Plattformgebühr (15 %) wird abgezogen.\n<strong>3.</strong> Die verbleibenden 85 % werden auf Ihr Stripe-Konto überwiesen.\n\nAuszahlungen auf Ihr Bankkonto folgen dem Standardzeitplan von Stripe (in der Regel 2–7 Werktage nach der Zahlung, je nach Land).\n\nSie können alle Ihre Einnahmen, ausstehenden Auszahlungen und die Transaktionshistorie in Ihrem Arzt-Dashboard → Bereich Zahlungen einsehen."
+    },
+    "stripe-onboarding": {
+      "question": "Wie richte ich Stripe ein, um Zahlungen zu empfangen?",
+      "answer": "Um Patientenzahlungen zu empfangen, müssen Sie ein Stripe-Konto verbinden:\n\n<strong>1.</strong> Gehen Sie zu Arzt-Dashboard → Zahlungen.\n<strong>2.</strong> Klicken Sie auf <strong>Zahlungen einrichten</strong> oder <strong>Stripe verbinden</strong>.\n<strong>3.</strong> Sie werden zum Onboarding-Prozess von Stripe weitergeleitet.\n<strong>4.</strong> Geben Sie Ihre Geschäftsdaten, Bankkontoinformationen und Identitätsverifizierung an.\n<strong>5.</strong> Nach der Verifizierung können Sie Zahlungen empfangen.\n\nWir verwenden <strong>Stripe Connect Express</strong>, was bedeutet, dass Stripe die gesamte Compliance und Steuerberichterstattung übernimmt. Die Einrichtung dauert in der Regel 5–10 Minuten."
+    },
+    "supported-currencies": {
+      "question": "Welche Währungen werden unterstützt?",
+      "answer": "MyDoctors360 unterstützt mehrere Währungen für internationale Gesundheitsversorgung:\n\n• <strong>EUR</strong> (Euro)\n• <strong>GBP</strong> (Britisches Pfund)\n• <strong>TRY</strong> (Türkische Lira)\n• <strong>USD</strong> (US-Dollar)\n\nÄrzte legen ihre Beratungsgebühren in ihrer bevorzugten Währung fest. Patienten sehen die Preise in der Währung des Arztes und zahlen in dieser Währung. Stripe übernimmt die Währungsverarbeitung automatisch.\n\nWeitere Währungen können in Zukunft je nach Nachfrage hinzugefügt werden."
+    },
+    "update-profile": {
+      "question": "Wie aktualisiere ich mein Profil?",
+      "answer": "Melden Sie sich an und gehen Sie zu Ihrem Dashboard, dann navigieren Sie zu <strong>Einstellungen</strong> oder <strong>Profil</strong>.\n\n<strong>Für Patienten:</strong> Aktualisieren Sie Ihren Namen, Ihre E-Mail-Adresse, Telefonnummer und andere persönliche Daten.\n\n<strong>Für Ärzte:</strong> Aktualisieren Sie Ihre Biografie, Qualifikationen, Fachgebiete, Beratungsgebühren, Profilfoto, Praxisadresse und mehr.\n\nÄnderungen werden sofort gespeichert. Wenn Sie Ihre E-Mail-Adresse ändern, müssen Sie die neue E-Mail-Adresse möglicherweise bestätigen."
+    },
+    "notification-preferences": {
+      "question": "Wie verwalte ich meine Benachrichtigungseinstellungen?",
+      "answer": "Gehen Sie zu Ihrem Dashboard → <strong>Einstellungen → Benachrichtigungen</strong>.\n\nSie können Benachrichtigungen für folgende Kanäle steuern:\n• <strong>E-Mail:</strong> Buchungsbestätigungen, Erinnerungen, Stornierungen\n• <strong>SMS:</strong> Terminerinnerungen und dringende Mitteilungen\n• <strong>WhatsApp:</strong> Schnelle Erinnerungen und Buchungsbenachrichtigungen\n\nJeder Benachrichtigungstyp kann unabhängig ein- oder ausgeschaltet werden. Wir empfehlen, Buchungsbestätigungs- und Erinnerungsbenachrichtigungen aktiviert zu lassen, um keine Termine zu verpassen."
+    },
+    "cancel-reschedule-booking": {
+      "question": "Wie storniere oder verlege ich eine Buchung?",
+      "answer": "Gehen Sie zu Ihrem Patienten-Dashboard → <strong>Meine Buchungen</strong>.\n\nSuchen Sie die Buchung, die Sie ändern möchten, und klicken Sie auf <strong>Buchung stornieren</strong> oder <strong>Umbuchen</strong>.\n\n<strong>Stornierung:</strong> Wenn Sie innerhalb des Stornierungszeitraums des Arztes stornieren, erhalten Sie eine vollständige Erstattung. Andernfalls fällt eine Stornierungsgebühr an.\n\n<strong>Umbuchung:</strong> Wählen Sie ein neues Datum und eine neue Uhrzeit aus den verfügbaren Zeitfenstern des Arztes. Es ist keine zusätzliche Zahlung erforderlich, wenn sich die Beratungsgebühr nicht geändert hat.\n\nSowohl Patienten als auch Ärzte erhalten E-Mail-Benachrichtigungen, wenn eine Buchung storniert oder umgebucht wird."
+    },
+    "doctor-subscription": {
+      "question": "Welche Abonnementpläne gibt es für Ärzte?",
+      "answer": "MyDoctors360 bietet Abonnementpläne für Ärzte, die erweiterte Funktionen und Sichtbarkeit wünschen:\n\n<strong>Kostenloser Plan:</strong> Basisprofil, Standard-Suchplatzierung, Kalenderintegration und Zahlungsabwicklung.\n\n<strong>Premium-Plan:</strong> Hervorgehobene Platzierung in Suchergebnissen, bevorzugter Support, erweiterte Analysen und Marketingtools für das Wachstum Ihrer Praxis.\n\nAlle Pläne umfassen sichere Zahlungsabwicklung über Stripe Connect. Sie können Ihren Plan jederzeit über Ihr Arzt-Dashboard → Abonnement upgraden oder downgraden."
+    },
+    "account-security": {
+      "question": "Wie schütze ich mein Konto?",
+      "answer": "Hier sind bewährte Methoden für die Kontosicherheit:\n\n<strong>1. Verwenden Sie ein starkes Passwort:</strong> Mindestens 8 Zeichen mit einer Mischung aus Buchstaben, Zahlen und Sonderzeichen.\n<strong>2. Teilen Sie Ihre Anmeldedaten nicht:</strong> Ihr Konto ist persönlich und sollte nicht geteilt werden.\n<strong>3. Bestätigen Sie Ihre E-Mail:</strong> Stellen Sie sicher, dass Ihre E-Mail-Adresse verifiziert ist.\n<strong>4. Melden Sie sich auf geteilten Geräten ab:</strong> Melden Sie sich immer ab, wenn Sie öffentliche oder gemeinsam genutzte Computer verwenden.\n<strong>5. Achten Sie auf Phishing:</strong> Wir werden Sie niemals per E-Mail nach Ihrem Passwort fragen. Wenn Sie eine verdächtige E-Mail erhalten, kontaktieren Sie den Support.\n\nWenn Sie einen unbefugten Zugriff auf Ihr Konto vermuten, ändern Sie sofort Ihr Passwort und kontaktieren Sie unser Support-Team."
+    },
+    "calendar-not-syncing": {
+      "question": "Mein Kalender synchronisiert sich nicht — was soll ich tun?",
+      "answer": "Befolgen Sie diese Schritte zur Fehlerbehebung bei Problemen mit der Kalender-Synchronisierung:\n\n<strong>1. Überprüfen Sie den Verbindungsstatus:</strong> Gehen Sie zu Kalender → Integrationen und vergewissern Sie sich, dass Ihr Kalender als \u201EVerbunden\u201C angezeigt wird.\n\n<strong>2. Versuchen Sie eine manuelle Synchronisierung:</strong> Klicken Sie auf die Schaltfläche <strong>Jetzt synchronisieren</strong>, um eine sofortige Synchronisierung auszulösen.\n\n<strong>3. Überprüfen Sie Ihre Zugangsdaten:</strong> Wenn der Status einen Fehler anzeigt, versuchen Sie, Ihren Kalender zu trennen und erneut zu verbinden.\n\n<strong>4. Überprüfen Sie die Kalenderberechtigungen:</strong> Stellen Sie sicher, dass MyDoctors360 Lese-/Schreibzugriff auf Ihren Kalender hat.\n\n<strong>5. Für Apple iCloud:</strong> Beachten Sie, dass die CalDAV-Synchronisierung alle 10 Minuten erfolgt, sodass es eine kurze Verzögerung geben kann.\n\nWenn das Problem nach diesen Schritten weiterhin besteht, kontaktieren Sie unser Support-Team mit Details zu Ihrem Kalenderanbieter und dem angezeigten Fehler."
+    },
+    "google-auth-expired": {
+      "question": "Meine Google Calendar-Autorisierung ist abgelaufen",
+      "answer": "Google OAuth-Token können ablaufen, wenn Sie Ihr Google-Passwort ändern, App-Berechtigungen widerrufen oder nach einer langen Inaktivitätsphase.\n\n<strong>So beheben Sie das Problem:</strong>\n<strong>1.</strong> Gehen Sie zu Arzt-Dashboard → Kalender → Integrationen.\n<strong>2.</strong> Klicken Sie neben Google Calendar auf <strong>Trennen</strong>.\n<strong>3.</strong> Klicken Sie erneut auf <strong>Google Calendar verbinden</strong>.\n<strong>4.</strong> Melden Sie sich an und erteilen Sie die Berechtigungen erneut.\n\nIhre bisherigen Synchronisierungsdaten bleiben erhalten. Die neue Verbindung nimmt die Synchronisierung sofort wieder auf.\n\n<strong>Tipp:</strong> Sie können Ihre verbundenen Apps auch unter <strong>myaccount.google.com/permissions</strong> überprüfen, um sicherzustellen, dass MyDoctors360 weiterhin Zugriff hat."
+    },
+    "apple-password-revoked": {
+      "question": "Mein Apple iCloud App-spezifisches Passwort wurde widerrufen",
+      "answer": "App-spezifische Passwörter von Apple können widerrufen werden, wenn Sie Ihr Apple-ID-Passwort ändern oder sie manuell in Ihrem Apple-Konto widerrufen.\n\n<strong>So beheben Sie das Problem:</strong>\n<strong>1.</strong> Gehen Sie zu <strong>appleid.apple.com</strong> und melden Sie sich an.\n<strong>2.</strong> Navigieren Sie zu <strong>Anmeldung & Sicherheit → App-spezifische Passwörter</strong>.\n<strong>3.</strong> Erstellen Sie ein <strong>neues App-spezifisches Passwort</strong>.\n<strong>4.</strong> Gehen Sie auf MyDoctors360 zu Kalender → Integrationen.\n<strong>5.</strong> Trennen Sie Ihre Apple-Kalender-Verbindung.\n<strong>6.</strong> Verbinden Sie sich erneut mit Ihrer Apple-ID-E-Mail und dem neuen App-spezifischen Passwort.\n\nDie Synchronisierung wird beim nächsten Abfragezyklus wieder aufgenommen (innerhalb von 10 Minuten)."
+    },
+    "payment-failed": {
+      "question": "Meine Zahlung ist fehlgeschlagen — was soll ich tun?",
+      "answer": "Zahlungsfehler können verschiedene Ursachen haben:\n\n<strong>• Unzureichendes Guthaben:</strong> Überprüfen Sie, ob Ihre Karte über ausreichendes Guthaben verfügt.\n<strong>• Karte abgelehnt:</strong> Ihre Bank hat die Transaktion möglicherweise blockiert. Kontaktieren Sie Ihre Bank, um sie zu autorisieren.\n<strong>• Karte abgelaufen:</strong> Aktualisieren Sie Ihre Kartendaten und versuchen Sie es erneut.\n<strong>• 3D Secure fehlgeschlagen:</strong> Führen Sie den Authentifizierungsschritt Ihrer Bank durch, wenn Sie dazu aufgefordert werden.\n\n<strong>Zum erneuten Versuch:</strong>\n<strong>1.</strong> Das Zeitfenster bleibt nach einem fehlgeschlagenen Versuch 15 Minuten lang gesperrt.\n<strong>2.</strong> Gehen Sie zurück zur Buchungsseite und versuchen Sie es erneut mit einer anderen Karte oder nachdem Sie das Problem mit Ihrer Bank gelöst haben.\n\nWenn Ihnen ein Betrag abgebucht wurde, Sie aber keine Buchungsbestätigung sehen, kontaktieren Sie unser Support-Team — wir werden das sofort untersuchen."
+    },
+    "video-call-issues": {
+      "question": "Ich habe Probleme mit dem Videoanruf",
+      "answer": "Wenn Sie Probleme mit dem Videoanruf haben, probieren Sie diese Schritte:\n\n<strong>1. Überprüfen Sie Ihren Browser:</strong> Verwenden Sie einen modernen Browser (Chrome, Firefox, Safari oder Edge). Stellen Sie sicher, dass er auf dem neuesten Stand ist.\n\n<strong>2. Kamera und Mikrofon erlauben:</strong> Klicken Sie bei der Aufforderung auf \u201EErlauben\u201C, um Browserberechtigungen zu erteilen. Sie können dies auch in Ihren Browsereinstellungen überprüfen.\n\n<strong>3. Überprüfen Sie Ihre Internetverbindung:</strong> Für Videoanrufe wird eine stabile Verbindung mit mindestens 2 Mbit/s empfohlen.\n\n<strong>4. Schließen Sie andere Apps:</strong> Andere Video-Apps (Zoom, Teams usw.) nutzen möglicherweise Ihre Kamera. Schließen Sie diese und versuchen Sie es erneut.\n\n<strong>5. Versuchen Sie einen anderen Browser:</strong> Wenn das Problem weiterhin besteht, wechseln Sie zu einem anderen Browser.\n\n<strong>6. Starten Sie Ihr Gerät neu:</strong> Ein Neustart kann Kamera- oder Mikrofonprobleme beheben, die durch andere Software verursacht werden.\n\nWenn sich weder Sie noch der Arzt verbinden können, kontaktieren Sie den Support und wir helfen Ihnen, den Termin umzubuchen."
+    },
+    "booking-slot-unavailable": {
+      "question": "Das von mir gewählte Zeitfenster ist verschwunden",
+      "answer": "Es gibt einige Gründe, warum ein Zeitfenster nicht mehr verfügbar sein kann:\n\n<strong>• Ein anderer Patient hat es gebucht:</strong> Jemand anderes hat möglicherweise den Bezahlvorgang für dieses Zeitfenster abgeschlossen, während Sie gesucht haben.\n\n<strong>• Zeitfenster war gesperrt:</strong> Ein anderer Patient befindet sich möglicherweise im Bezahlvorgang (Zeitfenster werden während der Zahlung 15 Minuten gesperrt).\n\n<strong>• Kalender-Synchronisierungs-Update:</strong> Der externe Kalender des Arztes wurde möglicherweise mit einem sich überschneidenden Termin aktualisiert, der diese Zeit automatisch blockiert.\n\n<strong>• Arzt hat Verfügbarkeit geändert:</strong> Der Arzt hat möglicherweise seinen Zeitplan aktualisiert oder eine Datumsausnahme hinzugefügt.\n\n<strong>Was Sie tun können:</strong> Aktualisieren Sie die Seite, um die neuesten verfügbaren Zeitfenster zu sehen, und wählen Sie eine andere Zeit. Wenn Sie wiederholt Schwierigkeiten haben, verfügbare Termine zu finden, versuchen Sie es zu anderen Zeiten oder kontaktieren Sie die Praxis des Arztes direkt."
+    },
+    "sync-delay-apple": {
+      "question": "Warum ist meine Apple-Kalender-Synchronisierung verzögert?",
+      "answer": "Apple iCloud-Kalender verwendet das <strong>CalDAV-Protokoll</strong>, das keine Echtzeit-Benachrichtigungen (Webhooks) unterstützt. Stattdessen prüft MyDoctors360 Änderungen durch <strong>Abfrage Ihres Kalenders alle 10 Minuten</strong>.\n\nDas bedeutet:\n• Änderungen in Ihrem Apple-Kalender können <strong>bis zu 10 Minuten</strong> brauchen, um auf MyDoctors360 zu erscheinen.\n• Neue Buchungen auf MyDoctors360 können bis zu 10 Minuten brauchen, um in Ihrem Apple-Kalender zu erscheinen.\n\n<strong>Tipps zur Minimierung von Verzögerungen:</strong>\n• Verwenden Sie die Schaltfläche <strong>Jetzt synchronisieren</strong> in den Kalendereinstellungen, um eine sofortige Synchronisierung auszulösen.\n• Erwägen Sie die Verwendung von Google oder Microsoft Kalender für Echtzeit-Synchronisierung, wenn die Zeiteinhaltung kritisch ist.\n\nDies ist eine Einschränkung des CalDAV-Protokolls, kein Fehler. Google- und Microsoft-Kalender synchronisieren in Echtzeit, da sie Webhook-Benachrichtigungen unterstützen."
+    }
+  },
   "findPharmacy": {
     "title": "Apotheke finden",
     "subtitle": "Suchen Sie nach NHS-Apotheken in Ihrer Nahe. Geben Sie Ihre britische Postleitzahl ein, um Adressen, Offnungszeiten und Kontaktdaten zu finden.",
