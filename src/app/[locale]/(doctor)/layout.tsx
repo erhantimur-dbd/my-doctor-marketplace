@@ -1,71 +1,10 @@
 import { Suspense } from "react";
 import { Header } from "@/components/layout/dynamic-header";
 import { Link } from "@/i18n/navigation";
-import {
-  Calendar,
-  Users,
-  Star,
-  CreditCard,
-  Receipt,
-  BarChart3,
-  Settings,
-  LayoutDashboard,
-  User,
-  FileText,
-  Crown,
-  Clock,
-  MessageSquare,
-  UserPlus,
-  HelpCircle,
-  BookOpen,
-  FlaskConical,
-} from "lucide-react";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 import { DoctorSessionGuard } from "@/components/shared/session-timeout-guard";
-
-const sidebarLinks = [
-  { href: "/doctor-dashboard", icon: LayoutDashboard, label: "Overview" },
-  { href: "/doctor-dashboard/calendar", icon: Calendar, label: "Calendar" },
-  { href: "/doctor-dashboard/bookings", icon: Clock, label: "Bookings" },
-  { href: "/doctor-dashboard/patients", icon: Users, label: "Patients" },
-  { href: "/doctor-dashboard/profile", icon: User, label: "Profile" },
-  { href: "/doctor-dashboard/reviews", icon: Star, label: "Reviews" },
-  { href: "/doctor-dashboard/payments", icon: CreditCard, label: "Payments" },
-  { href: "/doctor-dashboard/invoices", icon: Receipt, label: "Invoices" },
-  { href: "/doctor-dashboard/analytics", icon: BarChart3, label: "Analytics" },
-  {
-    href: "/doctor-dashboard/medical-testing",
-    icon: FlaskConical,
-    label: "Medical Testing",
-  },
-  { href: "/doctor-dashboard/policies", icon: FileText, label: "Policies" },
-  {
-    href: "/doctor-dashboard/subscription",
-    icon: Crown,
-    label: "Subscription",
-  },
-  {
-    href: "/doctor-dashboard/referrals",
-    icon: UserPlus,
-    label: "Referrals",
-  },
-  {
-    href: "/doctor-dashboard/messages",
-    icon: MessageSquare,
-    label: "Messages",
-  },
-  { href: "/doctor-dashboard/settings", icon: Settings, label: "Settings" },
-  {
-    href: "/help-center",
-    icon: BookOpen,
-    label: "Help Center",
-  },
-  {
-    href: "/doctor-dashboard/support",
-    icon: HelpCircle,
-    label: "Support",
-  },
-];
+import { DashboardMobileNav } from "@/components/layout/dashboard-mobile-nav";
+import { doctorSidebarLinks } from "@/lib/constants/sidebar-links";
 
 export default function DoctorLayout({
   children,
@@ -76,10 +15,10 @@ export default function DoctorLayout({
     <div className="flex min-h-screen flex-col">
       <DoctorSessionGuard />
       <Header />
-      <div className="container mx-auto flex flex-1 gap-8 px-4 py-8">
+      <div className="container mx-auto flex flex-1 gap-8 px-4 py-8 pb-20 md:pb-8">
         <aside className="hidden w-56 shrink-0 md:block">
           <nav className="sticky top-24 space-y-1">
-            {sidebarLinks.map((link) => (
+            {doctorSidebarLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -87,7 +26,7 @@ export default function DoctorLayout({
               >
                 <link.icon className="h-4 w-4" />
                 {link.label}
-                {link.href.endsWith("/messages") && (
+                {link.hasUnreadBadge && (
                   <Suspense fallback={null}>
                     <UnreadBadge />
                   </Suspense>
@@ -96,8 +35,16 @@ export default function DoctorLayout({
             ))}
           </nav>
         </aside>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 overflow-hidden">{children}</main>
       </div>
+      <DashboardMobileNav
+        portal="doctor"
+        messagesBadge={
+          <Suspense fallback={null}>
+            <UnreadBadge />
+          </Suspense>
+        }
+      />
     </div>
   );
 }

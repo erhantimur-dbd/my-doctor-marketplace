@@ -1,37 +1,10 @@
 import { Suspense } from "react";
 import { Header } from "@/components/layout/dynamic-header";
 import { Link } from "@/i18n/navigation";
-import {
-  Calendar,
-  ClipboardList,
-  CreditCard,
-  Gift,
-  Heart,
-  HelpCircle,
-  BookOpen,
-  MessageSquare,
-  Receipt,
-  Settings,
-  Star,
-  LayoutDashboard,
-} from "lucide-react";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 import { PatientSessionGuard } from "@/components/shared/session-timeout-guard";
-
-const sidebarLinks = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
-  { href: "/dashboard/bookings", icon: Calendar, label: "Bookings" },
-  { href: "/dashboard/treatment-plans", icon: ClipboardList, label: "Treatment Plans" },
-  { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },
-  { href: "/dashboard/invoices", icon: Receipt, label: "Invoices" },
-  { href: "/dashboard/favorites", icon: Heart, label: "Saved Doctors" },
-  { href: "/dashboard/reviews", icon: Star, label: "My Reviews" },
-  { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
-  { href: "/dashboard/referrals", icon: Gift, label: "Referrals" },
-  { href: "/dashboard/settings", icon: Settings, label: "Settings" },
-  { href: "/help-center", icon: BookOpen, label: "Help Center" },
-  { href: "/dashboard/support", icon: HelpCircle, label: "Support" },
-];
+import { DashboardMobileNav } from "@/components/layout/dashboard-mobile-nav";
+import { patientSidebarLinks } from "@/lib/constants/sidebar-links";
 
 export default function PatientLayout({
   children,
@@ -42,10 +15,10 @@ export default function PatientLayout({
     <div className="flex min-h-screen flex-col">
       <PatientSessionGuard />
       <Header />
-      <div className="container mx-auto flex flex-1 gap-8 px-4 py-8">
+      <div className="container mx-auto flex flex-1 gap-8 px-4 py-8 pb-20 md:pb-8">
         <aside className="hidden w-56 shrink-0 md:block">
           <nav className="sticky top-24 space-y-1">
-            {sidebarLinks.map((link) => (
+            {patientSidebarLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -53,7 +26,7 @@ export default function PatientLayout({
               >
                 <link.icon className="h-4 w-4" />
                 {link.label}
-                {link.href === "/dashboard/messages" && (
+                {link.hasUnreadBadge && (
                   <Suspense fallback={null}>
                     <UnreadBadge />
                   </Suspense>
@@ -62,8 +35,16 @@ export default function PatientLayout({
             ))}
           </nav>
         </aside>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 overflow-hidden">{children}</main>
       </div>
+      <DashboardMobileNav
+        portal="patient"
+        messagesBadge={
+          <Suspense fallback={null}>
+            <UnreadBadge />
+          </Suspense>
+        }
+      />
     </div>
   );
 }

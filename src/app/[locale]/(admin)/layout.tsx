@@ -1,34 +1,9 @@
 import { Header } from "@/components/layout/dynamic-header";
 import { Link } from "@/i18n/navigation";
 import { AdminSessionGuard } from "@/components/shared/session-timeout-guard";
-import {
-  LayoutDashboard,
-  Stethoscope,
-  Users,
-  Calendar,
-  Star,
-  DollarSign,
-  Crown,
-  Tag,
-  Settings,
-  ShieldCheck,
-  HelpCircle,
-  ScrollText,
-} from "lucide-react";
-
-const sidebarLinks = [
-  { href: "/admin", icon: LayoutDashboard, label: "Overview" },
-  { href: "/admin/doctors", icon: Stethoscope, label: "Doctors" },
-  { href: "/admin/patients", icon: Users, label: "Patients" },
-  { href: "/admin/bookings", icon: Calendar, label: "Bookings" },
-  { href: "/admin/reviews", icon: Star, label: "Reviews" },
-  { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
-  { href: "/admin/subscriptions", icon: Crown, label: "Subscriptions" },
-  { href: "/admin/coupons", icon: Tag, label: "Coupons" },
-  { href: "/admin/support", icon: HelpCircle, label: "Support" },
-  { href: "/admin/audit-log", icon: ScrollText, label: "Audit Log" },
-  { href: "/admin/settings", icon: Settings, label: "Settings" },
-];
+import { DashboardMobileNav } from "@/components/layout/dashboard-mobile-nav";
+import { adminSidebarLinks } from "@/lib/constants/sidebar-links";
+import { ShieldCheck } from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -39,7 +14,7 @@ export default function AdminLayout({
     <div className="flex min-h-screen flex-col">
       <AdminSessionGuard />
       <Header />
-      <div className="container mx-auto flex flex-1 gap-8 px-4 py-8">
+      <div className="container mx-auto flex flex-1 gap-8 px-4 py-8 pb-20 md:pb-8">
         <aside className="hidden w-56 shrink-0 md:block">
           <div className="sticky top-24">
             <div className="mb-4 flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-2">
@@ -49,7 +24,7 @@ export default function AdminLayout({
               </span>
             </div>
             <nav className="space-y-1">
-              {sidebarLinks.map((link) => (
+              {adminSidebarLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
@@ -62,8 +37,9 @@ export default function AdminLayout({
             </nav>
           </div>
         </aside>
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 overflow-hidden">{children}</main>
       </div>
+      <DashboardMobileNav portal="admin" />
     </div>
   );
 }
