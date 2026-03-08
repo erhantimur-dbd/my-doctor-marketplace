@@ -10,17 +10,20 @@ import {
   HelpCircle,
   BookOpen,
   MessageSquare,
+  Receipt,
   Settings,
   Star,
   LayoutDashboard,
 } from "lucide-react";
 import { UnreadBadge } from "@/components/shared/unread-badge";
+import { PatientSessionGuard } from "@/components/shared/session-timeout-guard";
 
 const sidebarLinks = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
   { href: "/dashboard/bookings", icon: Calendar, label: "Bookings" },
   { href: "/dashboard/treatment-plans", icon: ClipboardList, label: "Treatment Plans" },
   { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },
+  { href: "/dashboard/invoices", icon: Receipt, label: "Invoices" },
   { href: "/dashboard/favorites", icon: Heart, label: "Saved Doctors" },
   { href: "/dashboard/reviews", icon: Star, label: "My Reviews" },
   { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
@@ -37,6 +40,7 @@ export default function PatientLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <PatientSessionGuard />
       <Header />
       <div className="container mx-auto flex flex-1 gap-8 px-4 py-8">
         <aside className="hidden w-56 shrink-0 md:block">

@@ -19,6 +19,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import { UnreadBadge } from "@/components/shared/unread-badge";
+import { DoctorSessionGuard } from "@/components/shared/session-timeout-guard";
 
 const sidebarLinks = [
   { href: "/doctor-dashboard", icon: LayoutDashboard, label: "Overview" },
@@ -65,6 +66,7 @@ export default function DoctorLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <DoctorSessionGuard />
       <Header />
       <div className="container mx-auto flex flex-1 gap-8 px-4 py-8">
         <aside className="hidden w-56 shrink-0 md:block">

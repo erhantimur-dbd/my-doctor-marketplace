@@ -15,6 +15,7 @@ import { Users, Search, User, Mail, Calendar } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 import { FollowUpInvitationDialog } from "@/components/doctor/follow-up-invitation-dialog";
+import { CreateInvoiceDialog } from "@/components/doctor/create-invoice-dialog";
 
 interface PatientRow {
   patient_id: string;
@@ -69,6 +70,12 @@ export default async function PatientsPage({
     .eq("doctor_id", doctor.id)
     .eq("is_active", true)
     .order("display_order", { ascending: true });
+
+  // Fetch doctor's price book for auto-fill
+  const { data: priceBookData } = await supabase
+    .from("doctor_price_book")
+    .select("test_id, price_cents")
+    .eq("doctor_id", doctor.id);
 
   // Fetch all bookings for this doctor with patient profiles
   const { data: bookings } = await supabase
@@ -261,12 +268,22 @@ export default async function PatientsPage({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <FollowUpInvitationDialog
-                        patientId={patient.patient_id}
-                        patientName={`${patient.first_name} ${patient.last_name}`}
-                        doctorCurrency={doctor.base_currency}
-                        services={servicesData || []}
-                      />
+                      <div className="flex justify-end gap-1.5">
+                        <FollowUpInvitationDialog
+                          patientId={patient.patient_id}
+                          patientName={`${patient.first_name} ${patient.last_name}`}
+                          doctorCurrency={doctor.base_currency}
+                          services={servicesData || []}
+                          priceBook={priceBookData || []}
+                        />
+                        <CreateInvoiceDialog
+                          patientId={patient.patient_id}
+                          patientName={`${patient.first_name} ${patient.last_name}`}
+                          doctorCurrency={doctor.base_currency}
+                          services={servicesData || []}
+                          priceBook={priceBookData || []}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

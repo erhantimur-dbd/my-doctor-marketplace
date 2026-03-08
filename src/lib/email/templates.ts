@@ -1265,3 +1265,78 @@ export function newMessageEmail({
 
   return { subject, html };
 }
+
+// ─── Invoice Email ────────────────────────────────────────────
+
+interface InvoiceEmailParams {
+  patientName: string;
+  doctorName: string;
+  invoiceNumber: string;
+  items: string;
+  totalAmount: string;
+  dueDate: string;
+  invoiceUrl: string;
+  doctorNote: string | null;
+}
+
+export function invoiceEmail({
+  patientName,
+  doctorName,
+  invoiceNumber,
+  items,
+  totalAmount,
+  dueDate,
+  invoiceUrl,
+  doctorNote,
+}: InvoiceEmailParams): { subject: string; html: string } {
+  const subject = `Invoice ${invoiceNumber} from Dr. ${doctorName}`;
+
+  const noteBlock = doctorNote
+    ? `
+    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 16px 20px; border-radius: 4px; margin: 0 0 24px;">
+      <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280; font-weight: 600;">
+        Note from Dr. ${doctorName}:
+      </p>
+      <p style="margin: 0; font-size: 14px; color: #1e3a5f; line-height: 1.6; font-style: italic;">
+        "${doctorNote}"
+      </p>
+    </div>`
+    : "";
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 16px; font-size: 20px; color: #111827; font-weight: 700;">
+      You Have a New Invoice
+    </h2>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Hi ${patientName},
+    </p>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      <strong>Dr. ${doctorName}</strong> has sent you an invoice. Please review and pay at your convenience.
+    </p>
+
+    ${noteBlock}
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+      <tr>
+        <td style="padding: 16px 20px; background-color: #f9fafb;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${infoRow("Invoice", invoiceNumber)}
+            ${infoRow("Services", items)}
+            ${infoRow("Total", `<strong>${totalAmount}</strong>`)}
+            ${infoRow("Due Date", dueDate)}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${button("View & Pay Invoice", invoiceUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you have any questions about this invoice, please contact your doctor directly.
+    </p>
+  `);
+
+  return { subject, html };
+}

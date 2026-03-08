@@ -46,6 +46,7 @@ import {
   updateDoctorService,
   deleteDoctorService,
 } from "@/actions/doctor-services";
+import { PriceBookEditor } from "@/components/doctor/price-book-editor";
 import type { Education, Certification, Doctor, DoctorService } from "@/types";
 
 function createSupabase() {
@@ -873,6 +874,9 @@ export default function ProfilePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Price Book */}
+      <PriceBookEditor doctorCurrency={doctor?.base_currency || "EUR"} />
 
       {/* Cancellation Policy */}
       <Card>

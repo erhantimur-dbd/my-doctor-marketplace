@@ -18,10 +18,13 @@ import {
   Globe,
   User,
   CalendarDays,
+  Stethoscope,
+  Tag,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
+import { MEDICAL_TEST_GROUPS } from "@/lib/constants/medical-tests";
 import { ReviewSummaryCard } from "@/components/doctors/review-summary-card";
 import type { Metadata } from "next";
 
@@ -108,6 +111,19 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     .maybeSingle();
 
   const hasActiveSubscription = !!doctorSubscription;
+
+  // Fetch services and price book for public display
+  const { data: doctorServices } = await supabase
+    .from("doctor_services")
+    .select("id, name, description, price_cents, duration_minutes, consultation_type")
+    .eq("doctor_id", doctor.id)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+
+  const { data: priceBookEntries } = await supabase
+    .from("doctor_price_book")
+    .select("test_id, price_cents")
+    .eq("doctor_id", doctor.id);
 
   const primarySpecialty =
     doctor.specialties?.find(
@@ -316,6 +332,122 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                     </Badge>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Services & Tests */}
+          {((doctorServices && doctorServices.length > 0) ||
+            (priceBookEntries && priceBookEntries.length > 0)) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Stethoscope className="h-5 w-5" />
+                  Services & Pricing
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Doctor's custom services */}
+                {doctorServices && doctorServices.length > 0 && (
+                  <div className="space-y-2">
+                    {doctorServices.map((svc: any) => (
+                      <div
+                        key={svc.id}
+                        className="flex items-center justify-between rounded-lg border p-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm">
+                              {svc.name}
+                            </span>
+                            <Badge variant="secondary" className="text-xs">
+                              <Clock className="mr-1 h-3 w-3" />
+                              {svc.duration_minutes} min
+                            </Badge>
+                            <Badge variant="outline" className="text-xs">
+                              {svc.consultation_type === "both"
+                                ? "In-Person & Video"
+                                : svc.consultation_type === "video"
+                                  ? "Video"
+                                  : "In-Person"}
+                            </Badge>
+                          </div>
+                          {svc.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {svc.description}
+                            </p>
+                          )}
+                        </div>
+                        <span className="text-sm font-semibold shrink-0 ml-4">
+                          {formatCurrency(
+                            svc.price_cents,
+                            doctor.base_currency,
+                            locale
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Price book tests */}
+                {priceBookEntries && priceBookEntries.length > 0 && (
+                  <>
+                    {doctorServices && doctorServices.length > 0 && (
+                      <Separator />
+                    )}
+                    <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      Tests & Diagnostics
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {priceBookEntries.map((entry: any) => {
+                        const testName =
+                          MEDICAL_TEST_GROUPS.flatMap((g) => g.tests).find(
+                            (t) => t.id === entry.test_id
+                          )?.name ?? entry.test_id;
+                        return (
+                          <div
+                            key={entry.test_id}
+                            className="flex items-center justify-between rounded-lg border px-3 py-2"
+                          >
+                            <span className="text-sm truncate mr-2">
+                              {testName}
+                            </span>
+                            <span className="text-sm font-semibold shrink-0">
+                              {formatCurrency(
+                                entry.price_cents,
+                                doctor.base_currency,
+                                locale
+                              )}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* Multi-buy discount hint */}
+                {((doctorServices && doctorServices.length > 1) ||
+                  (priceBookEntries && priceBookEntries.length > 1)) && (
+                  <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 dark:bg-green-950/30">
+                    <Tag className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                    <p className="text-xs text-green-700 dark:text-green-400">
+                      Multi-service discounts may be available when booking
+                      multiple tests or follow-up sessions. Ask your doctor for
+                      details.
+                    </p>
+                  </div>
+                )}
+
+                {hasActiveSubscription && (
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href={`/doctors/${doctor.slug}/book`}>
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      Book a Service
+                    </Link>
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

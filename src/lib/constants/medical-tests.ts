@@ -582,3 +582,122 @@ export const MEDICAL_TESTS: readonly MedicalTestEntry[] = [
     relatedSpecialties: [],
   },
 ] as const;
+
+/* ─── Grouped list for follow-up invitation dropdown ─────────────── */
+
+export interface MedicalTestOption {
+  id: string;
+  name: string;
+}
+
+export interface MedicalTestGroup {
+  label: string;
+  tests: MedicalTestOption[];
+}
+
+export const MEDICAL_TEST_GROUPS: MedicalTestGroup[] = [
+  {
+    label: "Laboratory — Blood",
+    tests: [
+      { id: "test_cbc", name: "Complete Blood Count (CBC)" },
+      { id: "test_cmp", name: "Blood Chemistry Panel (CMP)" },
+      { id: "test_lipid", name: "Lipid Panel / Cholesterol" },
+      { id: "test_hba1c", name: "HbA1c (Diabetes Screening)" },
+      { id: "test_thyroid", name: "Thyroid Function (TSH, T3, T4)" },
+      { id: "test_lft", name: "Liver Function Test (LFT)" },
+      { id: "test_kft", name: "Kidney Function Test (KFT/RFT)" },
+      { id: "test_glucose", name: "Blood Glucose (Fasting)" },
+      { id: "test_vitd", name: "Vitamin D Level" },
+      { id: "test_vitb12", name: "Vitamin B12 Level" },
+      { id: "test_iron", name: "Iron Studies / Ferritin" },
+      { id: "test_coag", name: "Coagulation Panel (PT/INR)" },
+      { id: "test_crp", name: "CRP / ESR (Inflammation Markers)" },
+      { id: "test_electrolytes", name: "Electrolyte Panel" },
+      { id: "test_hormone", name: "Hormone Panel" },
+      { id: "test_psa", name: "PSA (Prostate Screening)" },
+      { id: "test_sti", name: "STI Screening Panel" },
+      { id: "test_allergy_ige", name: "Allergy Panel (IgE)" },
+      { id: "test_autoimmune", name: "Autoimmune Panel (ANA)" },
+      { id: "test_tumor_markers", name: "Tumor Markers" },
+      { id: "test_blood_type", name: "Blood Type & Rh Factor" },
+    ],
+  },
+  {
+    label: "Laboratory — Urine & Stool",
+    tests: [
+      { id: "test_urine", name: "Urine Analysis & Culture" },
+      { id: "test_24hr_urine", name: "24-Hour Urine Collection" },
+      { id: "test_microalbumin", name: "Microalbumin (ACR)" },
+      { id: "test_pregnancy", name: "Pregnancy Test (hCG)" },
+      { id: "test_drug_screen", name: "Urine Drug Screen" },
+      { id: "test_stool", name: "Stool Analysis" },
+    ],
+  },
+  {
+    label: "Imaging & Diagnostics",
+    tests: [
+      { id: "test_xray", name: "X-Ray" },
+      { id: "test_ultrasound", name: "Ultrasound" },
+      { id: "test_abdominal_us", name: "Abdominal Ultrasound" },
+      { id: "test_pelvic_us", name: "Pelvic Ultrasound" },
+      { id: "test_thyroid_us", name: "Thyroid Ultrasound" },
+      { id: "test_doppler", name: "Doppler Ultrasound" },
+      { id: "test_mri", name: "MRI Scan" },
+      { id: "test_ct", name: "CT Scan" },
+      { id: "test_mammo", name: "Mammography" },
+      { id: "test_dexa", name: "DEXA Bone Density Scan" },
+      { id: "test_pet", name: "PET / PET-CT Scan" },
+      { id: "test_bone_scan", name: "Bone Scan (Scintigraphy)" },
+      { id: "test_dental_xray", name: "Dental X-Ray / OPG" },
+    ],
+  },
+  {
+    label: "Cardiac Tests",
+    tests: [
+      { id: "test_ecg", name: "ECG / EKG" },
+      { id: "test_echo", name: "Echocardiogram" },
+      { id: "test_holter", name: "Holter Monitor (24h ECG)" },
+      { id: "test_stress", name: "Cardiac Stress Test" },
+      { id: "test_abpm", name: "Ambulatory Blood Pressure Monitoring" },
+      { id: "test_cardiac_cath", name: "Cardiac Catheterisation / Angiogram" },
+    ],
+  },
+  {
+    label: "Endoscopy & Scopes",
+    tests: [
+      { id: "test_gastroscopy", name: "Gastroscopy (Upper Endoscopy)" },
+      { id: "test_colonoscopy", name: "Colonoscopy" },
+      { id: "test_sigmoidoscopy", name: "Sigmoidoscopy" },
+      { id: "test_bronchoscopy", name: "Bronchoscopy" },
+      { id: "test_cystoscopy", name: "Cystoscopy" },
+      { id: "test_colposcopy", name: "Colposcopy" },
+    ],
+  },
+  {
+    label: "Biopsies & Cytology",
+    tests: [
+      { id: "test_skin_biopsy", name: "Skin Biopsy" },
+      { id: "test_tissue_biopsy", name: "Tissue Biopsy" },
+      { id: "test_fna", name: "Fine Needle Aspiration (FNA)" },
+      { id: "test_bone_marrow", name: "Bone Marrow Biopsy" },
+      { id: "test_pap_smear", name: "Pap Smear / Cervical Screening" },
+    ],
+  },
+  {
+    label: "Other Specialist Tests",
+    tests: [
+      { id: "test_spirometry", name: "Spirometry (Lung Function)" },
+      { id: "test_sleep", name: "Sleep Study (Polysomnography)" },
+      { id: "test_eeg", name: "EEG (Electroencephalogram)" },
+      { id: "test_emg", name: "EMG / Nerve Conduction Study" },
+      { id: "test_audiometry", name: "Audiometry (Hearing Test)" },
+      { id: "test_eye", name: "Eye Examination" },
+      { id: "test_visual_field", name: "Visual Field Test" },
+      { id: "test_skin_prick", name: "Skin Prick / Allergy Test" },
+      { id: "test_patch", name: "Skin Patch Test" },
+      { id: "test_food_allergy", name: "Food Allergy / Intolerance Test" },
+      { id: "test_urodynamics", name: "Urodynamics Study" },
+      { id: "test_body_comp", name: "Body Composition Analysis" },
+    ],
+  },
+];

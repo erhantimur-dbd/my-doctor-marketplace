@@ -105,8 +105,21 @@ export async function createFollowUpInvitation(
     let serviceId: string | null = null;
     let durationMinutes = parsed.data.duration_minutes;
     const consultationType = parsed.data.consultation_type;
+    let itemsJson: { name: string; price_cents: number; quantity: number }[] | null = null;
 
-    if (parsed.data.service_id) {
+    if (parsed.data.items && parsed.data.items.length > 0) {
+      // Multi-item invitation
+      itemsJson = parsed.data.items;
+      unitPriceCents = itemsJson.reduce(
+        (sum, item) => sum + item.price_cents * item.quantity,
+        0
+      );
+      serviceName =
+        itemsJson.length === 1
+          ? itemsJson[0].name
+          : itemsJson.map((i) => i.name).join(", ");
+      serviceId = parsed.data.service_id || null;
+    } else if (parsed.data.service_id) {
       const { data: service } = await supabase
         .from("doctor_services")
         .select("*")
@@ -176,6 +189,7 @@ export async function createFollowUpInvitation(
         platform_fee_cents: platformFeeCents,
         currency: doctor.base_currency,
         doctor_note: parsed.data.doctor_note || null,
+        items: itemsJson,
         expires_at: expiresAt.toISOString(),
       })
       .select("id")
@@ -249,7 +263,8 @@ export async function createFollowUpInvitation(
 
 export async function getFollowUpInvitationByToken(token: string) {
   try {
-    const supabase = await createClient();
+    // Use admin client to bypass RLS — access is gated by the secret token
+    const supabase = createAdminClient();
 
     const { data: invitation, error } = await supabase
       .from("follow_up_invitations")

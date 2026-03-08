@@ -46,7 +46,36 @@ export async function POST(request: NextRequest) {
       const bookingId = session.metadata?.booking_id;
       const invitationId = session.metadata?.invitation_id;
 
-      if (invitationId && session.mode === "payment") {
+      const invoiceId = session.metadata?.invoice_id;
+
+      if (invoiceId && session.metadata?.type === "invoice_payment") {
+        // ─── Invoice payment ──────────────────────────────────────
+        await supabase
+          .from("invoices")
+          .update({
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            stripe_session_id: session.id,
+          })
+          .eq("id", invoiceId);
+
+        // Record platform fee
+        const { data: invoice } = await supabase
+          .from("invoices")
+          .select("doctor_id, platform_fee_cents, currency")
+          .eq("id", invoiceId)
+          .single();
+
+        if (invoice) {
+          await supabase.from("platform_fees").insert({
+            invoice_id: invoiceId,
+            doctor_id: invoice.doctor_id,
+            fee_type: "invoice",
+            amount_cents: invoice.platform_fee_cents,
+            currency: invoice.currency,
+          });
+        }
+      } else if (invitationId && session.mode === "payment") {
         const firstBookingId = session.metadata?.first_booking_id;
 
         // 1. Update invitation → accepted, paid_at, sessions_booked = 1

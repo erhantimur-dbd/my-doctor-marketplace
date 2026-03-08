@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/dynamic-header";
 import { Link } from "@/i18n/navigation";
+import { AdminSessionGuard } from "@/components/shared/session-timeout-guard";
 import {
   LayoutDashboard,
   Stethoscope,
@@ -36,6 +37,7 @@ export default function AdminLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <AdminSessionGuard />
       <Header />
       <div className="container mx-auto flex flex-1 gap-8 px-4 py-8">
         <aside className="hidden w-56 shrink-0 md:block">

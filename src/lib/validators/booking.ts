@@ -33,12 +33,18 @@ export const doctorServiceSchema = z.object({
   display_order: z.number().int().optional().default(0),
 });
 
+const invitationItemSchema = z.object({
+  name: z.string().min(1).max(200),
+  price_cents: z.number().int().min(0),
+  quantity: z.number().int().min(1).max(10),
+});
+
 export const createFollowUpInvitationSchema = z
   .object({
     patient_id: z.string().regex(uuidFormat, "Invalid patient ID"),
     service_id: z.string().regex(uuidFormat).nullish(),
-    custom_service_name: z.string().min(1).max(200).nullish(),
-    custom_price_cents: z.number().int().min(100).nullish(),
+    custom_service_name: z.string().min(1).max(500).nullish(),
+    custom_price_cents: z.number().int().min(0).nullish(),
     consultation_type: z.enum(["in_person", "video"]),
     duration_minutes: z.number().int().refine((v) => [15, 30, 45, 60].includes(v), {
       message: "Duration must be 15, 30, 45, or 60 minutes",
@@ -47,10 +53,11 @@ export const createFollowUpInvitationSchema = z
     discount_type: z.enum(["percentage", "fixed_amount"]).nullish(),
     discount_value: z.number().int().min(0).nullish(),
     doctor_note: z.string().max(1000).nullish(),
+    items: z.array(invitationItemSchema).min(1).max(20).nullish(),
   })
   .refine(
-    (d) => d.service_id || (d.custom_service_name && d.custom_price_cents),
-    { message: "Either a service or custom service name + price is required" }
+    (d) => (d.items && d.items.length > 0) || d.service_id || (d.custom_service_name && d.custom_price_cents),
+    { message: "At least one line item, service, or custom name + price is required" }
   );
 
 export const bookFollowUpSessionSchema = z.object({
