@@ -29,6 +29,8 @@ import { registerDoctor, signInWithGoogle, signInWithApple } from "@/actions/aut
 import { validateReferralCode } from "@/actions/referral";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
+import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
+import { formatCurrency } from "@/lib/utils/currency";
 import { centsToAmount, amountToCents } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import {
@@ -44,6 +46,7 @@ import {
   Gift,
   ChevronDown,
   ChevronUp,
+  FlaskConical,
 } from "lucide-react";
 
 const STEPS = [
@@ -127,6 +130,7 @@ export default function RegisterDoctorPage() {
   const [consultationFee, setConsultationFee] = useState<number>(50);
   const [videoFee, setVideoFee] = useState<number>(40);
   const [currency, setCurrency] = useState("EUR");
+  const [hasTestingAddon, setHasTestingAddon] = useState(false);
 
   function nextStep() {
     setError("");
@@ -210,6 +214,9 @@ export default function RegisterDoctorPage() {
     if (referralCode) formData.set("referral_code", referralCode);
     if (colleagueName) formData.set("colleague_name", colleagueName);
     if (colleagueEmail) formData.set("colleague_email", colleagueEmail);
+
+    // Add-on
+    formData.set("has_testing_addon", hasTestingAddon ? "true" : "false");
 
     const result = await registerDoctor(formData);
     if (result?.error) {
@@ -650,6 +657,61 @@ export default function RegisterDoctorPage() {
                 You can change your pricing anytime from your dashboard settings.
                 Prices are displayed to patients in the currency you select.
               </p>
+
+              <Separator />
+
+              {/* Medical Testing Add-on */}
+              <div
+                className={`rounded-lg border p-4 transition-colors ${
+                  hasTestingAddon
+                    ? "border-teal-400 bg-teal-50/60"
+                    : "border-muted bg-muted/20"
+                }`}
+              >
+                <label className="flex cursor-pointer items-start gap-3">
+                  <Checkbox
+                    checked={hasTestingAddon}
+                    onCheckedChange={(checked) =>
+                      setHasTestingAddon(checked === true)
+                    }
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <FlaskConical className="h-4 w-4 text-teal-600" />
+                      <span className="font-medium">
+                        Add Medical Testing Services
+                      </span>
+                      <Badge variant="secondary" className="text-xs">
+                        +{formatCurrency(SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!.priceMonthly, SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!.currency)} / month
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      List in-person diagnostic services like blood testing,
+                      urine analysis, ECG, MRI scans, and more. You set your
+                      own prices for each test from your dashboard.
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {[
+                        "Blood Tests",
+                        "Urine Tests",
+                        "ECG",
+                        "MRI Scans",
+                        "X-Ray",
+                        "Ultrasound",
+                      ].map((svc) => (
+                        <Badge
+                          key={svc}
+                          variant="outline"
+                          className="text-xs border-teal-300 text-teal-700"
+                        >
+                          {svc}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </label>
+              </div>
             </div>
           )}
 
@@ -752,6 +814,18 @@ export default function RegisterDoctorPage() {
                     <span className="text-muted-foreground">Video Fee: </span>
                     {videoFee} {currency}
                   </div>
+                  {hasTestingAddon && (
+                    <div className="col-span-2 mt-1">
+                      <span className="text-muted-foreground">Add-on: </span>
+                      <Badge
+                        variant="secondary"
+                        className="text-xs border-teal-300 text-teal-700"
+                      >
+                        <FlaskConical className="mr-1 h-3 w-3" />
+                        Medical Testing Services (+{formatCurrency(SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!.priceMonthly, SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!.currency)}/mo)
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </div>
 

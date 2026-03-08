@@ -139,6 +139,7 @@ export async function registerDoctor(formData: FormData) {
   const locale = (formData.get("locale") as string) || "en";
   const colleagueName = (formData.get("colleague_name") as string)?.trim() || "";
   const colleagueEmail = (formData.get("colleague_email") as string)?.trim().toLowerCase() || "";
+  const hasTestingAddon = formData.get("has_testing_addon") === "true";
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -224,6 +225,7 @@ export async function registerDoctor(formData: FormData) {
         slug,
         consultation_fee_cents: 0,
         referral_code: newReferralCode,
+        has_testing_addon: hasTestingAddon,
         ...(gmcNumber && { gmc_number: gmcNumber }),
       })
       .select("id")

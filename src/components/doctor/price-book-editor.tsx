@@ -39,6 +39,7 @@ interface LocalEntry {
   test_id: string;
   price_cents: number;
   displayPrice: string;
+  custom_name: string | null;
 }
 
 export function PriceBookEditor({ doctorCurrency }: PriceBookEditorProps) {
@@ -60,6 +61,7 @@ export function PriceBookEditor({ doctorCurrency }: PriceBookEditorProps) {
           test_id: e.test_id,
           price_cents: e.price_cents,
           displayPrice: String(centsToAmount(e.price_cents)),
+          custom_name: e.custom_name,
         }))
       );
     }
@@ -72,7 +74,7 @@ export function PriceBookEditor({ doctorCurrency }: PriceBookEditorProps) {
     if (!testId || usedTestIds.has(testId)) return;
     setEntries((prev) => [
       ...prev,
-      { test_id: testId, price_cents: 0, displayPrice: "" },
+      { test_id: testId, price_cents: 0, displayPrice: "", custom_name: null },
     ]);
     setAddTestId("");
   }
@@ -106,7 +108,11 @@ export function PriceBookEditor({ doctorCurrency }: PriceBookEditorProps) {
     setSaving(true);
     setSaved(false);
     const result = await savePriceBookEntries(
-      validEntries.map((e) => ({ test_id: e.test_id, price_cents: e.price_cents }))
+      validEntries.map((e) => ({
+        test_id: e.test_id,
+        price_cents: e.price_cents,
+        custom_name: e.custom_name,
+      }))
     );
 
     if (result.error) {
@@ -119,7 +125,8 @@ export function PriceBookEditor({ doctorCurrency }: PriceBookEditorProps) {
     setSaving(false);
   }
 
-  function getTestName(testId: string) {
+  function getTestName(testId: string, customName?: string | null) {
+    if (customName) return customName;
     return ALL_TESTS.find((t) => t.id === testId)?.name ?? testId;
   }
 
@@ -207,10 +214,10 @@ export function PriceBookEditor({ doctorCurrency }: PriceBookEditorProps) {
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">
-                    {getTestName(entry.test_id)}
+                    {getTestName(entry.test_id, entry.custom_name)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {getTestGroup(entry.test_id)}
+                    {entry.custom_name ? "Custom Test" : getTestGroup(entry.test_id)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

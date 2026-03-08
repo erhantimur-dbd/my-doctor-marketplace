@@ -26,6 +26,7 @@ import {
   ArrowDown,
   Tag,
   X,
+  FlaskConical,
 } from "lucide-react";
 import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -66,6 +67,7 @@ export default function SubscriptionPage() {
     name?: string;
   } | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [hasTestingAddon, setHasTestingAddon] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -81,12 +83,13 @@ export default function SubscriptionPage() {
 
       const { data: doctor } = await supabase
         .from("doctors")
-        .select("id")
+        .select("id, has_testing_addon")
         .eq("profile_id", user.id)
         .single();
       if (!doctor) { setLoading(false); return; }
 
       setDoctorId(doctor.id);
+      setHasTestingAddon(doctor.has_testing_addon ?? false);
 
       const { data: sub } = await supabase
         .from("doctor_subscriptions")
@@ -165,6 +168,22 @@ export default function SubscriptionPage() {
     }
 
     setCancelDialogOpen(false);
+    await loadData();
+    setActionLoading(false);
+  }
+
+  async function handleToggleTestingAddon() {
+    if (!doctorId) return;
+    setActionLoading(true);
+    const supabase = createSupabase();
+    const { error } = await supabase
+      .from("doctors")
+      .update({ has_testing_addon: !hasTestingAddon })
+      .eq("id", doctorId);
+    if (error) {
+      console.error("Addon toggle failed:", error);
+      alert("Failed to update add-on. Please try again.");
+    }
     await loadData();
     setActionLoading(false);
   }
@@ -352,7 +371,7 @@ export default function SubscriptionPage() {
 
       {/* Plan Cards */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0).map((plan) => {
+        {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0 && !("addon" in plan && plan.addon) && !plan.id.startsWith("testing_")).map((plan) => {
           const planIndex = SUBSCRIPTION_PLANS.findIndex((p) => p.id === plan.id);
           const isCurrent = currentPlanId === plan.id;
           const isPopular = "popular" in plan && plan.popular;
@@ -444,6 +463,95 @@ export default function SubscriptionPage() {
           );
         })}
       </div>
+
+      {/* Add-ons */}
+      {(() => {
+        const addonPlan = SUBSCRIPTION_PLANS.find(
+          (p) => "addon" in p && p.addon
+        );
+        if (!addonPlan) return null;
+        const isEligible =
+          currentPlanId === "professional" || currentPlanId === "premium";
+
+        return (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold">Add-ons</h2>
+              <p className="text-sm text-muted-foreground">
+                Enhance your practice with additional services
+              </p>
+            </div>
+            <Card
+              className={`transition-colors ${
+                hasTestingAddon
+                  ? "border-teal-400 ring-2 ring-teal-200"
+                  : ""
+              }`}
+            >
+              <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="rounded-full bg-teal-50 p-3">
+                    <FlaskConical className="h-5 w-5 text-teal-600" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold">{addonPlan.name}</h3>
+                      <Badge variant="secondary">Add-on</Badge>
+                      {hasTestingAddon && (
+                        <Badge className="bg-teal-600">Active</Badge>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      List in-person diagnostic services and set your own prices
+                      for each test. Blood testing, urine analysis, ECG, MRI
+                      scans, and more.
+                    </p>
+                    <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                      {addonPlan.features.map((f) => (
+                        <li
+                          key={f}
+                          className="flex items-center gap-1 text-xs text-muted-foreground"
+                        >
+                          <Check className="h-3 w-3 text-teal-600" /> {f}
+                        </li>
+                      ))}
+                    </ul>
+                    {!isEligible && !hasTestingAddon && (
+                      <p className="mt-2 text-xs text-amber-600">
+                        Upgrade to Professional or Premium to add medical testing
+                        for {formatCurrency(addonPlan.priceMonthly, addonPlan.currency)}/month.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 sm:shrink-0">
+                  <div className="text-right">
+                    <span className="text-2xl font-bold">
+                      {formatCurrency(addonPlan.priceMonthly, addonPlan.currency)}
+                    </span>
+                    <span className="text-muted-foreground"> / mo</span>
+                  </div>
+                  <Button
+                    variant={hasTestingAddon ? "outline" : "default"}
+                    onClick={handleToggleTestingAddon}
+                    disabled={actionLoading || (!isEligible && !hasTestingAddon)}
+                    className={
+                      hasTestingAddon
+                        ? "border-red-200 text-red-600 hover:bg-red-50"
+                        : "bg-teal-600 hover:bg-teal-700"
+                    }
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {hasTestingAddon ? "Remove" : "Add to Plan"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
 
       {/* Free Profile Note */}
       {!currentPlanId && (

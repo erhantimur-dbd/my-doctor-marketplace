@@ -24,6 +24,7 @@ export interface PriceBookEntry {
   id: string;
   test_id: string;
   price_cents: number;
+  custom_name: string | null;
 }
 
 export async function getPriceBook(): Promise<{
@@ -38,7 +39,7 @@ export async function getPriceBook(): Promise<{
 
     const { data, error } = await supabase
       .from("doctor_price_book")
-      .select("id, test_id, price_cents")
+      .select("id, test_id, price_cents, custom_name")
       .eq("doctor_id", doctor.id)
       .order("test_id");
 
@@ -55,7 +56,7 @@ export async function getPriceBook(): Promise<{
 }
 
 export async function savePriceBookEntries(
-  entries: { test_id: string; price_cents: number }[]
+  entries: { test_id: string; price_cents: number; custom_name?: string | null }[]
 ): Promise<{ success?: boolean; error?: string }> {
   try {
     const { error: authError, supabase, doctor } = await requireDoctor();
@@ -75,6 +76,7 @@ export async function savePriceBookEntries(
       doctor_id: doctor.id,
       test_id: e.test_id,
       price_cents: e.price_cents,
+      custom_name: e.custom_name || null,
     }));
 
     const { error } = await supabase

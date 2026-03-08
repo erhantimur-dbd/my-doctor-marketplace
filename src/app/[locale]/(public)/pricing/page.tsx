@@ -110,7 +110,8 @@ function formatPriceForLocale(
 
 export default function PricingPage() {
   const locale = useLocale();
-  const testingPlan = SUBSCRIPTION_PLANS.find((p) => p.id === "testing_service")!;
+  const testingStandalone = SUBSCRIPTION_PLANS.find((p) => p.id === "testing_standalone")!;
+  const testingAddon = SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!;
 
   return (
     <>
@@ -300,27 +301,32 @@ export default function PricingPage() {
           <div className="text-center">
             <Badge variant="secondary" className="mb-4">
               <FlaskConical className="mr-1.5 h-3 w-3" />
-              For Testing Providers
+              Medical Testing
             </Badge>
             <h2 className="text-2xl font-bold md:text-3xl">
               Medical Testing Services
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              For labs, clinics, and nurses offering diagnostic testing. List your services and accept bookings online.
+              List in-person diagnostic services and set your own prices.
+              Choose the plan that fits your practice.
             </p>
           </div>
 
-          <Card className="mx-auto mt-8 max-w-2xl border-teal-200 dark:border-teal-900">
-            <CardContent className="p-6 md:p-8">
-              <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
-                {/* Icon + Price */}
-                <div className="flex flex-col items-center text-center md:w-1/3">
+          <div className="mx-auto mt-8 grid max-w-4xl gap-6 md:grid-cols-2">
+            {/* Standalone — £99/month */}
+            <Card className="relative flex flex-col border-teal-200 dark:border-teal-900">
+              <CardContent className="flex flex-1 flex-col p-6">
+                <div className="flex flex-col items-center text-center">
                   <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
-                    <FlaskConical className="h-8 w-8 text-teal-600" />
+                    <FlaskConical className="h-7 w-7 text-teal-600" />
                   </div>
+                  <h3 className="mt-4 text-lg font-bold">Standalone</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    For labs, clinics &amp; nurses
+                  </p>
                   <div className="mt-4">
                     <span className="text-3xl font-bold">
-                      {formatPriceForLocale(testingPlan.prices, locale)}
+                      {formatPriceForLocale(testingStandalone.prices, locale)}
                     </span>
                     <span className="text-muted-foreground"> / month</span>
                   </div>
@@ -328,36 +334,80 @@ export default function PricingPage() {
                     + 15% platform commission
                   </p>
                 </div>
+                <ul className="mt-6 flex-1 space-y-2.5">
+                  {testingStandalone.features.map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-start gap-2 text-sm"
+                    >
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  className="mt-6 w-full rounded-full bg-teal-600 hover:bg-teal-700"
+                  asChild
+                >
+                  <Link href="/register-testing-service">
+                    Register as Testing Service
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
 
-                {/* Features + CTA */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{testingPlan.name}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {testingPlan.description}
-                  </p>
-                  <ul className="mt-4 space-y-2.5">
-                    {testingPlan.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-start gap-2 text-sm"
-                      >
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    className="mt-6 rounded-full bg-teal-600 hover:bg-teal-700"
-                    asChild
-                  >
-                    <Link href="/register-testing-service">
-                      Register as Testing Service <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </Button>
-                </div>
+            {/* Doctor Add-on — £49/month */}
+            <Card className="relative flex flex-col border-teal-400 shadow-md dark:border-teal-800">
+              <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
+                <Badge className="bg-teal-600 text-white shadow-md hover:bg-teal-600">
+                  Save 50%
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
+              <CardContent className="flex flex-1 flex-col p-6 pt-8">
+                <div className="flex flex-col items-center text-center">
+                  <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
+                    <FlaskConical className="h-7 w-7 text-teal-600" />
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold">Doctor Add-on</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    For doctors on Professional or Premium
+                  </p>
+                  <div className="mt-4">
+                    <span className="text-3xl font-bold">
+                      {formatPriceForLocale(testingAddon.prices, locale)}
+                    </span>
+                    <span className="text-muted-foreground"> / month</span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Added to your existing subscription
+                  </p>
+                </div>
+                <ul className="mt-6 flex-1 space-y-2.5">
+                  {testingAddon.features.map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-start gap-2 text-sm"
+                    >
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Button
+                  className="mt-6 w-full rounded-full"
+                  variant="outline"
+                  asChild
+                >
+                  <Link href="/register-doctor">
+                    Register as Doctor <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Already a doctor? Add from your subscription dashboard.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
 

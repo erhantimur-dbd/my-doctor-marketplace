@@ -18,6 +18,7 @@ import {
   UserPlus,
   HelpCircle,
   BookOpen,
+  FlaskConical,
 } from "lucide-react";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 import { DoctorSessionGuard } from "@/components/shared/session-timeout-guard";
@@ -32,6 +33,11 @@ const sidebarLinks = [
   { href: "/doctor-dashboard/payments", icon: CreditCard, label: "Payments" },
   { href: "/doctor-dashboard/invoices", icon: Receipt, label: "Invoices" },
   { href: "/doctor-dashboard/analytics", icon: BarChart3, label: "Analytics" },
+  {
+    href: "/doctor-dashboard/medical-testing",
+    icon: FlaskConical,
+    label: "Medical Testing",
+  },
   { href: "/doctor-dashboard/policies", icon: FileText, label: "Policies" },
   {
     href: "/doctor-dashboard/subscription",

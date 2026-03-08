@@ -27,6 +27,8 @@ import { registerTestingService } from "@/actions/auth";
 import { getTestingSpecialties } from "@/lib/constants/specialties";
 import { formatSpecialtyName } from "@/lib/utils";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
+import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
+import { formatCurrency } from "@/lib/utils/currency";
 import {
   Loader2,
   ChevronRight,
@@ -187,6 +189,11 @@ export default function RegisterTestingServicePage() {
             <FlaskConical className="h-6 w-6 text-teal-600" />
           </div>
           <CardTitle className="text-2xl">Register as a Testing Service</CardTitle>
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 dark:bg-teal-950/30">
+            <span className="text-sm font-semibold text-teal-700 dark:text-teal-400">
+              {formatCurrency(SUBSCRIPTION_PLANS.find((p) => p.id === "testing_standalone")!.priceMonthly, SUBSCRIPTION_PLANS.find((p) => p.id === "testing_standalone")!.currency)} / month
+            </span>
+          </div>
           <CardDescription>
             Step {step} of 4 —{" "}
             {STEPS.find((s) => s.number === step)?.title}

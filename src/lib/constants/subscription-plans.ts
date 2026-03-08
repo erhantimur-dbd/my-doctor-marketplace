@@ -65,12 +65,27 @@ export const SUBSCRIPTION_PLANS = [
     ],
   },
   {
-    id: "testing_service",
+    id: "testing_standalone",
     name: "Medical Testing",
     description: "For labs, clinics & nurses offering diagnostic services",
+    priceMonthly: 9900,
+    currency: "GBP",
+    prices: { EUR: 11400, GBP: 9900, TRY: 431200 },
+    features: [
+      "Online booking calendar",
+      "Unlimited bookings",
+      "Email reminders",
+      "SMS & WhatsApp reminders",
+    ],
+  },
+  {
+    id: "testing_addon",
+    name: "Medical Testing Add-on",
+    description: "Add diagnostic services to your doctor profile",
     priceMonthly: 4900,
     currency: "GBP",
     prices: { EUR: 5700, GBP: 4900, TRY: 215600 },
+    addon: true,
     features: [
       "Online booking calendar",
       "Unlimited bookings",
