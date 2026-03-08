@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { importMicrosoftCalendarEvents } from "@/lib/microsoft/sync";
 
+const EXPECTED_CLIENT_STATE = process.env.MICROSOFT_WEBHOOK_SECRET || "mydoctors360-calendar-sync";
+
 /**
  * POST /api/webhooks/microsoft-calendar
  * Handles Microsoft Graph push notifications for calendar changes.
@@ -26,10 +28,14 @@ export async function POST(request: NextRequest) {
     const notifications = body.value || [];
 
     for (const notification of notifications) {
-      // Verify client state
-      if (notification.clientState !== "mydoctors360-calendar-sync") continue;
+      // Verify client state matches our secret
+      if (notification.clientState !== EXPECTED_CLIENT_STATE) {
+        console.warn("Microsoft webhook: invalid clientState received");
+        continue;
+      }
 
       const subscriptionId = notification.subscriptionId;
+      if (!subscriptionId) continue;
 
       // Find doctor by webhook subscription ID
       const supabase = createAdminClient();

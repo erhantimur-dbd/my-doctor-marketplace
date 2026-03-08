@@ -6,6 +6,7 @@ import {
   Users,
   Star,
   CreditCard,
+  Receipt,
   BarChart3,
   Settings,
   LayoutDashboard,
@@ -29,6 +30,7 @@ const sidebarLinks = [
   { href: "/doctor-dashboard/profile", icon: User, label: "Profile" },
   { href: "/doctor-dashboard/reviews", icon: Star, label: "Reviews" },
   { href: "/doctor-dashboard/payments", icon: CreditCard, label: "Payments" },
+  { href: "/doctor-dashboard/invoices", icon: Receipt, label: "Invoices" },
   { href: "/doctor-dashboard/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/doctor-dashboard/policies", icon: FileText, label: "Policies" },
   {

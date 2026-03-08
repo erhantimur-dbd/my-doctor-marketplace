@@ -10,7 +10,9 @@ export async function GET(
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const next = searchParams.get("next") ?? `/${locale}`;
+  const rawNext = searchParams.get("next") ?? `/${locale}`;
+  // Only allow relative paths to prevent open redirect attacks
+  const next = (rawNext.startsWith("/") && !rawNext.startsWith("//")) ? rawNext : `/${locale}`;
 
   // Helper: create a redirect response and copy all auth cookies onto it.
   // This is critical — using `cookies()` from next/headers sets cookies on

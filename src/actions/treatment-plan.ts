@@ -296,7 +296,8 @@ export async function createTreatmentPlan(
 
 export async function getTreatmentPlanByToken(token: string) {
   try {
-    const supabase = await createClient();
+    // Use admin client to bypass RLS — access is gated by the secret token
+    const supabase = createAdminClient();
 
     const { data: plan, error } = await supabase
       .from("treatment_plans")

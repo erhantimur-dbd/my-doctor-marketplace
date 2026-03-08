@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { rateLimit } from "@/lib/rate-limit";
 
 /** Derive the app origin from incoming request headers (works on localhost,
  *  Vercel preview deploys, and production). Falls back to env var. */
@@ -16,7 +17,20 @@ async function getOrigin(): Promise<string> {
   return process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 }
 
+/** Get client IP for rate limiting */
+async function getClientIp(): Promise<string> {
+  const h = await headers();
+  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+}
+
 export async function login(formData: FormData) {
+  // Rate limit: 5 login attempts per 15 minutes per IP
+  const ip = await getClientIp();
+  const { limited } = rateLimit(`login:${ip}`, 5, 15 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many login attempts. Please try again in a few minutes." };
+  }
+
   const supabase = await createClient();
 
   const email = formData.get("email") as string;
@@ -52,7 +66,8 @@ export async function login(formData: FormData) {
   revalidatePath("/", "layout");
 
   // If there's an explicit redirect (e.g. from middleware), honour it
-  if (redirectTo) {
+  // Only allow relative paths to prevent open redirect attacks
+  if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
     redirect(redirectTo);
   }
 
@@ -68,6 +83,13 @@ export async function login(formData: FormData) {
 }
 
 export async function register(formData: FormData) {
+  // Rate limit: 3 registrations per 30 minutes per IP
+  const ip = await getClientIp();
+  const { limited } = rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many registration attempts. Please try again later." };
+  }
+
   const supabase = await createClient();
   const origin = await getOrigin();
 
@@ -99,6 +121,12 @@ export async function register(formData: FormData) {
 }
 
 export async function registerDoctor(formData: FormData) {
+  const ip = await getClientIp();
+  const { limited } = rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many registration attempts. Please try again later." };
+  }
+
   const supabase = await createClient();
   const origin = await getOrigin();
 
@@ -233,6 +261,12 @@ export async function registerDoctor(formData: FormData) {
 }
 
 export async function registerTestingService(formData: FormData) {
+  const ip = await getClientIp();
+  const { limited } = rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many registration attempts. Please try again later." };
+  }
+
   const supabase = await createClient();
   const origin = await getOrigin();
 
@@ -336,6 +370,12 @@ export async function registerTestingService(formData: FormData) {
 }
 
 export async function resendVerificationEmail(email: string, locale: string = "en") {
+  const ip = await getClientIp();
+  const { limited } = rateLimit(`resend:${ip}`, 3, 15 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many requests. Please try again later." };
+  }
+
   const supabase = await createClient();
   const origin = await getOrigin();
 
@@ -355,6 +395,13 @@ export async function resendVerificationEmail(email: string, locale: string = "e
 }
 
 export async function forgotPassword(formData: FormData) {
+  // Rate limit: 3 password reset requests per 15 minutes per IP
+  const ip = await getClientIp();
+  const { limited } = rateLimit(`forgot:${ip}`, 3, 15 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many password reset requests. Please try again later." };
+  }
+
   const supabase = await createClient();
 
   const email = formData.get("email") as string;

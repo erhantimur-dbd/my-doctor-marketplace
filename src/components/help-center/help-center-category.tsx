@@ -106,12 +106,9 @@ export function HelpCenterCategory({
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <div
-                      className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_strong]:text-foreground"
-                      dangerouslySetInnerHTML={{
-                        __html: article.answer.replace(/\n/g, "<br />"),
-                      }}
-                    />
+                    <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_strong]:text-foreground whitespace-pre-line">
+                      {article.answer}
+                    </div>
                     <button
                       onClick={() => copyLink(article.id)}
                       className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground/60 transition-colors hover:text-primary"

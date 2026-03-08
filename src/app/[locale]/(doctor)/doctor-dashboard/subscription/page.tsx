@@ -72,31 +72,35 @@ export default function SubscriptionPage() {
   }, []);
 
   async function loadData() {
-    const supabase = createSupabase();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const supabase = createSupabase();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) { setLoading(false); return; }
 
-    const { data: doctor } = await supabase
-      .from("doctors")
-      .select("id")
-      .eq("profile_id", user.id)
-      .single();
-    if (!doctor) return;
+      const { data: doctor } = await supabase
+        .from("doctors")
+        .select("id")
+        .eq("profile_id", user.id)
+        .single();
+      if (!doctor) { setLoading(false); return; }
 
-    setDoctorId(doctor.id);
+      setDoctorId(doctor.id);
 
-    const { data: sub } = await supabase
-      .from("doctor_subscriptions")
-      .select("*")
-      .eq("doctor_id", doctor.id)
-      .in("status", ["active", "trialing", "past_due"])
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      const { data: sub } = await supabase
+        .from("doctor_subscriptions")
+        .select("*")
+        .eq("doctor_id", doctor.id)
+        .in("status", ["active", "trialing", "past_due"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    setSubscription(sub as Subscription | null);
+      setSubscription(sub as Subscription | null);
+    } catch (err) {
+      console.error("Failed to load subscription data:", err);
+    }
     setLoading(false);
   }
 

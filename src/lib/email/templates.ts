@@ -1340,3 +1340,78 @@ export function invoiceEmail({
 
   return { subject, html };
 }
+
+// ─── Treatment Continuation Reminder ─────────────────────────────
+
+interface TreatmentReminderParams {
+  patientName: string;
+  doctorName: string;
+  invoiceNumber: string;
+  services: string;
+  totalAmount: string;
+  dueDate: string;
+  invoiceUrl: string;
+  reminderNumber: 1 | 2 | 3;
+}
+
+export function treatmentContinuationEmail({
+  patientName,
+  doctorName,
+  invoiceNumber,
+  services,
+  totalAmount,
+  dueDate,
+  invoiceUrl,
+  reminderNumber,
+}: TreatmentReminderParams): { subject: string; html: string } {
+  const subjectByReminder: Record<number, string> = {
+    1: `Your recommended treatment plan from Dr. ${doctorName}`,
+    2: `Reminder: Dr. ${doctorName} recommended follow-up care for you`,
+    3: `Final reminder: Your treatment plan from Dr. ${doctorName}`,
+  };
+
+  const introByReminder: Record<number, string> = {
+    1: `Following your recent consultation, <strong>Dr. ${doctorName}</strong> has recommended the following treatment plan for your continued care. If you'd like to proceed, you can review and accept it at your convenience.`,
+    2: `We wanted to gently remind you that <strong>Dr. ${doctorName}</strong> recommended a follow-up treatment plan after your recent visit. Your health is important, and the recommended care is still available if you'd like to proceed.`,
+    3: `This is a final, friendly reminder about the treatment plan <strong>Dr. ${doctorName}</strong> recommended for you. There's no obligation — but if you'd like to continue with the recommended care, the option is still open for a short time.`,
+  };
+
+  const subject = subjectByReminder[reminderNumber] || subjectByReminder[1];
+  const intro = introByReminder[reminderNumber] || introByReminder[1];
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 16px; font-size: 20px; color: #111827; font-weight: 700;">
+      Your Recommended Treatment Plan
+    </h2>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Hi ${patientName},
+    </p>
+
+    <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
+      ${intro}
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden;">
+      <tr>
+        <td style="padding: 16px 20px; background-color: #f9fafb;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${infoRow("Reference", invoiceNumber)}
+            ${infoRow("Recommended Care", services)}
+            ${infoRow("Total", `<strong>${totalAmount}</strong>`)}
+            ${infoRow("Available Until", dueDate)}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${button("Review Treatment Plan", invoiceUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      This is a recommendation from your doctor — there is no obligation to proceed.
+      If you have any questions about the suggested treatment, please contact Dr. ${doctorName} directly.
+    </p>
+  `);
+
+  return { subject, html };
+}
