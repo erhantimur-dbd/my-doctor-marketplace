@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { MapErrorBoundary } from "@/components/maps/map-error-boundary";
 
 const ProfileMap = dynamic(
   () => import("@/components/maps/profile-map").then((mod) => mod.ProfileMap),
@@ -23,5 +24,9 @@ interface ProfileMapWrapperProps {
 }
 
 export function ProfileMapWrapper({ lat, lng, label, className, interactive }: ProfileMapWrapperProps) {
-  return <ProfileMap lat={lat} lng={lng} label={label} className={className} interactive={interactive} />;
+  return (
+    <MapErrorBoundary className={className} lat={lat} lng={lng}>
+      <ProfileMap lat={lat} lng={lng} label={label} className={className} interactive={interactive} />
+    </MapErrorBoundary>
+  );
 }

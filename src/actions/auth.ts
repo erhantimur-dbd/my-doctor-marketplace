@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getStripe } from "@/lib/stripe/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -120,7 +121,18 @@ export async function register(formData: FormData) {
   redirect(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
 }
 
-export async function registerDoctor(formData: FormData) {
+// ─── Internal helper: shared doctor account creation ────────────────
+
+async function createDoctorAccount(formData: FormData): Promise<
+  | { error: string }
+  | {
+      userId: string;
+      doctorId: string;
+      orgId: string | null;
+      email: string;
+      locale: string;
+    }
+> {
   const ip = await getClientIp();
   const { limited } = rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
   if (limited) {
@@ -158,149 +170,242 @@ export async function registerDoctor(formData: FormData) {
     return { error: error.message };
   }
 
-  if (data.user) {
-    // Use admin client because user has no active session yet
-    // (email confirmation pending), so RLS policies would block.
-    const adminSupabase = createAdminClient();
+  if (!data.user) {
+    return { error: "Account creation failed. Please try again." };
+  }
 
-    // Wait for auth.users + profiles trigger to commit.
-    // Supabase's GoTrue may return before the DB transaction is visible
-    // to PostgREST, so we poll until the profile row appears.
-    let profileReady = false;
-    for (let attempt = 0; attempt < 10; attempt++) {
-      const { data: profile } = await adminSupabase
-        .from("profiles")
-        .select("id")
-        .eq("id", data.user.id)
-        .maybeSingle();
+  // Use admin client because user has no active session yet
+  // (email confirmation pending), so RLS policies would block.
+  const adminSupabase = createAdminClient();
 
-      if (profile) {
-        profileReady = true;
-        break;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    // If trigger still hasn't fired after 5s, create profile manually
-    if (!profileReady) {
-      const { error: profileError } = await adminSupabase
-        .from("profiles")
-        .insert({
-          id: data.user.id,
-          role: "doctor",
-          first_name: firstName,
-          last_name: lastName,
-          email,
-        });
-
-      if (profileError) {
-        console.error("Profile creation failed:", profileError);
-        return {
-          error:
-            "Account created but profile setup is still processing. Please wait a moment and log in.",
-        };
-      }
-    }
-
-    const slug =
-      `dr-${firstName}-${lastName}`
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "") +
-      "-" +
-      Math.random().toString(36).substring(2, 6);
-
-    // Generate unique referral code for this new doctor
-    const newReferralCode = (
-      firstName.substring(0, 2) +
-      lastName.substring(0, 2) +
-      Math.random().toString(36).substring(2, 6)
-    ).toUpperCase();
-
-    const { error: doctorError, data: newDoctor } = await adminSupabase
-      .from("doctors")
-      .insert({
-        profile_id: data.user.id,
-        slug,
-        consultation_fee_cents: 0,
-        referral_code: newReferralCode,
-        has_testing_addon: hasTestingAddon,
-        ...(gmcNumber && { gmc_number: gmcNumber }),
-      })
+  // Wait for auth.users + profiles trigger to commit.
+  let profileReady = false;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data: profile } = await adminSupabase
+      .from("profiles")
       .select("id")
-      .single();
+      .eq("id", data.user.id)
+      .maybeSingle();
 
-    if (doctorError) {
-      console.error("Doctor creation failed:", doctorError);
-      return { error: doctorError.message };
+    if (profile) {
+      profileReady = true;
+      break;
     }
 
-    // Process referral code if provided (link this doctor as a referred signup)
-    if (referralCode && newDoctor) {
-      const { processReferralSignup } = await import("@/actions/referral");
-      await processReferralSignup(newDoctor.id, email);
-    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
 
-    // Send colleague invitation if provided
-    if (colleagueEmail && newDoctor) {
-      const { sendReferralInvitationAtRegistration } = await import(
-        "@/actions/referral"
-      );
-      const referrerName = `Dr. ${firstName} ${lastName}`;
-      await sendReferralInvitationAtRegistration(
-        newDoctor.id,
-        newReferralCode,
-        referrerName,
-        colleagueName,
-        colleagueEmail
-      );
-    }
+  // If trigger still hasn't fired after 5s, create profile manually
+  if (!profileReady) {
+    const { error: profileError } = await adminSupabase
+      .from("profiles")
+      .insert({
+        id: data.user.id,
+        role: "doctor",
+        first_name: firstName,
+        last_name: lastName,
+        email,
+      });
 
-    // Auto-create organization + owner membership for the new doctor
-    if (newDoctor) {
-      try {
-        const orgSlug =
-          `dr-${firstName}-${lastName}-practice`
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/(^-|-$)/g, "") +
-          "-" +
-          Math.random().toString(36).substring(2, 6);
-
-        const { data: newOrg } = await adminSupabase
-          .from("organizations")
-          .insert({
-            name: `Dr. ${firstName} ${lastName}'s Practice`,
-            slug: orgSlug,
-            email,
-          })
-          .select("id")
-          .single();
-
-        if (newOrg) {
-          await adminSupabase.from("organization_members").insert({
-            organization_id: newOrg.id,
-            user_id: data.user.id,
-            role: "owner",
-            status: "active",
-            accepted_at: new Date().toISOString(),
-          });
-
-          await adminSupabase
-            .from("doctors")
-            .update({ organization_id: newOrg.id })
-            .eq("id", newDoctor.id);
-        }
-      } catch (orgErr) {
-        // Non-blocking — doctor can still use the platform; org can be created later
-        console.error("[Auth] Auto-org creation failed:", orgErr);
-      }
+    if (profileError) {
+      console.error("Profile creation failed:", profileError);
+      return {
+        error:
+          "Account created but profile setup is still processing. Please wait a moment and log in.",
+      };
     }
   }
 
+  const slug =
+    `dr-${firstName}-${lastName}`
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") +
+    "-" +
+    Math.random().toString(36).substring(2, 6);
+
+  // Generate unique referral code for this new doctor
+  const newReferralCode = (
+    firstName.substring(0, 2) +
+    lastName.substring(0, 2) +
+    Math.random().toString(36).substring(2, 6)
+  ).toUpperCase();
+
+  const { error: doctorError, data: newDoctor } = await adminSupabase
+    .from("doctors")
+    .insert({
+      profile_id: data.user.id,
+      slug,
+      consultation_fee_cents: 0,
+      referral_code: newReferralCode,
+      has_testing_addon: hasTestingAddon,
+      ...(gmcNumber && { gmc_number: gmcNumber }),
+    })
+    .select("id")
+    .single();
+
+  if (doctorError) {
+    console.error("Doctor creation failed:", doctorError);
+    return { error: doctorError.message };
+  }
+
+  // Process referral code if provided (link this doctor as a referred signup)
+  if (referralCode && newDoctor) {
+    const { processReferralSignup } = await import("@/actions/referral");
+    await processReferralSignup(newDoctor.id, email);
+  }
+
+  // Send colleague invitation if provided
+  if (colleagueEmail && newDoctor) {
+    const { sendReferralInvitationAtRegistration } = await import(
+      "@/actions/referral"
+    );
+    const referrerName = `Dr. ${firstName} ${lastName}`;
+    await sendReferralInvitationAtRegistration(
+      newDoctor.id,
+      newReferralCode,
+      referrerName,
+      colleagueName,
+      colleagueEmail
+    );
+  }
+
+  // Auto-create organization + owner membership for the new doctor
+  let orgId: string | null = null;
+  if (newDoctor) {
+    try {
+      const orgSlug =
+        `dr-${firstName}-${lastName}-practice`
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "") +
+        "-" +
+        Math.random().toString(36).substring(2, 6);
+
+      const { data: newOrg } = await adminSupabase
+        .from("organizations")
+        .insert({
+          name: `Dr. ${firstName} ${lastName}'s Practice`,
+          slug: orgSlug,
+          email,
+        })
+        .select("id")
+        .single();
+
+      if (newOrg) {
+        orgId = newOrg.id;
+        await adminSupabase.from("organization_members").insert({
+          organization_id: newOrg.id,
+          user_id: data.user.id,
+          role: "owner",
+          status: "active",
+          accepted_at: new Date().toISOString(),
+        });
+
+        await adminSupabase
+          .from("doctors")
+          .update({ organization_id: newOrg.id })
+          .eq("id", newDoctor.id);
+      }
+    } catch (orgErr) {
+      // Non-blocking — doctor can still use the platform; org can be created later
+      console.error("[Auth] Auto-org creation failed:", orgErr);
+    }
+  }
+
+  return { userId: data.user.id, doctorId: newDoctor.id, orgId, email, locale };
+}
+
+// ─── Doctor Registration (Free Tier) ────────────────────────────────
+
+export async function registerDoctor(formData: FormData) {
+  const result = await createDoctorAccount(formData);
+  if ("error" in result) return result;
+
+  const tier = (formData.get("tier") as string) || "free";
+
+  // Create free license for free tier
+  if (tier === "free" && result.orgId) {
+    const adminSupabase = createAdminClient();
+    await adminSupabase.from("licenses").insert({
+      organization_id: result.orgId,
+      tier: "free",
+      status: "active",
+      max_seats: 1,
+      used_seats: 1,
+      current_period_start: new Date().toISOString(),
+      current_period_end: "2099-12-31T23:59:59.000Z",
+    });
+  }
+
   revalidatePath("/", "layout");
-  redirect(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
+  redirect(`/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}`);
+}
+
+// ─── Doctor Registration (Paid Tier → Stripe Checkout) ──────────────
+
+export async function registerDoctorWithCheckout(formData: FormData) {
+  const result = await createDoctorAccount(formData);
+  if ("error" in result) return result;
+
+  const tier = (formData.get("tier") as string) || "starter";
+  const seatCount = parseInt(formData.get("seat_count") as string) || 1;
+
+  if (!result.orgId) {
+    return { error: "Organization creation failed. Please try again." };
+  }
+
+  const { getLicenseTier } = await import("@/lib/constants/license-tiers");
+  const tierConfig = getLicenseTier(tier);
+  if (!tierConfig) return { error: "Invalid plan selected" };
+  if (tierConfig.isFreeTier) return { error: "Free tier does not require checkout" };
+  if (tierConfig.isCustomPricing) return { error: "Please contact us for Enterprise pricing" };
+
+  const stripe = getStripe();
+  const origin = await getOrigin();
+
+  // Create Stripe customer for the org
+  const customer = await stripe.customers.create({
+    email: result.email,
+    metadata: { organization_id: result.orgId },
+  });
+
+  // Store Stripe customer ID on org
+  const adminSupabase = createAdminClient();
+  await adminSupabase
+    .from("organizations")
+    .update({ stripe_customer_id: customer.id })
+    .eq("id", result.orgId);
+
+  // Create price on-the-fly in GBP
+  const price = await stripe.prices.create({
+    currency: "gbp",
+    unit_amount: tierConfig.priceMonthlyPence,
+    recurring: { interval: "month" },
+    product_data: {
+      name: `MyDoctors360 ${tierConfig.name} License`,
+      metadata: { tier },
+    },
+  });
+
+  const quantity = tierConfig.perUser ? Math.min(seatCount, tierConfig.maxSeats) : 1;
+
+  const session = await stripe.checkout.sessions.create({
+    customer: customer.id,
+    mode: "subscription",
+    line_items: [{ price: price.id, quantity }],
+    subscription_data: {
+      metadata: {
+        organization_id: result.orgId,
+        tier,
+        type: "license",
+      },
+    },
+    success_url: `${origin}/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}&checkout=success`,
+    cancel_url: `${origin}/${result.locale}/register-doctor?tier=${tier}&checkout=cancelled`,
+  });
+
+  return { checkoutUrl: session.url };
 }
 
 export async function registerTestingService(formData: FormData) {

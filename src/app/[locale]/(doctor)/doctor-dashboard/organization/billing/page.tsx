@@ -28,8 +28,7 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { LICENSE_TIERS, AVAILABLE_MODULES } from "@/lib/constants/license-tiers";
-import { formatCurrency } from "@/lib/utils/currency";
+import { LICENSE_TIERS, AVAILABLE_MODULES, formatPrice } from "@/lib/constants/license-tiers";
 import {
   getOrganizationLicense,
   createLicenseCheckout,
@@ -319,12 +318,16 @@ export default function BillingPage() {
                   <div className="mb-4">
                     {tier.isCustomPricing ? (
                       <span className="text-2xl font-bold">Custom</span>
+                    ) : tier.isFreeTier ? (
+                      <span className="text-2xl font-bold">Free</span>
                     ) : (
                       <>
                         <span className="text-2xl font-bold">
-                          {formatCurrency(tier.priceMonthly, "EUR")}
+                          {formatPrice(tier.priceMonthlyPence, "GBP")}
                         </span>
-                        <span className="text-muted-foreground"> / mo</span>
+                        <span className="text-muted-foreground">
+                          {tier.perUser ? " / user / mo" : " / mo"}
+                        </span>
                       </>
                     )}
                   </div>
@@ -411,7 +414,7 @@ export default function BillingPage() {
                   <div className="flex items-center gap-4 sm:shrink-0">
                     <div className="text-right">
                       <span className="text-xl font-bold">
-                        {formatCurrency(mod.priceMonthly, "EUR")}
+                        {formatPrice(mod.priceMonthlyPence, "GBP")}
                       </span>
                       <span className="text-muted-foreground"> / mo</span>
                     </div>

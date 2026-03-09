@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale } from "next-intl";
 import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -27,9 +28,18 @@ import {
   Tag,
   X,
   FlaskConical,
+  ArrowRight,
+  Info,
 } from "lucide-react";
-import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
-import { formatCurrency } from "@/lib/utils/currency";
+import {
+  LICENSE_TIERS,
+  AVAILABLE_MODULES,
+  getLicenseTier,
+  formatPriceForLocale,
+  formatPrice,
+  type LicenseTierConfig,
+} from "@/lib/constants/license-tiers";
+import { Link } from "@/i18n/navigation";
 
 interface Subscription {
   id: string;
@@ -43,6 +53,22 @@ interface Subscription {
   created_at: string;
 }
 
+/** Map legacy plan IDs to display names (for existing subscriptions). */
+function getLegacyPlanName(planId: string): string {
+  // Try new tier system first
+  const tier = getLicenseTier(planId);
+  if (tier) return tier.name;
+  // Legacy mappings
+  const legacyNames: Record<string, string> = {
+    basic: "Basic",
+    professional: "Professional",
+    premium: "Premium",
+    clinic: "Clinic",
+    testing_standalone: "Medical Testing",
+  };
+  return legacyNames[planId] || planId;
+}
+
 function createSupabase() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,6 +77,7 @@ function createSupabase() {
 }
 
 export default function SubscriptionPage() {
+  const locale = useLocale();
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [doctorId, setDoctorId] = useState<string | null>(null);
@@ -68,6 +95,7 @@ export default function SubscriptionPage() {
   } | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [hasTestingAddon, setHasTestingAddon] = useState(false);
+  const [hasOrgLicense, setHasOrgLicense] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -91,6 +119,27 @@ export default function SubscriptionPage() {
       setDoctorId(doctor.id);
       setHasTestingAddon(doctor.has_testing_addon ?? false);
 
+      // Check for org-based license
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .single();
+
+      if (membership) {
+        const { data: license } = await supabase
+          .from("licenses")
+          .select("id")
+          .eq("organization_id", membership.organization_id)
+          .in("status", ["active", "trialing", "past_due"])
+          .limit(1)
+          .maybeSingle();
+
+        setHasOrgLicense(!!license);
+      }
+
+      // Legacy per-doctor subscription
       const { data: sub } = await supabase
         .from("doctor_subscriptions")
         .select("*")
@@ -107,7 +156,7 @@ export default function SubscriptionPage() {
     setLoading(false);
   }
 
-  async function handleSelectPlan(planId: string) {
+  async function handleSelectPlan(tierId: string) {
     if (!doctorId) return;
     setActionLoading(true);
 
@@ -117,7 +166,7 @@ export default function SubscriptionPage() {
       const { error } = await supabase
         .from("doctor_subscriptions")
         .update({
-          plan_id: planId,
+          plan_id: tierId,
           cancel_at_period_end: false,
         })
         .eq("id", subscription.id);
@@ -133,7 +182,7 @@ export default function SubscriptionPage() {
 
       const { error } = await supabase.from("doctor_subscriptions").insert({
         doctor_id: doctorId,
-        plan_id: planId,
+        plan_id: tierId,
         status: "trialing",
         stripe_subscription_id: null,
         stripe_customer_id: null,
@@ -194,7 +243,6 @@ export default function SubscriptionPage() {
     setCouponValidation(null);
     try {
       const { validateCoupon } = await import("@/actions/coupon");
-      // Validate against "professional" as default; server checks plan applicability
       const result = await validateCoupon(couponCode, "professional");
       setCouponValidation(result as any);
     } catch {
@@ -208,18 +256,6 @@ export default function SubscriptionPage() {
     setCouponValidation(null);
   }
 
-  function calculateDiscountedPrice(priceInCents: number): number {
-    if (!couponValidation?.valid) return priceInCents;
-    if (couponValidation.discount_type === "percentage") {
-      return Math.round(priceInCents * (1 - (couponValidation.discount_value || 0) / 100));
-    }
-    return Math.max(0, priceInCents - (couponValidation.discount_value || 0));
-  }
-
-  function getPlanIndex(planId: string): number {
-    return SUBSCRIPTION_PLANS.findIndex((p) => p.id === planId);
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -228,8 +264,12 @@ export default function SubscriptionPage() {
     );
   }
 
+  // Display tiers for plan selection (exclude free and enterprise)
+  const displayTiers = LICENSE_TIERS.filter(
+    (t) => !t.isFreeTier && !t.isCustomPricing
+  );
+
   const currentPlanId = subscription?.plan_id || null;
-  const currentPlanIndex = currentPlanId ? getPlanIndex(currentPlanId) : -1;
 
   return (
     <div className="space-y-6">
@@ -239,6 +279,32 @@ export default function SubscriptionPage() {
           Manage your subscription plan and billing
         </p>
       </div>
+
+      {/* Banner: org-based billing */}
+      {hasOrgLicense && (
+        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/20">
+          <CardContent className="flex items-start gap-4 p-6">
+            <div className="rounded-full bg-blue-100 p-3 dark:bg-blue-900/50">
+              <Info className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-blue-900 dark:text-blue-100">
+                Your subscription is managed through your organization
+              </p>
+              <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
+                Billing, plan upgrades, and seat management are handled on the
+                organization billing page.
+              </p>
+              <Link href="/doctor-dashboard/organization/billing">
+                <Button size="sm" className="mt-3" variant="default">
+                  Go to Organization Billing
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Current Subscription Status */}
       {subscription ? (
@@ -251,9 +317,7 @@ export default function SubscriptionPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <p className="font-semibold">
-                    {SUBSCRIPTION_PLANS.find((p) => p.id === subscription.plan_id)
-                      ?.name || "Unknown"}{" "}
-                    Plan
+                    {getLegacyPlanName(subscription.plan_id)} Plan
                   </p>
                   <Badge
                     variant={
@@ -307,8 +371,8 @@ export default function SubscriptionPage() {
             <div>
               <p className="font-semibold">No Active Subscription</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Start with a 14-day free trial. No credit card required. Choose a
-                plan below to get started.
+                Choose a plan below to unlock bookings, reminders, video
+                consultations, and more.
               </p>
             </div>
           </CardContent>
@@ -358,7 +422,7 @@ export default function SubscriptionPage() {
                   {couponValidation.name} &mdash;{" "}
                   {couponValidation.discount_type === "percentage"
                     ? `${couponValidation.discount_value}% off`
-                    : `${formatCurrency(couponValidation.discount_value!, couponValidation.currency || "EUR")} off`}
+                    : `${formatPrice(couponValidation.discount_value! * 100, couponValidation.currency || "GBP")} off`}
                 </span>
               </div>
             )}
@@ -371,27 +435,29 @@ export default function SubscriptionPage() {
 
       {/* Plan Cards */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {SUBSCRIPTION_PLANS.filter((plan) => plan.priceMonthly > 0 && !("addon" in plan && plan.addon) && !plan.id.startsWith("testing_")).map((plan) => {
-          const planIndex = SUBSCRIPTION_PLANS.findIndex((p) => p.id === plan.id);
-          const isCurrent = currentPlanId === plan.id;
-          const isPopular = "popular" in plan && plan.popular;
-          const isUpgrade = currentPlanIndex >= 0 && planIndex > currentPlanIndex;
-          const isDowngrade = currentPlanIndex >= 0 && planIndex < currentPlanIndex;
+        {displayTiers.map((tier) => {
+          const isCurrent = currentPlanId === tier.id;
+          const currentTierIndex = currentPlanId
+            ? displayTiers.findIndex((t) => t.id === currentPlanId)
+            : -1;
+          const thisTierIndex = displayTiers.findIndex((t) => t.id === tier.id);
+          const isUpgrade = currentTierIndex >= 0 && thisTierIndex > currentTierIndex;
+          const isDowngrade = currentTierIndex >= 0 && thisTierIndex < currentTierIndex;
 
           return (
             <Card
-              key={plan.id}
+              key={tier.id}
               className={`relative flex flex-col ${
                 isCurrent
                   ? "border-primary ring-2 ring-primary/20"
-                  : isPopular
+                  : tier.popular
                     ? "border-primary/50"
                     : ""
               }`}
             >
-              {isPopular && !isCurrent && (
+              {tier.popular && !isCurrent && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-primary px-3">Most Doctors start here</Badge>
+                  <Badge className="bg-primary px-3">Most Popular</Badge>
                 </div>
               )}
               {isCurrent && (
@@ -400,29 +466,20 @@ export default function SubscriptionPage() {
                 </div>
               )}
               <CardHeader className="pt-8">
-                <CardTitle>{plan.name}</CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
+                <CardTitle>{tier.name}</CardTitle>
+                <CardDescription>{tier.description}</CardDescription>
               </CardHeader>
               <CardContent className="flex-1">
                 <div className="mb-6">
-                  {couponValidation?.valid && !subscription ? (
-                    <>
-                      <span className="text-lg line-through text-muted-foreground">
-                        {formatCurrency(plan.priceMonthly, plan.currency)}
-                      </span>
-                      <span className="ml-2 text-3xl font-bold text-green-600">
-                        {formatCurrency(calculateDiscountedPrice(plan.priceMonthly), plan.currency)}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-3xl font-bold">
-                      {formatCurrency(plan.priceMonthly, plan.currency)}
-                    </span>
-                  )}
-                  <span className="text-muted-foreground"> / month</span>
+                  <span className="text-3xl font-bold">
+                    {formatPriceForLocale(tier.priceMonthlyPence, locale)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}/ {tier.perUser ? "user / " : ""}month
+                  </span>
                 </div>
                 <ul className="space-y-2">
-                  {plan.features.map((feature) => (
+                  {tier.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2">
                       <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
                       <span className="text-sm">{feature}</span>
@@ -438,8 +495,8 @@ export default function SubscriptionPage() {
                 ) : (
                   <Button
                     className="w-full"
-                    variant={isPopular ? "default" : "outline"}
-                    onClick={() => handleSelectPlan(plan.id)}
+                    variant={tier.popular ? "default" : "outline"}
+                    onClick={() => handleSelectPlan(tier.id)}
                     disabled={actionLoading}
                   >
                     {actionLoading ? (
@@ -455,7 +512,7 @@ export default function SubscriptionPage() {
                       ? isUpgrade
                         ? "Upgrade"
                         : "Downgrade"
-                      : "Start Free Trial"}
+                      : "Choose Plan"}
                   </Button>
                 )}
               </CardFooter>
@@ -466,12 +523,15 @@ export default function SubscriptionPage() {
 
       {/* Add-ons */}
       {(() => {
-        const addonPlan = SUBSCRIPTION_PLANS.find(
-          (p) => "addon" in p && p.addon
+        const testingModule = AVAILABLE_MODULES.find(
+          (m) => m.key === "medical_testing"
         );
-        if (!addonPlan) return null;
+        if (!testingModule) return null;
         const isEligible =
-          currentPlanId === "professional" || currentPlanId === "premium";
+          currentPlanId === "professional" ||
+          currentPlanId === "premium" ||
+          currentPlanId === "clinic" ||
+          currentPlanId === "starter";
 
         return (
           <div className="space-y-4">
@@ -495,31 +555,20 @@ export default function SubscriptionPage() {
                   </div>
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold">{addonPlan.name}</h3>
+                      <h3 className="font-semibold">{testingModule.name}</h3>
                       <Badge variant="secondary">Add-on</Badge>
                       {hasTestingAddon && (
                         <Badge className="bg-teal-600">Active</Badge>
                       )}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      List in-person diagnostic services and set your own prices
-                      for each test. Blood testing, urine analysis, ECG, MRI
-                      scans, and more.
+                      {testingModule.description}. Blood testing, urine
+                      analysis, ECG, MRI scans, and more.
                     </p>
-                    <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                      {addonPlan.features.map((f) => (
-                        <li
-                          key={f}
-                          className="flex items-center gap-1 text-xs text-muted-foreground"
-                        >
-                          <Check className="h-3 w-3 text-teal-600" /> {f}
-                        </li>
-                      ))}
-                    </ul>
                     {!isEligible && !hasTestingAddon && (
                       <p className="mt-2 text-xs text-amber-600">
-                        Upgrade to Professional or Premium to add medical testing
-                        for {formatCurrency(addonPlan.priceMonthly, addonPlan.currency)}/month.
+                        Subscribe to a paid plan to add medical testing for{" "}
+                        {formatPriceForLocale(testingModule.priceMonthlyPence, locale)}/month.
                       </p>
                     )}
                   </div>
@@ -527,7 +576,7 @@ export default function SubscriptionPage() {
                 <div className="flex items-center gap-4 sm:shrink-0">
                   <div className="text-right">
                     <span className="text-2xl font-bold">
-                      {formatCurrency(addonPlan.priceMonthly, addonPlan.currency)}
+                      {formatPriceForLocale(testingModule.priceMonthlyPence, locale)}
                     </span>
                     <span className="text-muted-foreground"> / mo</span>
                   </div>

@@ -10,7 +10,7 @@ import {
   toggleModuleSchema,
   upgradeTierSchema,
 } from "@/lib/validators/license";
-import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_CENTS } from "@/lib/constants/license-tiers";
+import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_PENCE, convertPrice, BASE_CURRENCY } from "@/lib/constants/license-tiers";
 import type { LicenseTier } from "@/types";
 
 // ─── Helpers ────────────────────────────────────────────────
@@ -117,13 +117,15 @@ export async function createLicenseCheckout(formData: FormData) {
   const parsed = createLicenseCheckoutSchema.safeParse({
     tier: formData.get("tier") as string,
     billing_period: (formData.get("billing_period") as string) || "monthly",
+    seat_count: formData.get("seat_count") ? parseInt(formData.get("seat_count") as string, 10) : undefined,
     coupon_code: (formData.get("coupon_code") as string) || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Invalid input" };
 
   const tierConfig = getLicenseTier(parsed.data.tier);
   if (!tierConfig) return { error: "Invalid tier" };
-  if (tierConfig.isCustomPricing) return { error: "Please contact sales for Enterprise pricing" };
+  if (tierConfig.isCustomPricing) return { error: "Please get in touch for Enterprise pricing" };
+  if (tierConfig.isFreeTier) return { error: "Free tier does not require checkout" };
 
   // Check no existing active license
   const { data: existingLicense } = await supabase
@@ -156,19 +158,15 @@ export async function createLicenseCheckout(formData: FormData) {
       .eq("id", org.id);
   }
 
-  // Determine price based on tier and billing period
-  const currency = org.base_currency?.toLowerCase() || "eur";
-  const unitAmount =
-    parsed.data.billing_period === "annual"
-      ? tierConfig.priceAnnual
-      : tierConfig.priceMonthly;
-
+  // Determine price — always GBP as base Stripe currency
+  const currency = "gbp";
+  const unitAmount = tierConfig.priceMonthlyPence;
   const interval = parsed.data.billing_period === "annual" ? "year" : "month";
 
-  // Create a price on-the-fly (or use pre-configured Stripe prices)
+  // Create a price on-the-fly
   const price = await stripe.prices.create({
     currency,
-    unit_amount: tierConfig.prices[currency.toUpperCase()] || unitAmount,
+    unit_amount: unitAmount,
     recurring: { interval },
     product_data: {
       name: `MyDoctors360 ${tierConfig.name} License`,
@@ -176,10 +174,14 @@ export async function createLicenseCheckout(formData: FormData) {
     },
   });
 
+  // Per-user pricing: Professional tier quantity = seat count
+  const seatCount = parsed.data.seat_count || 1;
+  const quantity = tierConfig.perUser ? Math.min(seatCount, tierConfig.maxSeats) : 1;
+
   const sessionOptions: Record<string, unknown> = {
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: price.id, quantity: 1 }],
+    line_items: [{ price: price.id, quantity }],
     metadata: {
       organization_id: org.id,
       tier: parsed.data.tier,
@@ -276,10 +278,10 @@ export async function addExtraSeats(formData: FormData) {
       const subscription = await stripe.subscriptions.retrieve(license.stripe_subscription_id);
 
       // Create a price for extra seats
-      const currency = org.base_currency?.toLowerCase() || "eur";
+      const currency = "gbp";
       const seatPrice = await stripe.prices.create({
         currency,
-        unit_amount: EXTRA_SEAT_PRICE_CENTS,
+        unit_amount: EXTRA_SEAT_PRICE_PENCE,
         recurring: { interval: "month" },
         product_data: { name: "Extra Doctor Seat" },
       });

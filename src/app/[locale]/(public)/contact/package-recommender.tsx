@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
-import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
+import { getLicenseTier, formatPriceForLocale } from "@/lib/constants/license-tiers";
+import type { LicenseTier } from "@/types";
 import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 
 type PatientVolume = "under_10" | "10_to_30" | "over_30";
@@ -19,33 +21,33 @@ interface Answers {
 
 function getRecommendation(
   answers: Answers
-): "basic" | "professional" | "premium" | null {
+): LicenseTier | null {
   const { patientsPerWeek, needsVideo, wantsFeatured } = answers;
   if (!patientsPerWeek || !needsVideo || !wantsFeatured) return null;
 
-  if (wantsFeatured === "yes") return "premium";
+  if (wantsFeatured === "yes") return "professional";
   if (needsVideo === "yes" || patientsPerWeek === "over_30")
-    return "professional";
-  return "basic";
+    return "starter";
+  return "free";
 }
 
 function getRecommendationReason(
-  planId: string,
+  tierId: LicenseTier,
   answers: Answers
 ): string {
-  if (planId === "premium") {
-    return "Featured placement will maximise your visibility to patients searching for specialists. You'll also get a dedicated account manager and advanced tools.";
+  if (tierId === "professional") {
+    return "Professional gives you advanced analytics, patient CRM, treatment plans, and priority support — maximising your visibility and patient engagement.";
   }
-  if (planId === "professional") {
+  if (tierId === "starter") {
     if (answers.needsVideo === "yes" && answers.patientsPerWeek === "over_30") {
-      return "With high patient volume and video consultations, Professional gives you unlimited bookings, telemedicine tools, and advanced analytics to manage your growing practice.";
+      return "With high patient volume and video consultations, Starter gives you unlimited bookings, telemedicine tools, and SMS/WhatsApp reminders to manage your growing practice.";
     }
     if (answers.needsVideo === "yes") {
-      return "Video consultations are included in Professional, along with unlimited bookings and a patient CRM to grow your practice.";
+      return "Video consultations are included in Starter, along with unlimited bookings and automated reminders to grow your practice.";
     }
-    return "With your high patient volume, Professional gives you unlimited bookings, advanced analytics, and priority support to keep things running smoothly.";
+    return "With your high patient volume, Starter gives you unlimited bookings, video consultations, and SMS/WhatsApp reminders to keep things running smoothly.";
   }
-  return "Basic is perfect for getting started — you'll have a public profile, online booking, and email reminders to build your presence on the platform.";
+  return "Free is perfect for getting started — you'll have a public doctor profile listing to build your presence on the platform.";
 }
 
 interface OptionCardProps {
@@ -90,6 +92,7 @@ function OptionCard({ label, description, selected, onClick }: OptionCardProps) 
 }
 
 export function PackageRecommender() {
+  const locale = useLocale();
   const [answers, setAnswers] = useState<Answers>({
     patientsPerWeek: null,
     needsVideo: null,
@@ -97,9 +100,7 @@ export function PackageRecommender() {
   });
 
   const recommendation = getRecommendation(answers);
-  const plan = recommendation
-    ? SUBSCRIPTION_PLANS.find((p) => p.id === recommendation)
-    : null;
+  const tierConfig = recommendation ? getLicenseTier(recommendation) : null;
 
   return (
     <Card className="overflow-hidden">
@@ -198,16 +199,21 @@ export function PackageRecommender() {
         </div>
 
         {/* Result */}
-        {plan && recommendation && (
+        {tierConfig && recommendation && (
           <div className="animate-in fade-in slide-in-from-bottom-2 rounded-xl border-2 border-primary/20 bg-primary/5 p-5">
             <div className="mb-3 flex items-center gap-3">
               <Badge variant="default" className="text-sm">
                 Recommended
               </Badge>
-              <span className="text-lg font-bold">{plan.name}</span>
-              <span className="text-lg font-semibold text-primary">
-                €{(plan.priceMonthly / 100).toFixed(0)}/mo
-              </span>
+              <span className="text-lg font-bold">{tierConfig.name}</span>
+              {tierConfig.isFreeTier ? (
+                <span className="text-lg font-semibold text-primary">Free</span>
+              ) : (
+                <span className="text-lg font-semibold text-primary">
+                  {formatPriceForLocale(tierConfig.priceMonthlyPence, locale)}/mo
+                  {tierConfig.perUser && " per user"}
+                </span>
+              )}
             </div>
 
             <p className="mb-4 text-sm text-muted-foreground">
@@ -215,7 +221,7 @@ export function PackageRecommender() {
             </p>
 
             <ul className="mb-5 space-y-1.5">
-              {plan.features.slice(0, 4).map((feature) => (
+              {tierConfig.features.slice(0, 4).map((feature) => (
                 <li
                   key={feature}
                   className="flex items-center gap-2 text-sm"
@@ -224,16 +230,16 @@ export function PackageRecommender() {
                   {feature}
                 </li>
               ))}
-              {plan.features.length > 4 && (
+              {tierConfig.features.length > 4 && (
                 <li className="pl-6 text-xs text-muted-foreground">
-                  + {plan.features.length - 4} more features
+                  + {tierConfig.features.length - 4} more features
                 </li>
               )}
             </ul>
 
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button asChild className="rounded-full">
-                <Link href="/register-doctor">
+                <Link href={`/register-doctor?tier=${recommendation}`}>
                   Get Started <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

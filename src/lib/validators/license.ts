@@ -1,8 +1,9 @@
 import { z } from "zod/v4";
 
 export const createLicenseCheckoutSchema = z.object({
-  tier: z.enum(["starter", "professional", "clinic", "enterprise"]),
+  tier: z.enum(["free", "starter", "professional", "clinic", "enterprise"]),
   billing_period: z.enum(["monthly", "annual"]).default("monthly"),
+  seat_count: z.number().int().min(1).max(4).optional(),
   coupon_code: z.string().max(50).optional(),
 });
 
@@ -20,7 +21,7 @@ export const toggleModuleSchema = z.object({
 });
 
 export const upgradeTierSchema = z.object({
-  new_tier: z.enum(["starter", "professional", "clinic", "enterprise"]),
+  new_tier: z.enum(["free", "starter", "professional", "clinic", "enterprise"]),
 });
 
 // ─── Admin Schemas ──────────────────────────────────────────
@@ -33,7 +34,7 @@ export const adminOverrideLicenseStatusSchema = z.object({
 
 export const adminChangeLicenseTierSchema = z.object({
   license_id: z.string().uuid(),
-  new_tier: z.enum(["starter", "professional", "clinic", "enterprise"]),
+  new_tier: z.enum(["free", "starter", "professional", "clinic", "enterprise"]),
 });
 
 export const adminAdjustSeatsSchema = z.object({
@@ -49,7 +50,7 @@ export const adminExtendPeriodSchema = z.object({
 
 export const adminCreateLicenseSchema = z.object({
   organization_id: z.string().uuid(),
-  tier: z.enum(["starter", "professional", "clinic", "enterprise"]),
+  tier: z.enum(["free", "starter", "professional", "clinic", "enterprise"]),
   status: z.enum(["active", "trialing"]),
   max_seats: z.number().int().min(1).max(999),
   trial_days: z.number().int().min(1).max(365).optional(),

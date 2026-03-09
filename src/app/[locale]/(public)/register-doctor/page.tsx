@@ -25,14 +25,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Link } from "@/i18n/navigation";
-import { registerDoctor, signInWithGoogle, signInWithApple } from "@/actions/auth";
+import { registerDoctor, registerDoctorWithCheckout, signInWithGoogle, signInWithApple } from "@/actions/auth";
 import { validateReferralCode } from "@/actions/referral";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
-import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
-import { formatCurrency } from "@/lib/utils/currency";
-import { centsToAmount, amountToCents } from "@/lib/utils/currency";
+import {
+  LICENSE_TIERS,
+  AVAILABLE_MODULES,
+  formatPriceForLocale,
+  getLicenseTier,
+  type LicenseTierConfig,
+} from "@/lib/constants/license-tiers";
 import { formatSpecialtyName } from "@/lib/utils";
+import type { LicenseTier } from "@/types";
 import {
   Loader2,
   ChevronRight,
@@ -47,6 +52,9 @@ import {
   ChevronDown,
   ChevronUp,
   FlaskConical,
+  CreditCard,
+  Check,
+  X,
 } from "lucide-react";
 
 const STEPS = [
@@ -54,7 +62,7 @@ const STEPS = [
   { number: 2, title: "Professional", icon: Stethoscope },
   { number: 3, title: "Practice", icon: Building },
   { number: 4, title: "Pricing", icon: DollarSign },
-  { number: 5, title: "Review", icon: CheckCircle2 },
+  { number: 5, title: "Choose Plan", icon: CreditCard },
 ];
 
 export default function RegisterDoctorPage() {
@@ -76,12 +84,16 @@ export default function RegisterDoctorPage() {
   const [referrerName, setReferrerName] = useState<string | null>(null);
   const [validatingCode, setValidatingCode] = useState(false);
 
+  // Step 5: Plan selection
+  const [selectedTier, setSelectedTier] = useState<LicenseTier>("free");
+  const [seatCount, setSeatCount] = useState(1);
+
   // Step 5: Invite a colleague (optional)
   const [showInvite, setShowInvite] = useState(false);
   const [colleagueName, setColleagueName] = useState("");
   const [colleagueEmail, setColleagueEmail] = useState("");
 
-  // Auto-fill referral code from URL
+  // Auto-fill from URL params (?ref=, ?tier=, ?checkout=cancelled)
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) {
@@ -94,6 +106,17 @@ export default function RegisterDoctorPage() {
           setReferrerName(result.referrerName);
         }
       });
+    }
+
+    const tier = searchParams.get("tier");
+    if (tier && LICENSE_TIERS.some((t) => t.id === tier)) {
+      setSelectedTier(tier as LicenseTier);
+    }
+
+    const checkoutStatus = searchParams.get("checkout");
+    if (checkoutStatus === "cancelled") {
+      setError("Checkout was cancelled. You can try again or choose a different plan.");
+      setStep(5);
     }
   }, [searchParams]);
 
@@ -195,6 +218,18 @@ export default function RegisterDoctorPage() {
     );
   }
 
+  function getSelectedTierConfig(): LicenseTierConfig | undefined {
+    return getLicenseTier(selectedTier);
+  }
+
+  function calculateMonthlyTotal(): number {
+    const tier = getSelectedTierConfig();
+    if (!tier) return 0;
+    if (tier.isFreeTier) return 0;
+    if (tier.perUser) return tier.priceMonthlyPence * seatCount;
+    return tier.priceMonthlyPence;
+  }
+
   async function handleSubmit() {
     setLoading(true);
     setError("");
@@ -204,7 +239,6 @@ export default function RegisterDoctorPage() {
     formData.set("last_name", lastName);
     formData.set("email", email);
     formData.set("password", password);
-
     formData.set("locale", locale);
 
     // Professional data
@@ -218,17 +252,42 @@ export default function RegisterDoctorPage() {
     // Add-on
     formData.set("has_testing_addon", hasTestingAddon ? "true" : "false");
 
-    const result = await registerDoctor(formData);
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
+    // Plan selection
+    formData.set("tier", selectedTier);
+    formData.set("seat_count", seatCount.toString());
+
+    const tierConfig = getSelectedTierConfig();
+    const isFreeTier = !tierConfig || tierConfig.isFreeTier;
+
+    if (isFreeTier) {
+      // Free tier: create account directly, redirect to verify-email
+      const result = await registerDoctor(formData);
+      if (result?.error) {
+        setError(result.error);
+        setLoading(false);
+      }
+      // If successful, registerDoctor redirects to verify-email
+    } else {
+      // Paid tier: create account + redirect to Stripe checkout
+      const result = await registerDoctorWithCheckout(formData);
+      if (result && "error" in result && result.error) {
+        setError(result.error);
+        setLoading(false);
+      } else if (result && "checkoutUrl" in result && result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        setError("Failed to create checkout session. Please try again.");
+        setLoading(false);
+      }
     }
-    // If successful, registerDoctor redirects to verify-email
   }
 
   function getSelectedCountry() {
     return COUNTRIES.find((c) => c.code === country);
   }
+
+  // Testing addon config
+  const testingAddon = AVAILABLE_MODULES.find((m) => m.key === "medical_testing");
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
@@ -345,7 +404,21 @@ export default function RegisterDoctorPage() {
                 <Separator className="flex-1" />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-[auto_1fr_1fr] gap-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Select value={title} onValueChange={setTitle}>
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Dr.">Dr.</SelectItem>
+                      <SelectItem value="Prof.">Prof.</SelectItem>
+                      <SelectItem value="Prof. Dr.">Prof. Dr.</SelectItem>
+                      <SelectItem value="Assoc. Prof.">Assoc. Prof.</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name *</Label>
                   <Input
@@ -448,33 +521,18 @@ export default function RegisterDoctorPage() {
           {/* Step 2: Professional Info */}
           {step === 2 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Title</Label>
-                  <Select value={title} onValueChange={setTitle}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Dr.">Dr.</SelectItem>
-                      <SelectItem value="Prof.">Prof.</SelectItem>
-                      <SelectItem value="Prof. Dr.">Prof. Dr.</SelectItem>
-                      <SelectItem value="Assoc. Prof.">Assoc. Prof.</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Years of Experience</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={60}
-                    value={yearsOfExperience}
-                    onChange={(e) =>
-                      setYearsOfExperience(parseInt(e.target.value) || 0)
-                    }
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Years of Experience</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={yearsOfExperience}
+                  onChange={(e) =>
+                    setYearsOfExperience(parseInt(e.target.value) || 0)
+                  }
+                  className="w-32"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="gmcNumber">GMC Reference Number *</Label>
@@ -661,173 +719,230 @@ export default function RegisterDoctorPage() {
               <Separator />
 
               {/* Medical Testing Add-on */}
-              <div
-                className={`rounded-lg border p-4 transition-colors ${
-                  hasTestingAddon
-                    ? "border-teal-400 bg-teal-50/60"
-                    : "border-muted bg-muted/20"
-                }`}
-              >
-                <label className="flex cursor-pointer items-start gap-3">
-                  <Checkbox
-                    checked={hasTestingAddon}
-                    onCheckedChange={(checked) =>
-                      setHasTestingAddon(checked === true)
-                    }
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <FlaskConical className="h-4 w-4 text-teal-600" />
-                      <span className="font-medium">
-                        Add Medical Testing Services
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        +{formatCurrency(SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!.priceMonthly, SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!.currency)} / month
-                      </Badge>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      List in-person diagnostic services like blood testing,
-                      urine analysis, ECG, MRI scans, and more. You set your
-                      own prices for each test from your dashboard.
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {[
-                        "Blood Tests",
-                        "Urine Tests",
-                        "ECG",
-                        "MRI Scans",
-                        "X-Ray",
-                        "Ultrasound",
-                      ].map((svc) => (
-                        <Badge
-                          key={svc}
-                          variant="outline"
-                          className="text-xs border-teal-300 text-teal-700"
-                        >
-                          {svc}
+              {testingAddon && (
+                <div
+                  className={`rounded-lg border p-4 transition-colors ${
+                    hasTestingAddon
+                      ? "border-teal-400 bg-teal-50/60"
+                      : "border-muted bg-muted/20"
+                  }`}
+                >
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <Checkbox
+                      checked={hasTestingAddon}
+                      onCheckedChange={(checked) =>
+                        setHasTestingAddon(checked === true)
+                      }
+                      className="mt-1"
+                    />
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <FlaskConical className="h-4 w-4 text-teal-600" />
+                        <span className="font-medium">
+                          Add Medical Testing Services
+                        </span>
+                        <Badge variant="secondary" className="text-xs">
+                          +{formatPriceForLocale(testingAddon.priceMonthlyPence, locale)} / month
                         </Badge>
-                      ))}
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        List in-person diagnostic services like blood testing,
+                        urine analysis, ECG, MRI scans, and more. You set your
+                        own prices for each test from your dashboard.
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {[
+                          "Blood Tests",
+                          "Urine Tests",
+                          "ECG",
+                          "MRI Scans",
+                          "X-Ray",
+                          "Ultrasound",
+                        ].map((svc) => (
+                          <Badge
+                            key={svc}
+                            variant="outline"
+                            className="text-xs border-teal-300 text-teal-700"
+                          >
+                            {svc}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </label>
-              </div>
+                  </label>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Step 5: Review */}
+          {/* Step 5: Choose Your Plan */}
           {step === 5 && (
-            <div className="space-y-4">
-              <div className="rounded-lg border p-4">
-                <h3 className="mb-3 font-semibold">Personal Information</h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Name: </span>
-                    {title} {firstName} {lastName}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Email: </span>
-                    {email}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border p-4">
-                <h3 className="mb-3 font-semibold">Professional Details</h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">GMC Number: </span>
-                    {gmcNumber}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Experience: </span>
-                    {yearsOfExperience} years
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Specialties: </span>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {selectedSpecialties.map((slug) => {
-                        const spec = SPECIALTIES.find((s) => s.slug === slug);
-                        const label = spec
-                          ? formatSpecialtyName(spec.nameKey)
-                          : slug;
-                        return (
-                          <Badge key={slug} variant="secondary" className="text-xs">
-                            {label}
-                          </Badge>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border p-4">
-                <h3 className="mb-3 font-semibold">Practice Details</h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  {clinicName && (
-                    <div>
-                      <span className="text-muted-foreground">Clinic: </span>
-                      {clinicName}
-                    </div>
-                  )}
-                  {address && (
-                    <div>
-                      <span className="text-muted-foreground">Address: </span>
-                      {address}
-                    </div>
-                  )}
-                  {country && (
-                    <div>
-                      <span className="text-muted-foreground">Country: </span>
-                      {getSelectedCountry()?.name || country}
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-muted-foreground">Types: </span>
-                    {consultationTypes
-                      .map((t) => (t === "in_person" ? "In Person" : "Video"))
-                      .join(", ")}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Languages: </span>
-                    {selectedLanguages
-                      .map(
-                        (code) =>
-                          LANGUAGES.find((l) => l.code === code)?.name || code
-                      )
-                      .join(", ")}
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border p-4">
-                <h3 className="mb-3 font-semibold">Pricing</h3>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">
-                      In-Person Fee:{" "}
-                    </span>
-                    {consultationFee} {currency}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Video Fee: </span>
-                    {videoFee} {currency}
-                  </div>
-                  {hasTestingAddon && (
-                    <div className="col-span-2 mt-1">
-                      <span className="text-muted-foreground">Add-on: </span>
-                      <Badge
-                        variant="secondary"
-                        className="text-xs border-teal-300 text-teal-700"
+            <div className="space-y-6">
+              {/* Plan Selection Cards */}
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Select Your Plan</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {LICENSE_TIERS.filter((t) => !t.isCustomPricing).map((tier) => {
+                    const isSelected = selectedTier === tier.id;
+                    return (
+                      <div
+                        key={tier.id}
+                        className={`cursor-pointer rounded-lg border-2 p-4 transition-all ${
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/40"
+                        } ${tier.popular ? "ring-1 ring-primary/20" : ""}`}
+                        onClick={() => {
+                          setSelectedTier(tier.id);
+                          if (tier.id !== "professional") setSeatCount(tier.defaultSeats);
+                          else setSeatCount(1);
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedTier(tier.id);
+                            if (tier.id !== "professional") setSeatCount(tier.defaultSeats);
+                            else setSeatCount(1);
+                          }
+                        }}
                       >
-                        <FlaskConical className="mr-1 h-3 w-3" />
-                        Medical Testing Services (+{formatCurrency(SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!.priceMonthly, SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!.currency)}/mo)
-                      </Badge>
-                    </div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold">{tier.name}</span>
+                              {tier.popular && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  Popular
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+                              {tier.description}
+                            </p>
+                          </div>
+                          <div
+                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                              isSelected ? "border-primary bg-primary" : "border-muted-foreground/30"
+                            }`}
+                          >
+                            {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                          </div>
+                        </div>
+                        <div className="mt-3">
+                          {tier.isFreeTier ? (
+                            <span className="text-lg font-bold">Free</span>
+                          ) : (
+                            <>
+                              <span className="text-lg font-bold">
+                                {formatPriceForLocale(tier.priceMonthlyPence, locale)}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {tier.perUser ? " / user / mo" : " / mo"}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        {/* Key features (compact) */}
+                        <div className="mt-2 space-y-0.5">
+                          {tier.features.slice(0, 3).map((f) => (
+                            <div key={f} className="flex items-center gap-1.5">
+                              <Check className="h-3 w-3 shrink-0 text-green-600" />
+                              <span className="text-[11px] text-muted-foreground line-clamp-1">{f}</span>
+                            </div>
+                          ))}
+                          {tier.features.length > 3 && (
+                            <p className="text-[11px] text-muted-foreground pl-[18px]">
+                              +{tier.features.length - 3} more
+                            </p>
+                          )}
+                        </div>
+                        {/* Excluded features for free tier */}
+                        {tier.excludedFeatures && tier.excludedFeatures.length > 0 && (
+                          <div className="mt-1.5 space-y-0.5">
+                            {tier.excludedFeatures.slice(0, 2).map((f) => (
+                              <div key={f} className="flex items-center gap-1.5">
+                                <X className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+                                <span className="text-[11px] text-muted-foreground/60 line-through line-clamp-1">{f}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Enterprise link */}
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Need 15+ doctors?{" "}
+                  <Link href="/support" className="text-primary hover:underline">
+                    Get in touch for Enterprise
+                  </Link>
+                </p>
+              </div>
+
+              {/* Seat count for Professional */}
+              {selectedTier === "professional" && (
+                <div className="rounded-lg border p-4">
+                  <Label className="text-sm font-medium">Number of Doctors</Label>
+                  <div className="mt-2 flex items-center gap-3">
+                    {[1, 2, 3, 4].map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 text-sm font-medium transition-colors ${
+                          seatCount === n
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border hover:border-primary/40"
+                        }`}
+                        onClick={() => setSeatCount(n)}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                  {seatCount > 1 && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {seatCount} doctors × {formatPriceForLocale(29900, locale)} ={" "}
+                      <span className="font-medium text-foreground">
+                        {formatPriceForLocale(29900 * seatCount, locale)}/mo
+                      </span>
+                    </p>
                   )}
                 </div>
-              </div>
+              )}
+
+              {/* Clinic included seats info */}
+              {selectedTier === "clinic" && (
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">5 doctor profiles included</span> in the Clinic Starter Pack.
+                    Add up to 10 more doctors at {formatPriceForLocale(29900, locale)}/seat/month from your dashboard after registration.
+                  </p>
+                </div>
+              )}
+
+              {/* Price Summary */}
+              {selectedTier !== "free" && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Monthly Total</span>
+                    <div className="text-right">
+                      <span className="text-xl font-bold">
+                        {formatPriceForLocale(calculateMonthlyTotal(), locale)}
+                      </span>
+                      <span className="text-sm text-muted-foreground"> / month</span>
+                    </div>
+                  </div>
+                  {getSelectedTierConfig()?.commitmentMonths ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {getSelectedTierConfig()!.commitmentMonths}-month commitment, billed monthly
+                    </p>
+                  ) : null}
+                </div>
+              )}
 
               {/* Invite a Colleague */}
               <div className="rounded-lg border p-4">
@@ -889,27 +1004,30 @@ export default function RegisterDoctorPage() {
                 )}
               </div>
 
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex items-start gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <div className="text-sm text-emerald-800">
-                    <p className="font-medium">You&apos;re starting on the Free Plan</p>
-                    <p className="mt-1">
-                      Your GMC registration will be verified by our team before your profile goes live.
-                      You&apos;ll receive an email once your account is approved. In the meantime,
-                      you can complete your profile from your dashboard.
-                    </p>
+              {/* Free tier notice */}
+              {selectedTier === "free" && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                    <div className="text-sm text-emerald-800">
+                      <p className="font-medium">You&apos;re starting on the Free Plan</p>
+                      <p className="mt-1">
+                        Your GMC registration will be verified by our team before your profile goes live.
+                        You can upgrade to a paid plan anytime from your dashboard.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
+              {/* Terms */}
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <p className="text-sm text-blue-800">
-                  By clicking &quot;Create Account&quot;, you agree to our Terms
-                  of Service and Privacy Policy. Your account will need email
-                  verification before it becomes active. Additional profile details
-                  (education, certifications, photos) can be added from your
-                  dashboard after registration.
+                  By clicking &quot;{selectedTier === "free" ? "Create Account" : "Subscribe & Create Account"}&quot;,
+                  you agree to our Terms of Service and Privacy Policy.
+                  {selectedTier === "free"
+                    ? " Your account will need email verification before it becomes active."
+                    : " You will be redirected to Stripe to complete payment, then verify your email."}
                 </p>
               </div>
             </div>
@@ -933,7 +1051,14 @@ export default function RegisterDoctorPage() {
           ) : (
             <Button onClick={handleSubmit} disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Account
+              {selectedTier === "free" ? (
+                "Create Account"
+              ) : (
+                <>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Subscribe & Create Account
+                </>
+              )}
             </Button>
           )}
         </CardFooter>

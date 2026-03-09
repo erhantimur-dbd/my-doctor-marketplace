@@ -1,8 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle2,
   ArrowRight,
@@ -17,8 +16,18 @@ import {
   Shield,
   Zap,
   FlaskConical,
+  X,
+  Building2,
+  Crown,
 } from "lucide-react";
-import { SUBSCRIPTION_PLANS } from "@/lib/constants/subscription-plans";
+import {
+  LICENSE_TIERS,
+  AVAILABLE_MODULES,
+  TESTING_STANDALONE_PLAN,
+  PLATFORM_BOOKING_FEE_PERCENT,
+  formatPriceForLocale,
+  formatPrice,
+} from "@/lib/constants/license-tiers";
 import { useLocale } from "next-intl";
 
 const platformFeatures = [
@@ -80,38 +89,30 @@ const platformFeatures = [
   },
 ];
 
-/** Map locale to display currency */
-function getDisplayCurrency(locale: string): string {
-  switch (locale) {
-    case "en":
-      return "GBP";
-    case "tr":
-      return "TRY";
+/** Icon for each tier */
+function getTierIcon(tierId: string) {
+  switch (tierId) {
+    case "free":
+      return Stethoscope;
+    case "starter":
+      return Zap;
+    case "professional":
+      return BarChart3;
+    case "clinic":
+      return Building2;
+    case "enterprise":
+      return Crown;
     default:
-      return "EUR";
+      return Stethoscope;
   }
-}
-
-/** Format price using explicit per-currency prices from the plan */
-function formatPriceForLocale(
-  prices: { readonly EUR: number; readonly GBP: number; readonly TRY: number },
-  locale: string
-): string {
-  const displayCurrency = getDisplayCurrency(locale);
-  const cents = prices[displayCurrency as keyof typeof prices] ?? prices.EUR;
-
-  return new Intl.NumberFormat(locale === "de" ? "de-DE" : locale === "fr" ? "fr-FR" : locale === "tr" ? "tr-TR" : "en-GB", {
-    style: "currency",
-    currency: displayCurrency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
 }
 
 export default function PricingPage() {
   const locale = useLocale();
-  const testingStandalone = SUBSCRIPTION_PLANS.find((p) => p.id === "testing_standalone")!;
-  const testingAddon = SUBSCRIPTION_PLANS.find((p) => p.id === "testing_addon")!;
+
+  // Get paid tiers for the main grid (exclude free, it's shown separately)
+  const paidTiers = LICENSE_TIERS.filter((t) => !t.isFreeTier);
+  const testingModule = AVAILABLE_MODULES.find((m) => m.key === "medical_testing");
 
   return (
     <>
@@ -125,172 +126,149 @@ export default function PricingPage() {
             Grow Your Practice with MyDoctors360
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Join our premium marketplace and reach patients across Europe. Simple pricing, powerful tools, no long-term contracts.
+            Join our premium marketplace and reach patients across Europe.
+            Simple pricing, powerful tools, 12-month commitment billed monthly.
           </p>
         </div>
       </section>
 
       {/* Pricing Plans */}
       <section className="px-4 py-12 md:py-20">
-        <div className="container mx-auto max-w-5xl">
-          <div className="grid gap-6 md:grid-cols-3 md:items-stretch">
-            {/* Professional */}
-            {(() => {
-              const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "professional")!;
-              return (
-                <Card className="relative flex flex-col overflow-hidden">
-                  <div className="px-6 pb-6 pt-10 text-center">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                      <Stethoscope className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-bold">{plan.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
-                      {plan.description}
-                    </p>
-                    <div className="mt-4">
-                      <span className="text-4xl font-bold">
-                        {formatPriceForLocale(plan.prices, locale)}
-                      </span>
-                      <span className="text-muted-foreground"> / month</span>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
-                        Introductory pricing
-                      </p>
-                    </div>
-                  </div>
-                  <CardContent className="flex flex-1 flex-col p-6">
-                    <ul className="flex-1 space-y-3">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      className="mt-6 w-full rounded-full"
-                      variant="outline"
-                      asChild
-                    >
-                      <Link href="/register-doctor">
-                        Get Started
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })()}
+        <div className="container mx-auto max-w-6xl">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
+            {paidTiers.map((tier) => {
+              const TierIcon = getTierIcon(tier.id);
+              const isPopular = tier.popular;
+              const isEnterprise = tier.isCustomPricing;
 
-            {/* Premium (Popular) */}
-            {(() => {
-              const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "premium")!;
               return (
-                <Card className="relative flex flex-col overflow-hidden border-foreground/20 shadow-lg">
-                  <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
-                    <Badge className="bg-foreground text-background shadow-md hover:bg-foreground">
-                      Most Doctors start here
-                    </Badge>
-                  </div>
-                  <div className="px-6 pb-6 pt-10 text-center">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                      <Zap className="h-5 w-5 text-muted-foreground" />
+                <Card
+                  key={tier.id}
+                  className={`relative flex flex-col overflow-hidden ${
+                    isPopular
+                      ? "border-foreground/20 shadow-lg"
+                      : ""
+                  }`}
+                >
+                  {isPopular && (
+                    <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
+                      <Badge className="bg-foreground text-background shadow-md hover:bg-foreground">
+                        Most Popular
+                      </Badge>
                     </div>
-                    <h3 className="text-lg font-bold">{plan.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
-                      {plan.description}
-                    </p>
-                    <div className="mt-4">
-                      <span className="text-4xl font-bold">
-                        {formatPriceForLocale(plan.prices, locale)}
-                      </span>
-                      <span className="text-muted-foreground"> / month</span>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
-                        Introductory pricing
-                      </p>
-                    </div>
-                  </div>
-                  <CardContent className="flex flex-1 flex-col p-6">
-                    <ul className="flex-1 space-y-3">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      className="mt-6 w-full rounded-full"
-                      asChild
-                    >
-                      <Link href="/register-doctor">
-                        Get Started
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })()}
+                  )}
 
-            {/* Clinic Starter Pack */}
-            {(() => {
-              const plan = SUBSCRIPTION_PLANS.find((p) => p.id === "clinic")!;
-              return (
-                <Card className="relative flex flex-col overflow-hidden">
                   <div className="px-6 pb-6 pt-10 text-center">
                     <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                      <Users className="h-5 w-5 text-muted-foreground" />
+                      <TierIcon className="h-5 w-5 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-bold">{plan.name}</h3>
+                    <h3 className="text-lg font-bold">{tier.name}</h3>
                     <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
-                      {plan.description}
+                      {tier.description}
                     </p>
                     <div className="mt-4">
-                      <span className="text-4xl font-bold">
-                        {formatPriceForLocale(plan.prices, locale)}
-                      </span>
-                      <span className="text-muted-foreground"> / month</span>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
-                        Introductory pricing
-                      </p>
+                      {isEnterprise ? (
+                        <>
+                          <span className="text-3xl font-bold">Custom</span>
+                          <p className="mt-1.5 text-xs text-muted-foreground">
+                            Tailored to your needs
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-4xl font-bold">
+                            {formatPriceForLocale(tier.priceMonthlyPence, locale)}
+                          </span>
+                          <span className="text-muted-foreground">
+                            {tier.perUser ? " / user / mo" : " / month"}
+                          </span>
+                          {tier.commitmentMonths > 0 && (
+                            <p className="mt-1.5 text-xs text-muted-foreground">
+                              12-month commitment, billed monthly
+                            </p>
+                          )}
+                        </>
+                      )}
                     </div>
+
+                    {/* Seat info */}
+                    {!isEnterprise && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        {tier.perUser
+                          ? `${tier.defaultSeats}–${tier.maxSeats} users`
+                          : tier.includedSeats > 1
+                            ? `${tier.includedSeats} users included, up to ${tier.maxSeats}`
+                            : `${tier.defaultSeats} user`}
+                        {tier.extraSeatPricePence > 0 && !tier.perUser && (
+                          <>
+                            {" · "}
+                            {formatPriceForLocale(tier.extraSeatPricePence, locale)}/extra seat
+                          </>
+                        )}
+                      </p>
+                    )}
+                    {isEnterprise && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        15+ doctor profiles
+                      </p>
+                    )}
                   </div>
-                  <CardContent className="flex flex-1 flex-col p-6">
-                    <ul className="flex-1 space-y-3">
-                      {plan.features.map((feature) => (
+
+                  <CardContent className="flex flex-1 flex-col p-6 pt-0">
+                    <ul className="flex-1 space-y-2.5">
+                      {tier.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2 text-sm">
                           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                           {feature}
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      className="mt-6 w-full rounded-full"
-                      variant="outline"
-                      asChild
-                    >
-                      <Link href="/register-doctor">
-                        Get Started
-                      </Link>
-                    </Button>
                   </CardContent>
+
+                  <CardFooter className="p-6 pt-0">
+                    {isEnterprise ? (
+                      <Button
+                        className="w-full rounded-full"
+                        variant="outline"
+                        asChild
+                      >
+                        <Link href="/support">
+                          Get in Touch for a Demo
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        className="w-full rounded-full"
+                        variant={isPopular ? "default" : "outline"}
+                        asChild
+                      >
+                        <Link href={`/register-doctor?tier=${tier.id}`}>
+                          Get Started
+                        </Link>
+                      </Button>
+                    )}
+                  </CardFooter>
                 </Card>
               );
-            })()}
+            })}
           </div>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            All plans include a 15% platform commission on each booking, invoiced monthly. Cancel anytime, no long-term contracts.
-          </p>
-          <p className="mt-2 text-center text-xs text-muted-foreground/70">
-            These are introductory rates for early adopters. Lock in your price today — it stays the same for as long as you&apos;re subscribed.
+            All plans include a {PLATFORM_BOOKING_FEE_PERCENT}% platform commission on each booking, invoiced monthly.
+            All paid plans require a 12-month commitment, billed monthly.
           </p>
 
           {/* Free Profile Note */}
-          <p className="mt-10 text-center text-sm text-muted-foreground">
-            Want to try first?{" "}
-            <Link href="/register-doctor" className="font-medium text-primary hover:underline">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            Not ready to commit?{" "}
+            <Link
+              href="/register-doctor?tier=free"
+              className="font-medium text-primary hover:underline"
+            >
               Create a free doctor profile
             </Link>{" "}
-            and upgrade when you&apos;re ready.
+            — a basic listing to get started.
           </p>
         </div>
       </section>
@@ -313,29 +291,34 @@ export default function PricingPage() {
           </div>
 
           <div className="mx-auto mt-8 grid max-w-4xl gap-6 md:grid-cols-2">
-            {/* Standalone — £99/month */}
+            {/* Standalone Testing — £99/month */}
             <Card className="relative flex flex-col border-teal-200 dark:border-teal-900">
               <CardContent className="flex flex-1 flex-col p-6">
                 <div className="flex flex-col items-center text-center">
                   <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
                     <FlaskConical className="h-7 w-7 text-teal-600" />
                   </div>
-                  <h3 className="mt-4 text-lg font-bold">Standalone</h3>
+                  <h3 className="mt-4 text-lg font-bold">
+                    {TESTING_STANDALONE_PLAN.name}
+                  </h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    For labs, clinics &amp; nurses
+                    {TESTING_STANDALONE_PLAN.description}
                   </p>
                   <div className="mt-4">
                     <span className="text-3xl font-bold">
-                      {formatPriceForLocale(testingStandalone.prices, locale)}
+                      {formatPriceForLocale(
+                        TESTING_STANDALONE_PLAN.priceMonthlyPence,
+                        locale
+                      )}
                     </span>
                     <span className="text-muted-foreground"> / month</span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    + 15% platform commission
+                    + {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
                   </p>
                 </div>
                 <ul className="mt-6 flex-1 space-y-2.5">
-                  {testingStandalone.features.map((feature) => (
+                  {TESTING_STANDALONE_PLAN.features.map((feature) => (
                     <li
                       key={feature}
                       className="flex items-start gap-2 text-sm"
@@ -357,56 +340,61 @@ export default function PricingPage() {
             </Card>
 
             {/* Doctor Add-on — £49/month */}
-            <Card className="relative flex flex-col border-teal-400 shadow-md dark:border-teal-800">
-              <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
-                <Badge className="bg-teal-600 text-white shadow-md hover:bg-teal-600">
-                  Save 50%
-                </Badge>
-              </div>
-              <CardContent className="flex flex-1 flex-col p-6 pt-8">
-                <div className="flex flex-col items-center text-center">
-                  <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
-                    <FlaskConical className="h-7 w-7 text-teal-600" />
-                  </div>
-                  <h3 className="mt-4 text-lg font-bold">Doctor Add-on</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    For doctors on Professional or Premium
-                  </p>
-                  <div className="mt-4">
-                    <span className="text-3xl font-bold">
-                      {formatPriceForLocale(testingAddon.prices, locale)}
-                    </span>
-                    <span className="text-muted-foreground"> / month</span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Added to your existing subscription
-                  </p>
+            {testingModule && (
+              <Card className="relative flex flex-col border-teal-400 shadow-md dark:border-teal-800">
+                <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
+                  <Badge className="bg-teal-600 text-white shadow-md hover:bg-teal-600">
+                    Save 50%
+                  </Badge>
                 </div>
-                <ul className="mt-6 flex-1 space-y-2.5">
-                  {testingAddon.features.map((feature) => (
-                    <li
-                      key={feature}
-                      className="flex items-start gap-2 text-sm"
-                    >
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="mt-6 w-full rounded-full"
-                  variant="outline"
-                  asChild
-                >
-                  <Link href="/register-doctor">
-                    Register as Doctor <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Already a doctor? Add from your subscription dashboard.
-                </p>
-              </CardContent>
-            </Card>
+                <CardContent className="flex flex-1 flex-col p-6 pt-8">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
+                      <FlaskConical className="h-7 w-7 text-teal-600" />
+                    </div>
+                    <h3 className="mt-4 text-lg font-bold">Doctor Add-on</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      For doctors on Starter, Professional, or Clinic
+                    </p>
+                    <div className="mt-4">
+                      <span className="text-3xl font-bold">
+                        {formatPriceForLocale(
+                          testingModule.priceMonthlyPence,
+                          locale
+                        )}
+                      </span>
+                      <span className="text-muted-foreground"> / month</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Added to your existing subscription
+                    </p>
+                  </div>
+                  <ul className="mt-6 flex-1 space-y-2.5">
+                    {TESTING_STANDALONE_PLAN.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-start gap-2 text-sm"
+                      >
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    className="mt-6 w-full rounded-full"
+                    variant="outline"
+                    asChild
+                  >
+                    <Link href="/register-doctor?tier=starter">
+                      Register as Doctor <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <p className="mt-3 text-center text-xs text-muted-foreground">
+                    Already a doctor? Add from your billing dashboard.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </section>
@@ -466,9 +454,9 @@ export default function PricingPage() {
               },
               {
                 step: "3",
-                icon: Calendar,
-                title: "Set Your Availability",
-                desc: "Configure your weekly schedule, set appointment durations, and manage availability overrides.",
+                icon: CreditCard,
+                title: "Choose Your Plan",
+                desc: "Select a plan that fits your practice. All paid plans include a 12-month commitment billed monthly.",
                 bg: "bg-violet-50 dark:bg-violet-950/30",
                 text: "text-violet-600",
                 ring: "ring-violet-200 dark:ring-violet-800",
@@ -484,7 +472,9 @@ export default function PricingPage() {
               },
             ].map((item) => (
               <div key={item.step} className="flex gap-4">
-                <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${item.bg} ring-1 ${item.ring}`}>
+                <div
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${item.bg} ring-1 ${item.ring}`}
+                >
                   <item.icon className={`h-6 w-6 ${item.text}`} />
                 </div>
                 <div>
@@ -585,7 +575,7 @@ export default function PricingPage() {
                   className="mt-10 rounded-full bg-white text-slate-900 hover:bg-white/90"
                   asChild
                 >
-                  <Link href="/register-doctor">
+                  <Link href="/register-doctor?tier=professional">
                     Join as a Doctor <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>

@@ -12,8 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Crown, Users, TrendingUp, DollarSign, UserMinus, BarChart3 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { LICENSE_TIERS } from "@/lib/constants/license-tiers";
-import { formatCurrency } from "@/lib/utils/currency";
+import { LICENSE_TIERS, EXTRA_SEAT_PRICE_PENCE, formatPrice } from "@/lib/constants/license-tiers";
 
 export default async function AdminLicensesPage() {
   const supabase = await createClient();
@@ -51,8 +50,8 @@ export default async function AdminLicensesPage() {
       activeCount++;
       const tierConfig = LICENSE_TIERS.find((t) => t.id === tierKey);
       if (tierConfig) {
-        mrrCents += tierConfig.priceMonthly;
-        mrrCents += lic.extra_seat_count * 2900; // extra seat price
+        mrrCents += tierConfig.priceMonthlyPence;
+        mrrCents += lic.extra_seat_count * EXTRA_SEAT_PRICE_PENCE;
       }
       totalSeats += lic.used_seats;
     }
@@ -100,7 +99,7 @@ export default async function AdminLicensesPage() {
             <div>
               <p className="text-sm text-muted-foreground">MRR</p>
               <p className="text-2xl font-bold">
-                {formatCurrency(mrrCents, "EUR")}
+                {formatPrice(mrrCents, "GBP")}
               </p>
               <p className="text-xs text-muted-foreground">monthly recurring</p>
             </div>
@@ -114,7 +113,7 @@ export default async function AdminLicensesPage() {
             <div>
               <p className="text-sm text-muted-foreground">ARR</p>
               <p className="text-2xl font-bold">
-                {formatCurrency(arrCents, "EUR")}
+                {formatPrice(arrCents, "GBP")}
               </p>
               <p className="text-xs text-muted-foreground">annual recurring</p>
             </div>
@@ -166,7 +165,9 @@ export default async function AdminLicensesPage() {
                 <p className="text-xs text-muted-foreground">
                   {tier.isCustomPricing
                     ? "custom pricing"
-                    : `${formatCurrency(tier.priceMonthly, "EUR")}/mo`}
+                    : tier.isFreeTier
+                      ? "free"
+                      : `${formatPrice(tier.priceMonthlyPence, "GBP")}/mo`}
                 </p>
               </div>
             </CardContent>

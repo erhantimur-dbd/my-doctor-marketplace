@@ -11,7 +11,7 @@ export type LicenseStatus =
   | "suspended"
   | "cancelled";
 
-export type LicenseTier = "starter" | "professional" | "clinic" | "enterprise";
+export type LicenseTier = "free" | "starter" | "professional" | "clinic" | "enterprise";
 
 export interface Organization {
   id: string;
