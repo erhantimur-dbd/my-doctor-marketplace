@@ -590,6 +590,13 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                     </div>
                   )}
 
+                {doctor.in_person_deposit_type && doctor.in_person_deposit_type !== "none" &&
+                  doctor.consultation_types?.includes("in_person") && (
+                    <p className="mt-2 text-center text-xs text-amber-700 dark:text-amber-400">
+                      Deposit required at booking for in-person visits
+                    </p>
+                  )}
+
                 <Separator className="my-4" />
 
                 {hasActiveSubscription ? (

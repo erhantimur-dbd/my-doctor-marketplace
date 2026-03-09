@@ -37,9 +37,10 @@ import {
   Pencil,
   Trash2,
   Lock,
+  CreditCard,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { centsToAmount, amountToCents, formatCurrency } from "@/lib/utils/currency";
+import { centsToAmount, amountToCents, formatCurrency, RECOMMENDED_DEPOSIT_PERCENTAGE, PLATFORM_COMMISSION_PERCENT, getBookingFeeCents, calculateDepositCents, getCommissionCents } from "@/lib/utils/currency";
 import { LANGUAGES } from "@/lib/constants/countries";
 import {
   createDoctorService,
@@ -78,6 +79,8 @@ export default function ProfilePage() {
   const [cancellationPolicy, setCancellationPolicy] = useState("flexible");
   const [cancellationHours, setCancellationHours] = useState(24);
   const [isWheelchairAccessible, setIsWheelchairAccessible] = useState(false);
+  const [inPersonDepositType, setInPersonDepositType] = useState<"none" | "percentage" | "flat">("none");
+  const [inPersonDepositValue, setInPersonDepositValue] = useState<number | null>(null);
 
   // Services state
   const [services, setServices] = useState<DoctorService[]>([]);
@@ -89,6 +92,8 @@ export default function ProfilePage() {
   const [svcPriceCents, setSvcPriceCents] = useState(0);
   const [svcDuration, setSvcDuration] = useState("30");
   const [svcType, setSvcType] = useState("in_person");
+  const [svcDepositType, setSvcDepositType] = useState<string | null>(null);
+  const [svcDepositValue, setSvcDepositValue] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -100,6 +105,8 @@ export default function ProfilePage() {
     setSvcPriceCents(0);
     setSvcDuration("30");
     setSvcType("in_person");
+    setSvcDepositType(null);
+    setSvcDepositValue(null);
     setEditingService(null);
     setShowServiceForm(false);
   }
@@ -110,6 +117,8 @@ export default function ProfilePage() {
     setSvcPriceCents(svc.price_cents);
     setSvcDuration(String(svc.duration_minutes));
     setSvcType(svc.consultation_type);
+    setSvcDepositType(svc.deposit_type ?? null);
+    setSvcDepositValue(svc.deposit_value ?? null);
     setEditingService(svc);
     setShowServiceForm(true);
   }
@@ -124,6 +133,8 @@ export default function ProfilePage() {
       consultation_type: svcType as "in_person" | "video" | "both",
       is_active: true,
       display_order: editingService?.display_order ?? services.length,
+      deposit_type: svcDepositType as "none" | "percentage" | "flat" | null,
+      deposit_value: svcDepositValue,
     };
 
     if (editingService) {
@@ -182,6 +193,9 @@ export default function ProfilePage() {
     setCancellationPolicy(data.cancellation_policy || "flexible");
     setCancellationHours(data.cancellation_hours || 24);
     setIsWheelchairAccessible(data.is_wheelchair_accessible || false);
+    const dt = data.in_person_deposit_type || "none";
+    setInPersonDepositType(dt as "none" | "percentage" | "flat");
+    setInPersonDepositValue(data.in_person_deposit_value ?? null);
 
     // Load services
     const { data: svcData } = await supabase
@@ -216,6 +230,8 @@ export default function ProfilePage() {
         certifications,
         consultation_fee_cents: consultationFeeCents,
         video_consultation_fee_cents: videoConsultationFeeCents || null,
+        in_person_deposit_type: inPersonDepositType,
+        in_person_deposit_value: inPersonDepositType === "none" ? null : inPersonDepositValue,
         cancellation_policy: cancellationPolicy,
         cancellation_hours: cancellationHours,
         is_wheelchair_accessible: isWheelchairAccessible,
@@ -695,6 +711,136 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* In-Person Deposit Settings */}
+          {consultationTypes.includes("in_person") && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">In-Person Deposit Settings</Label>
+                <p className="text-xs text-muted-foreground">
+                  Choose how patients pay for in-person appointments. Video consultations always require full payment.
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setInPersonDepositType("none"); setInPersonDepositValue(null); }}
+                    className={`rounded-lg border p-3 text-left transition-colors ${
+                      inPersonDepositType === "none"
+                        ? "border-primary bg-primary/5"
+                        : "border-muted hover:bg-accent"
+                    } cursor-pointer`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">Full Payment</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Patient pays entire fee upfront
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setInPersonDepositType("percentage"); setInPersonDepositValue(inPersonDepositValue || RECOMMENDED_DEPOSIT_PERCENTAGE); }}
+                    className={`rounded-lg border p-3 text-left transition-colors ${
+                      inPersonDepositType === "percentage"
+                        ? "border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-950/30"
+                        : "border-muted hover:bg-accent"
+                    } cursor-pointer`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium">Percentage</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Deposit as % of fee (recommended)
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setInPersonDepositType("flat"); setInPersonDepositValue(inPersonDepositValue || 0); }}
+                    className={`rounded-lg border p-3 text-left transition-colors ${
+                      inPersonDepositType === "flat"
+                        ? "border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-950/30"
+                        : "border-muted hover:bg-accent"
+                    } cursor-pointer`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium">Flat Fee</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Fixed deposit amount
+                    </p>
+                  </button>
+                </div>
+
+                {/* Percentage input */}
+                {inPersonDepositType === "percentage" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Deposit Percentage</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={PLATFORM_COMMISSION_PERCENT}
+                        max={100}
+                        step={1}
+                        value={inPersonDepositValue ?? RECOMMENDED_DEPOSIT_PERCENTAGE}
+                        onChange={(e) => setInPersonDepositValue(parseInt(e.target.value) || RECOMMENDED_DEPOSIT_PERCENTAGE)}
+                        className="w-24"
+                      />
+                      <span className="text-sm text-muted-foreground">%</span>
+                      <span className="text-xs text-muted-foreground">(Recommended: {RECOMMENDED_DEPOSIT_PERCENTAGE}%, Min: {PLATFORM_COMMISSION_PERCENT}%)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Flat fee input */}
+                {inPersonDepositType === "flat" && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Deposit Amount</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                        {doctor?.base_currency || "EUR"}
+                      </span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        className="pl-14 w-40"
+                        value={centsToAmount(inPersonDepositValue ?? 0)}
+                        onChange={(e) => setInPersonDepositValue(amountToCents(parseFloat(e.target.value) || 0))}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Commission reminder */}
+                {inPersonDepositType !== "none" && (
+                  <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50">
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      <strong>{PLATFORM_COMMISSION_PERCENT}% of the total consultation fee</strong> is held as platform commission.
+                      This is deducted from the deposit payment via Stripe.
+                    </p>
+                    {consultationFeeCents > 0 && (() => {
+                      const previewDeposit = calculateDepositCents(consultationFeeCents, inPersonDepositType, inPersonDepositValue);
+                      const commission = getCommissionCents(consultationFeeCents);
+                      const bookingFee = getBookingFeeCents(doctor?.base_currency || "EUR");
+                      if (!previewDeposit) return null;
+                      return (
+                        <div className="mt-2 space-y-1 text-xs text-blue-600 dark:text-blue-400">
+                          <p>Preview for {formatCurrency(consultationFeeCents, doctor?.base_currency || "EUR")} consultation:</p>
+                          <p>• Deposit: {formatCurrency(previewDeposit, doctor?.base_currency || "EUR")} | Booking fee: {formatCurrency(bookingFee, doctor?.base_currency || "EUR")}</p>
+                          <p>• Patient pays: {formatCurrency(previewDeposit + bookingFee, doctor?.base_currency || "EUR")}</p>
+                          <p>• Commission: {formatCurrency(commission, doctor?.base_currency || "EUR")} | Remainder due on day: {formatCurrency(consultationFeeCents - previewDeposit, doctor?.base_currency || "EUR")}</p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -796,6 +942,67 @@ export default function ProfilePage() {
                   rows={2}
                 />
               </div>
+              {/* Service Deposit Override (only for in-person/both services) */}
+              {(svcType === "in_person" || svcType === "both") && (
+                <div className="space-y-2 rounded-md border p-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-medium">Deposit Override</Label>
+                    <Select
+                      value={svcDepositType ?? "inherit"}
+                      onValueChange={(v) => {
+                        if (v === "inherit") {
+                          setSvcDepositType(null);
+                          setSvcDepositValue(null);
+                        } else {
+                          setSvcDepositType(v);
+                          if (v === "percentage") setSvcDepositValue(RECOMMENDED_DEPOSIT_PERCENTAGE);
+                          else if (v === "flat") setSvcDepositValue(0);
+                          else setSvcDepositValue(null);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-44 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="inherit">Use doctor default</SelectItem>
+                        <SelectItem value="none">No deposit</SelectItem>
+                        <SelectItem value="percentage">Percentage</SelectItem>
+                        <SelectItem value="flat">Flat fee</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {svcDepositType === "percentage" && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={PLATFORM_COMMISSION_PERCENT}
+                        max={100}
+                        step={1}
+                        value={svcDepositValue ?? RECOMMENDED_DEPOSIT_PERCENTAGE}
+                        onChange={(e) => setSvcDepositValue(parseInt(e.target.value) || RECOMMENDED_DEPOSIT_PERCENTAGE)}
+                        className="w-20 h-8 text-xs"
+                      />
+                      <span className="text-xs text-muted-foreground">%</span>
+                    </div>
+                  )}
+                  {svcDepositType === "flat" && (
+                    <div className="relative w-32">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        {doctor?.base_currency || "EUR"}
+                      </span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        className="pl-12 h-8 text-xs"
+                        value={centsToAmount(svcDepositValue ?? 0)}
+                        onChange={(e) => setSvcDepositValue(amountToCents(parseFloat(e.target.value) || 0))}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" onClick={resetServiceForm}>
                   Cancel
@@ -847,9 +1054,16 @@ export default function ProfilePage() {
                       {svc.description}
                     </p>
                   )}
-                  <p className="text-sm font-semibold mt-1">
-                    {formatCurrency(svc.price_cents, doctor?.base_currency || "EUR")}
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-sm font-semibold">
+                      {formatCurrency(svc.price_cents, doctor?.base_currency || "EUR")}
+                    </p>
+                    {svc.deposit_type && svc.deposit_type !== "none" && (
+                      <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                        {svc.deposit_type === "percentage" ? `${svc.deposit_value}% deposit` : `${formatCurrency(svc.deposit_value || 0, doctor?.base_currency || "EUR")} deposit`}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0 ml-2">
                   <Button

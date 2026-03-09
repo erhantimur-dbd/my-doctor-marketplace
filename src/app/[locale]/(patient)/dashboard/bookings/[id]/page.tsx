@@ -46,6 +46,11 @@ type BookingDetail = {
   consultation_fee_cents: number;
   platform_fee_cents: number;
   total_amount_cents: number;
+  payment_mode: string;
+  deposit_amount_cents: number | null;
+  deposit_type: string | null;
+  deposit_value: number | null;
+  remainder_due_cents: number | null;
   currency: string;
   patient_notes: string | null;
   doctor_notes: string | null;
@@ -638,6 +643,20 @@ export default async function BookingDetailPage({
                   )}
                 </span>
               </div>
+              {typedBooking.payment_mode === "deposit" && typedBooking.deposit_amount_cents != null && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Deposit{typedBooking.deposit_type === "percentage" && typedBooking.deposit_value ? ` (${typedBooking.deposit_value}%)` : ""}
+                  </span>
+                  <span>
+                    {formatCurrency(
+                      typedBooking.deposit_amount_cents,
+                      typedBooking.currency,
+                      locale
+                    )}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Booking Fee</span>
                 <span>
@@ -650,15 +669,45 @@ export default async function BookingDetailPage({
               </div>
               <Separator />
               <div className="flex items-center justify-between font-medium">
-                <span>Total</span>
+                <span>
+                  {typedBooking.payment_mode === "deposit" ? "Charged" : "Total"}
+                </span>
                 <span className="text-lg">
-                  {formatCurrency(
-                    typedBooking.total_amount_cents,
-                    typedBooking.currency,
-                    locale
-                  )}
+                  {typedBooking.payment_mode === "deposit" && typedBooking.deposit_amount_cents != null
+                    ? formatCurrency(
+                        typedBooking.deposit_amount_cents + typedBooking.platform_fee_cents,
+                        typedBooking.currency,
+                        locale
+                      )
+                    : formatCurrency(
+                        typedBooking.total_amount_cents,
+                        typedBooking.currency,
+                        locale
+                      )}
                 </span>
               </div>
+              {typedBooking.payment_mode === "deposit" && typedBooking.remainder_due_cents != null && (
+                <>
+                  <div className="flex items-center justify-between text-sm text-amber-700 dark:text-amber-400">
+                    <span>Due on the Day</span>
+                    <span className="font-medium">
+                      {formatCurrency(
+                        typedBooking.remainder_due_cents,
+                        typedBooking.currency,
+                        locale
+                      )}
+                    </span>
+                  </div>
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-2 dark:border-amber-900 dark:bg-amber-950/50">
+                    <p className="text-xs text-amber-700 dark:text-amber-300">
+                      {typedBooking.deposit_type === "percentage" && typedBooking.deposit_value
+                        ? `${typedBooking.deposit_value}% deposit paid.`
+                        : "Deposit paid."}{" "}
+                      The remainder is payable to the doctor on the day.
+                    </p>
+                  </div>
+                </>
+              )}
               {typedBooking.payment_status && (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Payment Status</span>

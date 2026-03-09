@@ -76,6 +76,8 @@ export async function createDoctorService(
         consultation_type: parsed.data.consultation_type,
         is_active: parsed.data.is_active ?? true,
         display_order: parsed.data.display_order ?? 0,
+        deposit_type: parsed.data.deposit_type ?? null,
+        deposit_value: parsed.data.deposit_value ?? null,
       })
       .select("*")
       .single();
@@ -118,6 +120,8 @@ export async function updateDoctorService(
         consultation_type: parsed.data.consultation_type,
         is_active: parsed.data.is_active ?? true,
         display_order: parsed.data.display_order ?? 0,
+        deposit_type: parsed.data.deposit_type ?? null,
+        deposit_value: parsed.data.deposit_value ?? null,
       })
       .eq("id", serviceId)
       .eq("doctor_id", doctor.id)

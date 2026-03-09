@@ -263,6 +263,12 @@ export async function POST(request: NextRequest) {
             platform_fee_cents,
             total_amount_cents,
             currency,
+            payment_mode,
+            deposit_amount_cents,
+            remainder_due_cents,
+            commission_cents,
+            deposit_type,
+            deposit_value,
             patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
             doctor:doctors!inner(
               id,
@@ -275,12 +281,13 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (booking) {
-          // Record platform fee
+          // Record platform fee (booking fee + commission)
+          const platformFeeTotal = booking.platform_fee_cents + (booking.commission_cents || 0);
           await supabase.from("platform_fees").insert({
             booking_id: bookingId,
             doctor_id: booking.doctor_id,
             fee_type: "commission",
-            amount_cents: booking.platform_fee_cents,
+            amount_cents: platformFeeTotal,
             currency: booking.currency,
           });
 
@@ -338,6 +345,7 @@ export async function POST(request: NextRequest) {
                 ? "Phone Consultation"
                 : "In-Person Consultation";
 
+            const isDeposit = booking.payment_mode === "deposit";
             const { subject, html } = bookingConfirmationEmail({
               patientName: patient.first_name || "Patient",
               doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
@@ -350,6 +358,15 @@ export async function POST(request: NextRequest) {
               videoRoomUrl,
               clinicName: doctor.clinic_name,
               address: doctor.address,
+              isDeposit,
+              depositAmount: isDeposit && booking.deposit_amount_cents != null
+                ? booking.deposit_amount_cents / 100
+                : undefined,
+              remainderDue: isDeposit && booking.remainder_due_cents != null
+                ? booking.remainder_due_cents / 100
+                : undefined,
+              depositType: isDeposit ? (booking as any).deposit_type : undefined,
+              depositValue: isDeposit ? (booking as any).deposit_value : undefined,
             });
 
             sendEmail({ to: patient.email, subject, html }).catch((err) =>
@@ -364,6 +381,11 @@ export async function POST(request: NextRequest) {
                 month: "short",
               });
 
+              // For WhatsApp, show what was actually charged through Stripe
+              const chargedAmount = isDeposit && booking.deposit_amount_cents != null
+                ? booking.deposit_amount_cents + booking.platform_fee_cents
+                : booking.total_amount_cents;
+
               sendWhatsAppTemplate({
                 to: patient.phone,
                 templateName: TEMPLATE_BOOKING_CONFIRMATION,
@@ -374,7 +396,7 @@ export async function POST(request: NextRequest) {
                   date: dateFormatted,
                   time: booking.start_time,
                   doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
-                  amount: formatCurrency(booking.total_amount_cents, booking.currency),
+                  amount: formatCurrency(chargedAmount, booking.currency),
                 }),
               }).catch((err) =>
                 console.error("WhatsApp confirmation error:", err)

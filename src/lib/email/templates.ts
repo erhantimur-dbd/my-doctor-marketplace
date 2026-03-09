@@ -96,6 +96,11 @@ interface BookingConfirmationParams {
   videoRoomUrl?: string | null;
   clinicName?: string | null;
   address?: string | null;
+  isDeposit?: boolean;
+  depositAmount?: number;
+  remainderDue?: number;
+  depositType?: string; // 'percentage' | 'flat'
+  depositValue?: number; // the percentage or flat value used
 }
 
 export function bookingConfirmationEmail({
@@ -110,6 +115,11 @@ export function bookingConfirmationEmail({
   videoRoomUrl,
   clinicName,
   address,
+  isDeposit,
+  depositAmount,
+  remainderDue,
+  depositType,
+  depositValue,
 }: BookingConfirmationParams): { subject: string; html: string } {
   const subject = `Booking Confirmed - ${bookingNumber}`;
 
@@ -134,6 +144,31 @@ export function bookingConfirmationEmail({
       </p>
     </div>`;
 
+  const depositDescription = depositType === "percentage" && depositValue
+    ? `a ${depositValue}% deposit`
+    : "a deposit";
+
+  const depositBlock = isDeposit && depositAmount != null && remainderDue != null
+    ? `
+    <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #92400e;">
+        Deposit Payment
+      </p>
+      <p style="margin: 0; font-size: 13px; color: #92400e; line-height: 1.6;">
+        You paid ${depositDescription} of <strong>${currency} ${depositAmount.toFixed(2)}</strong> to secure your appointment.
+        The remaining <strong>${currency} ${remainderDue.toFixed(2)}</strong> is payable directly to the doctor on the day of your appointment.
+      </p>
+      <p style="margin: 8px 0 0; font-size: 12px; color: #a16207; line-height: 1.5;">
+        Deposits are fully refundable if cancelled within the cancellation period.
+      </p>
+    </div>`
+    : "";
+
+  const paymentLabel = isDeposit ? "Deposit Paid" : "Amount Paid";
+  const paymentAmount = isDeposit && depositAmount != null
+    ? `${currency} ${depositAmount.toFixed(2)}`
+    : `${currency} ${amount.toFixed(2)}`;
+
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Booking Confirmed</h2>
     <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
@@ -150,12 +185,14 @@ export function bookingConfirmationEmail({
             ${infoRow("Time", time)}
             ${infoRow("Consultation", consultationType)}
             ${!videoRoomUrl && clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
-            ${infoRow("Amount Paid", `${currency} ${amount.toFixed(2)}`)}
+            ${infoRow(paymentLabel, paymentAmount)}
+            ${isDeposit && remainderDue != null ? infoRow("Due on the Day", `${currency} ${remainderDue.toFixed(2)}`) : ""}
           </table>
         </td>
       </tr>
     </table>
 
+    ${depositBlock}
     ${videoBlock}
 
     ${button("View Booking Details")}
@@ -176,6 +213,7 @@ interface BookingCancellationParams {
   bookingNumber: string;
   refundAmount: number;
   currency: string;
+  isDeposit?: boolean;
 }
 
 export function bookingCancellationEmail({
@@ -186,6 +224,7 @@ export function bookingCancellationEmail({
   bookingNumber,
   refundAmount,
   currency,
+  isDeposit,
 }: BookingCancellationParams): { subject: string; html: string } {
   const subject = `Booking Cancelled - ${bookingNumber}`;
 
@@ -212,12 +251,14 @@ export function bookingCancellationEmail({
     ${refundAmount > 0
       ? `<div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
           <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">
-            A refund of <strong>${currency} ${refundAmount.toFixed(2)}</strong> will be processed to your original payment method within 5-10 business days.
+            A refund of <strong>${currency} ${refundAmount.toFixed(2)}</strong>${isDeposit ? " (deposit)" : ""} will be processed to your original payment method within 5-10 business days.
           </p>
         </div>`
       : `<div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
           <p style="margin: 0; font-size: 13px; color: #991b1b; line-height: 1.5;">
-            This cancellation is not eligible for a refund based on our cancellation policy.
+            ${isDeposit
+              ? "Your deposit is non-refundable as this cancellation is outside the cancellation period."
+              : "This cancellation is not eligible for a refund based on our cancellation policy."}
           </p>
         </div>`
     }
@@ -1410,6 +1451,74 @@ export function treatmentContinuationEmail({
     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       This is a recommendation from your doctor — there is no obligation to proceed.
       If you have any questions about the suggested treatment, please contact Dr. ${doctorName} directly.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
+// Admin Booking – Payment Link Email
+// ---------------------------------------------------------------------------
+
+interface AdminBookingPaymentLinkParams {
+  patientName: string;
+  doctorName: string;
+  date: string;
+  time: string;
+  consultationType: string;
+  bookingNumber: string;
+  amount: number;
+  currency: string;
+  paymentUrl: string;
+  expiresInHours: number;
+}
+
+export function adminBookingPaymentLinkEmail({
+  patientName,
+  doctorName,
+  date,
+  time,
+  consultationType,
+  bookingNumber,
+  amount,
+  currency,
+  paymentUrl,
+  expiresInHours,
+}: AdminBookingPaymentLinkParams): { subject: string; html: string } {
+  const subject = `Complete Your Booking — ${bookingNumber}`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Complete Your Booking</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, our support team has reserved an appointment for you. Please complete your payment to confirm the booking.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+      <tr>
+        <td style="padding: 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${infoRow("Booking Number", bookingNumber)}
+            ${infoRow("Doctor", `Dr. ${doctorName}`)}
+            ${infoRow("Date", date)}
+            ${infoRow("Time", time)}
+            ${infoRow("Consultation", consultationType)}
+            ${infoRow("Amount", `<strong>${currency} ${amount.toFixed(2)}</strong>`)}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 13px; color: #92400e; line-height: 1.5;">
+        <strong>Important:</strong> This payment link expires in ${expiresInHours} hours. If the link expires, please contact our support team for a new one.
+      </p>
+    </div>
+
+    ${button("Complete Payment", paymentUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      Your appointment will only be confirmed once payment is complete. If you did not request this booking, please ignore this email or contact our support team.
     </p>
   `);
 

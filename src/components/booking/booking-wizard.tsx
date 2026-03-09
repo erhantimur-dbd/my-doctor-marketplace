@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { createBookingAndCheckout } from "@/actions/booking";
-import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
+import { formatCurrency, getBookingFeeCents, calculateDepositCents } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import { formatSlotTime } from "@/lib/utils/availability";
 import { toast } from "sonner";
@@ -48,6 +48,8 @@ interface ServiceOption {
   price_cents: number;
   duration_minutes: number;
   consultation_type: string;
+  deposit_type?: string | null;
+  deposit_value?: number | null;
 }
 
 interface BookingWizardProps {
@@ -62,6 +64,8 @@ interface BookingWizardProps {
     cancellation_policy: string;
     clinic_name: string | null;
     address: string | null;
+    in_person_deposit_type?: string;
+    in_person_deposit_value?: number | null;
     profile: {
       first_name: string;
       last_name: string;
@@ -154,6 +158,45 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
 
   const platformFeeCents = getBookingFeeCents(doctor.base_currency);
   const totalAmountCents = consultationFeeCents + platformFeeCents;
+
+  // Resolve deposit config: service override → doctor default → none
+  // Only for in-person appointments
+  let resolvedDepositType: string | null = null;
+  let resolvedDepositValue: number | null = null;
+
+  if (consultationType === "in_person") {
+    if (selectedService?.deposit_type) {
+      // Service has its own deposit override
+      resolvedDepositType = selectedService.deposit_type;
+      resolvedDepositValue = selectedService.deposit_value ?? null;
+    } else if (!selectedService && doctor.in_person_deposit_type && doctor.in_person_deposit_type !== "none") {
+      // First-visit: use doctor default
+      resolvedDepositType = doctor.in_person_deposit_type;
+      resolvedDepositValue = doctor.in_person_deposit_value ?? null;
+    } else if (selectedService && !selectedService.deposit_type) {
+      // Service inherits from doctor default
+      resolvedDepositType = doctor.in_person_deposit_type ?? null;
+      resolvedDepositValue = doctor.in_person_deposit_value ?? null;
+    }
+  }
+
+  const depositAmountCents = calculateDepositCents(
+    consultationFeeCents,
+    resolvedDepositType,
+    resolvedDepositValue
+  );
+  const isDepositMode = depositAmountCents != null && depositAmountCents > 0;
+  const remainderDueCents = isDepositMode
+    ? consultationFeeCents - depositAmountCents
+    : null;
+  const chargeNowCents = isDepositMode
+    ? depositAmountCents + platformFeeCents
+    : totalAmountCents;
+
+  // Deposit label for display
+  const depositLabel = resolvedDepositType === "percentage" && resolvedDepositValue
+    ? `${resolvedDepositValue}% Deposit`
+    : "Deposit";
 
   // Slot duration override when service is selected
   const slotDurationOverride = selectedService
@@ -324,6 +367,11 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-primary" />
                       <span className="font-medium">In-Person Visit</span>
+                      {doctor.in_person_deposit_type && doctor.in_person_deposit_type !== "none" && (
+                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                          Deposit Required
+                        </Badge>
+                      )}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Visit the doctor at their clinic
@@ -678,6 +726,16 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                       )}
                     </span>
                   </div>
+                  {isDepositMode && depositAmountCents != null && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {depositLabel}
+                      </span>
+                      <span>
+                        {formatCurrency(depositAmountCents, doctor.base_currency)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
                       Booking Fee
@@ -688,13 +746,33 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                   </div>
                   <Separator />
                   <div className="flex items-center justify-between font-semibold">
-                    <span>Total</span>
+                    <span>{isDepositMode ? "Charge Now" : "Total"}</span>
                     <span className="text-lg">
-                      {formatCurrency(totalAmountCents, doctor.base_currency)}
+                      {formatCurrency(chargeNowCents, doctor.base_currency)}
                     </span>
                   </div>
+                  {isDepositMode && remainderDueCents != null && (
+                    <div className="flex items-center justify-between text-sm text-amber-700 dark:text-amber-400">
+                      <span>Due on the Day</span>
+                      <span className="font-medium">
+                        {formatCurrency(remainderDueCents, doctor.base_currency)}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Deposit Info Banner */}
+              {isDepositMode && remainderDueCents != null && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/50">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    A {depositLabel.toLowerCase()} secures your appointment. The remaining{" "}
+                    {formatCurrency(remainderDueCents, doctor.base_currency)} is payable
+                    directly to the doctor on the day. Deposits are fully refundable if
+                    cancelled within the cancellation period.
+                  </p>
+                </div>
+              )}
 
               {/* Cancellation Policy */}
               <p className="text-xs text-muted-foreground">
@@ -749,11 +827,29 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                       {formatSlotTime(slotSelection.startTime)}
                     </p>
                   </div>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(totalAmountCents, doctor.base_currency)}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-xl font-bold">
+                      {formatCurrency(chargeNowCents, doctor.base_currency)}
+                    </p>
+                    {isDepositMode && (
+                      <p className="text-xs text-amber-700 dark:text-amber-400">
+                        {depositLabel.toLowerCase()} + booking fee
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {isDepositMode && remainderDueCents != null && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/50">
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    You are paying a {depositLabel.toLowerCase()} to secure your appointment.
+                    The remaining{" "}
+                    <strong>{formatCurrency(remainderDueCents, doctor.base_currency)}</strong>{" "}
+                    is payable directly to the doctor on the day.
+                  </p>
+                </div>
+              )}
 
               <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50">
                 <p className="text-sm text-blue-700 dark:text-blue-300">

@@ -74,6 +74,11 @@ export default async function BookingConfirmationPage({
       consultation_fee_cents,
       platform_fee_cents,
       total_amount_cents,
+      payment_mode,
+      deposit_amount_cents,
+      deposit_type,
+      deposit_value,
+      remainder_due_cents,
       patient_notes,
       paid_at,
       doctor:doctors!inner(
@@ -247,14 +252,56 @@ export default async function BookingConfirmationPage({
 
             {/* Amount Paid */}
             <div className="flex items-center justify-between">
-              <span className="font-semibold">Amount Paid</span>
+              <span className="font-semibold">
+                {(booking as any).payment_mode === "deposit"
+                  ? (booking as any).deposit_type === "percentage" && (booking as any).deposit_value
+                    ? `${(booking as any).deposit_value}% Deposit Paid`
+                    : "Deposit Paid"
+                  : "Amount Paid"}
+              </span>
               <span className="text-lg font-bold">
-                {formatCurrency(
-                  booking.total_amount_cents,
-                  booking.currency
-                )}
+                {(booking as any).payment_mode === "deposit" && (booking as any).deposit_amount_cents != null
+                  ? formatCurrency(
+                      (booking as any).deposit_amount_cents + booking.platform_fee_cents,
+                      booking.currency
+                    )
+                  : formatCurrency(
+                      booking.total_amount_cents,
+                      booking.currency
+                    )}
               </span>
             </div>
+
+            {/* Deposit remainder due on the day */}
+            {(booking as any).payment_mode === "deposit" && (booking as any).remainder_due_cents != null && (
+              <>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-amber-700 dark:text-amber-400">Due on the Day</span>
+                  <span className="font-medium text-amber-700 dark:text-amber-400">
+                    {formatCurrency(
+                      (booking as any).remainder_due_cents,
+                      booking.currency
+                    )}
+                  </span>
+                </div>
+
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/50">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    You paid a{" "}
+                    {(booking as any).deposit_type === "percentage" && (booking as any).deposit_value
+                      ? `${(booking as any).deposit_value}% deposit`
+                      : "deposit"}{" "}
+                    to secure your appointment. The remaining{" "}
+                    {formatCurrency(
+                      (booking as any).remainder_due_cents,
+                      booking.currency
+                    )}{" "}
+                    is payable directly to the doctor on the day. Deposits are fully refundable if
+                    cancelled within the cancellation period.
+                  </p>
+                </div>
+              </>
+            )}
 
             {/* Cancellation Policy Note */}
             <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50">

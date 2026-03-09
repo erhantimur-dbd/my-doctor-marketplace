@@ -31,6 +31,8 @@ export const doctorServiceSchema = z.object({
   consultation_type: z.enum(["in_person", "video", "both"]),
   is_active: z.boolean().optional().default(true),
   display_order: z.number().int().optional().default(0),
+  deposit_type: z.enum(["none", "percentage", "flat"]).nullish(),
+  deposit_value: z.number().int().min(0).nullish(),
 });
 
 const invitationItemSchema = z.object({

@@ -194,6 +194,8 @@ export interface DoctorService {
   consultation_type: string;
   is_active: boolean;
   display_order: number;
+  deposit_type: string | null;
+  deposit_value: number | null;
   created_at: string;
   updated_at: string;
 }

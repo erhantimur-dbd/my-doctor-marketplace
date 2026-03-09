@@ -239,6 +239,16 @@ async function createDoctorAccount(formData: FormData): Promise<
       consultation_fee_cents: 0,
       referral_code: newReferralCode,
       has_testing_addon: hasTestingAddon,
+      in_person_deposit_type: (() => {
+        const dt = formData.get("in_person_deposit_type") as string;
+        return ["none", "percentage", "flat"].includes(dt) ? dt : "none";
+      })(),
+      in_person_deposit_value: (() => {
+        const dt = formData.get("in_person_deposit_type") as string;
+        if (dt === "none" || !dt) return null;
+        const dv = formData.get("in_person_deposit_value") as string;
+        return dv ? parseInt(dv, 10) : null;
+      })(),
       ...(gmcNumber && { gmc_number: gmcNumber }),
     })
     .select("id")

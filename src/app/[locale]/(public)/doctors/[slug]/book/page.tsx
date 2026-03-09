@@ -69,6 +69,8 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
       cancellation_policy,
       clinic_name,
       address,
+      in_person_deposit_type,
+      in_person_deposit_value,
       is_active,
       verification_status,
       stripe_account_id,
@@ -114,7 +116,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
   // Fetch services for this doctor (for returning-patient flow)
   const { data: servicesData } = await supabase
     .from("doctor_services")
-    .select("id, name, price_cents, duration_minutes, consultation_type")
+    .select("id, name, price_cents, duration_minutes, consultation_type, deposit_type, deposit_value")
     .eq("doctor_id", doctor.id)
     .eq("is_active", true)
     .order("display_order", { ascending: true });

@@ -54,3 +54,60 @@ export function getBookingFeeCents(currency: string): number {
   const rate = GBP_EXCHANGE_RATES[currency] ?? 1.0;
   return Math.round(BOOKING_FEE_GBP_CENTS * rate);
 }
+
+/* ── Platform commission ────────────────────────────────────
+ * The platform takes 15% commission from the doctor's consultation
+ * fee. This is collected via Stripe's application_fee alongside
+ * the patient booking fee.
+ * ─────────────────────────────────────────────────────────── */
+export const PLATFORM_COMMISSION_PERCENT = 15;
+
+/**
+ * Calculates the 15% platform commission on the consultation fee.
+ * This is deducted from the doctor's share via Stripe application_fee.
+ */
+export function getCommissionCents(consultationFeeCents: number): number {
+  return Math.round(consultationFeeCents * (PLATFORM_COMMISSION_PERCENT / 100));
+}
+
+/* ── Deposit calculation ──────────────────────────────────
+ * For in-person appointments, doctors configure their own
+ * deposit amount — either a percentage (recommended 30%) or
+ * a flat fee. Each service can optionally override the
+ * doctor-level default.
+ * ─────────────────────────────────────────────────────────── */
+export const RECOMMENDED_DEPOSIT_PERCENTAGE = 30;
+
+/**
+ * Calculates the deposit amount in cents based on the deposit type and value.
+ * - 'percentage': value is a percentage (e.g. 30 → 30% of fee)
+ * - 'flat': value is already in cents (e.g. 5000 → £50.00)
+ * Returns null if deposit type is 'none' or invalid.
+ */
+export function calculateDepositCents(
+  consultationFeeCents: number,
+  depositType: string | null | undefined,
+  depositValue: number | null | undefined
+): number | null {
+  if (!depositType || depositType === "none" || depositValue == null) return null;
+  if (depositType === "percentage") {
+    return Math.round(consultationFeeCents * (depositValue / 100));
+  }
+  if (depositType === "flat") {
+    // Cap flat deposit at the consultation fee
+    return Math.min(depositValue, consultationFeeCents);
+  }
+  return null;
+}
+
+/**
+ * Validates that the deposit amount covers the platform commission (15%).
+ * Returns true if valid, false if deposit is too small.
+ */
+export function isDepositSufficient(
+  depositCents: number,
+  consultationFeeCents: number
+): boolean {
+  const commissionCents = getCommissionCents(consultationFeeCents);
+  return depositCents >= commissionCents;
+}

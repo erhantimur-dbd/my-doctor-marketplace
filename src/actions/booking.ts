@@ -26,7 +26,12 @@ import {
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
 
-import { getBookingFeeCents } from "@/lib/utils/currency";
+import {
+  getBookingFeeCents,
+  calculateDepositCents,
+  getCommissionCents,
+  formatCurrency,
+} from "@/lib/utils/currency";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -83,6 +88,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         base_currency,
         cancellation_policy,
         consultation_types,
+        in_person_deposit_type,
+        in_person_deposit_value,
         is_active,
         verification_status,
         organization_id,
@@ -153,11 +160,15 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     let serviceName: string | null = null;
     const serviceId: string | null = parsed.data.service_id || null;
 
+    // Track service-level deposit overrides
+    let serviceDepositType: string | null = null;
+    let serviceDepositValue: number | null = null;
+
     if (serviceId) {
       // Returning patient with selected service — use service price
       const { data: service } = await supabase
         .from("doctor_services")
-        .select("*")
+        .select("*, deposit_type, deposit_value")
         .eq("id", serviceId)
         .eq("doctor_id", parsed.data.doctor_id)
         .single();
@@ -168,6 +179,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
       consultationFeeCents = service.price_cents;
       serviceName = service.name;
+      serviceDepositType = (service as any).deposit_type ?? null;
+      serviceDepositValue = (service as any).deposit_value ?? null;
     } else {
       // First visit or doctor has no services — use default fee
       consultationFeeCents =
@@ -178,7 +191,50 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     }
 
     const platformFeeCents = getBookingFeeCents(doctor.base_currency);
+    const commissionCents = getCommissionCents(consultationFeeCents);
     const totalAmountCents = consultationFeeCents + platformFeeCents;
+
+    // Resolve deposit config: service override → doctor default → none
+    // Video consultations are ALWAYS full payment; deposit only applies to in-person
+    let resolvedDepositType: string | null = null;
+    let resolvedDepositValue: number | null = null;
+
+    if (parsed.data.consultation_type === "in_person") {
+      if (serviceDepositType != null) {
+        // Service has its own deposit override
+        resolvedDepositType = serviceDepositType;
+        resolvedDepositValue = serviceDepositValue;
+      } else {
+        // Use doctor's default for in-person
+        resolvedDepositType = (doctor as any).in_person_deposit_type ?? "none";
+        resolvedDepositValue = (doctor as any).in_person_deposit_value ?? null;
+      }
+    }
+
+    const depositAmountCents = calculateDepositCents(
+      consultationFeeCents,
+      resolvedDepositType,
+      resolvedDepositValue
+    );
+    const isDeposit = depositAmountCents != null && depositAmountCents > 0;
+    const remainderDueCents = isDeposit
+      ? consultationFeeCents - depositAmountCents
+      : null;
+
+    // The amount Stripe will charge the patient:
+    // Full: consultation_fee + booking_fee
+    // Deposit: deposit_amount + booking_fee
+    const stripeChargeCents = isDeposit
+      ? depositAmountCents + platformFeeCents
+      : totalAmountCents;
+
+    // Application fee = booking fee (from patient) + 15% commission (from doctor's share)
+    // In deposit mode the commission is still on the full consultation fee,
+    // but it's capped at the Stripe charge so Stripe doesn't reject it.
+    const applicationFeeCents = Math.min(
+      platformFeeCents + commissionCents,
+      stripeChargeCents
+    );
 
     // Insert booking with pending_payment status
     const { data: booking, error: bookingError } = await supabase
@@ -195,7 +251,13 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         currency: doctor.base_currency,
         consultation_fee_cents: consultationFeeCents,
         platform_fee_cents: platformFeeCents,
+        commission_cents: commissionCents,
         total_amount_cents: totalAmountCents,
+        payment_mode: isDeposit ? "deposit" : "full",
+        deposit_amount_cents: depositAmountCents,
+        remainder_due_cents: remainderDueCents,
+        deposit_type: isDeposit ? resolvedDepositType : null,
+        deposit_value: isDeposit ? resolvedDepositValue : null,
         service_id: serviceId,
         service_name: serviceName,
       })
@@ -226,16 +288,20 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
           price_data: {
             currency: doctor.base_currency.toLowerCase(),
             product_data: {
-              name: `${consultationLabel} with Dr. ${doctorName}`,
-              description: `${parsed.data.appointment_date} at ${parsed.data.start_time}`,
+              name: isDeposit
+                ? `Deposit: ${consultationLabel} with Dr. ${doctorName}`
+                : `${consultationLabel} with Dr. ${doctorName}`,
+              description: isDeposit
+                ? `${parsed.data.appointment_date} at ${parsed.data.start_time} (${resolvedDepositType === "percentage" ? `${resolvedDepositValue}% deposit` : "deposit"} — remainder due on the day)`
+                : `${parsed.data.appointment_date} at ${parsed.data.start_time}`,
             },
-            unit_amount: totalAmountCents,
+            unit_amount: stripeChargeCents,
           },
           quantity: 1,
         },
       ],
       payment_intent_data: {
-        application_fee_amount: platformFeeCents,
+        application_fee_amount: applicationFeeCents,
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
@@ -243,6 +309,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       metadata: {
         booking_id: booking.id,
         booking_number: booking.booking_number,
+        payment_mode: isDeposit ? "deposit" : "full",
       },
       success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/${locale}/doctors/${doctor.slug}`,
@@ -333,13 +400,19 @@ export async function cancelBooking(input: CancelBookingInput) {
     }
 
     // Process refund via Stripe if payment was made
+    // For deposit bookings, refund is based on what was actually charged (deposit + booking fee)
+    const stripeChargedAmount =
+      booking.payment_mode === "deposit" && booking.deposit_amount_cents != null
+        ? booking.deposit_amount_cents + booking.platform_fee_cents
+        : booking.total_amount_cents;
+
     if (
       booking.stripe_payment_intent_id &&
       refundPercent > 0 &&
-      booking.total_amount_cents > 0
+      stripeChargedAmount > 0
     ) {
       const refundAmount = Math.round(
-        (booking.total_amount_cents * refundPercent) / 100
+        (stripeChargedAmount * refundPercent) / 100
       );
 
       await getStripe().refunds.create({
@@ -392,7 +465,7 @@ export async function cancelBooking(input: CancelBookingInput) {
 
     if (patient?.email && doctorProfile) {
       const refundAmount = refundPercent > 0
-        ? (booking.total_amount_cents * refundPercent) / 100 / 100
+        ? (stripeChargedAmount * refundPercent) / 100 / 100
         : 0;
 
       const { subject, html } = bookingCancellationEmail({

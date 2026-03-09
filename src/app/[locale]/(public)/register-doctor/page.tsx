@@ -155,6 +155,8 @@ export default function RegisterDoctorPage() {
   const [videoFee, setVideoFee] = useState<number>(40);
   const [currency, setCurrency] = useState("EUR");
   const [hasTestingAddon, setHasTestingAddon] = useState(false);
+  const [inPersonDepositType, setInPersonDepositType] = useState<"none" | "percentage" | "flat">("none");
+  const [inPersonDepositValue, setInPersonDepositValue] = useState<number | null>(null);
 
   function nextStep() {
     setError("");
@@ -248,6 +250,12 @@ export default function RegisterDoctorPage() {
 
     // Add-on
     formData.set("has_testing_addon", hasTestingAddon ? "true" : "false");
+
+    // Payment mode
+    formData.set("in_person_deposit_type", inPersonDepositType);
+    if (inPersonDepositType !== "none" && inPersonDepositValue != null) {
+      formData.set("in_person_deposit_value", String(inPersonDepositValue));
+    }
 
     // Plan selection
     formData.set("tier", selectedTier);
@@ -701,6 +709,88 @@ export default function RegisterDoctorPage() {
                 You can change your pricing anytime from your dashboard settings.
                 Prices are displayed to patients in the currency you select.
               </p>
+
+              <Separator />
+
+              {/* In-Person Deposit Settings */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">In-Person Deposit Settings</Label>
+                <p className="text-xs text-muted-foreground">
+                  Choose how patients pay for in-person appointments. Video consultations always require full payment.
+                  15% of the total consultation fee is held as platform commission.
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setInPersonDepositType("none"); setInPersonDepositValue(null); }}
+                    className={`rounded-lg border p-3 text-left transition-colors cursor-pointer ${
+                      inPersonDepositType === "none"
+                        ? "border-primary bg-primary/5"
+                        : "border-muted hover:bg-accent"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">Full Payment</span>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Patient pays entire fee upfront
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setInPersonDepositType("percentage"); setInPersonDepositValue(30); }}
+                    className={`rounded-lg border p-3 text-left transition-colors cursor-pointer ${
+                      inPersonDepositType === "percentage"
+                        ? "border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-950/30"
+                        : "border-muted hover:bg-accent"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">Percentage</span>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Recommended: 30% deposit
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setInPersonDepositType("flat"); setInPersonDepositValue(0); }}
+                    className={`rounded-lg border p-3 text-left transition-colors cursor-pointer ${
+                      inPersonDepositType === "flat"
+                        ? "border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-950/30"
+                        : "border-muted hover:bg-accent"
+                    }`}
+                  >
+                    <span className="text-sm font-medium">Flat Fee</span>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Fixed deposit amount
+                    </p>
+                  </button>
+                </div>
+                {inPersonDepositType === "percentage" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={15}
+                      max={100}
+                      step={1}
+                      value={inPersonDepositValue ?? 30}
+                      onChange={(e) => setInPersonDepositValue(parseInt(e.target.value) || 30)}
+                      className="w-24"
+                    />
+                    <span className="text-sm text-muted-foreground">% (Recommended: 30%, Min: 15%)</span>
+                  </div>
+                )}
+                {inPersonDepositType === "flat" && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">{currency}</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      className="w-32"
+                      value={(inPersonDepositValue ?? 0) / 100}
+                      onChange={(e) => setInPersonDepositValue(Math.round((parseFloat(e.target.value) || 0) * 100))}
+                    />
+                  </div>
+                )}
+              </div>
 
               <Separator />
 

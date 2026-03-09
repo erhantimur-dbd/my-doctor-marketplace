@@ -122,6 +122,19 @@ export async function updateDoctorProfile(formData: FormData) {
   const cancellationHours = formData.get("cancellation_hours") as string;
   if (cancellationHours) updates.cancellation_hours = parseInt(cancellationHours, 10);
 
+  const depositType = formData.get("in_person_deposit_type") as string;
+  if (depositType && ["none", "percentage", "flat"].includes(depositType)) {
+    updates.in_person_deposit_type = depositType;
+    if (depositType === "none") {
+      updates.in_person_deposit_value = null;
+    } else {
+      const depositValue = formData.get("in_person_deposit_value") as string;
+      if (depositValue) {
+        updates.in_person_deposit_value = parseInt(depositValue, 10);
+      }
+    }
+  }
+
   const { error } = await supabase
     .from("doctors")
     .update(updates)
