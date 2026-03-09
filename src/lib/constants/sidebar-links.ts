@@ -1,6 +1,7 @@
 import { type LucideIcon } from "lucide-react";
 import {
   Calendar,
+  ClipboardCheck,
   ClipboardList,
   CreditCard,
   Gift,
@@ -24,6 +25,7 @@ import {
   DollarSign,
   Tag,
   ScrollText,
+  Building2,
 } from "lucide-react";
 
 export interface SidebarLink {
@@ -58,9 +60,14 @@ export const doctorSidebarLinks: SidebarLink[] = [
   },
   { href: "/doctor-dashboard/policies", icon: FileText, label: "Policies" },
   {
-    href: "/doctor-dashboard/subscription",
+    href: "/doctor-dashboard/organization",
+    icon: Building2,
+    label: "Organization",
+  },
+  {
+    href: "/doctor-dashboard/organization/billing",
     icon: Crown,
-    label: "Subscription",
+    label: "License & Billing",
   },
   { href: "/doctor-dashboard/referrals", icon: UserPlus, label: "Referrals" },
   {
@@ -124,14 +131,29 @@ export const doctorSidebarGroups: SidebarGroup[] = [
         label: "Policies",
       },
       {
-        href: "/doctor-dashboard/subscription",
-        icon: Crown,
-        label: "Subscription",
-      },
-      {
         href: "/doctor-dashboard/referrals",
         icon: UserPlus,
         label: "Referrals",
+      },
+    ],
+  },
+  {
+    label: "Organization",
+    links: [
+      {
+        href: "/doctor-dashboard/organization",
+        icon: Building2,
+        label: "Organization",
+      },
+      {
+        href: "/doctor-dashboard/organization/members",
+        icon: Users,
+        label: "Team Members",
+      },
+      {
+        href: "/doctor-dashboard/organization/billing",
+        icon: Crown,
+        label: "License & Billing",
       },
     ],
   },
@@ -189,12 +211,14 @@ export const patientSidebarLinks: SidebarLink[] = [
 
 export const adminSidebarLinks: SidebarLink[] = [
   { href: "/admin", icon: LayoutDashboard, label: "Overview" },
+  { href: "/admin/approvals", icon: ClipboardCheck, label: "Approvals" },
   { href: "/admin/doctors", icon: Stethoscope, label: "Doctors" },
   { href: "/admin/patients", icon: Users, label: "Patients" },
   { href: "/admin/bookings", icon: Calendar, label: "Bookings" },
   { href: "/admin/reviews", icon: Star, label: "Reviews" },
   { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
-  { href: "/admin/subscriptions", icon: Crown, label: "Subscriptions" },
+  { href: "/admin/organizations", icon: Building2, label: "Organizations" },
+  { href: "/admin/licenses", icon: Crown, label: "Licenses" },
   { href: "/admin/coupons", icon: Tag, label: "Coupons" },
   { href: "/admin/support", icon: HelpCircle, label: "Support" },
   { href: "/admin/audit-log", icon: ScrollText, label: "Audit Log" },

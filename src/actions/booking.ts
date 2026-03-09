@@ -85,6 +85,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         consultation_types,
         is_active,
         verification_status,
+        organization_id,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
       `
       )
@@ -106,17 +107,35 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
-    // Check doctor has an active subscription (free tier cannot accept bookings)
+    // Check doctor's org has an active license (or legacy subscription)
     const adminSupabase = createAdminClient();
-    const { data: doctorSubscription } = await adminSupabase
-      .from("doctor_subscriptions")
-      .select("id")
-      .eq("doctor_id", doctor.id)
-      .in("status", ["active", "trialing", "past_due"])
-      .limit(1)
-      .maybeSingle();
+    let hasActiveLicense = false;
 
-    if (!doctorSubscription) {
+    // New: check organization license
+    if (doctor.organization_id) {
+      const { data: orgLicense } = await adminSupabase
+        .from("licenses")
+        .select("id")
+        .eq("organization_id", doctor.organization_id)
+        .in("status", ["active", "trialing", "past_due"])
+        .limit(1)
+        .maybeSingle();
+      hasActiveLicense = !!orgLicense;
+    }
+
+    // Legacy fallback: check doctor_subscriptions during transition
+    if (!hasActiveLicense) {
+      const { data: legacySub } = await adminSupabase
+        .from("doctor_subscriptions")
+        .select("id")
+        .eq("doctor_id", doctor.id)
+        .in("status", ["active", "trialing", "past_due"])
+        .limit(1)
+        .maybeSingle();
+      hasActiveLicense = !!legacySub;
+    }
+
+    if (!hasActiveLicense) {
       return {
         error: "This doctor is not currently accepting online bookings.",
       };

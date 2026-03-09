@@ -54,6 +54,12 @@ export async function searchDoctors(filters: SearchFilters) {
     .eq("verification_status", "verified")
     .eq("is_active", true);
 
+  // License filter: only show doctors with active org licenses (or legacy subscriptions)
+  const { data: licensedIds } = await supabase.rpc("get_licensed_doctor_ids");
+  if (licensedIds && licensedIds.length > 0) {
+    query = query.in("id", licensedIds);
+  }
+
   // Provider type filter (doctor vs testing_service)
   if (filters.providerType) {
     query = query.eq("provider_type", filters.providerType);

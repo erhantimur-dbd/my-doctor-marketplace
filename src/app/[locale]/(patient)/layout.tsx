@@ -35,7 +35,7 @@ export default function PatientLayout({
             ))}
           </nav>
         </aside>
-        <main className="flex-1 overflow-hidden">{children}</main>
+        <main className="min-w-0 flex-1">{children}</main>
       </div>
       <DashboardMobileNav
         portal="patient"

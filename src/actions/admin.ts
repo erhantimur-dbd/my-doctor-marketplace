@@ -55,12 +55,84 @@ async function logAdminAction(
   });
 }
 
+// ===================== Approval Checklist =====================
+
+export async function getApprovalChecklist(doctorId: string) {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError, data: null };
+
+  const { data, error } = await supabase
+    .from("doctor_approval_checklist")
+    .select("*")
+    .eq("doctor_id", doctorId)
+    .maybeSingle();
+
+  if (error) return { error: error.message, data: null };
+  return { data };
+}
+
+export async function saveApprovalChecklist(
+  doctorId: string,
+  values: {
+    gmc_verified: boolean;
+    website_verified: boolean;
+    notes?: string;
+  }
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const allComplete = values.gmc_verified && values.website_verified;
+
+  const { error } = await supabase
+    .from("doctor_approval_checklist")
+    .upsert(
+      {
+        doctor_id: doctorId,
+        reviewer_id: user.id,
+        gmc_verified: values.gmc_verified,
+        website_verified: values.website_verified,
+        notes: values.notes || null,
+        completed_at: allComplete ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "doctor_id" }
+    );
+
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, "approval_checklist_updated", "doctor", doctorId, {
+    gmc_verified: values.gmc_verified,
+    website_verified: values.website_verified,
+    complete: allComplete,
+  });
+
+  revalidatePath(`/admin/doctors/${doctorId}`);
+  revalidatePath("/admin/approvals");
+  return { success: true };
+}
+
+// ===================== Doctor Verification =====================
+
 export async function updateDoctorVerification(
   doctorId: string,
   status: string
 ) {
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };
+
+  // When verifying, require completed approval checklist
+  if (status === "verified") {
+    const { data: checklist } = await supabase
+      .from("doctor_approval_checklist")
+      .select("gmc_verified, website_verified")
+      .eq("doctor_id", doctorId)
+      .maybeSingle();
+
+    if (!checklist || !checklist.gmc_verified || !checklist.website_verified) {
+      return { error: "Complete the approval checklist before verifying this doctor." };
+    }
+  }
 
   const updateData: Record<string, unknown> = {
     verification_status: status,
@@ -804,6 +876,254 @@ export async function exportPatientsCSV() {
 
   return { headers, rows };
 }
+
+// ===================== License Management =====================
+
+export async function adminOverrideLicenseStatus(
+  licenseId: string,
+  newStatus: string,
+  reason: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  if (!reason.trim()) return { error: "Reason is required" };
+
+  const { data: license } = await supabase
+    .from("licenses")
+    .select("id, status, stripe_subscription_id")
+    .eq("id", licenseId)
+    .single();
+  if (!license) return { error: "License not found" };
+  if (license.status === newStatus) return { error: "Already in this status" };
+
+  const updateData: Record<string, unknown> = {
+    status: newStatus,
+    updated_at: new Date().toISOString(),
+  };
+  if (newStatus === "suspended") {
+    updateData.suspended_at = new Date().toISOString();
+  } else if (newStatus === "cancelled") {
+    updateData.cancelled_at = new Date().toISOString();
+  } else if (newStatus === "grace_period") {
+    updateData.grace_period_start = new Date().toISOString();
+  } else if (newStatus === "active") {
+    updateData.suspended_at = null;
+    updateData.grace_period_start = null;
+    updateData.cancelled_at = null;
+  }
+
+  const { error } = await supabase
+    .from("licenses")
+    .update(updateData)
+    .eq("id", licenseId);
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, `license_status_${newStatus}`, "license", licenseId, {
+    from: license.status,
+    to: newStatus,
+    reason,
+    had_stripe: !!license.stripe_subscription_id,
+  });
+
+  revalidatePath(`/admin/licenses/${licenseId}`);
+  revalidatePath("/admin/licenses");
+  return { success: true };
+}
+
+export async function adminChangeLicenseTier(
+  licenseId: string,
+  newTier: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { data: license } = await supabase
+    .from("licenses")
+    .select("id, tier, max_seats")
+    .eq("id", licenseId)
+    .single();
+  if (!license) return { error: "License not found" };
+  if (license.tier === newTier) return { error: "Already on this tier" };
+
+  const { getLicenseTier } = await import("@/lib/constants/license-tiers");
+  const tierConfig = getLicenseTier(newTier);
+  if (!tierConfig) return { error: "Invalid tier" };
+
+  const { error } = await supabase
+    .from("licenses")
+    .update({
+      tier: newTier,
+      max_seats: Math.max(license.max_seats, tierConfig.defaultSeats),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", licenseId);
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, "license_tier_changed", "license", licenseId, {
+    from: license.tier,
+    to: newTier,
+  });
+
+  revalidatePath(`/admin/licenses/${licenseId}`);
+  revalidatePath("/admin/licenses");
+  return { success: true };
+}
+
+export async function adminAdjustLicenseSeats(
+  licenseId: string,
+  maxSeats: number,
+  extraSeatCount: number
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { data: license } = await supabase
+    .from("licenses")
+    .select("id, max_seats, extra_seat_count, used_seats")
+    .eq("id", licenseId)
+    .single();
+  if (!license) return { error: "License not found" };
+  if (maxSeats < license.used_seats) {
+    return { error: `Cannot reduce below current usage (${license.used_seats} seats in use)` };
+  }
+
+  const { error } = await supabase
+    .from("licenses")
+    .update({
+      max_seats: maxSeats,
+      extra_seat_count: extraSeatCount,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", licenseId);
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, "license_seats_adjusted", "license", licenseId, {
+    old_max: license.max_seats,
+    new_max: maxSeats,
+    old_extra: license.extra_seat_count,
+    new_extra: extraSeatCount,
+  });
+
+  revalidatePath(`/admin/licenses/${licenseId}`);
+  revalidatePath("/admin/licenses");
+  return { success: true };
+}
+
+export async function adminExtendLicensePeriod(
+  licenseId: string,
+  newPeriodEnd: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { data: license } = await supabase
+    .from("licenses")
+    .select("id, current_period_end")
+    .eq("id", licenseId)
+    .single();
+  if (!license) return { error: "License not found" };
+
+  const newEnd = new Date(newPeriodEnd);
+  if (isNaN(newEnd.getTime())) return { error: "Invalid date" };
+  if (newEnd <= new Date()) return { error: "New end date must be in the future" };
+
+  const { error } = await supabase
+    .from("licenses")
+    .update({
+      current_period_end: newEnd.toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", licenseId);
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, "license_period_extended", "license", licenseId, {
+    old_end: license.current_period_end,
+    new_end: newEnd.toISOString(),
+  });
+
+  revalidatePath(`/admin/licenses/${licenseId}`);
+  revalidatePath("/admin/licenses");
+  return { success: true };
+}
+
+export async function adminCreateLicense(data: {
+  organization_id: string;
+  tier: string;
+  status: "active" | "trialing";
+  max_seats: number;
+  trial_days?: number;
+  is_promotional?: boolean;
+  promo_note?: string;
+}) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("id, name")
+    .eq("id", data.organization_id)
+    .single();
+  if (!org) return { error: "Organization not found" };
+
+  // Check no existing non-cancelled license
+  const { data: existing } = await supabase
+    .from("licenses")
+    .select("id, status")
+    .eq("organization_id", data.organization_id)
+    .not("status", "eq", "cancelled")
+    .limit(1)
+    .maybeSingle();
+  if (existing) return { error: `Organization already has a license (${existing.status})` };
+
+  const now = new Date();
+  const periodEnd = new Date(now);
+  const trialDays = data.trial_days || 30;
+  periodEnd.setDate(periodEnd.getDate() + trialDays);
+
+  const metadata: Record<string, unknown> = { created_by_admin: user.id };
+  if (data.is_promotional) {
+    metadata.is_promotional = true;
+    if (data.promo_note) metadata.promo_note = data.promo_note;
+  }
+
+  const insertData: Record<string, unknown> = {
+    organization_id: data.organization_id,
+    tier: data.tier,
+    status: data.status,
+    max_seats: data.max_seats,
+    used_seats: 0,
+    extra_seat_count: 0,
+    current_period_start: now.toISOString(),
+    current_period_end: periodEnd.toISOString(),
+    metadata,
+  };
+  if (data.status === "trialing") {
+    insertData.trial_ends_at = periodEnd.toISOString();
+  }
+
+  const { data: newLicense, error } = await supabase
+    .from("licenses")
+    .insert(insertData)
+    .select("id")
+    .single();
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, "license_created", "license", newLicense.id, {
+    organization_id: data.organization_id,
+    org_name: org.name,
+    tier: data.tier,
+    status: data.status,
+    trial_days: trialDays,
+    is_promotional: !!data.is_promotional,
+  });
+
+  revalidatePath("/admin/licenses");
+  revalidatePath("/admin/organizations");
+  return { success: true, licenseId: newLicense.id };
+}
+
+// ===================== CSV Export Actions =====================
 
 export async function exportRevenueCSV() {
   const { error: authError, supabase } = await requireAdmin();

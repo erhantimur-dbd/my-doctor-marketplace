@@ -191,8 +191,7 @@
     "clear_these_filters": "清除",
     "price_min": "最低价格",
     "price_max": "最高价格",
-    "price_range_label": "每次就诊价格",
-    "min_rating": "最低评分"
+    "price_range_label": "每次就诊价格"
   },
   "booking": {
     "select_date": "选择日期",
@@ -440,7 +439,7 @@
     },
     "apple-icloud-setup": {
       "question": "如何连接Apple iCloud / CalDAV日历？",
-      "answer": "<strong>1.</strong> 进入医生控制面板 → 日历 → 集成。\n<strong>2.</strong> 点击<strong>连接Apple日历</strong>。\n<strong>3.</strong> 在<strong>appleid.apple.com</strong>生成<strong>App专用密码</strong>（在\u201c登录与安全\u201d → \u201cApp专用密码\u201d下）。\n<strong>4.</strong> 输入您的Apple ID邮箱和App专用密码。\n\n<strong>重要提示：</strong>Apple iCloud使用CalDAV协议，不支持Webhook。同步通过<strong>每10分钟轮询</strong>进行。这意味着Apple日历中的更改可能需要最多10分钟才能在MyDoctors360上显示。\n\n此方法同样适用于Fastmail和Nextcloud等其他CalDAV服务提供商。"
+      "answer": "<strong>1.</strong> 进入医生控制面板 → 日历 → 集成。\n<strong>2.</strong> 点击<strong>连接Apple日历</strong>。\n<strong>3.</strong> 在<strong>appleid.apple.com</strong>生成<strong>App专用密码</strong>（在“登录与安全” → “App专用密码”下）。\n<strong>4.</strong> 输入您的Apple ID邮箱和App专用密码。\n\n<strong>重要提示：</strong>Apple iCloud使用CalDAV协议，不支持Webhook。同步通过<strong>每10分钟轮询</strong>进行。这意味着Apple日历中的更改可能需要最多10分钟才能在MyDoctors360上显示。\n\n此方法同样适用于Fastmail和Nextcloud等其他CalDAV服务提供商。"
     },
     "calendar-provider-comparison": {
       "question": "各日历服务提供商有什么区别？",
@@ -448,7 +447,7 @@
     },
     "ics-feed": {
       "question": "什么是ICS日历订阅源？",
-      "answer": "ICS订阅源是一个<strong>只读订阅链接</strong>，可以让任何日历应用显示您的MyDoctors360预约。\n\n<strong>设置方法：</strong>\n<strong>1.</strong> 进入日历 → 集成 → ICS订阅源。\n<strong>2.</strong> 点击<strong>生成订阅链接</strong>来创建您的私人链接。\n<strong>3.</strong> 复制链接并粘贴到日历应用的\u201c订阅日历\u201d或\u201c通过URL添加\u201d功能中。\n\n您的日历应用会定期刷新订阅源以显示新预约。这是单向的——仅将MyDoctors360的预约显示在您的日历中，不会导入外部事件。\n\n<strong>注意：</strong>订阅链接中包含私有令牌，请勿与他人分享。您可以随时在设置中撤销并重新生成。"
+      "answer": "ICS订阅源是一个<strong>只读订阅链接</strong>，可以让任何日历应用显示您的MyDoctors360预约。\n\n<strong>设置方法：</strong>\n<strong>1.</strong> 进入日历 → 集成 → ICS订阅源。\n<strong>2.</strong> 点击<strong>生成订阅链接</strong>来创建您的私人链接。\n<strong>3.</strong> 复制链接并粘贴到日历应用的“订阅日历”或“通过URL添加”功能中。\n\n您的日历应用会定期刷新订阅源以显示新预约。这是单向的——仅将MyDoctors360的预约显示在您的日历中，不会导入外部事件。\n\n<strong>注意：</strong>订阅链接中包含私有令牌，请勿与他人分享。您可以随时在设置中撤销并重新生成。"
     },
     "slot-locking": {
       "question": "时段锁定如何防止重复预约？",
@@ -504,7 +503,7 @@
     },
     "calendar-not-syncing": {
       "question": "日历没有同步——该怎么办？",
-      "answer": "请按以下步骤排查日历同步问题：\n\n<strong>1. 检查连接状态：</strong>进入日历 → 集成，确认您的日历显示为\u201c已连接\u201d。\n\n<strong>2. 尝试手动同步：</strong>点击<strong>立即同步</strong>按钮触发即时同步。\n\n<strong>3. 验证凭据：</strong>如果状态显示错误，请尝试断开连接后重新连接日历。\n\n<strong>4. 检查日历权限：</strong>确保MyDoctors360拥有您日历的读写权限。\n\n<strong>5. 对于Apple iCloud：</strong>请注意CalDAV同步每10分钟运行一次，可能会有短暂延迟。\n\n如果尝试以上步骤后问题仍未解决，请附上您使用的日历服务和所看到的错误信息，联系我们的客服团队。"
+      "answer": "请按以下步骤排查日历同步问题：\n\n<strong>1. 检查连接状态：</strong>进入日历 → 集成，确认您的日历显示为“已连接”。\n\n<strong>2. 尝试手动同步：</strong>点击<strong>立即同步</strong>按钮触发即时同步。\n\n<strong>3. 验证凭据：</strong>如果状态显示错误，请尝试断开连接后重新连接日历。\n\n<strong>4. 检查日历权限：</strong>确保MyDoctors360拥有您日历的读写权限。\n\n<strong>5. 对于Apple iCloud：</strong>请注意CalDAV同步每10分钟运行一次，可能会有短暂延迟。\n\n如果尝试以上步骤后问题仍未解决，请附上您使用的日历服务和所看到的错误信息，联系我们的客服团队。"
     },
     "google-auth-expired": {
       "question": "Google日历授权已过期",
@@ -520,7 +519,7 @@
     },
     "video-call-issues": {
       "question": "视频通话出现问题",
-      "answer": "如果您遇到视频通话问题，请尝试以下步骤：\n\n<strong>1. 检查浏览器：</strong>请使用现代浏览器（Chrome、Firefox、Safari或Edge），确保已更新到最新版本。\n\n<strong>2. 允许摄像头和麦克风：</strong>出现提示时，点击\u201c允许\u201d授予浏览器权限。您也可以在浏览器设置中检查此项。\n\n<strong>3. 检查网络连接：</strong>视频通话建议使用至少2Mbps的稳定网络连接。\n\n<strong>4. 关闭其他应用：</strong>其他视频应用（Zoom、Teams等）可能正在使用您的摄像头。关闭它们后重试。\n\n<strong>5. 尝试其他浏览器：</strong>如果问题持续存在，请切换到其他浏览器。\n\n<strong>6. 重启设备：</strong>重启可以修复由其他软件引起的摄像头或麦克风问题。\n\n如果双方都无法连接，请联系客服，我们将帮助您重新安排预约。"
+      "answer": "如果您遇到视频通话问题，请尝试以下步骤：\n\n<strong>1. 检查浏览器：</strong>请使用现代浏览器（Chrome、Firefox、Safari或Edge），确保已更新到最新版本。\n\n<strong>2. 允许摄像头和麦克风：</strong>出现提示时，点击“允许”授予浏览器权限。您也可以在浏览器设置中检查此项。\n\n<strong>3. 检查网络连接：</strong>视频通话建议使用至少2Mbps的稳定网络连接。\n\n<strong>4. 关闭其他应用：</strong>其他视频应用（Zoom、Teams等）可能正在使用您的摄像头。关闭它们后重试。\n\n<strong>5. 尝试其他浏览器：</strong>如果问题持续存在，请切换到其他浏览器。\n\n<strong>6. 重启设备：</strong>重启可以修复由其他软件引起的摄像头或麦克风问题。\n\n如果双方都无法连接，请联系客服，我们将帮助您重新安排预约。"
     },
     "booking-slot-unavailable": {
       "question": "我选择的预约时段消失了",
@@ -784,5 +783,110 @@
     "success_disabled": "双重身份验证已停用。",
     "recommendation_title": "使用双重身份验证保护您的账户",
     "recommendation_desc": "作为医疗服务提供者，我们强烈建议您启用 2FA 以保护您的账户和患者数据。"
+  },
+  "organization": {
+    "title": "组织",
+    "practice": "诊所",
+    "practiceSettings": "诊所设置",
+    "practiceOverview": "诊所概览",
+    "createPractice": "创建您的诊所",
+    "createPracticeDescription": "Every doctor needs a practice profile. Solo practitioners and clinics alike use this to manage their platform presence.",
+    "practiceName": "Practice Name",
+    "practiceNamePlaceholder": "e.g. Dr. Smith's Practice",
+    "createButton": "Create Practice",
+    "saveChanges": "保存更改",
+    "settingsSaved": "Settings saved",
+    "organizationCreated": "Organization created successfully",
+    "organizationUpdated": "Organization updated",
+    "teamMembers": "团队成员",
+    "inviteMember": "邀请成员",
+    "inviteDescription": "The user must already have an account on MyDoctors360",
+    "invitationSent": "Invitation sent",
+    "memberRemoved": "Member removed",
+    "roleUpdated": "Role updated",
+    "ownershipTransferred": "Ownership transferred",
+    "transferOwnership": "Transfer Ownership",
+    "transferWarning": "This will transfer full ownership of the organization to the selected member. You will be demoted to Admin. This action cannot be easily undone.",
+    "confirmTransfer": "Confirm Transfer",
+    "removeMember": "Remove",
+    "promoteAdmin": "Promote to Admin",
+    "demoteDoctor": "Demote to Doctor",
+    "roles": {
+      "owner": "所有者",
+      "admin": "管理员",
+      "doctor": "医生",
+      "staff": "员工"
+    },
+    "statuses": {
+      "active": "Active",
+      "invited": "Pending",
+      "suspended": "Suspended",
+      "removed": "Removed"
+    },
+    "address": "地址",
+    "addressLine1": "Address Line 1",
+    "addressLine2": "Address Line 2",
+    "city": "城市",
+    "state": "State / Province",
+    "postalCode": "Postal Code",
+    "country": "国家",
+    "regionalSettings": "Regional Settings",
+    "timezone": "时区",
+    "baseCurrency": "基础货币",
+    "quickLinks": {
+      "teamMembers": "Invite & manage your team",
+      "billing": "Plans, seats & payments",
+      "settings": "Address, timezone, currency"
+    }
+  },
+  "license": {
+    "title": "许可证和账单",
+    "billingAndLicense": "Billing & License",
+    "manageDescription": "Manage your subscription, seats, and add-ons",
+    "noActiveLicense": "无活跃许可证",
+    "choosePlan": "选择计划",
+    "availablePlans": "Available Plans",
+    "currentPlan": "Current Plan",
+    "subscribe": "订阅",
+    "switchPlan": "Switch Plan",
+    "contactSales": "Contact Sales",
+    "manageBilling": "管理账单",
+    "addExtraSeats": "添加额外席位",
+    "addExtraSeatsDescription": "Need more seats beyond your plan? Each extra seat is €29/month.",
+    "addSeats": "Add Seats",
+    "seatsAdded": "seat(s) added",
+    "addOnModules": "Add-on Modules",
+    "addOnDescription": "Extend your practice with additional capabilities",
+    "moduleActivated": "Module activated",
+    "moduleDeactivated": "Module deactivated",
+    "add": "Add",
+    "remove": "Remove",
+    "popular": "Popular",
+    "current": "Current",
+    "perMonth": "/ mo",
+    "couponCode": "Have a coupon code?",
+    "enterCoupon": "Enter coupon code",
+    "statuses": {
+      "active": "活跃",
+      "trialing": "试用",
+      "past_due": "逾期",
+      "grace_period": "Grace Period",
+      "suspended": "暂停",
+      "cancelled": "已取消"
+    },
+    "banner": {
+      "paymentOverdue": "付款逾期。",
+      "updatePayment": "Please update your payment method to avoid service interruption.",
+      "daysRemaining": "days remaining",
+      "serviceLimited": "Service limited.",
+      "profileHidden": "Your profile is hidden from search and new bookings are paused.",
+      "suspendedIn": "Account will be suspended in",
+      "days": "days",
+      "accountSuspended": "账户已暂停。",
+      "reactivateMessage": "Your practice is no longer visible to patients. Reactivate your subscription to restore access.",
+      "updatePaymentButton": "Update Payment",
+      "fixBilling": "Fix Billing",
+      "reactivate": "重新激活"
+    }
   }
 }

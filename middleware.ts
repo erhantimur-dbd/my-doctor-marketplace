@@ -95,6 +95,44 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // License enforcement: redirect suspended orgs to billing page
+  if (isDoctorRoute && user) {
+    const billingPages = [
+      "/doctor-dashboard/organization/billing",
+      "/doctor-dashboard/subscription",
+    ];
+    const isBillingPage = billingPages.some((p) =>
+      pathnameWithoutLocale.startsWith(p)
+    );
+
+    if (!isBillingPage) {
+      const { data: doctor } = await supabase
+        .from("doctors")
+        .select("organization_id")
+        .eq("profile_id", user.id)
+        .single();
+
+      if (doctor?.organization_id) {
+        const { data: license } = await supabase
+          .from("licenses")
+          .select("status")
+          .eq("organization_id", doctor.organization_id)
+          .eq("status", "suspended")
+          .limit(1)
+          .maybeSingle();
+
+        if (license) {
+          return NextResponse.redirect(
+            new URL(
+              `/${locale}/doctor-dashboard/organization/billing`,
+              request.url
+            )
+          );
+        }
+      }
+    }
+  }
+
   // Admin routes: verify role AND email allowlist at the edge
   if (isAdminRoute && user) {
     // Check email allowlist first (fast, no DB query)

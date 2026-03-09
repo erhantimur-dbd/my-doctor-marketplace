@@ -134,6 +134,7 @@ function CalendarContent() {
 
   // Override form state
   const [overrideDialogOpen, setOverrideDialogOpen] = useState(false);
+  const [savingOverride, setSavingOverride] = useState(false);
   const [overrideForm, setOverrideForm] = useState({
     override_date: "",
     is_available: false,
@@ -264,29 +265,60 @@ function CalendarContent() {
   }
 
   async function saveOverride() {
-    if (!doctorId) return;
-    const supabase = createSupabase();
+    if (!doctorId) {
+      toast.error("Doctor profile not found. Please refresh the page.");
+      return;
+    }
 
-    const { error } = await supabase.from("availability_overrides").insert({
-      doctor_id: doctorId,
-      override_date: overrideForm.override_date,
-      is_available: overrideForm.is_available,
-      start_time: !overrideForm.is_available ? null : overrideForm.start_time || null,
-      end_time: !overrideForm.is_available ? null : overrideForm.end_time || null,
-      reason: overrideForm.reason || null,
-    });
+    // Validate partial-day overrides require both times
+    if (overrideForm.is_available) {
+      if (!overrideForm.start_time || !overrideForm.end_time) {
+        toast.error("Please enter both start and end times for custom hours.");
+        return;
+      }
+      if (overrideForm.start_time >= overrideForm.end_time) {
+        toast.error("Start time must be before end time.");
+        return;
+      }
+    }
 
-    if (error) { toast.error("Failed to add override"); return; }
-    toast.success("Date override added");
-    setOverrideDialogOpen(false);
-    setOverrideForm({
-      override_date: "",
-      is_available: false,
-      start_time: "",
-      end_time: "",
-      reason: "",
-    });
-    loadData();
+    setSavingOverride(true);
+    try {
+      const supabase = createSupabase();
+
+      const { error } = await supabase.from("availability_overrides").insert({
+        doctor_id: doctorId,
+        override_date: overrideForm.override_date,
+        is_available: overrideForm.is_available,
+        start_time: !overrideForm.is_available ? null : overrideForm.start_time,
+        end_time: !overrideForm.is_available ? null : overrideForm.end_time,
+        reason: overrideForm.reason || null,
+      });
+
+      if (error) {
+        if (error.code === "23505") {
+          toast.error("An override already exists for this date and time.");
+        } else {
+          toast.error("Failed to add override: " + error.message);
+        }
+        return;
+      }
+
+      toast.success("Date override added");
+      setOverrideDialogOpen(false);
+      setOverrideForm({
+        override_date: "",
+        is_available: false,
+        start_time: "",
+        end_time: "",
+        reason: "",
+      });
+      loadData();
+    } catch (err) {
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setSavingOverride(false);
+    }
   }
 
   async function deleteOverride(id: string) {
@@ -658,10 +690,12 @@ function CalendarContent() {
                   <Button variant="outline">Cancel</Button>
                 </DialogClose>
                 <Button
+                  type="button"
                   onClick={saveOverride}
-                  disabled={!overrideForm.override_date}
+                  disabled={!overrideForm.override_date || savingOverride}
                 >
-                  Add Override
+                  {savingOverride && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {savingOverride ? "Saving..." : "Add Override"}
                 </Button>
               </DialogFooter>
             </DialogContent>

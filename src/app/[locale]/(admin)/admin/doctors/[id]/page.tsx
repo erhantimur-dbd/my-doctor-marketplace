@@ -14,7 +14,7 @@ import {
   ExternalLink,
   CreditCard,
 } from "lucide-react";
-import { AdminDoctorActions } from "./actions-client";
+import { ApprovalSection } from "./approval-section";
 import { EditDoctorDialog } from "./edit-doctor-dialog";
 import { SendEmailDialog } from "../../components/send-email-dialog";
 
@@ -71,6 +71,13 @@ export default async function AdminDoctorDetailPage({
     .maybeSingle();
 
   const currentPlan = (subscription as any)?.plan_id || "free";
+
+  // Fetch approval checklist for this doctor
+  const { data: checklistData } = await supabase
+    .from("doctor_approval_checklist")
+    .select("gmc_verified, website_verified, notes")
+    .eq("doctor_id", id)
+    .maybeSingle();
 
   // Stripe Connect health (if connected)
   let stripeAccount: any = null;
@@ -338,20 +345,16 @@ export default async function AdminDoctorDetailPage({
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Admin Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <AdminDoctorActions
-            doctorId={doctor.id}
-            currentStatus={doctor.verification_status}
-            isActive={doctor.is_active}
-            isFeatured={doctor.is_featured}
-            currentPlan={currentPlan}
-          />
-        </CardContent>
-      </Card>
+      <ApprovalSection
+        doctorId={doctor.id}
+        gmcNumber={doctor.gmc_number}
+        website={doctor.website}
+        verificationStatus={doctor.verification_status}
+        isActive={doctor.is_active}
+        isFeatured={doctor.is_featured}
+        currentPlan={currentPlan}
+        checklist={checklistData}
+      />
 
       <div className="flex items-center gap-3">
         <Link href={`/doctors/${doctor.slug}`}>

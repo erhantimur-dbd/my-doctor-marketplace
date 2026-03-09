@@ -1,5 +1,86 @@
 export type UserRole = "patient" | "doctor" | "admin";
 
+// ─── Organization & Licensing Types ─────────────────────────
+export type OrgRole = "owner" | "admin" | "doctor" | "staff";
+
+export type LicenseStatus =
+  | "active"
+  | "trialing"
+  | "past_due"
+  | "grace_period"
+  | "suspended"
+  | "cancelled";
+
+export type LicenseTier = "starter" | "professional" | "clinic" | "enterprise";
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  website: string | null;
+  phone: string | null;
+  email: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
+  country: string | null;
+  timezone: string;
+  base_currency: string;
+  stripe_customer_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationMember {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  role: OrgRole;
+  invited_by: string | null;
+  invited_at: string | null;
+  accepted_at: string | null;
+  status: "invited" | "active" | "suspended" | "removed";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface License {
+  id: string;
+  organization_id: string;
+  tier: LicenseTier;
+  status: LicenseStatus;
+  max_seats: number;
+  used_seats: number;
+  extra_seat_count: number;
+  stripe_subscription_id: string | null;
+  stripe_customer_id: string | null;
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  grace_period_start: string | null;
+  suspended_at: string | null;
+  trial_ends_at: string | null;
+  cancelled_at: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LicenseModule {
+  id: string;
+  license_id: string;
+  module_key: string;
+  is_active: boolean;
+  stripe_subscription_item_id: string | null;
+  activated_at: string;
+  deactivated_at: string | null;
+  created_at: string;
+}
+
 export type VerificationStatus =
   | "pending"
   | "under_review"
@@ -32,6 +113,7 @@ export type ProviderType = "doctor" | "testing_service";
 export interface Doctor {
   id: string;
   profile_id: string;
+  organization_id: string | null;
   provider_type: ProviderType;
   slug: string;
   title: string | null;

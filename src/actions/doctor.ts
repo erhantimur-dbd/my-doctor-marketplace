@@ -21,6 +21,70 @@ async function requireDoctor() {
   return { error: null, supabase, doctor };
 }
 
+/**
+ * Org-aware version of requireDoctor().
+ * Returns the doctor, their organization, license, and membership info.
+ * Falls back gracefully when org is not yet set up (migration transition).
+ */
+export async function requireDoctorWithOrg() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user)
+    return {
+      error: "Not authenticated" as string | null,
+      supabase: null as Awaited<ReturnType<typeof createClient>> | null,
+      doctor: null as Record<string, unknown> | null,
+      org: null as Record<string, unknown> | null,
+      license: null as Record<string, unknown> | null,
+      membership: null as Record<string, unknown> | null,
+    };
+
+  const { data: doctor } = await supabase
+    .from("doctors")
+    .select("*")
+    .eq("profile_id", user.id)
+    .single();
+
+  if (!doctor)
+    return { error: "Not a doctor", supabase: null, doctor: null, org: null, license: null, membership: null };
+
+  let org: Record<string, unknown> | null = null;
+  let license: Record<string, unknown> | null = null;
+  let membership: Record<string, unknown> | null = null;
+
+  if (doctor.organization_id) {
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("*")
+      .eq("id", doctor.organization_id)
+      .single();
+    org = orgData;
+
+    const { data: mem } = await supabase
+      .from("organization_members")
+      .select("*")
+      .eq("organization_id", doctor.organization_id)
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .single();
+    membership = mem;
+
+    const { data: lic } = await supabase
+      .from("licenses")
+      .select("*")
+      .eq("organization_id", doctor.organization_id)
+      .in("status", ["active", "trialing", "past_due", "grace_period"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    license = lic;
+  }
+
+  return { error: null, supabase, doctor, org, license, membership };
+}
+
 export async function updateDoctorProfile(formData: FormData) {
   const { error: authError, supabase, doctor } = await requireDoctor();
   if (authError || !supabase || !doctor) return { error: authError };

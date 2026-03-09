@@ -280,7 +280,7 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
         </Link>
-        <Link href="/admin/doctors" className="block">
+        <Link href="/admin/approvals" className="block">
           <Card className="transition-shadow hover:shadow-md">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="rounded-full bg-orange-50 p-3">
@@ -294,7 +294,7 @@ export default async function AdminDashboard() {
                   {pendingVerifications || 0}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Doctors awaiting review
+                  Doctors awaiting approval
                 </p>
               </div>
             </CardContent>

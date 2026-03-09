@@ -41,7 +41,7 @@ export function SubscriptionGate({
 
         const { data: doctor } = await supabase
           .from("doctors")
-          .select("id")
+          .select("id, organization_id")
           .eq("profile_id", user.id)
           .single();
         if (!doctor) {
@@ -49,6 +49,23 @@ export function SubscriptionGate({
           return;
         }
 
+        // Check org license first
+        if (doctor.organization_id) {
+          const { data: license } = await supabase
+            .from("licenses")
+            .select("id")
+            .eq("organization_id", doctor.organization_id)
+            .in("status", ["active", "trialing", "past_due"])
+            .limit(1)
+            .maybeSingle();
+
+          if (license) {
+            setStatus("subscribed");
+            return;
+          }
+        }
+
+        // Legacy fallback: check doctor_subscriptions
         const { data: sub } = await supabase
           .from("doctor_subscriptions")
           .select("id")

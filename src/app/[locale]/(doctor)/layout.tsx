@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 import { DoctorSessionGuard } from "@/components/shared/session-timeout-guard";
 import { DashboardMobileNav } from "@/components/layout/dashboard-mobile-nav";
+import { LicenseBanner } from "@/components/shared/license-banner";
 import { doctorSidebarLinks } from "@/lib/constants/sidebar-links";
 
 export default function DoctorLayout({
@@ -15,6 +16,7 @@ export default function DoctorLayout({
     <div className="flex min-h-screen flex-col">
       <DoctorSessionGuard />
       <Header />
+      <LicenseBanner />
       <div className="container mx-auto flex flex-1 gap-8 px-4 py-8 pb-20 md:pb-8">
         <aside className="hidden w-56 shrink-0 md:block">
           <nav className="sticky top-24 space-y-1">
@@ -35,7 +37,7 @@ export default function DoctorLayout({
             ))}
           </nav>
         </aside>
-        <main className="flex-1 overflow-hidden">{children}</main>
+        <main className="min-w-0 flex-1">{children}</main>
       </div>
       <DashboardMobileNav
         portal="doctor"

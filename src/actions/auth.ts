@@ -256,6 +256,47 @@ export async function registerDoctor(formData: FormData) {
         colleagueEmail
       );
     }
+
+    // Auto-create organization + owner membership for the new doctor
+    if (newDoctor) {
+      try {
+        const orgSlug =
+          `dr-${firstName}-${lastName}-practice`
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "") +
+          "-" +
+          Math.random().toString(36).substring(2, 6);
+
+        const { data: newOrg } = await adminSupabase
+          .from("organizations")
+          .insert({
+            name: `Dr. ${firstName} ${lastName}'s Practice`,
+            slug: orgSlug,
+            email,
+          })
+          .select("id")
+          .single();
+
+        if (newOrg) {
+          await adminSupabase.from("organization_members").insert({
+            organization_id: newOrg.id,
+            user_id: data.user.id,
+            role: "owner",
+            status: "active",
+            accepted_at: new Date().toISOString(),
+          });
+
+          await adminSupabase
+            .from("doctors")
+            .update({ organization_id: newOrg.id })
+            .eq("id", newDoctor.id);
+        }
+      } catch (orgErr) {
+        // Non-blocking — doctor can still use the platform; org can be created later
+        console.error("[Auth] Auto-org creation failed:", orgErr);
+      }
+    }
   }
 
   revalidatePath("/", "layout");
@@ -348,7 +389,7 @@ export async function registerTestingService(formData: FormData) {
       Math.random().toString(36).substring(2, 6)
     ).toUpperCase();
 
-    const { error: doctorError } = await adminSupabase
+    const { error: doctorError, data: newDoctor } = await adminSupabase
       .from("doctors")
       .insert({
         profile_id: data.user.id,
@@ -364,6 +405,46 @@ export async function registerTestingService(formData: FormData) {
     if (doctorError) {
       console.error("Testing service creation failed:", doctorError);
       return { error: doctorError.message };
+    }
+
+    // Auto-create organization + owner membership for testing service
+    if (newDoctor) {
+      try {
+        const orgSlug =
+          `${firstName}-${lastName}-testing`
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "") +
+          "-" +
+          Math.random().toString(36).substring(2, 6);
+
+        const { data: newOrg } = await adminSupabase
+          .from("organizations")
+          .insert({
+            name: `${firstName} ${lastName} Testing`,
+            slug: orgSlug,
+            email,
+          })
+          .select("id")
+          .single();
+
+        if (newOrg) {
+          await adminSupabase.from("organization_members").insert({
+            organization_id: newOrg.id,
+            user_id: data.user.id,
+            role: "owner",
+            status: "active",
+            accepted_at: new Date().toISOString(),
+          });
+
+          await adminSupabase
+            .from("doctors")
+            .update({ organization_id: newOrg.id })
+            .eq("id", newDoctor.id);
+        }
+      } catch (orgErr) {
+        console.error("[Auth] Auto-org creation for testing service failed:", orgErr);
+      }
     }
   }
 

@@ -389,14 +389,62 @@ export async function POST(request: NextRequest) {
     case "customer.subscription.created":
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription;
+      const orgId = subscription.metadata?.organization_id;
       const doctorId = subscription.metadata?.doctor_id;
 
-      if (doctorId) {
-        // Access period dates from the raw object to handle different Stripe API versions
-        const subData = subscription as unknown as Record<string, unknown>;
-        const periodStart = subData.current_period_start as number | undefined;
-        const periodEnd = subData.current_period_end as number | undefined;
+      // Access period dates from the raw object to handle different Stripe API versions
+      const subData = subscription as unknown as Record<string, unknown>;
+      const periodStart = subData.current_period_start as number | undefined;
+      const periodEnd = subData.current_period_end as number | undefined;
 
+      if (orgId) {
+        // NEW: License subscription for an organization
+        let licenseStatus: string;
+        switch (subscription.status) {
+          case "active":
+            licenseStatus = "active";
+            break;
+          case "trialing":
+            licenseStatus = "trialing";
+            break;
+          case "past_due":
+            licenseStatus = "past_due";
+            break;
+          case "unpaid":
+            licenseStatus = "grace_period";
+            break;
+          case "canceled":
+            licenseStatus = "cancelled";
+            break;
+          default:
+            licenseStatus = subscription.status;
+        }
+
+        await supabase.from("licenses").upsert(
+          {
+            organization_id: orgId,
+            tier: subscription.metadata?.tier || "starter",
+            status: licenseStatus,
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: subscription.customer as string,
+            current_period_start: periodStart
+              ? new Date(periodStart * 1000).toISOString()
+              : new Date().toISOString(),
+            current_period_end: periodEnd
+              ? new Date(periodEnd * 1000).toISOString()
+              : new Date().toISOString(),
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            ...(licenseStatus === "grace_period" && {
+              grace_period_start: new Date().toISOString(),
+            }),
+            ...(licenseStatus === "cancelled" && {
+              cancelled_at: new Date().toISOString(),
+            }),
+          },
+          { onConflict: "stripe_subscription_id" }
+        );
+      } else if (doctorId) {
+        // LEGACY: Doctor-level subscription (existing flow)
         await supabase.from("doctor_subscriptions").upsert(
           {
             doctor_id: doctorId,
@@ -432,10 +480,21 @@ export async function POST(request: NextRequest) {
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
-      await supabase
-        .from("doctor_subscriptions")
-        .update({ status: "cancelled" })
-        .eq("stripe_subscription_id", subscription.id);
+      const orgId = subscription.metadata?.organization_id;
+
+      if (orgId) {
+        // License cancellation
+        await supabase
+          .from("licenses")
+          .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+          .eq("stripe_subscription_id", subscription.id);
+      } else {
+        // Legacy subscription cancellation
+        await supabase
+          .from("doctor_subscriptions")
+          .update({ status: "cancelled" })
+          .eq("stripe_subscription_id", subscription.id);
+      }
       break;
     }
 

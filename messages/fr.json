@@ -229,7 +229,6 @@
     "price_min": "Prix min",
     "price_max": "Prix max",
     "price_range_label": "Prix par séance",
-    "min_rating": "Note minimum",
     "map_view": "Vue carte",
     "doctors_on_map": "{count, plural, one {# médecin} other {# médecins}}"
   },
@@ -545,7 +544,7 @@
     },
     "ics-feed": {
       "question": "Qu'est-ce que le flux de calendrier ICS ?",
-      "answer": "Le flux ICS est une <strong>URL d'abonnement en lecture seule</strong> qui permet à n'importe quelle application de calendrier d'afficher vos réservations MyDoctors360.\n\n<strong>Comment le configurer :</strong>\n<strong>1.</strong> Accédez à Calendrier → Intégrations → Flux ICS.\n<strong>2.</strong> Cliquez sur <strong>Générer l'URL du flux</strong> pour créer votre URL privée.\n<strong>3.</strong> Copiez l'URL et collez-la dans la fonction \u00ab S\u2019abonner \u00e0 un calendrier \u00bb ou \u00ab Ajouter par URL \u00bb de votre application de calendrier.\n\nVotre application de calendrier actualisera périodiquement le flux pour afficher les nouvelles réservations. C'est unidirectionnel uniquement — cela affiche vos réservations MyDoctors360 dans votre calendrier, mais n'importe pas les événements externes.\n\n<strong>Remarque :</strong> L'URL du flux contient un jeton privé. Ne le partagez pas avec d'autres personnes. Vous pouvez le révoquer et le régénérer à tout moment depuis vos paramètres."
+      "answer": "Le flux ICS est une <strong>URL d'abonnement en lecture seule</strong> qui permet à n'importe quelle application de calendrier d'afficher vos réservations MyDoctors360.\n\n<strong>Comment le configurer :</strong>\n<strong>1.</strong> Accédez à Calendrier → Intégrations → Flux ICS.\n<strong>2.</strong> Cliquez sur <strong>Générer l'URL du flux</strong> pour créer votre URL privée.\n<strong>3.</strong> Copiez l'URL et collez-la dans la fonction « S’abonner à un calendrier » ou « Ajouter par URL » de votre application de calendrier.\n\nVotre application de calendrier actualisera périodiquement le flux pour afficher les nouvelles réservations. C'est unidirectionnel uniquement — cela affiche vos réservations MyDoctors360 dans votre calendrier, mais n'importe pas les événements externes.\n\n<strong>Remarque :</strong> L'URL du flux contient un jeton privé. Ne le partagez pas avec d'autres personnes. Vous pouvez le révoquer et le régénérer à tout moment depuis vos paramètres."
     },
     "slot-locking": {
       "question": "Comment le verrouillage des créneaux empêche-t-il les doubles réservations ?",
@@ -910,5 +909,110 @@
     "success_disabled": "L'authentification à deux facteurs a été désactivée.",
     "recommendation_title": "Sécurisez votre compte avec l'authentification à deux facteurs",
     "recommendation_desc": "En tant que professionnel de santé, nous vous recommandons vivement d'activer la 2FA pour protéger votre compte et les données de vos patients."
+  },
+  "organization": {
+    "title": "Organisation",
+    "practice": "Cabinet",
+    "practiceSettings": "Paramètres du cabinet",
+    "practiceOverview": "Vue d'ensemble du cabinet",
+    "createPractice": "Créez votre cabinet",
+    "createPracticeDescription": "Chaque médecin a besoin d'un profil de cabinet. Les praticiens indépendants et les cliniques utilisent ceci pour gérer leur présence sur la plateforme.",
+    "practiceName": "Nom du cabinet",
+    "practiceNamePlaceholder": "ex. Cabinet Dr. Dupont",
+    "createButton": "Créer le cabinet",
+    "saveChanges": "Enregistrer les modifications",
+    "settingsSaved": "Paramètres enregistrés",
+    "organizationCreated": "Organisation créée avec succès",
+    "organizationUpdated": "Organisation mise à jour",
+    "teamMembers": "Membres de l'équipe",
+    "inviteMember": "Inviter un membre",
+    "inviteDescription": "L'utilisateur doit déjà avoir un compte sur MyDoctors360",
+    "invitationSent": "Invitation envoyée",
+    "memberRemoved": "Membre supprimé",
+    "roleUpdated": "Rôle mis à jour",
+    "ownershipTransferred": "Propriété transférée",
+    "transferOwnership": "Transférer la propriété",
+    "transferWarning": "Cela transférera la pleine propriété de l'organisation au membre sélectionné. Vous serez rétrogradé au rôle d'Admin. Cette action ne peut pas être facilement annulée.",
+    "confirmTransfer": "Confirmer le transfert",
+    "removeMember": "Supprimer",
+    "promoteAdmin": "Promouvoir Admin",
+    "demoteDoctor": "Rétrograder Médecin",
+    "roles": {
+      "owner": "Propriétaire",
+      "admin": "Admin",
+      "doctor": "Médecin",
+      "staff": "Personnel"
+    },
+    "statuses": {
+      "active": "Actif",
+      "invited": "En attente",
+      "suspended": "Suspendu",
+      "removed": "Supprimé"
+    },
+    "address": "Adresse",
+    "addressLine1": "Ligne d'adresse 1",
+    "addressLine2": "Ligne d'adresse 2",
+    "city": "Ville",
+    "state": "État / Province",
+    "postalCode": "Code postal",
+    "country": "Pays",
+    "regionalSettings": "Paramètres régionaux",
+    "timezone": "Fuseau horaire",
+    "baseCurrency": "Devise de base",
+    "quickLinks": {
+      "teamMembers": "Inviter et gérer votre équipe",
+      "billing": "Plans, sièges et paiements",
+      "settings": "Adresse, fuseau horaire, devise"
+    }
+  },
+  "license": {
+    "title": "Licence et facturation",
+    "billingAndLicense": "Facturation et licence",
+    "manageDescription": "Gérez votre abonnement, sièges et modules complémentaires",
+    "noActiveLicense": "Aucune licence active",
+    "choosePlan": "Choisir un plan",
+    "availablePlans": "Plans disponibles",
+    "currentPlan": "Plan actuel",
+    "subscribe": "S'abonner",
+    "switchPlan": "Changer de plan",
+    "contactSales": "Contacter les ventes",
+    "manageBilling": "Gérer la facturation",
+    "addExtraSeats": "Ajouter des sièges supplémentaires",
+    "addExtraSeatsDescription": "Besoin de plus de sièges ? Chaque siège supplémentaire coûte 29€/mois.",
+    "addSeats": "Ajouter des sièges",
+    "seatsAdded": "siège(s) ajouté(s)",
+    "addOnModules": "Modules complémentaires",
+    "addOnDescription": "Étendez votre cabinet avec des capacités supplémentaires",
+    "moduleActivated": "Module activé",
+    "moduleDeactivated": "Module désactivé",
+    "add": "Ajouter",
+    "remove": "Supprimer",
+    "popular": "Populaire",
+    "current": "Actuel",
+    "perMonth": "/ mois",
+    "couponCode": "Avez-vous un code promo ?",
+    "enterCoupon": "Entrez le code promo",
+    "statuses": {
+      "active": "Actif",
+      "trialing": "Essai",
+      "past_due": "En retard",
+      "grace_period": "Période de grâce",
+      "suspended": "Suspendu",
+      "cancelled": "Annulé"
+    },
+    "banner": {
+      "paymentOverdue": "Paiement en retard.",
+      "updatePayment": "Veuillez mettre à jour votre moyen de paiement pour éviter une interruption de service.",
+      "daysRemaining": "jours restants",
+      "serviceLimited": "Service limité.",
+      "profileHidden": "Votre profil est masqué dans la recherche et les nouvelles réservations sont suspendues.",
+      "suspendedIn": "Le compte sera suspendu dans",
+      "days": "jours",
+      "accountSuspended": "Compte suspendu.",
+      "reactivateMessage": "Votre cabinet n'est plus visible pour les patients. Réactivez votre abonnement pour restaurer l'accès.",
+      "updatePaymentButton": "Mettre à jour le paiement",
+      "fixBilling": "Corriger la facturation",
+      "reactivate": "Réactiver"
+    }
   }
 }

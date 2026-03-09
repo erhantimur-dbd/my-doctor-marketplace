@@ -250,7 +250,7 @@
     },
     "ics-feed": {
       "question": "Was ist der ICS-Kalender-Feed?",
-      "answer": "Der ICS-Feed ist eine <strong>schreibgeschützte Abonnement-URL</strong>, die es jeder Kalender-App ermöglicht, Ihre MyDoctors360-Buchungen anzuzeigen.\n\n<strong>So richten Sie ihn ein:</strong>\n<strong>1.</strong> Gehen Sie zu Kalender → Integrationen → ICS-Feed.\n<strong>2.</strong> Klicken Sie auf <strong>Feed-URL generieren</strong>, um Ihre private URL zu erstellen.\n<strong>3.</strong> Kopieren Sie die URL und fügen Sie sie in die Funktion \u201EKalender abonnieren\u201C oder \u201EPer URL hinzuf\u00FCgen\u201C Ihrer Kalender-App ein.\n\nIhre Kalender-App aktualisiert den Feed regelmäßig, um neue Buchungen anzuzeigen. Dies ist nur in eine Richtung möglich — es zeigt Ihre MyDoctors360-Buchungen in Ihrem Kalender an, importiert aber keine externen Termine.\n\n<strong>Hinweis:</strong> Die Feed-URL enthält einen privaten Token. Teilen Sie ihn nicht mit anderen. Sie können ihn jederzeit in Ihren Einstellungen widerrufen und neu generieren."
+      "answer": "Der ICS-Feed ist eine <strong>schreibgeschützte Abonnement-URL</strong>, die es jeder Kalender-App ermöglicht, Ihre MyDoctors360-Buchungen anzuzeigen.\n\n<strong>So richten Sie ihn ein:</strong>\n<strong>1.</strong> Gehen Sie zu Kalender → Integrationen → ICS-Feed.\n<strong>2.</strong> Klicken Sie auf <strong>Feed-URL generieren</strong>, um Ihre private URL zu erstellen.\n<strong>3.</strong> Kopieren Sie die URL und fügen Sie sie in die Funktion „Kalender abonnieren“ oder „Per URL hinzufügen“ Ihrer Kalender-App ein.\n\nIhre Kalender-App aktualisiert den Feed regelmäßig, um neue Buchungen anzuzeigen. Dies ist nur in eine Richtung möglich — es zeigt Ihre MyDoctors360-Buchungen in Ihrem Kalender an, importiert aber keine externen Termine.\n\n<strong>Hinweis:</strong> Die Feed-URL enthält einen privaten Token. Teilen Sie ihn nicht mit anderen. Sie können ihn jederzeit in Ihren Einstellungen widerrufen und neu generieren."
     },
     "slot-locking": {
       "question": "Wie verhindert die Zeitfenster-Sperrung Doppelbuchungen?",
@@ -306,7 +306,7 @@
     },
     "calendar-not-syncing": {
       "question": "Mein Kalender synchronisiert sich nicht — was soll ich tun?",
-      "answer": "Befolgen Sie diese Schritte zur Fehlerbehebung bei Problemen mit der Kalender-Synchronisierung:\n\n<strong>1. Überprüfen Sie den Verbindungsstatus:</strong> Gehen Sie zu Kalender → Integrationen und vergewissern Sie sich, dass Ihr Kalender als \u201EVerbunden\u201C angezeigt wird.\n\n<strong>2. Versuchen Sie eine manuelle Synchronisierung:</strong> Klicken Sie auf die Schaltfläche <strong>Jetzt synchronisieren</strong>, um eine sofortige Synchronisierung auszulösen.\n\n<strong>3. Überprüfen Sie Ihre Zugangsdaten:</strong> Wenn der Status einen Fehler anzeigt, versuchen Sie, Ihren Kalender zu trennen und erneut zu verbinden.\n\n<strong>4. Überprüfen Sie die Kalenderberechtigungen:</strong> Stellen Sie sicher, dass MyDoctors360 Lese-/Schreibzugriff auf Ihren Kalender hat.\n\n<strong>5. Für Apple iCloud:</strong> Beachten Sie, dass die CalDAV-Synchronisierung alle 10 Minuten erfolgt, sodass es eine kurze Verzögerung geben kann.\n\nWenn das Problem nach diesen Schritten weiterhin besteht, kontaktieren Sie unser Support-Team mit Details zu Ihrem Kalenderanbieter und dem angezeigten Fehler."
+      "answer": "Befolgen Sie diese Schritte zur Fehlerbehebung bei Problemen mit der Kalender-Synchronisierung:\n\n<strong>1. Überprüfen Sie den Verbindungsstatus:</strong> Gehen Sie zu Kalender → Integrationen und vergewissern Sie sich, dass Ihr Kalender als „Verbunden“ angezeigt wird.\n\n<strong>2. Versuchen Sie eine manuelle Synchronisierung:</strong> Klicken Sie auf die Schaltfläche <strong>Jetzt synchronisieren</strong>, um eine sofortige Synchronisierung auszulösen.\n\n<strong>3. Überprüfen Sie Ihre Zugangsdaten:</strong> Wenn der Status einen Fehler anzeigt, versuchen Sie, Ihren Kalender zu trennen und erneut zu verbinden.\n\n<strong>4. Überprüfen Sie die Kalenderberechtigungen:</strong> Stellen Sie sicher, dass MyDoctors360 Lese-/Schreibzugriff auf Ihren Kalender hat.\n\n<strong>5. Für Apple iCloud:</strong> Beachten Sie, dass die CalDAV-Synchronisierung alle 10 Minuten erfolgt, sodass es eine kurze Verzögerung geben kann.\n\nWenn das Problem nach diesen Schritten weiterhin besteht, kontaktieren Sie unser Support-Team mit Details zu Ihrem Kalenderanbieter und dem angezeigten Fehler."
     },
     "google-auth-expired": {
       "question": "Meine Google Calendar-Autorisierung ist abgelaufen",
@@ -322,7 +322,7 @@
     },
     "video-call-issues": {
       "question": "Ich habe Probleme mit dem Videoanruf",
-      "answer": "Wenn Sie Probleme mit dem Videoanruf haben, probieren Sie diese Schritte:\n\n<strong>1. Überprüfen Sie Ihren Browser:</strong> Verwenden Sie einen modernen Browser (Chrome, Firefox, Safari oder Edge). Stellen Sie sicher, dass er auf dem neuesten Stand ist.\n\n<strong>2. Kamera und Mikrofon erlauben:</strong> Klicken Sie bei der Aufforderung auf \u201EErlauben\u201C, um Browserberechtigungen zu erteilen. Sie können dies auch in Ihren Browsereinstellungen überprüfen.\n\n<strong>3. Überprüfen Sie Ihre Internetverbindung:</strong> Für Videoanrufe wird eine stabile Verbindung mit mindestens 2 Mbit/s empfohlen.\n\n<strong>4. Schließen Sie andere Apps:</strong> Andere Video-Apps (Zoom, Teams usw.) nutzen möglicherweise Ihre Kamera. Schließen Sie diese und versuchen Sie es erneut.\n\n<strong>5. Versuchen Sie einen anderen Browser:</strong> Wenn das Problem weiterhin besteht, wechseln Sie zu einem anderen Browser.\n\n<strong>6. Starten Sie Ihr Gerät neu:</strong> Ein Neustart kann Kamera- oder Mikrofonprobleme beheben, die durch andere Software verursacht werden.\n\nWenn sich weder Sie noch der Arzt verbinden können, kontaktieren Sie den Support und wir helfen Ihnen, den Termin umzubuchen."
+      "answer": "Wenn Sie Probleme mit dem Videoanruf haben, probieren Sie diese Schritte:\n\n<strong>1. Überprüfen Sie Ihren Browser:</strong> Verwenden Sie einen modernen Browser (Chrome, Firefox, Safari oder Edge). Stellen Sie sicher, dass er auf dem neuesten Stand ist.\n\n<strong>2. Kamera und Mikrofon erlauben:</strong> Klicken Sie bei der Aufforderung auf „Erlauben“, um Browserberechtigungen zu erteilen. Sie können dies auch in Ihren Browsereinstellungen überprüfen.\n\n<strong>3. Überprüfen Sie Ihre Internetverbindung:</strong> Für Videoanrufe wird eine stabile Verbindung mit mindestens 2 Mbit/s empfohlen.\n\n<strong>4. Schließen Sie andere Apps:</strong> Andere Video-Apps (Zoom, Teams usw.) nutzen möglicherweise Ihre Kamera. Schließen Sie diese und versuchen Sie es erneut.\n\n<strong>5. Versuchen Sie einen anderen Browser:</strong> Wenn das Problem weiterhin besteht, wechseln Sie zu einem anderen Browser.\n\n<strong>6. Starten Sie Ihr Gerät neu:</strong> Ein Neustart kann Kamera- oder Mikrofonprobleme beheben, die durch andere Software verursacht werden.\n\nWenn sich weder Sie noch der Arzt verbinden können, kontaktieren Sie den Support und wir helfen Ihnen, den Termin umzubuchen."
     },
     "booking-slot-unavailable": {
       "question": "Das von mir gewählte Zeitfenster ist verschwunden",
@@ -433,7 +433,6 @@
     "price_min": "Mindestpreis",
     "price_max": "Höchstpreis",
     "price_range_label": "Preis pro Sitzung",
-    "min_rating": "Mindestbewertung",
     "map_view": "Kartenansicht",
     "doctors_on_map": "{count, plural, one {# Arzt} other {# Ärzte}}"
   },
@@ -880,7 +879,7 @@
     "generateFeedUrl": "Feed-URL generieren",
     "revokeFeed": "Feed-URL widerrufen",
     "icsInfo": "Erstellen Sie eine private URL, die jede Kalender-App abonnieren kann. Ihre kommenden Buchungen erscheinen automatisch.",
-    "icsCopyHint": "Fügen Sie diese URL in die Funktion \u201EKalender abonnieren\u201C oder \u201EPer URL hinzufügen\u201C Ihrer Kalender-App ein.",
+    "icsCopyHint": "Fügen Sie diese URL in die Funktion „Kalender abonnieren“ oder „Per URL hinzufügen“ Ihrer Kalender-App ein.",
     "revokeConfirm": "Diese Feed-URL widerrufen? Alle Kalender-Apps, die sie verwenden, werden nicht mehr aktualisiert."
   },
   "twoFactor": {
@@ -910,5 +909,110 @@
     "success_disabled": "Zwei-Faktor-Authentifizierung wurde deaktiviert.",
     "recommendation_title": "Sichern Sie Ihr Konto mit Zwei-Faktor-Authentifizierung",
     "recommendation_desc": "Als Gesundheitsdienstleister empfehlen wir Ihnen dringend, 2FA zu aktivieren, um Ihr Konto und Patientendaten zu schützen."
+  },
+  "organization": {
+    "title": "Organisation",
+    "practice": "Praxis",
+    "practiceSettings": "Praxiseinstellungen",
+    "practiceOverview": "Praxisübersicht",
+    "createPractice": "Erstellen Sie Ihre Praxis",
+    "createPracticeDescription": "Jeder Arzt benötigt ein Praxisprofil. Solo-Praxen und Kliniken gleichermaßen nutzen dies zur Verwaltung ihrer Plattformpräsenz.",
+    "practiceName": "Praxisname",
+    "practiceNamePlaceholder": "z.B. Dr. Müller Praxis",
+    "createButton": "Praxis erstellen",
+    "saveChanges": "Änderungen speichern",
+    "settingsSaved": "Einstellungen gespeichert",
+    "organizationCreated": "Organisation erfolgreich erstellt",
+    "organizationUpdated": "Organisation aktualisiert",
+    "teamMembers": "Teammitglieder",
+    "inviteMember": "Mitglied einladen",
+    "inviteDescription": "Der Benutzer muss bereits ein Konto auf MyDoctors360 haben",
+    "invitationSent": "Einladung gesendet",
+    "memberRemoved": "Mitglied entfernt",
+    "roleUpdated": "Rolle aktualisiert",
+    "ownershipTransferred": "Eigentum übertragen",
+    "transferOwnership": "Eigentum übertragen",
+    "transferWarning": "Dies überträgt das vollständige Eigentum der Organisation auf das ausgewählte Mitglied. Sie werden zum Admin herabgestuft. Diese Aktion kann nicht leicht rückgängig gemacht werden.",
+    "confirmTransfer": "Übertragung bestätigen",
+    "removeMember": "Entfernen",
+    "promoteAdmin": "Zum Admin befördern",
+    "demoteDoctor": "Zum Arzt herabstufen",
+    "roles": {
+      "owner": "Eigentümer",
+      "admin": "Admin",
+      "doctor": "Arzt",
+      "staff": "Personal"
+    },
+    "statuses": {
+      "active": "Aktiv",
+      "invited": "Ausstehend",
+      "suspended": "Gesperrt",
+      "removed": "Entfernt"
+    },
+    "address": "Adresse",
+    "addressLine1": "Adresszeile 1",
+    "addressLine2": "Adresszeile 2",
+    "city": "Stadt",
+    "state": "Bundesland",
+    "postalCode": "Postleitzahl",
+    "country": "Land",
+    "regionalSettings": "Regionale Einstellungen",
+    "timezone": "Zeitzone",
+    "baseCurrency": "Basiswährung",
+    "quickLinks": {
+      "teamMembers": "Team einladen und verwalten",
+      "billing": "Pläne, Sitze & Zahlungen",
+      "settings": "Adresse, Zeitzone, Währung"
+    }
+  },
+  "license": {
+    "title": "Lizenz & Abrechnung",
+    "billingAndLicense": "Abrechnung & Lizenz",
+    "manageDescription": "Verwalten Sie Ihr Abonnement, Sitze und Add-ons",
+    "noActiveLicense": "Keine aktive Lizenz",
+    "choosePlan": "Plan wählen",
+    "availablePlans": "Verfügbare Pläne",
+    "currentPlan": "Aktueller Plan",
+    "subscribe": "Abonnieren",
+    "switchPlan": "Plan wechseln",
+    "contactSales": "Vertrieb kontaktieren",
+    "manageBilling": "Abrechnung verwalten",
+    "addExtraSeats": "Zusätzliche Sitze hinzufügen",
+    "addExtraSeatsDescription": "Benötigen Sie mehr Sitze? Jeder zusätzliche Sitz kostet 29€/Monat.",
+    "addSeats": "Sitze hinzufügen",
+    "seatsAdded": "Sitz(e) hinzugefügt",
+    "addOnModules": "Zusatzmodule",
+    "addOnDescription": "Erweitern Sie Ihre Praxis mit zusätzlichen Funktionen",
+    "moduleActivated": "Modul aktiviert",
+    "moduleDeactivated": "Modul deaktiviert",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "popular": "Beliebt",
+    "current": "Aktuell",
+    "perMonth": "/ Monat",
+    "couponCode": "Haben Sie einen Gutscheincode?",
+    "enterCoupon": "Gutscheincode eingeben",
+    "statuses": {
+      "active": "Aktiv",
+      "trialing": "Testphase",
+      "past_due": "Überfällig",
+      "grace_period": "Nachfrist",
+      "suspended": "Gesperrt",
+      "cancelled": "Gekündigt"
+    },
+    "banner": {
+      "paymentOverdue": "Zahlung überfällig.",
+      "updatePayment": "Bitte aktualisieren Sie Ihre Zahlungsmethode, um eine Dienstunterbrechung zu vermeiden.",
+      "daysRemaining": "Tage verbleibend",
+      "serviceLimited": "Dienst eingeschränkt.",
+      "profileHidden": "Ihr Profil ist in der Suche verborgen und neue Buchungen sind pausiert.",
+      "suspendedIn": "Konto wird gesperrt in",
+      "days": "Tagen",
+      "accountSuspended": "Konto gesperrt.",
+      "reactivateMessage": "Ihre Praxis ist für Patienten nicht mehr sichtbar. Reaktivieren Sie Ihr Abonnement, um den Zugang wiederherzustellen.",
+      "updatePaymentButton": "Zahlung aktualisieren",
+      "fixBilling": "Abrechnung korrigieren",
+      "reactivate": "Reaktivieren"
+    }
   }
 }

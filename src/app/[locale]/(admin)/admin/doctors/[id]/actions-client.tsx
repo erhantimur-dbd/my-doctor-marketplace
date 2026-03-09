@@ -18,14 +18,17 @@ export function AdminDoctorActions({
   isActive,
   isFeatured,
   currentPlan,
+  checklistComplete: initialChecklistComplete = true,
 }: {
   doctorId: string;
   currentStatus: string;
   isActive: boolean;
   isFeatured: boolean;
   currentPlan: string;
+  checklistComplete?: boolean;
 }) {
   const [status, setStatus] = useState(currentStatus);
+  const [checklistDone, setChecklistDone] = useState(initialChecklistComplete);
   const [active, setActive] = useState(isActive);
   const [featured, setFeatured] = useState(isFeatured);
   const [loading, setLoading] = useState("");
@@ -79,16 +82,30 @@ export function AdminDoctorActions({
     setLoading("");
   }
 
+  // Allow external checklist updates (from ApprovalChecklist sibling component)
+  const updateChecklistDone = (complete: boolean) => setChecklistDone(complete);
+
+  const verifyDisabled =
+    loading === "verified" ||
+    status === "verified" ||
+    (!checklistDone && (status === "pending" || status === "under_review"));
+
   return (
     <div className="space-y-4">
       <div>
         <p className="mb-2 text-sm font-medium">Verification</p>
+        {!checklistDone && (status === "pending" || status === "under_review") && (
+          <p className="mb-2 text-xs text-orange-600">
+            Complete the approval checklist above before verifying this doctor.
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           <Button
             variant={status === "verified" ? "default" : "outline"}
             size="sm"
             onClick={() => handleVerify("verified")}
-            disabled={loading === "verified" || status === "verified"}
+            disabled={verifyDisabled}
+            title={!checklistDone ? "Complete the approval checklist first" : undefined}
           >
             <CheckCircle className="mr-1 h-4 w-4" />
             Verify
