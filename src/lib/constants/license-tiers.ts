@@ -124,7 +124,6 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     extraSeatPricePence: 0,
     commitmentMonths: 12,
     features: [
-      "Everything in Free",
       "1 doctor profile",
       "Online booking calendar",
       "Unlimited bookings",
@@ -151,7 +150,6 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     extraSeatPricePence: 29900, // £299 per additional user
     commitmentMonths: 12,
     features: [
-      "Everything in Starter",
       "1–4 doctor profiles",
       "Advanced analytics",
       "Patient CRM",
@@ -172,7 +170,6 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     extraSeatPricePence: 29900, // £299 per extra seat
     commitmentMonths: 12,
     features: [
-      "Everything in Professional",
       "Multi-location clinic",
       "5 doctor profiles included",
       "Add up to 15 doctors with add-ons",
@@ -197,7 +194,6 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     extraSeatPricePence: 0,
     commitmentMonths: 12,
     features: [
-      "Everything in Clinic",
       "15+ doctor profiles",
       "Multiple locations",
       "Custom branding",
@@ -213,7 +209,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
 // ─── Platform Constants ────────────────────────────────────
 
 /** Fixed platform booking fee percentage — same for all tiers */
-export const PLATFORM_BOOKING_FEE_PERCENT = 12;
+export const PLATFORM_BOOKING_FEE_PERCENT = 15;
 
 /** Extra seat price in GBP pence per month */
 export const EXTRA_SEAT_PRICE_PENCE = 29900;

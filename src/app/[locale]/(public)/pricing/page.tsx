@@ -2,6 +2,7 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle2,
   ArrowRight,
@@ -107,6 +108,37 @@ function getTierIcon(tierId: string) {
   }
 }
 
+/** Colour scheme for each tier icon */
+function getTierColor(tierId: string) {
+  switch (tierId) {
+    case "starter":
+      return {
+        bg: "bg-teal-50 dark:bg-teal-950/30",
+        text: "text-teal-600",
+      };
+    case "professional":
+      return {
+        bg: "bg-violet-50 dark:bg-violet-950/30",
+        text: "text-violet-600",
+      };
+    case "clinic":
+      return {
+        bg: "bg-blue-50 dark:bg-blue-950/30",
+        text: "text-blue-600",
+      };
+    case "enterprise":
+      return {
+        bg: "bg-amber-50 dark:bg-amber-950/30",
+        text: "text-amber-600",
+      };
+    default:
+      return {
+        bg: "bg-emerald-50 dark:bg-emerald-950/30",
+        text: "text-emerald-600",
+      };
+  }
+}
+
 export default function PricingPage() {
   const locale = useLocale();
 
@@ -138,6 +170,7 @@ export default function PricingPage() {
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
             {paidTiers.map((tier) => {
               const TierIcon = getTierIcon(tier.id);
+              const tierColor = getTierColor(tier.id);
               const isPopular = tier.popular;
               const isEnterprise = tier.isCustomPricing;
 
@@ -158,63 +191,74 @@ export default function PricingPage() {
                     </div>
                   )}
 
-                  <div className="px-6 pb-6 pt-10 text-center">
-                    <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                      <TierIcon className="h-5 w-5 text-muted-foreground" />
+                  {/* ── Fixed-height header: icon + name + description ── */}
+                  <div className="flex flex-col items-center px-6 pt-10 text-center">
+                    <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${tierColor.bg}`}>
+                      <TierIcon className={`h-5 w-5 ${tierColor.text}`} />
                     </div>
                     <h3 className="text-lg font-bold">{tier.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
+                    <p className="mt-1 h-[40px] text-sm text-muted-foreground">
                       {tier.description}
                     </p>
-                    <div className="mt-4">
-                      {isEnterprise ? (
-                        <>
-                          <span className="text-3xl font-bold">Custom</span>
-                          <p className="mt-1.5 text-xs text-muted-foreground">
-                            Tailored to your needs
-                          </p>
-                        </>
-                      ) : (
-                        <>
+                  </div>
+
+                  {/* ── Fixed-height price block ── */}
+                  <div className="flex h-[80px] flex-col items-center justify-center px-6 text-center">
+                    {isEnterprise ? (
+                      <>
+                        <span className="text-4xl font-bold">Custom</span>
+                      </>
+                    ) : (
+                      <>
+                        <div>
                           <span className="text-4xl font-bold">
                             {formatPriceForLocale(tier.priceMonthlyPence, locale)}
                           </span>
                           <span className="text-muted-foreground">
                             {tier.perUser ? " / user / mo" : " / month"}
                           </span>
-                          {tier.commitmentMonths > 0 && (
-                            <p className="mt-1.5 text-xs text-muted-foreground">
-                              12-month commitment, billed monthly
-                            </p>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    {/* Seat info */}
-                    {!isEnterprise && (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {tier.perUser
-                          ? `${tier.defaultSeats}–${tier.maxSeats} users`
-                          : tier.includedSeats > 1
-                            ? `${tier.includedSeats} users included, up to ${tier.maxSeats}`
-                            : `${tier.defaultSeats} user`}
-                        {tier.extraSeatPricePence > 0 && !tier.perUser && (
-                          <>
-                            {" · "}
-                            {formatPriceForLocale(tier.extraSeatPricePence, locale)}/extra seat
-                          </>
-                        )}
-                      </p>
-                    )}
-                    {isEnterprise && (
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        15+ doctor profiles
-                      </p>
+                        </div>
+                      </>
                     )}
                   </div>
 
-                  <CardContent className="flex flex-1 flex-col p-6 pt-0">
+                  {/* ── Fixed-height meta: commitment + seat info ── */}
+                  <div className="flex h-[48px] flex-col items-center justify-center px-6 text-center">
+                    {isEnterprise ? (
+                      <p className="text-xs text-muted-foreground">
+                        Tailored to your needs
+                      </p>
+                    ) : (
+                      <>
+                        {tier.commitmentMonths > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            12-month commitment, billed monthly
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {tier.perUser
+                            ? `${tier.defaultSeats}–${tier.maxSeats} users`
+                            : tier.includedSeats > 1
+                              ? `${tier.includedSeats} users included, up to ${tier.maxSeats}`
+                              : `${tier.defaultSeats} user`}
+                          {tier.extraSeatPricePence > 0 && !tier.perUser && (
+                            <>
+                              {" · "}
+                              {formatPriceForLocale(tier.extraSeatPricePence, locale)}/extra seat
+                            </>
+                          )}
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* ── Separator ── */}
+                  <div className="px-6 pb-6 pt-2">
+                    <Separator />
+                  </div>
+
+                  {/* ── Features list (flex-1 fills remaining space) ── */}
+                  <CardContent className="flex flex-1 flex-col px-6 pb-6 pt-0">
                     <ul className="flex-1 space-y-2.5">
                       {tier.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2 text-sm">
@@ -225,6 +269,7 @@ export default function PricingPage() {
                     </ul>
                   </CardContent>
 
+                  {/* ── CTA button ── */}
                   <CardFooter className="p-6 pt-0">
                     {isEnterprise ? (
                       <Button
