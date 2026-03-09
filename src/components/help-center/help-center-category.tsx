@@ -7,7 +7,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Link2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { HelpCategory } from "./help-center-data";
@@ -15,6 +14,7 @@ import type { HelpCategory } from "./help-center-data";
 interface HelpCenterCategoryProps {
   category: HelpCategory;
   searchQuery: string;
+  audience: "patient" | "doctor";
   openArticleId: string | null;
   onArticleToggle: (articleId: string | null) => void;
 }
@@ -22,31 +22,15 @@ interface HelpCenterCategoryProps {
 export function HelpCenterCategory({
   category,
   searchQuery,
+  audience,
   openArticleId,
   onArticleToggle,
 }: HelpCenterCategoryProps) {
   const t = useTranslations("helpCenter");
   const Icon = category.icon;
 
-  const audienceLabels: Record<
-    string,
-    { label: string; variant: "default" | "secondary" | "outline" }
-  > = {
-    doctor: { label: t("for_doctors"), variant: "default" },
-    patient: { label: t("for_patients"), variant: "secondary" },
-    all: { label: t("everyone"), variant: "outline" },
-  };
-
-  const filteredArticles = searchQuery
-    ? category.articles.filter((article) => {
-        const q = searchQuery.toLowerCase();
-        return (
-          article.question.toLowerCase().includes(q) ||
-          article.answer.toLowerCase().includes(q) ||
-          article.tags.some((tag) => tag.toLowerCase().includes(q))
-        );
-      })
-    : category.articles;
+  // Parent already handles audience + search filtering
+  const filteredArticles = category.articles;
 
   if (filteredArticles.length === 0) return null;
 
@@ -84,7 +68,6 @@ export function HelpCenterCategory({
             onValueChange={(val) => onArticleToggle(val || null)}
           >
             {filteredArticles.map((article) => {
-              const audience = audienceLabels[article.audience];
               return (
                 <AccordionItem
                   key={article.id}
@@ -93,17 +76,7 @@ export function HelpCenterCategory({
                   className="scroll-mt-24"
                 >
                   <AccordionTrigger className="text-left">
-                    <div className="flex items-center gap-2 pr-2">
-                      <span className="font-medium">{article.question}</span>
-                      {article.audience !== "all" && (
-                        <Badge
-                          variant={audience.variant}
-                          className="shrink-0 text-[10px]"
-                        >
-                          {audience.label}
-                        </Badge>
-                      )}
-                    </div>
+                    <span className="pr-2 font-medium">{article.question}</span>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_strong]:text-foreground whitespace-pre-line">

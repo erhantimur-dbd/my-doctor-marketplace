@@ -523,9 +523,12 @@
     "cat_account_desc": "Profil yönetimi, bildirimler, güvenlik ve tercihler.",
     "cat_troubleshooting": "Sorun Giderme",
     "cat_troubleshooting_desc": "Takvim senkronizasyonu, ödemeler ve görüntülü aramalarla ilgili yaygın sorunların çözümleri.",
-    "filter_all": "Tümü",
-    "filter_patient": "Hastayım",
-    "filter_doctor": "Doktorum"
+    "tab_patient": "Hastalar İçin",
+    "tab_doctor": "Doktorlar İçin",
+    "patient_section_title": "Hasta Yardım ve Rehberleri",
+    "patient_section_desc": "Randevu alma, ödemeler ve hesap yönetimi hakkında bilmeniz gereken her şey.",
+    "doctor_section_title": "Doktor Yardım ve Rehberleri",
+    "doctor_section_desc": "Kurulum rehberleri, takvim senkronizasyonu, ödeme yapılandırması ve muayenehane yönetimi."
   },
   "helpArticles": {
     "how-to-book": {

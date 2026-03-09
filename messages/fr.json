@@ -523,9 +523,12 @@
     "cat_account_desc": "Gestion du profil, notifications, sécurité et préférences.",
     "cat_troubleshooting": "Dépannage",
     "cat_troubleshooting_desc": "Solutions aux problèmes courants avec la synchronisation du calendrier, les paiements et les appels vidéo.",
-    "filter_all": "Tout",
-    "filter_patient": "Je suis patient",
-    "filter_doctor": "Je suis médecin"
+    "tab_patient": "Pour les Patients",
+    "tab_doctor": "Pour les Médecins",
+    "patient_section_title": "Aide et Guides pour les Patients",
+    "patient_section_desc": "Tout ce que vous devez savoir sur la prise de rendez-vous, les paiements et la gestion de votre compte.",
+    "doctor_section_title": "Aide et Guides pour les Médecins",
+    "doctor_section_desc": "Guides de configuration, synchronisation du calendrier, configuration des paiements et gestion du cabinet."
   },
   "helpArticles": {
     "how-to-book": {

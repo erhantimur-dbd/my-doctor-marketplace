@@ -425,7 +425,13 @@
     "cat_account": "账户与设置",
     "cat_account_desc": "个人资料管理、通知、安全和偏好设置。",
     "cat_troubleshooting": "故障排除",
-    "cat_troubleshooting_desc": "日历同步、支付和视频通话常见问题的解决方案。"
+    "cat_troubleshooting_desc": "日历同步、支付和视频通话常见问题的解决方案。",
+    "tab_patient": "患者帮助",
+    "tab_doctor": "医生帮助",
+    "patient_section_title": "患者帮助与指南",
+    "patient_section_desc": "关于预约、付款和账户管理，您需要了解的一切。",
+    "doctor_section_title": "医生帮助与指南",
+    "doctor_section_desc": "设置指南、日历同步、付款配置和诊所管理。"
   },
   "helpArticles": {
     "how-to-book": {

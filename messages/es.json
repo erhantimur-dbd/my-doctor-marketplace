@@ -419,7 +419,13 @@
     "cat_account": "Cuenta y Configuración",
     "cat_account_desc": "Gestión de perfil, notificaciones, seguridad y preferencias.",
     "cat_troubleshooting": "Solución de Problemas",
-    "cat_troubleshooting_desc": "Soluciones a problemas comunes con la sincronización de calendario, pagos y videollamadas."
+    "cat_troubleshooting_desc": "Soluciones a problemas comunes con la sincronización de calendario, pagos y videollamadas.",
+    "tab_patient": "Para Pacientes",
+    "tab_doctor": "Para Médicos",
+    "patient_section_title": "Ayuda y Guías para Pacientes",
+    "patient_section_desc": "Todo lo que necesita saber sobre reservar citas, pagos y gestionar su cuenta.",
+    "doctor_section_title": "Ayuda y Guías para Médicos",
+    "doctor_section_desc": "Guías de configuración, sincronización de calendario, configuración de pagos y gestión de consulta."
   },
   "helpArticles": {
     "how-to-book": {

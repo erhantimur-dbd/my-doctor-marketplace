@@ -419,7 +419,13 @@
     "cat_account": "アカウントと設定",
     "cat_account_desc": "プロフィール管理、通知、セキュリティ、設定。",
     "cat_troubleshooting": "トラブルシューティング",
-    "cat_troubleshooting_desc": "カレンダー同期、支払い、ビデオ通話に関する一般的な問題の解決策。"
+    "cat_troubleshooting_desc": "カレンダー同期、支払い、ビデオ通話に関する一般的な問題の解決策。",
+    "tab_patient": "患者向け",
+    "tab_doctor": "医師向け",
+    "patient_section_title": "患者向けヘルプとガイド",
+    "patient_section_desc": "予約、支払い、アカウント管理について知っておくべきことすべて。",
+    "doctor_section_title": "医師向けヘルプとガイド",
+    "doctor_section_desc": "セットアップガイド、カレンダー同期、支払い設定、診療管理。"
   },
   "helpArticles": {
     "how-to-book": {

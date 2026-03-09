@@ -202,9 +202,12 @@
     "cat_account_desc": "Profilverwaltung, Benachrichtigungen, Sicherheit und Einstellungen.",
     "cat_troubleshooting": "Fehlerbehebung",
     "cat_troubleshooting_desc": "Lösungen für häufige Probleme mit Kalender-Synchronisierung, Zahlungen und Videoanrufen.",
-    "filter_all": "Alle",
-    "filter_patient": "Ich bin Patient",
-    "filter_doctor": "Ich bin Arzt"
+    "tab_patient": "Für Patienten",
+    "tab_doctor": "Für Ärzte",
+    "patient_section_title": "Hilfe & Anleitungen für Patienten",
+    "patient_section_desc": "Alles, was Sie über Terminbuchung, Zahlungen und Kontoverwaltung wissen müssen.",
+    "doctor_section_title": "Hilfe & Anleitungen für Ärzte",
+    "doctor_section_desc": "Einrichtungsanleitungen, Kalender-Synchronisation, Zahlungskonfiguration und Praxisverwaltung."
   },
   "helpArticles": {
     "how-to-book": {

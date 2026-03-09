@@ -1,18 +1,47 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { BookOpen, Search, X, Mail, ArrowRight } from "lucide-react";
+import { BookOpen, Search, X, Mail, ArrowRight, Stethoscope, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Link } from "@/i18n/navigation";
 import { getHelpCategories } from "./help-center-data";
 import { HelpCenterCategory } from "./help-center-category";
+import type { HelpCategory } from "./help-center-data";
 
 const supportEmail =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@mydoctors360.com";
+
+function filterCategoriesForAudience(
+  categories: HelpCategory[],
+  audience: "patient" | "doctor",
+  query: string
+): HelpCategory[] {
+  let cats = categories.map((category) => ({
+    ...category,
+    articles: category.articles.filter(
+      (article) => article.audience === audience || article.audience === "all"
+    ),
+  }));
+
+  if (query) {
+    const q = query.toLowerCase();
+    cats = cats.map((category) => ({
+      ...category,
+      articles: category.articles.filter(
+        (article) =>
+          article.question.toLowerCase().includes(q) ||
+          article.answer.toLowerCase().includes(q) ||
+          article.tags.some((tag) => tag.toLowerCase().includes(q))
+      ),
+    }));
+  }
+
+  return cats.filter((category) => category.articles.length > 0);
+}
 
 export function HelpCenterClient() {
   const t = useTranslations("helpCenter");
@@ -25,6 +54,7 @@ export function HelpCenterClient() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [openArticleId, setOpenArticleId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"patient" | "doctor">("patient");
 
   // Debounce search
   useEffect(() => {
@@ -32,12 +62,23 @@ export function HelpCenterClient() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Hash anchor handling on mount
+  // Hash anchor handling on mount — detect which tab the article belongs to
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     if (hash) {
+      // Find which audience the article belongs to and switch tab
+      for (const cat of helpCategories) {
+        const article = cat.articles.find((a) => a.id === hash);
+        if (article) {
+          if (article.audience === "doctor") {
+            setActiveTab("doctor");
+          } else {
+            setActiveTab("patient");
+          }
+          break;
+        }
+      }
       setOpenArticleId(hash);
-      // Wait for DOM to render, then scroll
       const timer = setTimeout(() => {
         const el = document.getElementById(hash);
         if (el) {
@@ -46,28 +87,24 @@ export function HelpCenterClient() {
       }, 200);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [helpCategories]);
 
-  // Filtered categories based on search
-  const filteredCategories = useMemo(() => {
-    if (!debouncedQuery) return helpCategories;
-    const q = debouncedQuery.toLowerCase();
-    return helpCategories
-      .map((category) => ({
-        ...category,
-        articles: category.articles.filter(
-          (article) =>
-            article.question.toLowerCase().includes(q) ||
-            article.answer.toLowerCase().includes(q) ||
-            article.tags.some((tag) => tag.toLowerCase().includes(q))
-        ),
-      }))
-      .filter((category) => category.articles.length > 0);
-  }, [debouncedQuery, helpCategories]);
+  // Filtered categories per tab
+  const patientCategories = useMemo(
+    () => filterCategoriesForAudience(helpCategories, "patient", debouncedQuery),
+    [helpCategories, debouncedQuery]
+  );
+
+  const doctorCategories = useMemo(
+    () => filterCategoriesForAudience(helpCategories, "doctor", debouncedQuery),
+    [helpCategories, debouncedQuery]
+  );
+
+  const activeCategories = activeTab === "patient" ? patientCategories : doctorCategories;
 
   const totalResults = useMemo(
-    () => filteredCategories.reduce((sum, cat) => sum + cat.articles.length, 0),
-    [filteredCategories]
+    () => activeCategories.reduce((sum, cat) => sum + cat.articles.length, 0),
+    [activeCategories]
   );
 
   const scrollToCategory = useCallback((categoryId: string) => {
@@ -76,6 +113,75 @@ export function HelpCenterClient() {
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, []);
+
+  const renderCategoryCards = (categories: HelpCategory[]) => (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {categories.map((category) => {
+        const Icon = category.icon;
+        return (
+          <button
+            key={category.id}
+            onClick={() => scrollToCategory(category.id)}
+            className={`group flex flex-col items-center gap-3 rounded-xl border p-6 text-center transition-all hover:shadow-md ${category.color.border} hover:${category.color.bg}`}
+          >
+            <div
+              className={`flex h-12 w-12 items-center justify-center rounded-xl ${category.color.bg}`}
+            >
+              <Icon className={`h-6 w-6 ${category.color.text}`} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">{category.title}</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("articles_count", { count: category.articles.length })}
+              </p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const renderArticles = (categories: HelpCategory[], audience: "patient" | "doctor") => (
+    <div className="space-y-8">
+      {categories.length > 0 ? (
+        categories.map((category) => (
+          <HelpCenterCategory
+            key={category.id}
+            category={category}
+            searchQuery={debouncedQuery}
+            audience={audience}
+            openArticleId={
+              category.articles.some((a) => a.id === openArticleId)
+                ? openArticleId
+                : null
+            }
+            onArticleToggle={(id) => {
+              setOpenArticleId(id);
+              if (id) {
+                window.history.replaceState(null, "", `#${id}`);
+              }
+            }}
+          />
+        ))
+      ) : (
+        <div className="py-12 text-center">
+          <p className="text-lg font-medium text-muted-foreground">
+            {t("no_results_clear")}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("no_results_clear_hint")}
+          </p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => setSearchQuery("")}
+          >
+            {t("clear_search")}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -112,6 +218,7 @@ export function HelpCenterClient() {
                 </button>
               )}
             </div>
+
             {debouncedQuery && (
               <p className="mt-3 text-sm text-muted-foreground">
                 {totalResults > 0 ? (
@@ -143,86 +250,81 @@ export function HelpCenterClient() {
         </div>
       </section>
 
-      {/* Category Quick-Nav Cards */}
-      {!debouncedQuery && (
-        <section className="px-4 py-12 md:py-16">
-          <div className="container mx-auto max-w-5xl">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {helpCategories.map((category) => {
-                const Icon = category.icon;
-                return (
-                  <button
-                    key={category.id}
-                    onClick={() => scrollToCategory(category.id)}
-                    className={`group flex flex-col items-center gap-3 rounded-xl border p-6 text-center transition-all hover:shadow-md ${category.color.border} hover:${category.color.bg}`}
-                  >
-                    <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${category.color.bg}`}
-                    >
-                      <Icon className={`h-6 w-6 ${category.color.text}`} />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-semibold">
-                        {category.title}
-                      </h3>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {t("articles_count", {
-                          count: category.articles.length,
-                        })}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Category Sections */}
-      <section
-        className={`bg-muted/30 px-4 py-12 md:py-16 ${debouncedQuery ? "mt-0" : ""}`}
+      {/* Tabbed Content */}
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => {
+          setActiveTab(v as "patient" | "doctor");
+          setOpenArticleId(null);
+        }}
+        className="w-full"
       >
-        <div className="container mx-auto max-w-3xl space-y-8">
-          {filteredCategories.length > 0 ? (
-            filteredCategories.map((category) => (
-              <HelpCenterCategory
-                key={category.id}
-                category={category}
-                searchQuery={debouncedQuery}
-                openArticleId={
-                  // Only pass if this category owns the article
-                  category.articles.some((a) => a.id === openArticleId)
-                    ? openArticleId
-                    : null
-                }
-                onArticleToggle={(id) => {
-                  setOpenArticleId(id);
-                  if (id) {
-                    window.history.replaceState(null, "", `#${id}`);
-                  }
-                }}
-              />
-            ))
-          ) : (
-            <div className="py-12 text-center">
-              <p className="text-lg font-medium text-muted-foreground">
-                {t("no_results_clear")}
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {t("no_results_clear_hint")}
-              </p>
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setSearchQuery("")}
+        {/* Sticky Tab Bar */}
+        <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="container mx-auto flex justify-center px-4 py-3">
+            <TabsList className="h-11 rounded-full bg-muted p-1">
+              <TabsTrigger
+                value="patient"
+                className="flex items-center gap-2 rounded-full px-6 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
               >
-                {t("clear_search")}
-              </Button>
-            </div>
-          )}
+                <User className="h-4 w-4" />
+                {t("tab_patient")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="doctor"
+                className="flex items-center gap-2 rounded-full px-6 py-2 text-sm font-medium data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+              >
+                <Stethoscope className="h-4 w-4" />
+                {t("tab_doctor")}
+              </TabsTrigger>
+            </TabsList>
+          </div>
         </div>
-      </section>
+
+        {/* Patient Tab */}
+        <TabsContent value="patient" className="mt-0">
+          {/* Quick-Nav */}
+          {!debouncedQuery && patientCategories.length > 0 && (
+            <section className="px-4 py-12 md:py-16">
+              <div className="container mx-auto max-w-5xl">
+                <div className="mb-6 text-center">
+                  <h2 className="text-xl font-semibold">{t("patient_section_title")}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{t("patient_section_desc")}</p>
+                </div>
+                {renderCategoryCards(patientCategories)}
+              </div>
+            </section>
+          )}
+          {/* Articles */}
+          <section className="bg-muted/30 px-4 py-12 md:py-16">
+            <div className="container mx-auto max-w-3xl">
+              {renderArticles(patientCategories, "patient")}
+            </div>
+          </section>
+        </TabsContent>
+
+        {/* Doctor Tab */}
+        <TabsContent value="doctor" className="mt-0">
+          {/* Quick-Nav */}
+          {!debouncedQuery && doctorCategories.length > 0 && (
+            <section className="px-4 py-12 md:py-16">
+              <div className="container mx-auto max-w-5xl">
+                <div className="mb-6 text-center">
+                  <h2 className="text-xl font-semibold">{t("doctor_section_title")}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">{t("doctor_section_desc")}</p>
+                </div>
+                {renderCategoryCards(doctorCategories)}
+              </div>
+            </section>
+          )}
+          {/* Articles */}
+          <section className="bg-muted/30 px-4 py-12 md:py-16">
+            <div className="container mx-auto max-w-3xl">
+              {renderArticles(doctorCategories, "doctor")}
+            </div>
+          </section>
+        </TabsContent>
+      </Tabs>
 
       {/* Still Need Help? CTA */}
       <section className="px-4 py-12 md:py-20">

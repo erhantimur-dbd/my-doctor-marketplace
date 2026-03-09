@@ -523,9 +523,12 @@
     "cat_account_desc": "Profile management, notifications, security, and preferences.",
     "cat_troubleshooting": "Troubleshooting",
     "cat_troubleshooting_desc": "Solutions for common issues with calendar sync, payments, and video calls.",
-    "filter_all": "All",
-    "filter_patient": "I'm a Patient",
-    "filter_doctor": "I'm a Doctor"
+    "tab_patient": "For Patients",
+    "tab_doctor": "For Doctors",
+    "patient_section_title": "Patient Help & Guides",
+    "patient_section_desc": "Everything you need to know about booking appointments, payments, and managing your account.",
+    "doctor_section_title": "Doctor Help & Guides",
+    "doctor_section_desc": "Setup guides, calendar sync, payment configuration, and practice management."
   },
   "helpArticles": {
     "how-to-book": {
