@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { login, signInWithGoogle, signInWithApple } from "@/actions/auth";
@@ -55,66 +56,21 @@ export default function LoginPage() {
         <CardDescription>{t("login_subtitle")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="space-y-4">
-          {verified && (
-            <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
-              Email verified successfully! You can now sign in.
-            </div>
-          )}
-          {callbackError && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              Email verification failed or link expired. Please try signing up again.
-            </div>
-          )}
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="email">{t("email")}</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="name@example.com"
-              required
-            />
+        {verified && (
+          <div className="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700">
+            Email verified successfully! You can now sign in.
           </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">{t("password")}</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-muted-foreground hover:text-primary"
-              >
-                {t("forgot_password")}
-              </Link>
-            </div>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={6}
-            />
+        )}
+        {callbackError && (
+          <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            Email verification failed or link expired. Please try signing up again.
           </div>
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t("sign_in")}
-          </Button>
-        </form>
-
-        <div className="my-6 flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-xs text-muted-foreground">
-            {t("or_continue_with")}
-          </span>
-          <Separator className="flex-1" />
-        </div>
+        )}
+        {error && (
+          <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
+          </div>
+        )}
 
         <div className="space-y-3">
           <form
@@ -123,7 +79,7 @@ export default function LoginPage() {
               if (result?.error) setError(result.error);
             }}
           >
-            <Button variant="outline" className="w-full" type="submit">
+            <Button variant="outline" className="h-11 w-full" type="submit">
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -152,7 +108,7 @@ export default function LoginPage() {
               if (result?.error) setError(result.error);
             }}
           >
-            <Button variant="outline" className="w-full" type="submit">
+            <Button variant="outline" className="h-11 w-full" type="submit">
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
               </svg>
@@ -160,6 +116,52 @@ export default function LoginPage() {
             </Button>
           </form>
         </div>
+
+        <div className="my-6 flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted-foreground">
+            {t("or_continue_with")}
+          </span>
+          <Separator className="flex-1" />
+        </div>
+
+        <form action={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">{t("email")}</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">{t("password")}</Label>
+              <Link
+                href="/forgot-password"
+                className="text-xs text-muted-foreground hover:text-primary"
+              >
+                {t("forgot_password")}
+              </Link>
+            </div>
+            <PasswordInput
+              id="password"
+              name="password"
+              autoComplete="current-password"
+              required
+              minLength={6}
+            />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("sign_in")}
+          </Button>
+        </form>
       </CardContent>
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">

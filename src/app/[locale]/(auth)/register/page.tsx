@@ -12,6 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordStrength } from "@/components/ui/password-strength";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { register, signInWithGoogle, signInWithApple } from "@/actions/auth";
@@ -24,19 +26,11 @@ export default function RegisterPage() {
   const locale = useLocale();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passwordValue, setPasswordValue] = useState("");
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setError("");
-
-    const password = formData.get("password") as string;
-    const confirmPassword = formData.get("confirm_password") as string;
-
-    if (password !== confirmPassword) {
-      setError("Passwords don't match");
-      setLoading(false);
-      return;
-    }
 
     const result = await register(formData);
     if (result?.error) {
@@ -52,71 +46,11 @@ export default function RegisterPage() {
         <CardDescription>{t("register_subtitle")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">{t("first_name")}</Label>
-              <Input id="first_name" name="first_name" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="last_name">{t("last_name")}</Label>
-              <Input id="last_name" name="last_name" required />
-            </div>
+        {error && (
+          <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            {error}
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">{t("email")}</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="name@example.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">{t("password")}</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={8}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirm_password">{t("confirm_password")}</Label>
-            <Input
-              id="confirm_password"
-              name="confirm_password"
-              type="password"
-              required
-              minLength={8}
-            />
-          </div>
-
-          <input type="hidden" name="locale" value={locale} />
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {t("sign_up")}
-          </Button>
-        </form>
-
-        <div className="my-6 flex items-center gap-3">
-          <Separator className="flex-1" />
-          <span className="text-xs text-muted-foreground">
-            {t("or_continue_with")}
-          </span>
-          <Separator className="flex-1" />
-        </div>
+        )}
 
         <div className="space-y-3">
           <form
@@ -125,7 +59,7 @@ export default function RegisterPage() {
               if (result?.error) setError(result.error);
             }}
           >
-            <Button variant="outline" className="w-full" type="submit">
+            <Button variant="outline" className="h-11 w-full" type="submit">
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                 <path
                   fill="currentColor"
@@ -154,7 +88,7 @@ export default function RegisterPage() {
               if (result?.error) setError(result.error);
             }}
           >
-            <Button variant="outline" className="w-full" type="submit">
+            <Button variant="outline" className="h-11 w-full" type="submit">
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
               </svg>
@@ -162,6 +96,58 @@ export default function RegisterPage() {
             </Button>
           </form>
         </div>
+
+        <div className="my-6 flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted-foreground">
+            {t("or_continue_with")}
+          </span>
+          <Separator className="flex-1" />
+        </div>
+
+        <form action={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="first_name">{t("first_name")}</Label>
+              <Input id="first_name" name="first_name" autoComplete="given-name" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="last_name">{t("last_name")}</Label>
+              <Input id="last_name" name="last_name" autoComplete="family-name" required />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">{t("email")}</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="name@example.com"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password">{t("password")}</Label>
+            <PasswordInput
+              id="password"
+              name="password"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              onChange={(e) => setPasswordValue(e.target.value)}
+            />
+            <PasswordStrength password={passwordValue} />
+          </div>
+
+          <input type="hidden" name="locale" value={locale} />
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("sign_up")}
+          </Button>
+        </form>
       </CardContent>
       <CardFooter className="flex-col gap-3">
         <p className="text-sm text-muted-foreground">
