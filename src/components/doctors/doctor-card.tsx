@@ -127,11 +127,20 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         <Link href={`/doctors/${doctor.slug}`}>
           <Card
             className={cn(
-              "group h-full transition-all hover:border-primary/50 hover:shadow-lg",
+              "group relative h-full overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg",
               isHighlighted && "border-primary ring-2 ring-primary/20 shadow-lg"
             )}
           >
-            <CardContent className="p-5">
+            {/* Featured badge — positioned at top-left corner */}
+            {doctor.is_featured && (
+              <div className="absolute left-3 top-3 z-10">
+                <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs shadow-sm dark:bg-amber-900/40 dark:text-amber-300">
+                  ★ Featured
+                </Badge>
+              </div>
+            )}
+
+            <CardContent className={cn("p-5", doctor.is_featured && "pt-10")}>
               {/* Desktop: horizontal split layout (info left | availability right) */}
               <div className={cn(
                 "flex flex-col",
@@ -163,13 +172,13 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     {/* Info */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-semibold group-hover:text-primary">
+                        <div className="min-w-0">
+                          <h3 className="truncate font-semibold group-hover:text-primary">
                             {doctor.title} {doctor.profile.first_name}{" "}
                             {doctor.profile.last_name}
                           </h3>
                           {primarySpecialty && (
-                            <p className="text-sm text-muted-foreground">
+                            <p className="truncate text-sm text-muted-foreground">
                               {formatSpecialtyName(primarySpecialty.name_key)}
                             </p>
                           )}
@@ -191,11 +200,6 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                               Testing
                             </Badge>
                           )}
-                          {doctor.is_featured && (
-                            <Badge variant="secondary" className="shrink-0 text-xs">
-                              Featured
-                            </Badge>
-                          )}
                           {matchScore != null && matchScore > 0 && (
                             <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
                               {matchScore}% Match
@@ -207,31 +211,31 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       {/* Location */}
                       {doctor.location && (
                         <div className="mt-1.5 flex items-center gap-1 text-sm text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5" />
-                          <span>
+                          <MapPin className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">
                             {doctor.location.city}, {doctor.location.country_code}
                           </span>
                         </div>
                       )}
 
                       {/* Badges */}
-                      <div className="mt-2 flex items-center gap-3">
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                         {doctor.verification_status === "verified" && (
                           <div className="flex items-center gap-1 text-green-600">
-                            <Shield className="h-3.5 w-3.5" />
+                            <Shield className="h-3.5 w-3.5 shrink-0" />
                             <span className="text-xs">Verified</span>
                           </div>
                         )}
                         {doctor.consultation_types?.includes("video") && (
                           <div className="flex items-center gap-1 text-purple-600">
-                            <Video className="h-3.5 w-3.5" />
+                            <Video className="h-3.5 w-3.5 shrink-0" />
                             <span className="text-xs">Video</span>
                           </div>
                         )}
                         {doctor.is_wheelchair_accessible &&
                           doctor.consultation_types?.includes("in_person") && (
                           <div className="flex items-center gap-1 text-blue-600">
-                            <Accessibility className="h-3.5 w-3.5" />
+                            <Accessibility className="h-3.5 w-3.5 shrink-0" />
                             <span className="text-xs">Accessible</span>
                           </div>
                         )}
