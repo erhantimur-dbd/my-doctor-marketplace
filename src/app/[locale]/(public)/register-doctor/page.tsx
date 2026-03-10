@@ -157,7 +157,7 @@ export default function RegisterDoctorPage() {
   // Step 4: Pricing
   const [consultationFee, setConsultationFee] = useState<number>(50);
   const [videoFee, setVideoFee] = useState<number>(40);
-  const [currency, setCurrency] = useState("EUR");
+  const [currency, setCurrency] = useState("GBP");
   const [hasTestingAddon, setHasTestingAddon] = useState(false);
   const [inPersonDepositType, setInPersonDepositType] = useState<"none" | "percentage" | "flat">("none");
   const [inPersonDepositValue, setInPersonDepositValue] = useState<number | null>(null);
