@@ -100,7 +100,7 @@ export async function register(formData: FormData) {
   const lastName = formData.get("last_name") as string;
   const locale = (formData.get("locale") as string) || "en";
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -115,6 +115,15 @@ export async function register(formData: FormData) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Supabase returns a fake user with empty identities for duplicate emails
+  // (to prevent email enumeration). Detect this and return a clear error.
+  if (data.user?.identities?.length === 0) {
+    return {
+      error:
+        "An account with this email already exists. Please sign in instead.",
+    };
   }
 
   revalidatePath("/", "layout");
@@ -172,6 +181,15 @@ async function createDoctorAccount(formData: FormData): Promise<
 
   if (!data.user) {
     return { error: "Account creation failed. Please try again." };
+  }
+
+  // Supabase returns a fake user with empty identities for duplicate emails
+  // (to prevent email enumeration). Detect this and return a clear error.
+  if (data.user.identities?.length === 0) {
+    return {
+      error:
+        "An account with this email already exists. Please sign in instead.",
+    };
   }
 
   // Use admin client because user has no active session yet
@@ -478,6 +496,15 @@ export async function registerTestingService(formData: FormData) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  // Supabase returns a fake user with empty identities for duplicate emails
+  // (to prevent email enumeration). Detect this and return a clear error.
+  if (data.user?.identities?.length === 0) {
+    return {
+      error:
+        "An account with this email already exists. Please sign in instead.",
+    };
   }
 
   if (data.user) {
