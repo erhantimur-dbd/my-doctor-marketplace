@@ -95,6 +95,60 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // Role-based access control: enforce role boundaries for all protected routes
+  if ((isPatientRoute || isDoctorRoute || isAdminRoute) && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const userRole = profile?.role;
+
+    // Patient routes: only accessible by patients
+    if (isPatientRoute && userRole !== "patient") {
+      if (userRole === "doctor") {
+        return NextResponse.redirect(
+          new URL(`/${locale}/doctor-dashboard`, request.url)
+        );
+      }
+      if (userRole === "admin") {
+        return NextResponse.redirect(
+          new URL(`/${locale}/admin`, request.url)
+        );
+      }
+      return NextResponse.redirect(new URL(`/${locale}`, request.url));
+    }
+
+    // Doctor routes: only accessible by doctors
+    if (isDoctorRoute && userRole !== "doctor") {
+      if (userRole === "patient") {
+        return NextResponse.redirect(
+          new URL(`/${locale}/dashboard`, request.url)
+        );
+      }
+      if (userRole === "admin") {
+        return NextResponse.redirect(
+          new URL(`/${locale}/admin`, request.url)
+        );
+      }
+      return NextResponse.redirect(new URL(`/${locale}`, request.url));
+    }
+
+    // Admin routes: must be admin AND on email allowlist
+    if (isAdminRoute) {
+      if (
+        ADMIN_EMAILS.length > 0 &&
+        !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
+      ) {
+        return NextResponse.redirect(new URL(`/${locale}`, request.url));
+      }
+      if (userRole !== "admin") {
+        return NextResponse.redirect(new URL(`/${locale}`, request.url));
+      }
+    }
+  }
+
   // License enforcement: redirect suspended orgs to billing page
   if (isDoctorRoute && user) {
     const billingPages = [
@@ -130,25 +184,6 @@ export async function middleware(request: NextRequest) {
           );
         }
       }
-    }
-  }
-
-  // Admin routes: verify role AND email allowlist at the edge
-  if (isAdminRoute && user) {
-    // Check email allowlist first (fast, no DB query)
-    if (ADMIN_EMAILS.length > 0 && !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")) {
-      return NextResponse.redirect(new URL(`/${locale}`, request.url));
-    }
-
-    // Check admin role in database
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.role !== "admin") {
-      return NextResponse.redirect(new URL(`/${locale}`, request.url));
     }
   }
 
