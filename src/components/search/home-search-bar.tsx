@@ -454,13 +454,25 @@ export function HomeSearchBar({
       if (result.data) {
         const params = new URLSearchParams();
         if (result.data.specialty) params.set("specialty", result.data.specialty);
-        if (result.data.location) params.set("location", result.data.location);
         if (result.data.language) params.set("language", result.data.language);
         if (result.data.maxPrice) params.set("maxPrice", String(result.data.maxPrice / 100));
         if (result.data.minRating) params.set("minRating", String(result.data.minRating));
         if (result.data.consultationType) params.set("consultationType", result.data.consultationType);
         if (result.data.query) params.set("query", result.data.query);
-        if (location && location !== "all" && !result.data.location) params.set("location", location);
+
+        // Location priority: user's explicit selection always wins over AI-parsed location.
+        // This prevents the AI from overriding a manually selected location (e.g., London)
+        // with a hallucinated one (e.g., Berlin from "pain in my neck").
+        if (placeData) {
+          params.set("placeLat", placeData.lat.toFixed(6));
+          params.set("placeLng", placeData.lng.toFixed(6));
+          params.set("placeName", placeData.name);
+          params.set("radius", "10");
+        } else if (location && location !== "all") {
+          params.set("location", location);
+        } else if (result.data.location) {
+          params.set("location", result.data.location);
+        }
         params.set("aiParsed", "true");
         router.push(`/doctors?${params.toString()}`);
       } else {
@@ -472,7 +484,7 @@ export function HomeSearchBar({
     } finally {
       setAiLoading(false);
     }
-  }, [query, locale, location, router, handleSearch]);
+  }, [query, locale, location, placeData, router, handleSearch]);
 
   // Smart search: use NL parser when AI detects natural language, otherwise basic search
   const handleSmartSearch = useCallback(() => {
@@ -768,8 +780,16 @@ export function HomeSearchBar({
             {aiSymptomResult && (() => {
               const AiSpecIcon = specialtyIconMap[aiSymptomResult.primarySpecialty] || Stethoscope;
               const aiSc = getSpecialtyColor(aiSymptomResult.primarySpecialty);
+              // Show the first related specialty as a second suggestion
+              const relatedSlug = aiSymptomResult.relatedSpecialties.find(
+                (s) => s !== aiSymptomResult.primarySpecialty
+              );
+              const RelatedIcon = relatedSlug
+                ? (specialtyIconMap[relatedSlug] || Stethoscope)
+                : null;
+              const relatedSc = relatedSlug ? getSpecialtyColor(relatedSlug) : null;
               return (
-                <div className="px-2 pb-1">
+                <div className="space-y-1.5 px-2 pb-1">
                   <AISymptomResult
                     analysis={aiSymptomResult}
                     specialtyLabel={tSpec(slugToSpecialtyKey(aiSymptomResult.primarySpecialty))}
@@ -780,6 +800,27 @@ export function HomeSearchBar({
                     iconBg={aiSc.bg}
                     iconColor={aiSc.text}
                   />
+                  {relatedSlug && RelatedIcon && relatedSc && (
+                    <AISymptomResult
+                      analysis={{
+                        ...aiSymptomResult,
+                        primarySpecialty: relatedSlug,
+                      }}
+                      specialtyLabel={tSpec(slugToSpecialtyKey(relatedSlug))}
+                      onSelect={() =>
+                        handleSelectSuggestion({
+                          type: "ai_symptom",
+                          analysis: {
+                            ...aiSymptomResult,
+                            primarySpecialty: relatedSlug,
+                          },
+                        })
+                      }
+                      icon={RelatedIcon}
+                      iconBg={relatedSc.bg}
+                      iconColor={relatedSc.text}
+                    />
+                  )}
                 </div>
               );
             })()}
@@ -1059,8 +1100,15 @@ export function HomeSearchBar({
                 {aiSymptomResult && (() => {
                   const AiSpecIcon = specialtyIconMap[aiSymptomResult.primarySpecialty] || Stethoscope;
                   const aiSc = getSpecialtyColor(aiSymptomResult.primarySpecialty);
+                  const relatedSlug = aiSymptomResult.relatedSpecialties.find(
+                    (s) => s !== aiSymptomResult.primarySpecialty
+                  );
+                  const RelatedIcon = relatedSlug
+                    ? (specialtyIconMap[relatedSlug] || Stethoscope)
+                    : null;
+                  const relatedSc = relatedSlug ? getSpecialtyColor(relatedSlug) : null;
                   return (
-                    <div className="px-2 pb-1">
+                    <div className="space-y-1.5 px-2 pb-1">
                       <AISymptomResult
                         analysis={aiSymptomResult}
                         specialtyLabel={tSpec(slugToSpecialtyKey(aiSymptomResult.primarySpecialty))}
@@ -1071,6 +1119,27 @@ export function HomeSearchBar({
                         iconBg={aiSc.bg}
                         iconColor={aiSc.text}
                       />
+                      {relatedSlug && RelatedIcon && relatedSc && (
+                        <AISymptomResult
+                          analysis={{
+                            ...aiSymptomResult,
+                            primarySpecialty: relatedSlug,
+                          }}
+                          specialtyLabel={tSpec(slugToSpecialtyKey(relatedSlug))}
+                          onSelect={() =>
+                            handleSelectSuggestion({
+                              type: "ai_symptom",
+                              analysis: {
+                                ...aiSymptomResult,
+                                primarySpecialty: relatedSlug,
+                              },
+                            })
+                          }
+                          icon={RelatedIcon}
+                          iconBg={relatedSc.bg}
+                          iconColor={relatedSc.text}
+                        />
+                      )}
                     </div>
                   );
                 })()}

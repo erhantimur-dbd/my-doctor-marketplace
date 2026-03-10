@@ -76,6 +76,12 @@ Given the patient's symptoms, determine:
 3. Urgency level: "emergency" if symptoms suggest immediate danger (chest pain + breathing difficulty, stroke signs, severe bleeding, loss of consciousness), "urgent" if should be seen within days, "routine" for standard appointments
 4. Whether in-person or video consultation is appropriate
 
+IMPORTANT TRIAGE RULES:
+- For common, non-specific symptoms (headaches, general pain, fatigue, fever, cough, cold, flu-like symptoms, dizziness, nausea, general malaise, sore throat, stomach ache), the primarySpecialty MUST be "general-practice" (GP). Put the relevant specialist in relatedSpecialties.
+- Only set a specialist as primarySpecialty when symptoms are clearly specific to that specialty (e.g. "skin rash" → dermatology, "chest pain with shortness of breath" → cardiology, "broken bone" → orthopedics).
+- A GP is the first point of contact for most patients. They can refer to specialists when needed.
+- Always include "general-practice" in relatedSpecialties if it's not the primarySpecialty.
+
 Patient symptoms: "${trimmed}"
 Patient locale: ${locale}
 
