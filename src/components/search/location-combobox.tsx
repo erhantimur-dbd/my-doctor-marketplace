@@ -344,7 +344,10 @@ export function LocationCombobox({
               lng: loc.lng(),
               name: prediction.mainText,
             });
-            onValueChange("");
+            // Don't call onValueChange("") here — onPlaceSelect already
+            // handles clearing the predefined location param via the URL.
+            // Calling onValueChange("") would trigger a second router.push
+            // that wipes the place params.
             return;
           }
         }
@@ -357,7 +360,6 @@ export function LocationCombobox({
             lng: coords.lng,
             name: prediction.mainText,
           });
-          onValueChange("");
         }
       } catch {
         // Last resort: geocode the description text
@@ -368,7 +370,6 @@ export function LocationCombobox({
             lng: coords.lng,
             name: prediction.mainText,
           });
-          onValueChange("");
         }
       } finally {
         setResolvingPlace(false);
