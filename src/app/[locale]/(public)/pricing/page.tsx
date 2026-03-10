@@ -335,10 +335,10 @@ export default function PricingPage() {
             </p>
           </div>
 
-          <div className="mx-auto mt-8 grid max-w-4xl gap-6 md:grid-cols-2">
-            {/* Standalone Testing — £99/month */}
-            <Card className="relative flex flex-col border-teal-200 dark:border-teal-900">
-              <CardContent className="flex flex-1 flex-col p-6">
+          <div className="mx-auto mt-8 max-w-lg">
+            {/* Single unified testing card */}
+            <Card className="relative border-teal-200 dark:border-teal-900">
+              <CardContent className="p-6 md:p-8">
                 <div className="flex flex-col items-center text-center">
                   <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
                     <FlaskConical className="h-7 w-7 text-teal-600" />
@@ -349,7 +349,12 @@ export default function PricingPage() {
                   <p className="mt-1 text-sm text-muted-foreground">
                     {TESTING_STANDALONE_PLAN.description}
                   </p>
-                  <div className="mt-4">
+                </div>
+
+                {/* Pricing options */}
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  {/* Standalone price */}
+                  <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-4 text-center dark:border-teal-900 dark:bg-teal-950/20">
                     <span className="text-3xl font-bold">
                       {formatPriceForLocale(
                         TESTING_STANDALONE_PLAN.priceMonthlyPence,
@@ -357,12 +362,37 @@ export default function PricingPage() {
                       )}
                     </span>
                     <span className="text-muted-foreground"> / month</span>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Standalone
+                    </p>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    + {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
-                  </p>
+
+                  {/* Add-on price */}
+                  {testingModule && (
+                    <div className="relative rounded-xl border border-teal-400 bg-teal-50/50 p-4 text-center dark:border-teal-800 dark:bg-teal-950/20">
+                      <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-teal-600 text-white shadow-sm hover:bg-teal-600">
+                        Save 50%
+                      </Badge>
+                      <span className="text-3xl font-bold">
+                        {formatPriceForLocale(
+                          testingModule.priceMonthlyPence,
+                          locale
+                        )}
+                      </span>
+                      <span className="text-muted-foreground"> / month</span>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Add-on for Starter or Professional
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <ul className="mt-6 flex-1 space-y-2.5">
+
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  + {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
+                </p>
+
+                {/* Features */}
+                <ul className="mt-6 space-y-2.5">
                   {TESTING_STANDALONE_PLAN.features.map((feature) => (
                     <li
                       key={feature}
@@ -373,60 +403,19 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  className="mt-6 w-full rounded-full bg-teal-600 hover:bg-teal-700"
-                  asChild
-                >
-                  <Link href="/register-testing-service">
-                    Register as Testing Service
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
 
-            {/* Doctor Add-on — £49/month */}
-            {testingModule && (
-              <Card className="relative flex flex-col border-teal-400 shadow-md dark:border-teal-800">
-                <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
-                  <Badge className="bg-teal-600 text-white shadow-md hover:bg-teal-600">
-                    Save 50%
-                  </Badge>
-                </div>
-                <CardContent className="flex flex-1 flex-col p-6 pt-8">
-                  <div className="flex flex-col items-center text-center">
-                    <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
-                      <FlaskConical className="h-7 w-7 text-teal-600" />
-                    </div>
-                    <h3 className="mt-4 text-lg font-bold">Doctor Add-on</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      For doctors on Starter, Professional, or Clinic
-                    </p>
-                    <div className="mt-4">
-                      <span className="text-3xl font-bold">
-                        {formatPriceForLocale(
-                          testingModule.priceMonthlyPence,
-                          locale
-                        )}
-                      </span>
-                      <span className="text-muted-foreground"> / month</span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Added to your existing subscription
-                    </p>
-                  </div>
-                  <ul className="mt-6 flex-1 space-y-2.5">
-                    {TESTING_STANDALONE_PLAN.features.map((feature) => (
-                      <li
-                        key={feature}
-                        className="flex items-start gap-2 text-sm"
-                      >
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
+                {/* CTAs */}
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Button
-                    className="mt-6 w-full rounded-full"
+                    className="flex-1 rounded-full bg-teal-600 hover:bg-teal-700"
+                    asChild
+                  >
+                    <Link href="/register-testing-service">
+                      Register as Testing Service
+                    </Link>
+                  </Button>
+                  <Button
+                    className="flex-1 rounded-full"
                     variant="outline"
                     asChild
                   >
@@ -434,12 +423,12 @@ export default function PricingPage() {
                       Register as Doctor <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                  <p className="mt-3 text-center text-xs text-muted-foreground">
-                    Already a doctor? Add from your billing dashboard.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+                <p className="mt-3 text-center text-xs text-muted-foreground">
+                  Already a doctor? Add from your billing dashboard.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
