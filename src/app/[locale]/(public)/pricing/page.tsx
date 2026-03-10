@@ -337,11 +337,11 @@ export default function PricingPage() {
 
           <div className="mx-auto mt-8 max-w-lg">
             {/* Single unified testing card */}
-            <Card className="relative border-teal-200 dark:border-teal-900">
+            <Card className="relative border-sky-200 dark:border-sky-900">
               <CardContent className="p-6 md:p-8">
                 <div className="flex flex-col items-center text-center">
-                  <div className="rounded-2xl bg-teal-50 p-3 dark:bg-teal-950/30">
-                    <FlaskConical className="h-7 w-7 text-teal-600" />
+                  <div className="rounded-2xl bg-sky-50 p-3 dark:bg-sky-950/30">
+                    <FlaskConical className="h-7 w-7 text-sky-500" />
                   </div>
                   <h3 className="mt-4 text-lg font-bold">
                     {TESTING_STANDALONE_PLAN.name}
@@ -354,7 +354,7 @@ export default function PricingPage() {
                 {/* Pricing options */}
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
                   {/* Standalone price */}
-                  <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-4 text-center dark:border-teal-900 dark:bg-teal-950/20">
+                  <div className="rounded-xl border border-sky-200 bg-sky-50/50 p-4 text-center dark:border-sky-900 dark:bg-sky-950/20">
                     <span className="text-3xl font-bold">
                       {formatPriceForLocale(
                         TESTING_STANDALONE_PLAN.priceMonthlyPence,
@@ -369,8 +369,8 @@ export default function PricingPage() {
 
                   {/* Add-on price */}
                   {testingModule && (
-                    <div className="relative rounded-xl border border-teal-400 bg-teal-50/50 p-4 text-center dark:border-teal-800 dark:bg-teal-950/20">
-                      <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-teal-600 text-white shadow-sm hover:bg-teal-600">
+                    <div className="relative rounded-xl border border-sky-400 bg-sky-50/50 p-4 text-center dark:border-sky-800 dark:bg-sky-950/20">
+                      <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-sky-500 text-white shadow-sm hover:bg-sky-500">
                         Save 50%
                       </Badge>
                       <span className="text-3xl font-bold">
@@ -398,7 +398,7 @@ export default function PricingPage() {
                       key={feature}
                       className="flex items-start gap-2 text-sm"
                     >
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-sky-500" />
                       {feature}
                     </li>
                   ))}
@@ -407,7 +407,7 @@ export default function PricingPage() {
                 {/* CTAs */}
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Button
-                    className="flex-1 rounded-full bg-teal-600 hover:bg-teal-700"
+                    className="flex-1 rounded-full bg-sky-500 hover:bg-sky-600"
                     asChild
                   >
                     <Link href="/register-testing-service">
