@@ -507,7 +507,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
           <Dialog open={showFullAvailability} onOpenChange={setShowFullAvailability}>
-            <DialogContent showCloseButton={false} className="max-w-sm md:max-w-4xl p-4 md:p-6 gap-2 md:max-h-[75vh] max-h-[85vh] flex flex-col">
+            <DialogContent showCloseButton={false} className="max-w-[92vw] md:max-w-3xl p-4 md:p-6 gap-2 max-h-[80vh] md:max-h-[70vh] flex flex-col">
               {/* Custom close button */}
               <DialogClose className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/80 text-white shadow-md transition-colors hover:bg-black focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                 <X className="h-4 w-4" />

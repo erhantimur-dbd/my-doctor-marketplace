@@ -118,7 +118,7 @@ export function DoctorResultsWithMap({
       <div
         className={
           hasMapData
-            ? "w-[60%] xl:w-[65%] space-y-4 overflow-y-auto"
+            ? "min-w-0 flex-[3] xl:flex-[13] space-y-4 overflow-y-auto"
             : "w-full space-y-4"
         }
       >
@@ -139,7 +139,7 @@ export function DoctorResultsWithMap({
 
       {/* Map — right side (only if we have location data) */}
       {hasMapData && (
-        <div className="hidden w-[40%] xl:w-[35%] lg:block">
+        <div className="hidden min-w-0 flex-[2] xl:flex-[7] lg:block">
           <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-hidden rounded-lg border relative">
             <DoctorMap
               doctors={mapDoctors}
