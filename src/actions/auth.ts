@@ -195,17 +195,22 @@ async function createDoctorAccount(formData: FormData): Promise<
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  // If trigger still hasn't fired after 5s, create profile manually
+  // If trigger still hasn't fired after 5s, create profile manually.
+  // Use upsert to handle the race condition where the trigger fires
+  // between the last poll and this insert (avoids duplicate key error).
   if (!profileReady) {
     const { error: profileError } = await adminSupabase
       .from("profiles")
-      .insert({
-        id: data.user.id,
-        role: "doctor",
-        first_name: firstName,
-        last_name: lastName,
-        email,
-      });
+      .upsert(
+        {
+          id: data.user.id,
+          role: "doctor",
+          first_name: firstName,
+          last_name: lastName,
+          email,
+        },
+        { onConflict: "id" }
+      );
 
     if (profileError) {
       console.error("Profile creation failed:", profileError);
@@ -231,6 +236,25 @@ async function createDoctorAccount(formData: FormData): Promise<
     Math.random().toString(36).substring(2, 6)
   ).toUpperCase();
 
+  // Address fields from registration form
+  const clinicName = (formData.get("clinic_name") as string)?.trim() || null;
+  const address = (formData.get("address") as string)?.trim() || null;
+  const city = (formData.get("city") as string)?.trim() || null;
+  const postalCode = (formData.get("postal_code") as string)?.trim() || null;
+  const countryCode = (formData.get("country") as string)?.trim() || null;
+
+  // Resolve location_id from country code
+  let locationId: string | null = null;
+  if (countryCode) {
+    const { data: location } = await adminSupabase
+      .from("locations")
+      .select("id")
+      .eq("country_code", countryCode)
+      .limit(1)
+      .maybeSingle();
+    if (location) locationId = location.id;
+  }
+
   const { error: doctorError, data: newDoctor } = await adminSupabase
     .from("doctors")
     .insert({
@@ -250,6 +274,11 @@ async function createDoctorAccount(formData: FormData): Promise<
         return dv ? parseInt(dv, 10) : null;
       })(),
       ...(gmcNumber && { gmc_number: gmcNumber }),
+      ...(clinicName && { clinic_name: clinicName }),
+      ...(address && { address }),
+      ...(city && { city }),
+      ...(postalCode && { postal_code: postalCode }),
+      ...(locationId && { location_id: locationId }),
     })
     .select("id")
     .single();

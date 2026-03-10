@@ -18,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
+import type { ParsedAddress } from "@/components/shared/address-autocomplete";
 import {
   User,
   Briefcase,
@@ -70,6 +72,8 @@ export default function ProfilePage() {
   const [yearsOfExperience, setYearsOfExperience] = useState<number>(0);
   const [clinicName, setClinicName] = useState("");
   const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [languages, setLanguages] = useState<string[]>([]);
   const [consultationTypes, setConsultationTypes] = useState<string[]>([]);
   const [education, setEducation] = useState<Education[]>([]);
@@ -184,6 +188,8 @@ export default function ProfilePage() {
     setYearsOfExperience(data.years_of_experience || 0);
     setClinicName(data.clinic_name || "");
     setAddress(data.address || "");
+    setCity(data.city || "");
+    setPostalCode(data.postal_code || "");
     setLanguages(data.languages || []);
     setConsultationTypes(data.consultation_types || []);
     setEducation((data.education as Education[]) || []);
@@ -224,6 +230,8 @@ export default function ProfilePage() {
         years_of_experience: yearsOfExperience,
         clinic_name: clinicName || null,
         address: address || null,
+        city: city || null,
+        postal_code: postalCode || null,
         languages,
         consultation_types: consultationTypes,
         education,
@@ -419,22 +427,45 @@ export default function ProfilePage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Clinic Name</Label>
+            <Input
+              placeholder="e.g., City Medical Center"
+              value={clinicName}
+              onChange={(e) => setClinicName(e.target.value)}
+              disabled={isVerified}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Address</Label>
+            <AddressAutocomplete
+              value={address}
+              onChange={setAddress}
+              onPlaceSelect={(parsed: ParsedAddress) => {
+                setAddress(parsed.addressLine1);
+                if (parsed.city) setCity(parsed.city);
+                if (parsed.postalCode) setPostalCode(parsed.postalCode);
+              }}
+              placeholder="Start typing your clinic address..."
+              disabled={isVerified}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Clinic Name</Label>
+              <Label>City</Label>
               <Input
-                placeholder="e.g., City Medical Center"
-                value={clinicName}
-                onChange={(e) => setClinicName(e.target.value)}
+                placeholder="City"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
                 disabled={isVerified}
               />
             </div>
             <div className="space-y-2">
-              <Label>Address</Label>
+              <Label>Postcode</Label>
               <Input
-                placeholder="Full clinic address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                placeholder="Postcode / ZIP"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
                 disabled={isVerified}
               />
             </div>

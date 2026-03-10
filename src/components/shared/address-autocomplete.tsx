@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-interface ParsedAddress {
+export interface ParsedAddress {
   addressLine1: string;
   city: string;
   state: string;
@@ -19,6 +19,8 @@ interface AddressAutocompleteInnerProps {
   onChange: (value: string) => void;
   onPlaceSelect: (address: ParsedAddress) => void;
   placeholder?: string;
+  disabled?: boolean;
+  className?: string;
 }
 
 function AddressAutocompleteInner({
@@ -26,6 +28,8 @@ function AddressAutocompleteInner({
   onChange,
   onPlaceSelect,
   placeholder,
+  disabled,
+  className,
 }: AddressAutocompleteInnerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -99,16 +103,19 @@ function AddressAutocompleteInner({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="mt-1.5"
+      disabled={disabled}
+      className={className}
     />
   );
 }
 
-interface AddressAutocompleteProps {
+export interface AddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
   onPlaceSelect: (address: ParsedAddress) => void;
   placeholder?: string;
+  disabled?: boolean;
+  className?: string;
 }
 
 export function AddressAutocomplete(props: AddressAutocompleteProps) {
@@ -118,7 +125,8 @@ export function AddressAutocomplete(props: AddressAutocompleteProps) {
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         placeholder={props.placeholder}
-        className="mt-1.5"
+        disabled={props.disabled}
+        className={props.className}
       />
     );
   }

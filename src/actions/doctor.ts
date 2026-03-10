@@ -110,6 +110,12 @@ export async function updateDoctorProfile(formData: FormData) {
   const address = formData.get("address") as string;
   if (address !== null) updates.address = address;
 
+  const city = formData.get("city") as string;
+  if (city !== null) updates.city = city;
+
+  const postalCode = formData.get("postal_code") as string;
+  if (postalCode !== null) updates.postal_code = postalCode;
+
   const fee = formData.get("consultation_fee_cents") as string;
   if (fee) updates.consultation_fee_cents = parseInt(fee, 10);
 

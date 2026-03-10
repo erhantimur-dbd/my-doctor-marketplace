@@ -30,7 +30,7 @@ import {
   updateNotifications,
 } from "./actions";
 import { AvatarUpload } from "./avatar-upload";
-import { AddressAutocomplete } from "./address-autocomplete";
+import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
 import { MedicalProfileSection } from "./medical-profile-section";
 import { SavedPaymentsSection } from "./saved-payments-section";
 import { DataPrivacySection } from "./data-privacy-section";

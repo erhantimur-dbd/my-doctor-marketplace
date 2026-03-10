@@ -39,6 +39,8 @@ import {
   type LicenseTierConfig,
 } from "@/lib/constants/license-tiers";
 import { formatSpecialtyName } from "@/lib/utils";
+import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
+import type { ParsedAddress } from "@/components/shared/address-autocomplete";
 import type { LicenseTier } from "@/types";
 import {
   Loader2,
@@ -146,6 +148,8 @@ export default function RegisterDoctorPage() {
   // Step 3: Practice details
   const [clinicName, setClinicName] = useState("");
   const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("");
   const [consultationTypes, setConsultationTypes] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(["en"]);
@@ -247,6 +251,13 @@ export default function RegisterDoctorPage() {
     if (referralCode) formData.set("referral_code", referralCode);
     if (colleagueName) formData.set("colleague_name", colleagueName);
     if (colleagueEmail) formData.set("colleague_email", colleagueEmail);
+
+    // Practice details
+    if (clinicName) formData.set("clinic_name", clinicName);
+    if (address) formData.set("address", address);
+    if (city) formData.set("city", city);
+    if (postalCode) formData.set("postal_code", postalCode);
+    if (country) formData.set("country", country);
 
     // Add-on
     formData.set("has_testing_addon", hasTestingAddon ? "true" : "false");
@@ -584,11 +595,41 @@ export default function RegisterDoctorPage() {
               </div>
               <div className="space-y-2">
                 <Label>Clinic Address</Label>
-                <Input
-                  placeholder="Full street address"
+                <AddressAutocomplete
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={setAddress}
+                  onPlaceSelect={(parsed: ParsedAddress) => {
+                    setAddress(parsed.addressLine1);
+                    if (parsed.city) setCity(parsed.city);
+                    if (parsed.postalCode) setPostalCode(parsed.postalCode);
+                    if (parsed.country) {
+                      // Try to match the country name to a country code
+                      const match = COUNTRIES.find(
+                        (c) => c.name.toLowerCase() === parsed.country.toLowerCase()
+                      );
+                      if (match) setCountry(match.code);
+                    }
+                  }}
+                  placeholder="Start typing your clinic address..."
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>City</Label>
+                  <Input
+                    placeholder="City"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Postcode</Label>
+                  <Input
+                    placeholder="Postcode / ZIP"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Country</Label>
