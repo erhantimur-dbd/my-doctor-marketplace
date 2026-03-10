@@ -153,7 +153,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                   </Avatar>
 
                   <div className="flex-1">
-                    <div className="flex items-start gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <h1 className="text-2xl font-bold">{fullName}</h1>
                       {doctor.verification_status === "verified" && (
                         <div className="flex items-center gap-1 text-green-600">
