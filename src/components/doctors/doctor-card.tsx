@@ -14,7 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, Quote, X } from "lucide-react";
+import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, GraduationCap, Quote, X } from "lucide-react";
+import { LANGUAGES } from "@/lib/constants/countries";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn, formatSpecialtyName } from "@/lib/utils";
@@ -39,6 +40,9 @@ interface DoctorCardProps {
     consultation_types: string[];
     is_wheelchair_accessible?: boolean;
     provider_type?: string;
+    years_of_experience?: number | null;
+    education?: { degree: string; institution: string; year: number }[] | null;
+    certifications?: { name: string; issuer: string; year: number }[] | null;
     languages: string[];
     profile: {
       first_name: string;
@@ -240,6 +244,45 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                           </div>
                         )}
                       </div>
+
+                      {/* Profile snapshot: experience, languages, education */}
+                      {(doctor.years_of_experience || (doctor.languages?.length ?? 0) > 0 || (doctor.education as any[])?.some((e: any) => e.degree || e.institution)) && (
+                        <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                          {doctor.years_of_experience != null && doctor.years_of_experience > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3 w-3 shrink-0" />
+                              <span>{doctor.years_of_experience} years experience</span>
+                            </div>
+                          )}
+                          {doctor.languages?.length > 0 && (
+                            <div className="flex items-center gap-1.5">
+                              <Globe className="h-3 w-3 shrink-0" />
+                              <span className="truncate">
+                                {(() => {
+                                  const names = doctor.languages
+                                    .map((code) => LANGUAGES.find((l) => l.code === code)?.name || code.toUpperCase())
+                                    .slice(0, 3);
+                                  const remaining = doctor.languages.length - 3;
+                                  return remaining > 0
+                                    ? `${names.join(", ")} +${remaining} more`
+                                    : names.join(", ");
+                                })()}
+                              </span>
+                            </div>
+                          )}
+                          {(() => {
+                            const edu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
+                            if (!edu) return null;
+                            const label = [edu.degree, edu.institution].filter(Boolean).join(", ");
+                            return (
+                              <div className="flex items-center gap-1.5">
+                                <GraduationCap className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{label}</span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
                   </div>
 
