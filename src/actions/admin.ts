@@ -1,9 +1,29 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { subscriptionUpgradeInviteEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
+import { getStripe } from "@/lib/stripe/client";
+import { getBookingFeeCents } from "@/lib/utils/currency";
+import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
+import { sendEmail } from "@/lib/email/client";
+import {
+  adminBookingPaymentLinkEmail,
+  bookingCancellationEmail,
+} from "@/lib/email/templates";
+import { removeBookingFromGoogleCalendar } from "@/lib/google/sync";
+import { removeBookingFromMicrosoftCalendar } from "@/lib/microsoft/sync";
+import { removeBookingFromCalDAV } from "@/lib/caldav/sync";
+import { deleteRoom } from "@/lib/daily/client";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
+import {
+  TEMPLATE_BOOKING_CANCELLATION,
+  buildBookingCancellationComponents,
+  mapLocaleToWhatsApp,
+} from "@/lib/whatsapp/templates";
+import { headers } from "next/headers";
 
 // Admin email allowlist — mirrors middleware check for defense-in-depth
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
@@ -1121,6 +1141,853 @@ export async function adminCreateLicense(data: {
   revalidatePath("/admin/licenses");
   revalidatePath("/admin/organizations");
   return { success: true, licenseId: newLicense.id };
+}
+
+// ===================== CSV Export Actions =====================
+
+// ===================== Admin Booking on Behalf =====================
+
+/** Derive origin + locale from incoming request headers. */
+async function getOriginAndLocale() {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "";
+  const proto = h.get("x-forwarded-proto") || "https";
+  const origin = host
+    ? `${proto}://${host}`
+    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const referer = h.get("referer") || "";
+  const localeMatch = referer.match(/\/(en|de|tr|fr)(\/|$)/);
+  const locale = localeMatch ? localeMatch[1] : "en";
+  return { origin, locale };
+}
+
+export async function adminSearchPatients(query: string) {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError, data: [] };
+
+  if (!query || query.length < 2) return { data: [] };
+
+  const q = `%${query}%`;
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, first_name, last_name, email, phone")
+    .eq("role", "patient")
+    .or(`email.ilike.${q},first_name.ilike.${q},last_name.ilike.${q},phone.ilike.${q}`)
+    .limit(10);
+
+  if (error) return { error: error.message, data: [] };
+  return { data: data || [] };
+}
+
+export async function adminCreatePatient(input: {
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+}) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const adminSupabase = createAdminClient();
+
+  // Check if email already exists
+  const { data: existing } = await adminSupabase
+    .from("profiles")
+    .select("id, first_name, last_name, email")
+    .eq("email", input.email.toLowerCase())
+    .maybeSingle();
+
+  if (existing) {
+    return {
+      error: "A patient with this email already exists.",
+      existingPatient: existing,
+    };
+  }
+
+  // Create user via admin API
+  const { data: authData, error: authCreateError } =
+    await adminSupabase.auth.admin.createUser({
+      email: input.email.toLowerCase(),
+      email_confirm: true,
+      user_metadata: {
+        first_name: input.first_name,
+        last_name: input.last_name,
+        role: "patient",
+      },
+    });
+
+  if (authCreateError || !authData.user) {
+    return { error: authCreateError?.message || "Failed to create user." };
+  }
+
+  // Wait for handle_new_user trigger to create profile
+  let profileReady = false;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data: profile } = await adminSupabase
+      .from("profiles")
+      .select("id")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+
+    if (profile) {
+      profileReady = true;
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  // Fallback: create profile manually
+  if (!profileReady) {
+    await adminSupabase.from("profiles").insert({
+      id: authData.user.id,
+      role: "patient",
+      first_name: input.first_name,
+      last_name: input.last_name,
+      email: input.email.toLowerCase(),
+    });
+  } else {
+    // Update profile with provided details
+    await adminSupabase
+      .from("profiles")
+      .update({
+        first_name: input.first_name,
+        last_name: input.last_name,
+        phone: input.phone || null,
+      })
+      .eq("id", authData.user.id);
+  }
+
+  // Send password reset so patient can set their password later
+  await adminSupabase.auth.admin.generateLink({
+    type: "recovery",
+    email: input.email.toLowerCase(),
+  });
+
+  await logAdminAction(supabase, user.id, "patient_created", "profile", authData.user.id, {
+    email: input.email,
+    name: `${input.first_name} ${input.last_name}`,
+  });
+
+  return {
+    success: true,
+    patient: {
+      id: authData.user.id,
+      first_name: input.first_name,
+      last_name: input.last_name,
+      email: input.email.toLowerCase(),
+      phone: input.phone || null,
+    },
+  };
+}
+
+export async function adminSearchDoctors(query: string) {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError, data: [] };
+
+  if (!query || query.length < 2) return { data: [] };
+
+  const adminSupabase = createAdminClient();
+  const q = `%${query}%`;
+
+  const { data, error } = await adminSupabase
+    .from("doctors")
+    .select(
+      `id, slug, consultation_fee_cents, video_consultation_fee_cents, base_currency,
+       consultation_types, stripe_account_id, stripe_onboarding_complete, is_active,
+       profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)`
+    )
+    .eq("verification_status", "verified")
+    .eq("is_active", true);
+
+  if (error) return { error: error.message, data: [] };
+
+  // Client-side filter by name/email since we need to search across joined profile
+  const filtered = (data || []).filter((d: any) => {
+    const profile: any = Array.isArray(d.profile) ? d.profile[0] : d.profile;
+    if (!profile) return false;
+    const searchStr =
+      `${profile.first_name} ${profile.last_name} ${profile.email}`.toLowerCase();
+    return searchStr.includes(query.toLowerCase());
+  });
+
+  return {
+    data: filtered.slice(0, 10).map((d: any) => {
+      const profile: any = Array.isArray(d.profile) ? d.profile[0] : d.profile;
+      return {
+        id: d.id,
+        slug: d.slug,
+        name: `${profile.first_name} ${profile.last_name}`,
+        email: profile.email,
+        consultation_fee_cents: d.consultation_fee_cents,
+        video_consultation_fee_cents: d.video_consultation_fee_cents,
+        base_currency: d.base_currency,
+        consultation_types: d.consultation_types || [],
+        stripe_ready: !!d.stripe_account_id && !!d.stripe_onboarding_complete,
+      };
+    }),
+  };
+}
+
+export async function adminCreateBookingOnBehalf(input: {
+  patient_id: string;
+  doctor_id: string;
+  appointment_date: string;
+  start_time: string;
+  end_time: string;
+  consultation_type: string;
+  patient_notes?: string;
+  service_id?: string;
+}) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const adminSupabase = createAdminClient();
+
+  // Fetch doctor with profile + Stripe info
+  const { data: doctor, error: doctorError } = await adminSupabase
+    .from("doctors")
+    .select(
+      `id, slug, stripe_account_id, stripe_onboarding_complete,
+       consultation_fee_cents, video_consultation_fee_cents, base_currency,
+       cancellation_policy, consultation_types, is_active, verification_status,
+       organization_id,
+       profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)`
+    )
+    .eq("id", input.doctor_id)
+    .single();
+
+  if (doctorError || !doctor) return { error: "Doctor not found." };
+
+  if (!doctor.is_active || doctor.verification_status !== "verified") {
+    return { error: "This doctor is not currently accepting appointments." };
+  }
+  if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
+    return { error: "This doctor has not completed payment setup." };
+  }
+  if (!doctor.consultation_types?.includes(input.consultation_type)) {
+    return { error: "This doctor does not offer the selected consultation type." };
+  }
+
+  // Check org has active license
+  let hasActiveLicense = false;
+  if (doctor.organization_id) {
+    const { data: orgLicense } = await adminSupabase
+      .from("licenses")
+      .select("id")
+      .eq("organization_id", doctor.organization_id)
+      .in("status", ["active", "trialing", "past_due"])
+      .limit(1)
+      .maybeSingle();
+    hasActiveLicense = !!orgLicense;
+  }
+  if (!hasActiveLicense) {
+    const { data: legacySub } = await adminSupabase
+      .from("doctor_subscriptions")
+      .select("id")
+      .eq("doctor_id", doctor.id)
+      .in("status", ["active", "trialing", "past_due"])
+      .limit(1)
+      .maybeSingle();
+    hasActiveLicense = !!legacySub;
+  }
+  if (!hasActiveLicense) {
+    return { error: "This doctor does not have an active subscription." };
+  }
+
+  // Fetch patient
+  const { data: patient } = await adminSupabase
+    .from("profiles")
+    .select("id, first_name, last_name, email")
+    .eq("id", input.patient_id)
+    .single();
+
+  if (!patient) return { error: "Patient not found." };
+
+  // Check slot availability — make sure no existing booking occupies this slot
+  const { data: existingBooking } = await adminSupabase
+    .from("bookings")
+    .select("id")
+    .eq("doctor_id", input.doctor_id)
+    .eq("appointment_date", input.appointment_date)
+    .eq("start_time", input.start_time)
+    .not("status", "in", "(cancelled_patient,cancelled_doctor,refunded,expired)")
+    .limit(1)
+    .maybeSingle();
+
+  if (existingBooking) {
+    return { error: "This time slot is no longer available." };
+  }
+
+  // Calculate fees
+  let consultationFeeCents: number;
+  let serviceName: string | null = null;
+
+  if (input.service_id) {
+    const { data: service } = await adminSupabase
+      .from("doctor_services")
+      .select("*")
+      .eq("id", input.service_id)
+      .eq("doctor_id", input.doctor_id)
+      .single();
+
+    if (!service || !service.is_active) {
+      return { error: "Selected service is no longer available." };
+    }
+    consultationFeeCents = service.price_cents;
+    serviceName = service.name;
+  } else {
+    consultationFeeCents =
+      input.consultation_type === "video" && doctor.video_consultation_fee_cents
+        ? doctor.video_consultation_fee_cents
+        : doctor.consultation_fee_cents;
+  }
+
+  const platformFeeCents = getBookingFeeCents(doctor.base_currency);
+  const totalAmountCents = consultationFeeCents + platformFeeCents;
+
+  // Insert booking with pending_payment + admin metadata
+  const paymentLinkExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+
+  const { data: booking, error: bookingError } = await adminSupabase
+    .from("bookings")
+    .insert({
+      patient_id: input.patient_id,
+      doctor_id: doctor.id,
+      appointment_date: input.appointment_date,
+      start_time: input.start_time,
+      end_time: input.end_time,
+      consultation_type: input.consultation_type,
+      patient_notes: input.patient_notes || null,
+      status: BOOKING_STATUSES.PENDING_PAYMENT,
+      currency: doctor.base_currency,
+      consultation_fee_cents: consultationFeeCents,
+      platform_fee_cents: platformFeeCents,
+      total_amount_cents: totalAmountCents,
+      service_id: input.service_id || null,
+      service_name: serviceName,
+      created_by_admin_id: user.id,
+      payment_link_expires_at: paymentLinkExpiresAt,
+    })
+    .select("id, booking_number")
+    .single();
+
+  if (bookingError || !booking) {
+    console.error("Admin booking insert error:", bookingError);
+    return { error: "Failed to create booking. Please try again." };
+  }
+
+  // Create Stripe Checkout Session
+  const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
+  const doctorName = `${profile.first_name} ${profile.last_name}`;
+  const consultationLabel = serviceName
+    ? serviceName
+    : input.consultation_type === "video"
+      ? "Video Consultation"
+      : "In-Person Consultation";
+
+  const { origin, locale } = await getOriginAndLocale();
+
+  // Stripe checkout sessions max out at 24h
+  const expiresAt = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
+
+  const session = await getStripe().checkout.sessions.create({
+    mode: "payment",
+    customer_email: patient.email,
+    line_items: [
+      {
+        price_data: {
+          currency: doctor.base_currency.toLowerCase(),
+          product_data: {
+            name: `${consultationLabel} with Dr. ${doctorName}`,
+            description: `${input.appointment_date} at ${input.start_time}`,
+          },
+          unit_amount: totalAmountCents,
+        },
+        quantity: 1,
+      },
+    ],
+    payment_intent_data: {
+      application_fee_amount: platformFeeCents,
+      transfer_data: {
+        destination: doctor.stripe_account_id,
+      },
+    },
+    metadata: {
+      booking_id: booking.id,
+      booking_number: booking.booking_number,
+    },
+    expires_at: expiresAt,
+    success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/${locale}`,
+  });
+
+  // Store checkout session ID on booking
+  await adminSupabase
+    .from("bookings")
+    .update({ stripe_checkout_session_id: session.id })
+    .eq("id", booking.id);
+
+  // Send payment link email
+  const { subject, html } = adminBookingPaymentLinkEmail({
+    patientName: patient.first_name || "Patient",
+    doctorName,
+    date: input.appointment_date,
+    time: input.start_time,
+    consultationType: consultationLabel,
+    bookingNumber: booking.booking_number,
+    amount: totalAmountCents / 100,
+    currency: doctor.base_currency.toUpperCase(),
+    paymentUrl: session.url!,
+    expiresInHours: 24,
+  });
+
+  sendEmail({ to: patient.email, subject, html }).catch((err) =>
+    console.error("Admin booking payment link email error:", err)
+  );
+
+  await logAdminAction(supabase, user.id, "booking_created_on_behalf", "booking", booking.id, {
+    patient_id: input.patient_id,
+    patient_email: patient.email,
+    doctor_id: input.doctor_id,
+    booking_number: booking.booking_number,
+  });
+
+  revalidatePath("/admin/bookings");
+  return {
+    success: true,
+    bookingId: booking.id,
+    bookingNumber: booking.booking_number,
+    patientEmail: patient.email,
+  };
+}
+
+export async function adminResendPaymentLink(bookingId: string) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const adminSupabase = createAdminClient();
+
+  const { data: booking } = await adminSupabase
+    .from("bookings")
+    .select(
+      `id, booking_number, status, created_by_admin_id,
+       stripe_checkout_session_id, payment_link_expires_at,
+       appointment_date, start_time, end_time, consultation_type,
+       total_amount_cents, consultation_fee_cents, platform_fee_cents,
+       currency, service_name,
+       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+       doctor:doctors!inner(
+         stripe_account_id, base_currency,
+         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+       )`
+    )
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return { error: "Booking not found." };
+  if (booking.status !== BOOKING_STATUSES.PENDING_PAYMENT) {
+    return { error: "Booking is not in pending payment status." };
+  }
+  if (!booking.created_by_admin_id) {
+    return { error: "Only admin-created bookings support resend." };
+  }
+
+  // Check resend count (stored in audit log)
+  const { count } = await adminSupabase
+    .from("audit_log")
+    .select("id", { count: "exact", head: true })
+    .eq("target_id", bookingId)
+    .eq("action", "payment_link_resent");
+
+  if ((count || 0) >= 5) {
+    return { error: "Maximum resend limit (5) reached." };
+  }
+
+  // Expire old Stripe checkout session
+  if (booking.stripe_checkout_session_id) {
+    try {
+      await getStripe().checkout.sessions.expire(booking.stripe_checkout_session_id);
+    } catch {
+      // Session may already be expired
+    }
+  }
+
+  // Create new Stripe Checkout Session
+  const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
+  const doctor: any = booking.doctor;
+  const doctorProfile: any = doctor?.profile
+    ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
+    : null;
+
+  const doctorName = doctorProfile
+    ? `${doctorProfile.first_name} ${doctorProfile.last_name}`
+    : "Doctor";
+
+  const consultationLabel = booking.service_name
+    ? booking.service_name
+    : booking.consultation_type === "video"
+      ? "Video Consultation"
+      : "In-Person Consultation";
+
+  const { origin, locale } = await getOriginAndLocale();
+  const expiresAt = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
+
+  const session = await getStripe().checkout.sessions.create({
+    mode: "payment",
+    customer_email: patient.email,
+    line_items: [
+      {
+        price_data: {
+          currency: booking.currency.toLowerCase(),
+          product_data: {
+            name: `${consultationLabel} with Dr. ${doctorName}`,
+            description: `${booking.appointment_date} at ${booking.start_time}`,
+          },
+          unit_amount: booking.total_amount_cents,
+        },
+        quantity: 1,
+      },
+    ],
+    payment_intent_data: {
+      application_fee_amount: booking.platform_fee_cents,
+      transfer_data: {
+        destination: doctor.stripe_account_id,
+      },
+    },
+    metadata: {
+      booking_id: booking.id,
+      booking_number: booking.booking_number,
+    },
+    expires_at: expiresAt,
+    success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${origin}/${locale}`,
+  });
+
+  // Update booking with new session + extended expiry
+  const newExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  await adminSupabase
+    .from("bookings")
+    .update({
+      stripe_checkout_session_id: session.id,
+      payment_link_expires_at: newExpiry,
+    })
+    .eq("id", booking.id);
+
+  // Resend email
+  const { subject, html } = adminBookingPaymentLinkEmail({
+    patientName: patient.first_name || "Patient",
+    doctorName,
+    date: booking.appointment_date,
+    time: booking.start_time,
+    consultationType: consultationLabel,
+    bookingNumber: booking.booking_number,
+    amount: booking.total_amount_cents / 100,
+    currency: booking.currency.toUpperCase(),
+    paymentUrl: session.url!,
+    expiresInHours: 24,
+  });
+
+  sendEmail({ to: patient.email, subject, html }).catch((err) =>
+    console.error("Resend payment link email error:", err)
+  );
+
+  await logAdminAction(supabase, user.id, "payment_link_resent", "booking", bookingId, {
+    resend_count: (count || 0) + 1,
+    new_session_id: session.id,
+  });
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  return { success: true, resendCount: (count || 0) + 1 };
+}
+
+export async function adminCancelBooking(
+  bookingId: string,
+  reason?: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const adminSupabase = createAdminClient();
+
+  const { data: booking } = await adminSupabase
+    .from("bookings")
+    .select(
+      `*,
+       patient:profiles!bookings_patient_id_fkey(
+         first_name, last_name, email, phone, notification_whatsapp, preferred_locale
+       ),
+       doctor:doctors!inner(
+         cancellation_policy, cancellation_hours, stripe_account_id,
+         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+       )`
+    )
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return { error: "Booking not found." };
+
+  // Handle unpaid admin-created bookings
+  if (
+    booking.status === BOOKING_STATUSES.PENDING_PAYMENT &&
+    booking.created_by_admin_id
+  ) {
+    // Expire Stripe session
+    if (booking.stripe_checkout_session_id) {
+      try {
+        await getStripe().checkout.sessions.expire(booking.stripe_checkout_session_id);
+      } catch {
+        // May already be expired
+      }
+    }
+
+    // Delete the booking to release the slot
+    await adminSupabase.from("bookings").delete().eq("id", bookingId);
+
+    await logAdminAction(supabase, user.id, "admin_booking_cancelled_unpaid", "booking", bookingId, {
+      booking_number: booking.booking_number,
+      reason,
+    });
+
+    revalidatePath("/admin/bookings");
+    revalidatePath(`/admin/bookings/${bookingId}`);
+    return { success: true, message: "Unpaid booking deleted and slot released." };
+  }
+
+  // For paid bookings (confirmed/approved)
+  const CANCELLABLE = [
+    BOOKING_STATUSES.CONFIRMED,
+    BOOKING_STATUSES.PENDING_APPROVAL,
+    BOOKING_STATUSES.APPROVED,
+  ];
+  if (!CANCELLABLE.includes(booking.status)) {
+    return { error: `Cannot cancel a booking with status "${booking.status}".` };
+  }
+
+  // Calculate refund based on cancellation policy
+  const appointmentDateTime = new Date(
+    `${booking.appointment_date}T${booking.start_time}`
+  );
+  const now = new Date();
+  const hoursUntilAppointment =
+    (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  let refundPercent = 0;
+  const doctor: any = booking.doctor;
+  const policy = doctor.cancellation_policy;
+
+  if (policy === "flexible") {
+    refundPercent = hoursUntilAppointment > 24 ? 100 : 0;
+  } else if (policy === "moderate") {
+    if (hoursUntilAppointment > 48) {
+      refundPercent = 100;
+    } else if (hoursUntilAppointment > 24) {
+      refundPercent = 50;
+    } else {
+      refundPercent = 0;
+    }
+  } else if (policy === "strict") {
+    refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
+  }
+
+  // Process Stripe refund
+  let refundAmountCents = 0;
+  if (
+    booking.stripe_payment_intent_id &&
+    refundPercent > 0 &&
+    booking.total_amount_cents > 0
+  ) {
+    refundAmountCents = Math.round(
+      (booking.total_amount_cents * refundPercent) / 100
+    );
+
+    try {
+      await getStripe().refunds.create({
+        payment_intent: booking.stripe_payment_intent_id,
+        amount: refundAmountCents,
+        reverse_transfer: true,
+        refund_application_fee: true,
+      } as any);
+    } catch (err: any) {
+      console.error("Admin cancel refund error:", err);
+      return { error: `Stripe refund failed: ${err.message}` };
+    }
+  }
+
+  // Update booking status
+  const updateData: Record<string, unknown> = {
+    status: BOOKING_STATUSES.CANCELLED_DOCTOR,
+    cancelled_at: new Date().toISOString(),
+    cancellation_reason: reason || "Cancelled by admin",
+  };
+  if (refundAmountCents > 0) {
+    updateData.refund_amount_cents = refundAmountCents;
+    updateData.refunded_at = new Date().toISOString();
+  }
+
+  await adminSupabase
+    .from("bookings")
+    .update(updateData)
+    .eq("id", bookingId);
+
+  // Remove from calendars (non-blocking)
+  removeBookingFromGoogleCalendar(bookingId).catch((err) =>
+    console.error("Google Calendar removal error:", err)
+  );
+  removeBookingFromMicrosoftCalendar(bookingId).catch((err) =>
+    console.error("Microsoft Calendar removal error:", err)
+  );
+  removeBookingFromCalDAV(bookingId).catch((err) =>
+    console.error("CalDAV removal error:", err)
+  );
+
+  // Delete Daily.co video room
+  if (booking.daily_room_name) {
+    deleteRoom(booking.daily_room_name).catch((err) =>
+      console.error("Daily.co room deletion error:", err)
+    );
+  }
+
+  // Send cancellation email
+  const patient: any = Array.isArray(booking.patient)
+    ? booking.patient[0]
+    : booking.patient;
+  const doctorProfile: any = doctor?.profile
+    ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
+    : null;
+
+  if (patient?.email && doctorProfile) {
+    const refundAmount = refundAmountCents / 100;
+    const { subject, html } = bookingCancellationEmail({
+      patientName: patient.first_name || "Patient",
+      doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+      date: booking.appointment_date,
+      time: booking.start_time,
+      bookingNumber: booking.booking_number,
+      refundAmount,
+      currency: booking.currency.toUpperCase(),
+    });
+
+    sendEmail({ to: patient.email, subject, html }).catch((err) =>
+      console.error("Admin cancellation email error:", err)
+    );
+
+    // WhatsApp notification
+    if (patient.notification_whatsapp && patient.phone) {
+      const refundInfo =
+        refundPercent > 0
+          ? `A ${refundPercent}% refund has been initiated.`
+          : "No refund applicable per cancellation policy.";
+
+      sendWhatsAppTemplate({
+        to: patient.phone,
+        templateName: TEMPLATE_BOOKING_CANCELLATION,
+        languageCode: mapLocaleToWhatsApp(patient.preferred_locale),
+        components: buildBookingCancellationComponents({
+          patientName: patient.first_name || "there",
+          bookingNumber: booking.booking_number,
+          date: booking.appointment_date,
+          refundInfo,
+        }),
+      }).catch((err) =>
+        console.error("WhatsApp cancellation error:", err)
+      );
+    }
+  }
+
+  await logAdminAction(supabase, user.id, "booking_cancelled_by_admin", "booking", bookingId, {
+    booking_number: booking.booking_number,
+    policy,
+    refund_percent: refundPercent,
+    refund_amount_cents: refundAmountCents,
+    reason,
+  });
+
+  revalidatePath(`/admin/bookings/${bookingId}`);
+  revalidatePath("/admin/bookings");
+  return {
+    success: true,
+    refundPercent,
+    refundAmountCents,
+    message:
+      refundPercent > 0
+        ? `Booking cancelled. A ${refundPercent}% refund (${booking.currency.toUpperCase()} ${(refundAmountCents / 100).toFixed(2)}) has been processed.`
+        : "Booking cancelled. No refund applicable based on the cancellation policy.",
+  };
+}
+
+/** Preview the refund amount for a booking before cancelling */
+export async function adminGetCancelPreview(bookingId: string) {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError };
+
+  const adminSupabase = createAdminClient();
+
+  const { data: booking } = await adminSupabase
+    .from("bookings")
+    .select(
+      `id, status, appointment_date, start_time, total_amount_cents, currency,
+       created_by_admin_id, stripe_checkout_session_id,
+       doctor:doctors!inner(cancellation_policy, cancellation_hours)`
+    )
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return { error: "Booking not found." };
+
+  // Unpaid admin booking
+  if (
+    booking.status === BOOKING_STATUSES.PENDING_PAYMENT &&
+    booking.created_by_admin_id
+  ) {
+    return {
+      isUnpaid: true,
+      refundPercent: 0,
+      refundAmountCents: 0,
+      policy: null,
+      message: "This is an unpaid admin booking. Cancelling will delete it and release the slot.",
+    };
+  }
+
+  const doctor: any = booking.doctor;
+  const policy = doctor.cancellation_policy;
+
+  const appointmentDateTime = new Date(
+    `${booking.appointment_date}T${booking.start_time}`
+  );
+  const now = new Date();
+  const hoursUntilAppointment =
+    (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  let refundPercent = 0;
+  if (policy === "flexible") {
+    refundPercent = hoursUntilAppointment > 24 ? 100 : 0;
+  } else if (policy === "moderate") {
+    if (hoursUntilAppointment > 48) {
+      refundPercent = 100;
+    } else if (hoursUntilAppointment > 24) {
+      refundPercent = 50;
+    }
+  } else if (policy === "strict") {
+    refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
+  }
+
+  const refundAmountCents = Math.round(
+    (booking.total_amount_cents * refundPercent) / 100
+  );
+
+  return {
+    isUnpaid: false,
+    refundPercent,
+    refundAmountCents,
+    totalAmountCents: booking.total_amount_cents,
+    currency: booking.currency,
+    policy,
+    hoursUntilAppointment: Math.round(hoursUntilAppointment * 10) / 10,
+    message:
+      refundPercent > 0
+        ? `Based on the ${policy} policy, the patient will receive a ${refundPercent}% refund (${booking.currency.toUpperCase()} ${(refundAmountCents / 100).toFixed(2)}).`
+        : `Based on the ${policy} policy, no refund is applicable.`,
+  };
 }
 
 // ===================== CSV Export Actions =====================

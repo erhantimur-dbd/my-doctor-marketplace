@@ -23,6 +23,8 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { RefundDialog } from "./refund-dialog";
 import { BookingActions } from "./booking-actions";
+import { ResendPaymentLinkButton } from "./resend-payment-link-button";
+import { AdminCancelButton } from "./admin-cancel-button";
 
 const statusColors: Record<string, string> = {
   pending_payment: "bg-gray-100 text-gray-700",
@@ -94,13 +96,20 @@ export default async function AdminBookingDetailPage({
             })}
           </p>
         </div>
-        <span
-          className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
-            statusColors[booking.status] || "bg-gray-100 text-gray-700"
-          }`}
-        >
-          {booking.status.replace(/_/g, " ")}
-        </span>
+        <div className="flex items-center gap-2">
+          {booking.created_by_admin_id && (
+            <Badge className="bg-purple-100 text-purple-700">
+              Admin Created
+            </Badge>
+          )}
+          <span
+            className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${
+              statusColors[booking.status] || "bg-gray-100 text-gray-700"
+            }`}
+          >
+            {booking.status.replace(/_/g, " ")}
+          </span>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -344,6 +353,18 @@ export default async function AdminBookingDetailPage({
             bookingId={booking.id}
             currentStatus={booking.status}
           />
+          {/* Admin Cancel Button — replaces simple cancel for policy-aware refunds */}
+          {["confirmed", "approved", "pending_approval"].includes(booking.status) && (
+            <AdminCancelButton bookingId={booking.id} />
+          )}
+          {/* Resend payment link for admin-created pending bookings */}
+          {booking.status === "pending_payment" && booking.created_by_admin_id && (
+            <ResendPaymentLinkButton bookingId={booking.id} />
+          )}
+          {/* Cancel unpaid admin booking */}
+          {booking.status === "pending_payment" && booking.created_by_admin_id && (
+            <AdminCancelButton bookingId={booking.id} />
+          )}
           {booking.paid_at && !booking.refunded_at && (
             <RefundDialog
               bookingId={booking.id}
@@ -353,6 +374,7 @@ export default async function AdminBookingDetailPage({
           )}
           {!booking.paid_at &&
             !booking.refunded_at &&
+            !booking.created_by_admin_id &&
             !["confirmed", "approved", "pending_approval"].includes(booking.status) && (
               <span className="text-sm text-muted-foreground">
                 No actions available for this booking status

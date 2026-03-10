@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils/currency";
-import { Calendar, Clock, CheckCircle, Eye } from "lucide-react";
+import { Calendar, Clock, CheckCircle, Eye, Plus } from "lucide-react";
 import { BookingFilters } from "./booking-filters";
 import { ExportCSVButton } from "../components/export-csv-button";
 import { exportBookingsCSV } from "@/actions/admin";
@@ -168,7 +168,15 @@ export default async function AdminBookingsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Booking Management</h1>
-        <ExportCSVButton action={exportBookingsCSV} filename="bookings-export.csv" />
+        <div className="flex items-center gap-2">
+          <Button asChild>
+            <Link href="/admin/bookings/create">
+              <Plus className="mr-2 h-4 w-4" />
+              Create Booking
+            </Link>
+          </Button>
+          <ExportCSVButton action={exportBookingsCSV} filename="bookings-export.csv" />
+        </div>
       </div>
 
       {/* Tab Navigation */}

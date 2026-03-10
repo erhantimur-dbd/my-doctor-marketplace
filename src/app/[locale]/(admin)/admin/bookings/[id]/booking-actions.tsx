@@ -62,13 +62,7 @@ const TRANSITIONS: Record<string, StatusTransition[]> = {
       icon: UserX,
       variant: "secondary",
     },
-    {
-      newStatus: "cancelled_doctor",
-      label: "Cancel",
-      description: "Cancel this booking on behalf of the doctor.",
-      icon: XCircle,
-      variant: "destructive",
-    },
+    // Cancel now handled by AdminCancelButton with policy-aware refunds
   ],
   approved: [
     {
@@ -85,13 +79,7 @@ const TRANSITIONS: Record<string, StatusTransition[]> = {
       icon: UserX,
       variant: "secondary",
     },
-    {
-      newStatus: "cancelled_doctor",
-      label: "Cancel",
-      description: "Cancel this booking on behalf of the doctor.",
-      icon: XCircle,
-      variant: "destructive",
-    },
+    // Cancel now handled by AdminCancelButton with policy-aware refunds
   ],
 };
 
