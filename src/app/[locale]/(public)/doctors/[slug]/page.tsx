@@ -156,16 +156,15 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                     <div className="flex items-start gap-3">
                       <h1 className="text-2xl font-bold">{fullName}</h1>
                       {doctor.verification_status === "verified" && (
-                        <Badge
-                          variant="secondary"
-                          className="gap-1 bg-green-50 text-green-700"
-                        >
-                          <Shield className="h-3 w-3" />
-                          Verified
-                        </Badge>
+                        <div className="flex items-center gap-1 text-green-600">
+                          <Shield className="h-3.5 w-3.5 shrink-0" />
+                          <span className="text-xs font-medium">Verified</span>
+                        </div>
                       )}
                       {doctor.is_featured && (
-                        <Badge variant="secondary">Featured</Badge>
+                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs shadow-sm dark:bg-amber-900/40 dark:text-amber-300">
+                          ★ Featured
+                        </Badge>
                       )}
                     </div>
 
