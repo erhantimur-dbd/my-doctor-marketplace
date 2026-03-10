@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
+import type { ParsedAddress } from "@/components/shared/address-autocomplete";
 import {
   Card,
   CardContent,
@@ -611,16 +613,30 @@ export default function MedicalTestingPage() {
                   <Label htmlFor="loc-address" className="text-xs">
                     Address *
                   </Label>
-                  <Input
-                    id="loc-address"
-                    placeholder="123 Harley Street"
+                  <AddressAutocomplete
                     value={locationForm.address}
-                    onChange={(e) =>
+                    onChange={(val) =>
+                      setLocationForm((f) => ({ ...f, address: val }))
+                    }
+                    onPlaceSelect={(parsed: ParsedAddress) => {
                       setLocationForm((f) => ({
                         ...f,
-                        address: e.target.value,
-                      }))
-                    }
+                        address: parsed.addressLine1,
+                        ...(parsed.city && { city: parsed.city }),
+                        ...(parsed.postalCode && { postal_code: parsed.postalCode }),
+                        ...(parsed.country && (() => {
+                          const countryMap: Record<string, string> = {
+                            "united kingdom": "GB", "germany": "DE", "turkey": "TR",
+                            "france": "FR", "ireland": "IE", "netherlands": "NL",
+                            "belgium": "BE", "spain": "ES", "italy": "IT",
+                            "austria": "AT", "switzerland": "CH",
+                          };
+                          const code = countryMap[parsed.country.toLowerCase()];
+                          return code ? { country_code: code } : {};
+                        })()),
+                      }));
+                    }}
+                    placeholder="Start typing your address..."
                   />
                 </div>
                 <div>

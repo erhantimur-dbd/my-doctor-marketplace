@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Save, CheckCircle2, AlertCircle } from "lucide-react";
+import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
+import type { ParsedAddress } from "@/components/shared/address-autocomplete";
 import { getMyOrganization, updateOrganization } from "@/actions/organization";
 
 const TIMEZONES = [
@@ -52,6 +54,14 @@ export default function OrganizationSettingsPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Address state (controlled so autocomplete can fill them)
+  const [addressLine1, setAddressLine1] = useState("");
+  const [addressLine2, setAddressLine2] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("");
+
   useEffect(() => {
     loadData();
   }, []);
@@ -60,6 +70,14 @@ export default function OrganizationSettingsPage() {
     const result = await getMyOrganization();
     setOrg(result.org);
     setMembership(result.membership);
+    if (result.org) {
+      setAddressLine1(result.org.address_line1 || "");
+      setAddressLine2(result.org.address_line2 || "");
+      setCity(result.org.city || "");
+      setState(result.org.state || "");
+      setPostalCode(result.org.postal_code || "");
+      setCountry(result.org.country || "");
+    }
     setLoading(false);
   }
 
@@ -139,19 +157,27 @@ export default function OrganizationSettingsPage() {
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label htmlFor="address_line1">Address Line 1</Label>
-              <Input
-                id="address_line1"
-                name="address_line1"
-                defaultValue={org.address_line1 || ""}
-                placeholder="123 Medical Ave"
+              <AddressAutocomplete
+                value={addressLine1}
+                onChange={setAddressLine1}
+                onPlaceSelect={(parsed: ParsedAddress) => {
+                  setAddressLine1(parsed.addressLine1);
+                  if (parsed.city) setCity(parsed.city);
+                  if (parsed.state) setState(parsed.state);
+                  if (parsed.postalCode) setPostalCode(parsed.postalCode);
+                  if (parsed.country) setCountry(parsed.country);
+                }}
+                placeholder="Start typing your address..."
               />
+              <input type="hidden" name="address_line1" value={addressLine1} />
             </div>
             <div className="sm:col-span-2">
               <Label htmlFor="address_line2">Address Line 2</Label>
               <Input
                 id="address_line2"
                 name="address_line2"
-                defaultValue={org.address_line2 || ""}
+                value={addressLine2}
+                onChange={(e) => setAddressLine2(e.target.value)}
                 placeholder="Suite 100"
               />
             </div>
@@ -160,7 +186,8 @@ export default function OrganizationSettingsPage() {
               <Input
                 id="city"
                 name="city"
-                defaultValue={org.city || ""}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
               />
             </div>
             <div>
@@ -168,7 +195,8 @@ export default function OrganizationSettingsPage() {
               <Input
                 id="state"
                 name="state"
-                defaultValue={org.state || ""}
+                value={state}
+                onChange={(e) => setState(e.target.value)}
               />
             </div>
             <div>
@@ -176,7 +204,8 @@ export default function OrganizationSettingsPage() {
               <Input
                 id="postal_code"
                 name="postal_code"
-                defaultValue={org.postal_code || ""}
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
               />
             </div>
             <div>
@@ -184,7 +213,8 @@ export default function OrganizationSettingsPage() {
               <Input
                 id="country"
                 name="country"
-                defaultValue={org.country || ""}
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
               />
             </div>
           </CardContent>

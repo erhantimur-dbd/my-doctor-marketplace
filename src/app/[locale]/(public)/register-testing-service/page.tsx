@@ -28,6 +28,8 @@ import { Link } from "@/i18n/navigation";
 import { registerTestingService, signInWithGoogle, signInWithApple } from "@/actions/auth";
 import { getTestingSpecialties } from "@/lib/constants/specialties";
 import { formatSpecialtyName } from "@/lib/utils";
+import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
+import type { ParsedAddress } from "@/components/shared/address-autocomplete";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
 import { TESTING_STANDALONE_PLAN, formatPriceForLocale } from "@/lib/constants/license-tiers";
 import {
@@ -68,6 +70,8 @@ export default function RegisterTestingServicePage() {
 
   // Step 3: Practice details
   const [address, setAddress] = useState("");
+  const [city, setCity] = useState("");
+  const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("");
 
   function nextStep() {
@@ -388,12 +392,41 @@ export default function RegisterTestingServicePage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
+                <AddressAutocomplete
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="123 High Street, London"
+                  onChange={setAddress}
+                  onPlaceSelect={(parsed: ParsedAddress) => {
+                    setAddress(parsed.addressLine1);
+                    if (parsed.city) setCity(parsed.city);
+                    if (parsed.postalCode) setPostalCode(parsed.postalCode);
+                    if (parsed.country) {
+                      const match = COUNTRIES.find(
+                        (c) => c.name.toLowerCase() === parsed.country.toLowerCase()
+                      );
+                      if (match) setCountry(match.code);
+                    }
+                  }}
+                  placeholder="Start typing your address..."
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>City</Label>
+                  <Input
+                    placeholder="City"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Postcode</Label>
+                  <Input
+                    placeholder="Postcode / ZIP"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
