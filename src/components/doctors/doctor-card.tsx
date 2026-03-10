@@ -67,10 +67,12 @@ interface DoctorCardProps {
   availability?: DoctorMultiDayAvailability | null;
   matchScore?: number;
   matchReasons?: string[];
+  /** Hide snapshot column & use stacked layout for multi-column grids */
+  compact?: boolean;
 }
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
-  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons }, ref) {
+  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact }, ref) {
     const router = useRouter();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const [showFullAvailability, setShowFullAvailability] = useState(false);
@@ -145,10 +147,10 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
             )}
 
             <CardContent className={cn("p-5", doctor.is_featured && "pt-10")}>
-              {/* Desktop: horizontal split layout (info left | availability right) */}
+              {/* Desktop: horizontal split layout (info left | availability right) — stacked in compact */}
               <div className={cn(
                 "flex flex-col",
-                hasAvailability && "lg:flex-row lg:gap-5"
+                hasAvailability && !compact && "lg:flex-row lg:gap-5"
               )}>
                 {/* ── LEFT SIDE: Doctor info ── */}
                 <div className={cn(
@@ -247,8 +249,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
 
                     </div>
 
-                    {/* Profile snapshot — right column, desktop only */}
-                    {(() => {
+                    {/* Profile snapshot — right column, desktop only (hidden in compact mode) */}
+                    {!compact && (() => {
                       const hasYears = doctor.years_of_experience != null && doctor.years_of_experience > 0;
                       const hasLangs = (doctor.languages?.length ?? 0) > 0;
                       const topEdu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
@@ -323,8 +325,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                 {hasAvailability && (
                   <div className={cn(
                     "border-t pt-3 mt-3",
-                    "lg:border-t-0 lg:border-l lg:pt-0 lg:mt-0 lg:pl-5",
-                    "lg:w-[45%] lg:shrink-0"
+                    !compact && "lg:border-t-0 lg:border-l lg:pt-0 lg:mt-0 lg:pl-5",
+                    !compact && "lg:w-[45%] lg:shrink-0"
                   )}>
                     {/* Consultation Type Toggle */}
                     {showTypeToggle && (

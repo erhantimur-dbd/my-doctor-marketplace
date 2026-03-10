@@ -210,6 +210,7 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
                   doctor={doctor}
                   locale={locale}
                   availability={availability[doctor.id] || null}
+                  compact
                 />
               ))}
             </div>
