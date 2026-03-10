@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { LocationCombobox } from "@/components/search/location-combobox";
+import { PlacesLocationCombobox as LocationCombobox } from "@/components/search/places-location-combobox";
 import {
   Search,
   MapPin,

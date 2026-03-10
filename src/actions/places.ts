@@ -32,7 +32,12 @@ export async function searchPlaces(
     );
     const json = await res.json();
 
-    if (json.status !== "OK" || !json.predictions) return [];
+    if (json.status !== "OK" || !json.predictions) {
+      if (json.status !== "ZERO_RESULTS") {
+        console.error("[searchPlaces] API error:", json.status, json.error_message);
+      }
+      return [];
+    }
 
     return (json.predictions as Record<string, unknown>[])
       .slice(0, 5)
@@ -46,7 +51,8 @@ export async function searchPlaces(
           (p.structured_formatting as Record<string, string>)
             ?.secondary_text || "",
       }));
-  } catch {
+  } catch (err) {
+    console.error("[searchPlaces] Fetch error:", err);
     return [];
   }
 }

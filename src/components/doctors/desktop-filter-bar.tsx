@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { cn, formatSpecialtyName } from "@/lib/utils";
-import { LocationCombobox } from "@/components/search/location-combobox";
+import { PlacesLocationCombobox as LocationCombobox } from "@/components/search/places-location-combobox";
 import { MoreFiltersDialog } from "./more-filters-dialog";
 
 interface DesktopFilterBarProps {

@@ -57,7 +57,7 @@ export function countryCodeFromSlug(slug: string): string {
   return slug.replace("country-", "").toUpperCase();
 }
 
-interface LocationComboboxProps {
+export interface LocationComboboxProps {
   locations: LocationItem[];
   value: string; // location slug or ""
   onValueChange: (slug: string) => void;
@@ -77,6 +77,14 @@ interface LocationComboboxProps {
   onPlaceSelect?: (place: { lat: number; lng: number; name: string }) => void;
   /** Display name of a selected Place (shown when value is empty but a Place was chosen) */
   placeName?: string;
+  /**
+   * Injected by PlacesLocationCombobox wrapper — the loaded google.maps.places
+   * namespace for client-side autocomplete. When provided, uses the Maps JS API
+   * instead of the server-side REST action (which fails with referrer-restricted keys).
+   * @internal
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  _placesLib?: any;
 }
 
 // Country code → emoji flag
@@ -109,6 +117,7 @@ export function LocationCombobox({
   onEnterKey,
   onPlaceSelect,
   placeName,
+  _placesLib,
 }: LocationComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -122,7 +131,16 @@ export function LocationCombobox({
   // Google Places Autocomplete state
   const [placePredictions, setPlacePredictions] = useState<PlacePrediction[]>([]);
   const [placesLoading, startPlacesTransition] = useTransition();
+  const [placesDebouncing, setPlacesDebouncing] = useState(false);
   const [resolvingPlace, setResolvingPlace] = useState(false);
+
+  // Client-side AutocompleteService (created once when _placesLib is ready)
+  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  useEffect(() => {
+    if (_placesLib && !autocompleteServiceRef.current) {
+      autocompleteServiceRef.current = new _placesLib.AutocompleteService();
+    }
+  }, [_placesLib]);
 
   // Build unique countries from locations
   const countries = useMemo(() => {
@@ -221,12 +239,14 @@ export function LocationCombobox({
   useEffect(() => {
     if (!onPlaceSelect) {
       setPlacePredictions([]);
+      setPlacesDebouncing(false);
       return;
     }
 
     const trimmed = search.trim();
     if (trimmed.length < 2) {
       setPlacePredictions([]);
+      setPlacesDebouncing(false);
       return;
     }
 
@@ -234,21 +254,56 @@ export function LocationCombobox({
     // (more than 3 predefined matches means the user is probably finding what they need)
     if (filteredLocations.length > 3) {
       setPlacePredictions([]);
+      setPlacesDebouncing(false);
       return;
     }
 
+    // Mark that we're waiting for the debounce to fire
+    setPlacesDebouncing(true);
+
     if (placesDebounceRef.current) clearTimeout(placesDebounceRef.current);
     placesDebounceRef.current = setTimeout(() => {
-      startPlacesTransition(async () => {
-        const predictions = await searchPlaces(trimmed);
-        setPlacePredictions(predictions);
-      });
+      setPlacesDebouncing(false);
+
+      // Prefer client-side Places library (works with referrer-restricted keys)
+      if (autocompleteServiceRef.current) {
+        startPlacesTransition(() => {
+          autocompleteServiceRef.current!.getPlacePredictions(
+            { input: trimmed, types: ["geocode"] },
+            (predictions, status) => {
+              if (
+                status === google.maps.places.PlacesServiceStatus.OK &&
+                predictions
+              ) {
+                setPlacePredictions(
+                  predictions.slice(0, 5).map((p) => ({
+                    placeId: p.place_id,
+                    description: p.description,
+                    mainText:
+                      p.structured_formatting?.main_text || p.description,
+                    secondaryText:
+                      p.structured_formatting?.secondary_text || "",
+                  }))
+                );
+              } else {
+                setPlacePredictions([]);
+              }
+            }
+          );
+        });
+      } else {
+        // Fallback: server-side REST action (may fail with referrer-restricted keys)
+        startPlacesTransition(async () => {
+          const predictions = await searchPlaces(trimmed);
+          setPlacePredictions(predictions);
+        });
+      }
     }, 400);
 
     return () => {
       if (placesDebounceRef.current) clearTimeout(placesDebounceRef.current);
     };
-  }, [search, filteredLocations.length, onPlaceSelect]);
+  }, [search, filteredLocations.length, onPlaceSelect, _placesLib]);
 
   // Close on click outside
   useEffect(() => {
@@ -278,6 +333,23 @@ export function LocationCombobox({
 
       setResolvingPlace(true);
       try {
+        // Prefer client-side Geocoder (same API key, works with referrer restriction)
+        if (typeof google !== "undefined" && google.maps) {
+          const geocoder = new google.maps.Geocoder();
+          const result = await geocoder.geocode({ placeId: prediction.placeId });
+          const loc = result.results[0]?.geometry?.location;
+          if (loc) {
+            onPlaceSelect({
+              lat: loc.lat(),
+              lng: loc.lng(),
+              name: prediction.mainText,
+            });
+            onValueChange("");
+            return;
+          }
+        }
+
+        // Fallback: server-side Place Details
         const coords = await getPlaceCoordinates(prediction.placeId);
         if (coords) {
           onPlaceSelect({
@@ -285,11 +357,10 @@ export function LocationCombobox({
             lng: coords.lng,
             name: prediction.mainText,
           });
-          // Clear the predefined location since we're using a Place
           onValueChange("");
         }
       } catch {
-        // Fallback: try geocoding the description text
+        // Last resort: geocode the description text
         const coords = await geocodeAddress(prediction.description);
         if (coords) {
           onPlaceSelect({
@@ -547,14 +618,14 @@ export function LocationCombobox({
           )}
 
           {/* No results */}
-          {filteredLocations.length === 0 && filteredCountries.length === 0 && placePredictions.length === 0 && !geocodeResult && !geocoding && !placesLoading && search.trim() && (
+          {filteredLocations.length === 0 && filteredCountries.length === 0 && placePredictions.length === 0 && !geocodeResult && !geocoding && !placesLoading && !placesDebouncing && search.trim() && (
             <div className="px-3 py-4 text-center text-sm text-muted-foreground">
               No locations found for &ldquo;{search.trim()}&rdquo;
             </div>
           )}
 
           {/* Loading states */}
-          {(geocoding || placesLoading) && filteredLocations.length === 0 && placePredictions.length === 0 && (
+          {(geocoding || placesLoading || placesDebouncing) && filteredLocations.length === 0 && placePredictions.length === 0 && (
             <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               Searching places...
