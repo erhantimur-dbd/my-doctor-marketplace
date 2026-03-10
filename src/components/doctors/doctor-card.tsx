@@ -176,11 +176,37 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     {/* Info */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <h3 className="truncate font-semibold group-hover:text-primary">
-                            {doctor.title} {doctor.profile.first_name}{" "}
-                            {doctor.profile.last_name}
-                          </h3>
+                        <div className="min-w-0 flex-1">
+                          {/* Name + inline snapshot on same line */}
+                          <div className="flex items-baseline gap-2">
+                            <h3 className="truncate font-semibold group-hover:text-primary">
+                              {doctor.title} {doctor.profile.first_name}{" "}
+                              {doctor.profile.last_name}
+                            </h3>
+                            {/* Profile snapshot — inline with name, desktop only */}
+                            {(() => {
+                              const parts: string[] = [];
+                              if (doctor.years_of_experience != null && doctor.years_of_experience > 0) {
+                                parts.push(`${doctor.years_of_experience} yrs exp`);
+                              }
+                              if (doctor.languages?.length) {
+                                const codes = doctor.languages.slice(0, 3).map((c) => c.toUpperCase());
+                                const remaining = doctor.languages.length - 3;
+                                parts.push(remaining > 0 ? `${codes.join(", ")} +${remaining}` : codes.join(", "));
+                              }
+                              const topEdu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
+                              if (topEdu) {
+                                parts.push([topEdu.degree, topEdu.institution].filter(Boolean).join(", "));
+                              }
+                              if (parts.length === 0) return null;
+                              return (
+                                <span className="hidden lg:inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
+                                  <span className="text-muted-foreground/40">·</span>
+                                  {parts.join("  ·  ")}
+                                </span>
+                              );
+                            })()}
+                          </div>
                           {primarySpecialty && (
                             <p className="truncate text-sm text-muted-foreground">
                               {formatSpecialtyName(primarySpecialty.name_key)}
@@ -197,59 +223,18 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             </div>
                           )}
                         </div>
-                        <div className="shrink-0 flex items-start gap-2">
-                          {/* Existing tag badges */}
-                          <div className="flex shrink-0 gap-1.5">
-                            {isTestingService && (
-                              <Badge className="shrink-0 bg-teal-100 text-teal-800 hover:bg-teal-100 text-xs dark:bg-teal-900/40 dark:text-teal-300">
-                                <FlaskConical className="mr-1 h-3 w-3" />
-                                Testing
-                              </Badge>
-                            )}
-                            {matchScore != null && matchScore > 0 && (
-                              <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
-                                {matchScore}% Match
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Profile snapshot — right column, desktop only */}
-                          {(() => {
-                            const hasYears = doctor.years_of_experience != null && doctor.years_of_experience > 0;
-                            const hasLangs = (doctor.languages?.length ?? 0) > 0;
-                            const topEdu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
-                            if (!hasYears && !hasLangs && !topEdu) return null;
-                            return (
-                              <div className="hidden lg:flex flex-col items-end gap-1 text-xs text-muted-foreground">
-                                {hasYears && (
-                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <Clock className="h-3 w-3 shrink-0" />
-                                    <span>{doctor.years_of_experience} yrs exp</span>
-                                  </div>
-                                )}
-                                {hasLangs && (
-                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
-                                    <Globe className="h-3 w-3 shrink-0" />
-                                    <span>
-                                      {(() => {
-                                        const codes = doctor.languages!.slice(0, 3).map((c) => c.toUpperCase());
-                                        const remaining = doctor.languages!.length - 3;
-                                        return remaining > 0 ? `${codes.join(", ")} +${remaining}` : codes.join(", ");
-                                      })()}
-                                    </span>
-                                  </div>
-                                )}
-                                {topEdu && (
-                                  <div className="flex items-center gap-1.5">
-                                    <GraduationCap className="h-3 w-3 shrink-0" />
-                                    <span className="max-w-[140px] truncate">
-                                      {[topEdu.degree, topEdu.institution].filter(Boolean).join(", ")}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })()}
+                        <div className="flex shrink-0 gap-1.5">
+                          {isTestingService && (
+                            <Badge className="shrink-0 bg-teal-100 text-teal-800 hover:bg-teal-100 text-xs dark:bg-teal-900/40 dark:text-teal-300">
+                              <FlaskConical className="mr-1 h-3 w-3" />
+                              Testing
+                            </Badge>
+                          )}
+                          {matchScore != null && matchScore > 0 && (
+                            <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
+                              {matchScore}% Match
+                            </Badge>
+                          )}
                         </div>
                       </div>
 
