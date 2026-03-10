@@ -69,10 +69,12 @@ interface DoctorCardProps {
   matchReasons?: string[];
   /** Hide snapshot column & use stacked layout for multi-column grids */
   compact?: boolean;
+  /** Distance from searched place in km (shown as badge when proximity search is active) */
+  distanceKm?: number;
 }
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
-  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact }, ref) {
+  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact, distanceKm }, ref) {
     const router = useRouter();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const [showFullAvailability, setShowFullAvailability] = useState(false);
@@ -221,6 +223,11 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                           <span className="truncate">
                             {doctor.location.city}, {doctor.location.country_code}
                           </span>
+                          {distanceKm != null && (
+                            <span className="ml-1 shrink-0 rounded-full bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+                              {distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm} km`}
+                            </span>
+                          )}
                         </div>
                       )}
 

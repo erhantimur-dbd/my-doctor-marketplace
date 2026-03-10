@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { MapPin, Loader2, Check, Navigation, Globe } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo, useTransition } from "react";
+import { MapPin, Loader2, Check, Navigation, Globe, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { geocodeAddress, findNearestLocation } from "@/lib/utils/geo";
+import { searchPlaces, getPlaceCoordinates } from "@/actions/places";
+import type { PlacePrediction } from "@/actions/places";
 
 export interface LocationItem {
   slug: string;
@@ -71,6 +73,10 @@ interface LocationComboboxProps {
   className?: string;
   /** Called when Enter is pressed while the dropdown is closed or no item is highlighted */
   onEnterKey?: () => void;
+  /** Called when a Google Place is selected (borough, street, etc.) */
+  onPlaceSelect?: (place: { lat: number; lng: number; name: string }) => void;
+  /** Display name of a selected Place (shown when value is empty but a Place was chosen) */
+  placeName?: string;
 }
 
 // Country code → emoji flag
@@ -92,7 +98,7 @@ export function LocationCombobox({
   locations,
   value,
   onValueChange,
-  placeholder = "City or postcode...",
+  placeholder = "City, borough, or postcode...",
   variant = "bordered",
   geoSupported,
   geoLoading,
@@ -101,6 +107,8 @@ export function LocationCombobox({
   detectingLabel = "Detecting...",
   className,
   onEnterKey,
+  onPlaceSelect,
+  placeName,
 }: LocationComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -108,7 +116,13 @@ export function LocationCombobox({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const placesDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [geocodeResult, setGeocodeResult] = useState<string | null>(null);
+
+  // Google Places Autocomplete state
+  const [placePredictions, setPlacePredictions] = useState<PlacePrediction[]>([]);
+  const [placesLoading, startPlacesTransition] = useTransition();
+  const [resolvingPlace, setResolvingPlace] = useState(false);
 
   // Build unique countries from locations
   const countries = useMemo(() => {
@@ -139,7 +153,7 @@ export function LocationCombobox({
     ? `${countryFlag(selectedCountry.code)} ${selectedCountry.name}`
     : selectedLocation
       ? `${selectedLocation.city}, ${selectedLocation.country_code}`
-      : "";
+      : placeName || "";
 
   // Filter locations and countries client-side
   const term = search.trim().toLowerCase();
@@ -194,6 +208,39 @@ export function LocationCombobox({
     };
   }, [search, filteredLocations.length, locations]);
 
+  // Google Places Autocomplete with debounce
+  useEffect(() => {
+    if (!onPlaceSelect) {
+      setPlacePredictions([]);
+      return;
+    }
+
+    const trimmed = search.trim();
+    if (trimmed.length < 2) {
+      setPlacePredictions([]);
+      return;
+    }
+
+    // Only search places when there are few or no predefined matches
+    // (more than 3 predefined matches means the user is probably finding what they need)
+    if (filteredLocations.length > 3) {
+      setPlacePredictions([]);
+      return;
+    }
+
+    if (placesDebounceRef.current) clearTimeout(placesDebounceRef.current);
+    placesDebounceRef.current = setTimeout(() => {
+      startPlacesTransition(async () => {
+        const predictions = await searchPlaces(trimmed);
+        setPlacePredictions(predictions);
+      });
+    }, 400);
+
+    return () => {
+      if (placesDebounceRef.current) clearTimeout(placesDebounceRef.current);
+    };
+  }, [search, filteredLocations.length, onPlaceSelect]);
+
   // Close on click outside
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -211,18 +258,64 @@ export function LocationCombobox({
       setSearch("");
       setOpen(false);
       setGeocodeResult(null);
+      setPlacePredictions([]);
     },
     [onValueChange]
+  );
+
+  const handlePlaceClick = useCallback(
+    async (prediction: PlacePrediction) => {
+      if (!onPlaceSelect) return;
+
+      setResolvingPlace(true);
+      try {
+        const coords = await getPlaceCoordinates(prediction.placeId);
+        if (coords) {
+          onPlaceSelect({
+            lat: coords.lat,
+            lng: coords.lng,
+            name: prediction.mainText,
+          });
+          // Clear the predefined location since we're using a Place
+          onValueChange("");
+        }
+      } catch {
+        // Fallback: try geocoding the description text
+        const coords = await geocodeAddress(prediction.description);
+        if (coords) {
+          onPlaceSelect({
+            lat: coords.lat,
+            lng: coords.lng,
+            name: prediction.mainText,
+          });
+          onValueChange("");
+        }
+      } finally {
+        setResolvingPlace(false);
+        setSearch("");
+        setOpen(false);
+        setPlacePredictions([]);
+      }
+    },
+    [onPlaceSelect, onValueChange]
   );
 
   const handleClear = useCallback(() => {
     onValueChange("");
     setSearch("");
     setGeocodeResult(null);
-  }, [onValueChange]);
+    setPlacePredictions([]);
+    // Also clear place selection if callback exists
+    if (onPlaceSelect) {
+      onPlaceSelect({ lat: 0, lng: 0, name: "" });
+    }
+  }, [onValueChange, onPlaceSelect]);
 
   const isInline = variant === "inline";
   const isPill = variant === "pill";
+
+  // Show clear button when either a predefined location or a Place is selected
+  const hasSelection = !!value || !!placeName;
 
   return (
     <div ref={wrapperRef} className={cn("relative", className)}>
@@ -260,6 +353,10 @@ export function LocationCombobox({
                 // Auto-select if exactly one match
                 e.preventDefault();
                 handleSelect(filteredLocations[0].slug);
+              } else if (placePredictions.length === 1 && search.trim()) {
+                // Auto-select if exactly one Google Place result
+                e.preventDefault();
+                handlePlaceClick(placePredictions[0]);
               } else if (!open || filteredLocations.length === 0) {
                 // Bubble up to parent search handler
                 if (onEnterKey) {
@@ -280,7 +377,7 @@ export function LocationCombobox({
           )}
           autoComplete="off"
         />
-        {value && !open && (
+        {hasSelection && !open && (
           <button
             type="button"
             onClick={handleClear}
@@ -292,12 +389,12 @@ export function LocationCombobox({
             ×
           </button>
         )}
-        {geocoding && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
+        {(geocoding || resolvingPlace) && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
       </div>
 
       {/* Dropdown */}
       {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border bg-background shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-y-auto rounded-lg border bg-background shadow-lg">
           {/* Use my location button */}
           {geoSupported && onUseMyLocation && (
             <button
@@ -324,12 +421,12 @@ export function LocationCombobox({
             onClick={() => handleSelect("")}
             className={cn(
               "flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-accent",
-              !value && "font-medium"
+              !value && !placeName && "font-medium"
             )}
           >
             <MapPin className="h-4 w-4 text-muted-foreground" />
             <span>All Locations</span>
-            {!value && <Check className="ml-auto h-4 w-4 text-primary" />}
+            {!value && !placeName && <Check className="ml-auto h-4 w-4 text-primary" />}
           </button>
 
           {/* Geocode result (when postcode matched a location) */}
@@ -356,9 +453,37 @@ export function LocationCombobox({
             </div>
           )}
 
+          {/* Google Places suggestions */}
+          {onPlaceSelect && placePredictions.length > 0 && (
+            <div className="border-t">
+              <div className="px-3 pt-2 pb-1">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                  Nearby Places
+                </span>
+              </div>
+              {placePredictions.map((p) => (
+                <button
+                  key={p.placeId}
+                  type="button"
+                  onClick={() => handlePlaceClick(p)}
+                  disabled={resolvingPlace}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-accent disabled:opacity-50"
+                >
+                  <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div className="min-w-0 text-left">
+                    <span className="font-medium">{p.mainText}</span>
+                    {p.secondaryText && (
+                      <span className="ml-1 text-muted-foreground">{p.secondaryText}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Countries group */}
           {filteredCountries.length > 0 && (
-            <div className={geocodeResult ? "border-t" : ""}>
+            <div className={geocodeResult || placePredictions.length > 0 ? "border-t" : ""}>
               <div className="px-3 pt-2 pb-1">
                 <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
                   Countries
@@ -413,17 +538,17 @@ export function LocationCombobox({
           )}
 
           {/* No results */}
-          {filteredLocations.length === 0 && filteredCountries.length === 0 && !geocodeResult && !geocoding && search.trim() && (
+          {filteredLocations.length === 0 && filteredCountries.length === 0 && placePredictions.length === 0 && !geocodeResult && !geocoding && !placesLoading && search.trim() && (
             <div className="px-3 py-4 text-center text-sm text-muted-foreground">
               No locations found for &ldquo;{search.trim()}&rdquo;
             </div>
           )}
 
-          {/* Geocoding in progress */}
-          {geocoding && filteredLocations.length === 0 && (
+          {/* Loading states */}
+          {(geocoding || placesLoading) && filteredLocations.length === 0 && placePredictions.length === 0 && (
             <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Looking up postcode...
+              Searching places...
             </div>
           )}
         </div>

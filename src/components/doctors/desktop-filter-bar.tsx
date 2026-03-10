@@ -40,6 +40,10 @@ interface DesktopFilterBarProps {
   useMyLocationLabel: string;
   moreFilterCount: number;
   clearMoreFilters: () => void;
+  /** Location-specific handler that clears place params when a predefined location is selected */
+  onLocationChange?: (slug: string | undefined) => void;
+  /** Google Place selection handler */
+  onPlaceSelect?: (place: { lat: number; lng: number; name: string }) => void;
 }
 
 export function DesktopFilterBar({
@@ -57,6 +61,8 @@ export function DesktopFilterBar({
   useMyLocationLabel,
   moreFilterCount,
   clearMoreFilters,
+  onLocationChange,
+  onPlaceSelect,
 }: DesktopFilterBarProps) {
   const t = useTranslations("search");
 
@@ -131,7 +137,11 @@ export function DesktopFilterBar({
         <LocationCombobox
           locations={locations}
           value={currentFilters.location || ""}
-          onValueChange={(v) => updateFilter("location", v || undefined)}
+          onValueChange={(v) =>
+            onLocationChange
+              ? onLocationChange(v || undefined)
+              : updateFilter("location", v || undefined)
+          }
           placeholder={t("any_location")}
           variant="pill"
           geoSupported={geoSupported}
@@ -139,6 +149,8 @@ export function DesktopFilterBar({
           onUseMyLocation={onUseMyLocation}
           useMyLocationLabel={useMyLocationLabel}
           detectingLabel={detectingLocation}
+          onPlaceSelect={onPlaceSelect}
+          placeName={currentFilters.placeName}
         />
       </div>
 

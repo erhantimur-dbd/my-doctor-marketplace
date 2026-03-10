@@ -93,7 +93,7 @@ export function DoctorSearchFilters({
   };
 
   const hasFilters = Object.entries(currentFilters).some(
-    ([k, v]) => v && k !== "sort" && k !== "page" && k !== "lat" && k !== "lng" && k !== "aiParsed"
+    ([k, v]) => v && k !== "sort" && k !== "page" && k !== "lat" && k !== "lng" && k !== "aiParsed" && k !== "placeLat" && k !== "placeLng" && k !== "radius"
   );
 
   // Count active filters (excluding sort, page, lat, lng, availableToday — since that has its own chip)
@@ -107,7 +107,10 @@ export function DoctorSearchFilters({
       k !== "availableToday" &&
       k !== "wheelchairAccessible" &&
       k !== "query" &&
-      k !== "aiParsed"
+      k !== "aiParsed" &&
+      k !== "placeLat" &&
+      k !== "placeLng" &&
+      k !== "radius"
   ).length;
 
   // Keys managed by the "More Filters" dialog
@@ -189,6 +192,70 @@ export function DoctorSearchFilters({
     router,
   ]);
 
+  // Location-specific update: clears place params when a predefined location is selected
+  const handleLocationUpdate = useCallback(
+    (slug: string | undefined) => {
+      const params = new URLSearchParams();
+      Object.entries(currentFilters).forEach(([k, v]) => {
+        if (v && k !== "page") params.set(k, v);
+      });
+
+      if (slug) {
+        params.set("location", slug);
+      } else {
+        params.delete("location");
+      }
+
+      // Clear place params (mutually exclusive with predefined location)
+      params.delete("placeLat");
+      params.delete("placeLng");
+      params.delete("placeName");
+      params.delete("radius");
+      params.delete("page");
+
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [currentFilters, pathname, router]
+  );
+
+  // Google Place selection: sets place coords, clears predefined location
+  const handlePlaceSelect = useCallback(
+    (place: { lat: number; lng: number; name: string }) => {
+      // Handle the "clear" case (lat=0, lng=0, name="")
+      if (!place.name) {
+        const params = new URLSearchParams();
+        Object.entries(currentFilters).forEach(([k, v]) => {
+          if (v && k !== "page") params.set(k, v);
+        });
+        params.delete("placeLat");
+        params.delete("placeLng");
+        params.delete("placeName");
+        params.delete("radius");
+        params.delete("page");
+        router.push(`${pathname}?${params.toString()}`);
+        return;
+      }
+
+      const params = new URLSearchParams();
+      Object.entries(currentFilters).forEach(([k, v]) => {
+        if (v && k !== "page") params.set(k, v);
+      });
+
+      // Clear predefined location (mutually exclusive with place search)
+      params.delete("location");
+
+      // Set place params
+      params.set("placeLat", place.lat.toFixed(6));
+      params.set("placeLng", place.lng.toFixed(6));
+      params.set("placeName", place.name);
+      params.set("radius", "10"); // Default 10km radius
+      params.delete("page");
+
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [currentFilters, pathname, router]
+  );
+
   // Shared update handler that routes sort changes through handleSortChange
   const handleFilterUpdate = useCallback(
     (key: string, value: string | undefined) => {
@@ -268,6 +335,8 @@ export function DoctorSearchFilters({
           useMyLocationLabel={t("use_my_location")}
           moreFilterCount={moreFilterCount}
           clearMoreFilters={clearMoreFilters}
+          onLocationChange={handleLocationUpdate}
+          onPlaceSelect={handlePlaceSelect}
         />
       </div>
     </>

@@ -30,6 +30,7 @@ interface DoctorResultsWithMapProps {
   availability?: Record<string, DoctorMultiDayAvailability>;
   centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
   matchScores?: Record<string, { score: number; reasons: string[] }>;
+  distances?: Record<string, number>;
 }
 
 export function DoctorResultsWithMap({
@@ -38,6 +39,7 @@ export function DoctorResultsWithMap({
   availability,
   centerLocation,
   matchScores,
+  distances,
 }: DoctorResultsWithMapProps) {
   const [hoveredDoctorId, setHoveredDoctorId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -133,6 +135,7 @@ export function DoctorResultsWithMap({
             availability={availability ? (availability[doctor.id] || null) : undefined}
             matchScore={matchScores?.[doctor.id]?.score}
             matchReasons={matchScores?.[doctor.id]?.reasons}
+            distanceKm={distances?.[doctor.id]}
           />
         ))}
       </div>

@@ -24,6 +24,12 @@ export interface SearchFilters {
   userLng?: number;
   providerType?: "doctor" | "testing_service";
   acceptedPayment?: string;
+  /** Proximity search: latitude of a selected place (borough, street, etc.) */
+  placeLat?: number;
+  /** Proximity search: longitude of a selected place */
+  placeLng?: number;
+  /** Proximity search: radius in km (default 10) */
+  radius?: number;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -128,6 +134,40 @@ export async function searchDoctors(filters: SearchFilters) {
   if (filters.consultationType) {
     query = query.contains("consultation_types", [filters.consultationType]);
   }
+  // Proximity search: when a Place (borough, street, etc.) is selected,
+  // filter doctors within the given radius of those coordinates.
+  // This replaces the predefined location filter.
+  let proximityDistances: Map<string, number> | undefined;
+  if (
+    filters.placeLat != null &&
+    filters.placeLng != null &&
+    !filters.location
+  ) {
+    const radius = filters.radius || 10;
+    const { data: ordered, error: rpcError } = await supabase.rpc(
+      "sort_doctors_by_distance",
+      { p_lat: filters.placeLat, p_lng: filters.placeLng }
+    );
+
+    if (!rpcError && ordered) {
+      const withinRadius = (
+        ordered as { doctor_id: string; distance_km: number }[]
+      ).filter((r) => r.distance_km <= radius);
+
+      if (withinRadius.length === 0) {
+        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      }
+
+      const proximityIds = withinRadius.map((r) => r.doctor_id);
+      query = query.in("id", proximityIds);
+
+      // Store distances for potential use in sorting / response
+      proximityDistances = new Map(
+        withinRadius.map((r) => [r.doctor_id, r.distance_km])
+      );
+    }
+  }
+
   if (filters.location) {
     if (isCountryFilter) {
       // Country-level filter (e.g. "country-gb" → country_code "GB")
@@ -326,7 +366,28 @@ export async function searchDoctors(filters: SearchFilters) {
     return { doctors: sorted, total: count || 0, page, perPage, matchScores };
   }
 
-  return { doctors: data || [], total: count || 0, page, perPage, matchScores: undefined };
+  // When proximity search is active, sort by distance (nearest first) by default
+  let finalDoctors = data || [];
+  if (proximityDistances && proximityDistances.size > 0 && filters.sort !== "rating" && filters.sort !== "price_asc" && filters.sort !== "price_desc") {
+    finalDoctors = [...finalDoctors].sort(
+      (a: Record<string, unknown>, b: Record<string, unknown>) =>
+        (proximityDistances!.get(a.id as string) ?? Infinity) -
+        (proximityDistances!.get(b.id as string) ?? Infinity)
+    );
+  }
+
+  // Build distance map for client
+  let distances: Record<string, number> | undefined;
+  if (proximityDistances && proximityDistances.size > 0) {
+    distances = {};
+    for (const d of finalDoctors) {
+      const id = (d as Record<string, unknown>).id as string;
+      const dist = proximityDistances.get(id);
+      if (dist != null) distances[id] = Math.round(dist * 10) / 10;
+    }
+  }
+
+  return { doctors: finalDoctors, total: count || 0, page, perPage, matchScores: undefined, distances };
 }
 
 export async function getSpecialties() {

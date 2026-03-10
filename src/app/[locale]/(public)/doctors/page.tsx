@@ -46,6 +46,9 @@ export default async function DoctorsPage({
       userLng: sp.lng ? Number(sp.lng) : undefined,
       providerType: sp.providerType as "doctor" | "testing_service" | undefined,
       acceptedPayment: sp.acceptedPayment,
+      placeLat: sp.placeLat ? Number(sp.placeLat) : undefined,
+      placeLng: sp.placeLng ? Number(sp.placeLng) : undefined,
+      radius: sp.radius ? Number(sp.radius) : undefined,
     }),
     getSpecialties(),
     getLocations(),
@@ -63,11 +66,21 @@ export default async function DoctorsPage({
     sp.consultationType
   );
 
+  const distances = result.distances;
+
   // Resolve center location for the map when a location filter is active
   let centerLocation:
     | { lat: number; lng: number; city: string; countryCode?: string }
     | undefined;
-  if (sp.location) {
+
+  // Proximity search: center map on the selected Place
+  if (sp.placeLat && sp.placeLng) {
+    centerLocation = {
+      lat: Number(sp.placeLat),
+      lng: Number(sp.placeLng),
+      city: sp.placeName || "Search area",
+    };
+  } else if (sp.location) {
     const isCountry = sp.location.startsWith("country-");
     if (isCountry) {
       // Country-level filter: compute centroid from all cities in that country
@@ -135,10 +148,16 @@ export default async function DoctorsPage({
 
         {/* Results */}
         <div>
-          <div className="mb-4">
+          <div className="mb-4 flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               {t("results_count", { count: result.total })}
             </span>
+            {sp.placeName && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+                Near {sp.placeName}
+                {sp.radius && ` (${sp.radius} km)`}
+              </span>
+            )}
           </div>
 
           {result.doctors.length === 0 ? (
@@ -160,6 +179,7 @@ export default async function DoctorsPage({
                   availability={availability}
                   centerLocation={centerLocation}
                   matchScores={matchScores}
+                  distances={distances}
                 />
               </div>
 
@@ -173,6 +193,7 @@ export default async function DoctorsPage({
                     availability={availability[doctor.id] || null}
                     matchScore={matchScores?.[doctor.id]?.score}
                     matchReasons={matchScores?.[doctor.id]?.reasons}
+                    distanceKm={distances?.[doctor.id]}
                   />
                 ))}
               </div>

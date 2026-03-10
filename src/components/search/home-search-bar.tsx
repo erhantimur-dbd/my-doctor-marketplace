@@ -135,6 +135,8 @@ export function HomeSearchBar({
   const [location, setLocation] = useState(initialLocation);
   const [consultationType, setConsultationType] = useState<"all" | "in_person" | "video">(initialConsultationType);
   const [hasManuallySelected, setHasManuallySelected] = useState(!!initialLocation);
+  // Google Place selection state (borough, street, etc.)
+  const [placeData, setPlaceData] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
   // Autocomplete state
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -339,6 +341,19 @@ export function HomeSearchBar({
   const handleLocationChange = (value: string) => {
     setHasManuallySelected(true);
     setLocation(value);
+    // Clear place data when predefined location is selected
+    if (value) setPlaceData(null);
+  };
+
+  const handlePlaceSelect = (place: { lat: number; lng: number; name: string }) => {
+    if (!place.name) {
+      // Clear
+      setPlaceData(null);
+      return;
+    }
+    setHasManuallySelected(true);
+    setPlaceData(place);
+    setLocation(""); // Clear predefined location
   };
 
   const handleLocateClick = () => {
@@ -365,11 +380,19 @@ export function HomeSearchBar({
         params.set("query", query.trim());
       }
     }
-    if (location && location !== "all") params.set("location", location);
+    if (placeData) {
+      // Place-based search (borough, street, etc.)
+      params.set("placeLat", placeData.lat.toFixed(6));
+      params.set("placeLng", placeData.lng.toFixed(6));
+      params.set("placeName", placeData.name);
+      params.set("radius", "10");
+    } else if (location && location !== "all") {
+      params.set("location", location);
+    }
     if (consultationType !== "all") params.set("consultationType", consultationType);
     const qs = params.toString();
     router.push(`/doctors${qs ? `?${qs}` : ""}`);
-  }, [query, location, consultationType, router, specialties]);
+  }, [query, location, consultationType, router, specialties, placeData]);
 
   const navigateToSpecialty = useCallback(
     (slug: string) => {
@@ -826,6 +849,8 @@ export function HomeSearchBar({
               onUseMyLocation={handleLocateClick}
               useMyLocationLabel={t("use_my_location")}
               detectingLabel={t("detecting_location") || "Detecting..."}
+              onPlaceSelect={handlePlaceSelect}
+              placeName={placeData?.name}
               onEnterKey={handleSmartSearch}
             />
           </div>
@@ -1090,6 +1115,8 @@ export function HomeSearchBar({
           useMyLocationLabel={t("use_my_location")}
           detectingLabel={t("detecting_location") || "Detecting..."}
           onEnterKey={handleSmartSearch}
+          onPlaceSelect={handlePlaceSelect}
+          placeName={placeData?.name}
         />
 
         {!compact && (
