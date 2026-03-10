@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Clock, MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, GraduationCap, Quote, X } from "lucide-react";
+import { MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, FileText, Quote, X } from "lucide-react";
 import { LANGUAGES } from "@/lib/constants/countries";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -258,18 +258,11 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
 
                     {/* Profile snapshot — right column, desktop only (hidden in compact mode) */}
                     {!compact && (() => {
-                      const hasYears = doctor.years_of_experience != null && doctor.years_of_experience > 0;
                       const hasLangs = (doctor.languages?.length ?? 0) > 0;
-                      const topEdu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
-                      if (!hasYears && !hasLangs && !topEdu) return null;
+                      const hasBio = !!doctor.bio;
+                      if (!hasLangs && !hasBio) return null;
                       return (
                         <div className="hidden lg:flex shrink-0 flex-col items-end gap-1.5 pt-1 text-xs text-muted-foreground">
-                          {hasYears && (
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="h-3 w-3 shrink-0" />
-                              <span>{doctor.years_of_experience} yrs exp</span>
-                            </div>
-                          )}
                           {hasLangs && (
                             <div className="flex items-center gap-1.5">
                               <Globe className="h-3 w-3 shrink-0" />
@@ -282,12 +275,10 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                               </span>
                             </div>
                           )}
-                          {topEdu && (
-                            <div className="flex items-center gap-1.5">
-                              <GraduationCap className="h-3 w-3 shrink-0" />
-                              <span className="max-w-[160px] truncate">
-                                {[topEdu.degree, topEdu.institution].filter(Boolean).join(", ")}
-                              </span>
+                          {hasBio && (
+                            <div className="flex items-start gap-1.5 max-w-[200px]">
+                              <FileText className="h-3 w-3 shrink-0 mt-0.5" />
+                              <span className="line-clamp-2">{doctor.bio}</span>
                             </div>
                           )}
                         </div>
