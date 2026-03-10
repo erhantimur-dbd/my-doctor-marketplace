@@ -143,7 +143,7 @@ export default function RegisterDoctorPage() {
   const [title, setTitle] = useState("Dr.");
   const [gmcNumber, setGmcNumber] = useState("");
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
-  const [yearsOfExperience, setYearsOfExperience] = useState<number>(0);
+  const [yearsOfExperience, setYearsOfExperience] = useState("");
 
   // Step 3: Practice details
   const [clinicName, setClinicName] = useState("");
@@ -574,10 +574,9 @@ export default function RegisterDoctorPage() {
                   type="number"
                   min={0}
                   max={60}
+                  placeholder="e.g. 10"
                   value={yearsOfExperience}
-                  onChange={(e) =>
-                    setYearsOfExperience(parseInt(e.target.value) || 0)
-                  }
+                  onChange={(e) => setYearsOfExperience(e.target.value)}
                   className="w-32"
                 />
               </div>
