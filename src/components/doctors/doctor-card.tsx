@@ -178,8 +178,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
                           {/* Name + inline snapshot on same line */}
-                          <div className="flex items-baseline gap-2">
-                            <h3 className="truncate font-semibold group-hover:text-primary">
+                          <div className="flex items-baseline gap-2 min-w-0">
+                            <h3 className="shrink-0 font-semibold group-hover:text-primary">
                               {doctor.title} {doctor.profile.first_name}{" "}
                               {doctor.profile.last_name}
                             </h3>
@@ -200,8 +200,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                               }
                               if (parts.length === 0) return null;
                               return (
-                                <span className="hidden lg:inline-flex items-center gap-1 whitespace-nowrap text-xs text-muted-foreground">
-                                  <span className="text-muted-foreground/40">·</span>
+                                <span className="hidden lg:inline min-w-0 truncate text-xs text-muted-foreground">
+                                  <span className="text-muted-foreground/40"> · </span>
                                   {parts.join("  ·  ")}
                                 </span>
                               );
