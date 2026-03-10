@@ -177,36 +177,10 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          {/* Name + inline snapshot on same line */}
-                          <div className="flex items-baseline gap-2 min-w-0">
-                            <h3 className="shrink-0 font-semibold group-hover:text-primary">
-                              {doctor.title} {doctor.profile.first_name}{" "}
-                              {doctor.profile.last_name}
-                            </h3>
-                            {/* Profile snapshot — inline with name, desktop only */}
-                            {(() => {
-                              const parts: string[] = [];
-                              if (doctor.years_of_experience != null && doctor.years_of_experience > 0) {
-                                parts.push(`${doctor.years_of_experience} yrs exp`);
-                              }
-                              if (doctor.languages?.length) {
-                                const codes = doctor.languages.slice(0, 3).map((c) => c.toUpperCase());
-                                const remaining = doctor.languages.length - 3;
-                                parts.push(remaining > 0 ? `${codes.join(", ")} +${remaining}` : codes.join(", "));
-                              }
-                              const topEdu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
-                              if (topEdu) {
-                                parts.push([topEdu.degree, topEdu.institution].filter(Boolean).join(", "));
-                              }
-                              if (parts.length === 0) return null;
-                              return (
-                                <span className="hidden lg:inline min-w-0 truncate text-xs text-muted-foreground">
-                                  <span className="text-muted-foreground/40"> · </span>
-                                  {parts.join("  ·  ")}
-                                </span>
-                              );
-                            })()}
-                          </div>
+                          <h3 className="truncate font-semibold group-hover:text-primary">
+                            {doctor.title} {doctor.profile.first_name}{" "}
+                            {doctor.profile.last_name}
+                          </h3>
                           {primarySpecialty && (
                             <p className="truncate text-sm text-muted-foreground">
                               {formatSpecialtyName(primarySpecialty.name_key)}
@@ -272,6 +246,44 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       </div>
 
                     </div>
+
+                    {/* Profile snapshot — right column, desktop only */}
+                    {(() => {
+                      const hasYears = doctor.years_of_experience != null && doctor.years_of_experience > 0;
+                      const hasLangs = (doctor.languages?.length ?? 0) > 0;
+                      const topEdu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
+                      if (!hasYears && !hasLangs && !topEdu) return null;
+                      return (
+                        <div className="hidden lg:flex shrink-0 flex-col items-end gap-1.5 pt-1 text-xs text-muted-foreground">
+                          {hasYears && (
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3 w-3 shrink-0" />
+                              <span>{doctor.years_of_experience} yrs exp</span>
+                            </div>
+                          )}
+                          {hasLangs && (
+                            <div className="flex items-center gap-1.5">
+                              <Globe className="h-3 w-3 shrink-0" />
+                              <span>
+                                {(() => {
+                                  const codes = doctor.languages!.slice(0, 3).map((c) => c.toUpperCase());
+                                  const remaining = doctor.languages!.length - 3;
+                                  return remaining > 0 ? `${codes.join(", ")} +${remaining}` : codes.join(", ");
+                                })()}
+                              </span>
+                            </div>
+                          )}
+                          {topEdu && (
+                            <div className="flex items-center gap-1.5">
+                              <GraduationCap className="h-3 w-3 shrink-0" />
+                              <span className="max-w-[160px] truncate">
+                                {[topEdu.degree, topEdu.institution].filter(Boolean).join(", ")}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Price + Book — always visible on left side */}
