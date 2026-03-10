@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import { APIProvider, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { Input } from "@/components/ui/input";
 
@@ -33,52 +33,11 @@ function AddressAutocompleteInner({
 }: AddressAutocompleteInnerProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const onPlaceSelectRef = useRef(onPlaceSelect);
   const places = useMapsLibrary("places");
 
-  const handlePlaceChanged = useCallback(() => {
-    const place = autocompleteRef.current?.getPlace();
-    if (!place?.address_components) return;
-
-    const components = place.address_components;
-    let streetNumber = "";
-    let route = "";
-    let city = "";
-    let state = "";
-    let postalCode = "";
-    let country = "";
-
-    for (const component of components) {
-      const types = component.types;
-      if (types.includes("street_number")) {
-        streetNumber = component.long_name;
-      } else if (types.includes("route")) {
-        route = component.long_name;
-      } else if (
-        types.includes("locality") ||
-        types.includes("postal_town")
-      ) {
-        city = component.long_name;
-      } else if (types.includes("administrative_area_level_1")) {
-        state = component.long_name;
-      } else if (types.includes("postal_code")) {
-        postalCode = component.long_name;
-      } else if (types.includes("country")) {
-        country = component.long_name;
-      }
-    }
-
-    const addressLine1 = streetNumber
-      ? `${streetNumber} ${route}`
-      : route || place.formatted_address || "";
-
-    onPlaceSelect({
-      addressLine1: addressLine1.trim(),
-      city,
-      state,
-      postalCode,
-      country,
-    });
-  }, [onPlaceSelect]);
+  // Keep ref in sync so the listener always calls the latest callback
+  onPlaceSelectRef.current = onPlaceSelect;
 
   useEffect(() => {
     if (!places || !inputRef.current || autocompleteRef.current) return;
@@ -88,14 +47,57 @@ function AddressAutocompleteInner({
       fields: ["address_components", "formatted_address"],
     });
 
-    autocompleteRef.current.addListener("place_changed", handlePlaceChanged);
+    autocompleteRef.current.addListener("place_changed", () => {
+      const place = autocompleteRef.current?.getPlace();
+      if (!place?.address_components) return;
+
+      const components = place.address_components;
+      let streetNumber = "";
+      let route = "";
+      let city = "";
+      let state = "";
+      let postalCode = "";
+      let country = "";
+
+      for (const component of components) {
+        const types = component.types;
+        if (types.includes("street_number")) {
+          streetNumber = component.long_name;
+        } else if (types.includes("route")) {
+          route = component.long_name;
+        } else if (
+          types.includes("locality") ||
+          types.includes("postal_town")
+        ) {
+          city = component.long_name;
+        } else if (types.includes("administrative_area_level_1")) {
+          state = component.long_name;
+        } else if (types.includes("postal_code")) {
+          postalCode = component.long_name;
+        } else if (types.includes("country")) {
+          country = component.long_name;
+        }
+      }
+
+      const addressLine1 = streetNumber
+        ? `${streetNumber} ${route}`
+        : route || place.formatted_address || "";
+
+      onPlaceSelectRef.current({
+        addressLine1: addressLine1.trim(),
+        city,
+        state,
+        postalCode,
+        country,
+      });
+    });
 
     return () => {
       if (autocompleteRef.current) {
         google.maps.event.clearInstanceListeners(autocompleteRef.current);
       }
     };
-  }, [places, handlePlaceChanged]);
+  }, [places]);
 
   return (
     <Input
