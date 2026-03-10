@@ -816,9 +816,9 @@ export function HomeSearchBar({
     <div className={cn("mx-auto", compact ? "max-w-full" : "max-w-3xl")} ref={wrapperRef}>
       {/* Desktop layout */}
       <div className="relative hidden md:block">
-        <div className={cn("flex items-center gap-0 rounded-full border bg-background overflow-hidden", compact ? "shadow-md" : "shadow-lg transition-shadow hover:shadow-xl")}>
+        <div className={cn("flex items-center gap-0 rounded-full border bg-background", compact ? "shadow-md" : "shadow-lg transition-shadow hover:shadow-xl")}>
           {/* Text input */}
-          <div className="flex items-center gap-2 flex-1 pl-5 pr-2">
+          <div className="flex items-center gap-2 flex-1 pl-5 pr-2 overflow-hidden">
             <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
             <input
               ref={inputRef}
