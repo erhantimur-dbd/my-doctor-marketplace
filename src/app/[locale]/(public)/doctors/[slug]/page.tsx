@@ -26,6 +26,7 @@ import { formatSpecialtyName } from "@/lib/utils";
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
 import { MEDICAL_TEST_GROUPS } from "@/lib/constants/medical-tests";
 import { ReviewSummaryCard } from "@/components/doctors/review-summary-card";
+import { BackToSearchButton } from "@/components/doctors/back-to-search-button";
 import type { Metadata } from "next";
 
 interface DoctorPageProps {
@@ -134,6 +135,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <BackToSearchButton />
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
