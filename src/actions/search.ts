@@ -29,10 +29,14 @@ export interface SearchFilters {
 export async function searchDoctors(filters: SearchFilters) {
   const supabase = createAdminClient();
 
+  // Detect if the location filter is a country-level slug (e.g. "country-gb")
+  const isCountryFilter = filters.location?.startsWith("country-");
+  const hasLocationFilter = !!filters.location;
+
   // Use an inner join on locations when a location filter is active so that
   // non-matching doctors are excluded from results (left join only filters the
   // nested resource, leaving the parent row intact with location: null).
-  const locationJoin = filters.location
+  const locationJoin = hasLocationFilter
     ? "location:locations!inner(city, country_code, slug, latitude, longitude)"
     : "location:locations(city, country_code, slug, latitude, longitude)";
 
@@ -125,7 +129,11 @@ export async function searchDoctors(filters: SearchFilters) {
     query = query.contains("consultation_types", [filters.consultationType]);
   }
   if (filters.location) {
-    if (filters.consultationType === "video") {
+    if (isCountryFilter) {
+      // Country-level filter (e.g. "country-gb" → country_code "GB")
+      const countryCode = filters.location.replace("country-", "").toUpperCase();
+      query = query.eq("location.country_code", countryCode);
+    } else if (filters.consultationType === "video") {
       // Video consultations: expand to country-level so patients see all
       // doctors in the same country, not just the selected city.
       const { data: loc } = await supabase

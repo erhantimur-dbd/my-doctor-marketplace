@@ -68,16 +68,40 @@ export default async function DoctorsPage({
     | { lat: number; lng: number; city: string; countryCode?: string }
     | undefined;
   if (sp.location) {
-    const loc = locations.find(
-      (l: Record<string, unknown>) => l.slug === sp.location
-    );
-    if (loc && loc.latitude != null && loc.longitude != null) {
-      centerLocation = {
-        lat: Number(loc.latitude),
-        lng: Number(loc.longitude),
-        city: String(loc.city),
-        countryCode: String(loc.country_code),
-      };
+    const isCountry = sp.location.startsWith("country-");
+    if (isCountry) {
+      // Country-level filter: compute centroid from all cities in that country
+      const countryCode = sp.location.replace("country-", "").toUpperCase();
+      const countryLocs = locations.filter(
+        (l: Record<string, unknown>) =>
+          l.country_code === countryCode && l.latitude != null && l.longitude != null
+      );
+      if (countryLocs.length > 0) {
+        const avgLat =
+          countryLocs.reduce((sum: number, l: any) => sum + Number(l.latitude), 0) /
+          countryLocs.length;
+        const avgLng =
+          countryLocs.reduce((sum: number, l: any) => sum + Number(l.longitude), 0) /
+          countryLocs.length;
+        centerLocation = {
+          lat: avgLat,
+          lng: avgLng,
+          city: countryCode,
+          countryCode,
+        };
+      }
+    } else {
+      const loc = locations.find(
+        (l: Record<string, unknown>) => l.slug === sp.location
+      );
+      if (loc && loc.latitude != null && loc.longitude != null) {
+        centerLocation = {
+          lat: Number(loc.latitude),
+          lng: Number(loc.longitude),
+          city: String(loc.city),
+          countryCode: String(loc.country_code),
+        };
+      }
     }
   }
 

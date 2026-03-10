@@ -615,7 +615,7 @@ export function HomeSearchBar({
                     handleSelectSuggestion({
                       type: "specialty",
                       slug: s.slug,
-                      label: s.name_key,
+                      label: formatSpecialtyName(s.name_key),
                     });
                   }}
                 >
@@ -920,7 +920,7 @@ export function HomeSearchBar({
                         handleSelectSuggestion({
                           type: "specialty",
                           slug: s.slug,
-                          label: s.name_key,
+                          label: formatSpecialtyName(s.name_key),
                         });
                       }}
                     >

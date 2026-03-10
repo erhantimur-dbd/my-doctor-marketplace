@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { MapPin, Loader2, Check, Navigation } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { MapPin, Loader2, Check, Navigation, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { geocodeAddress, findNearestLocation } from "@/lib/utils/geo";
 
@@ -11,6 +11,48 @@ export interface LocationItem {
   country_code: string;
   latitude: number | null;
   longitude: number | null;
+}
+
+// Map of country codes to display names for countries with registered doctors
+const COUNTRY_NAMES: Record<string, string> = {
+  GB: "United Kingdom",
+  DE: "Germany",
+  NL: "Netherlands",
+  FR: "France",
+  TR: "Turkey",
+  ES: "Spain",
+  IT: "Italy",
+  AT: "Austria",
+  CH: "Switzerland",
+  BE: "Belgium",
+  IE: "Ireland",
+  PT: "Portugal",
+  GR: "Greece",
+  PL: "Poland",
+  CZ: "Czechia",
+  SE: "Sweden",
+  DK: "Denmark",
+  NO: "Norway",
+  FI: "Finland",
+  RO: "Romania",
+  BG: "Bulgaria",
+  HU: "Hungary",
+  HR: "Croatia",
+};
+
+/** Build a country slug like "country-gb" from a country code */
+export function countrySlug(code: string): string {
+  return `country-${code.toLowerCase()}`;
+}
+
+/** Check if a slug is a country-level slug */
+export function isCountrySlug(slug: string): boolean {
+  return slug.startsWith("country-");
+}
+
+/** Extract country code from a country slug */
+export function countryCodeFromSlug(slug: string): string {
+  return slug.replace("country-", "").toUpperCase();
 }
 
 interface LocationComboboxProps {
@@ -68,16 +110,48 @@ export function LocationCombobox({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [geocodeResult, setGeocodeResult] = useState<string | null>(null);
 
-  // Selected location display text
-  const selectedLocation = locations.find((l) => l.slug === value);
-  const displayText = selectedLocation
-    ? `${selectedLocation.city}, ${selectedLocation.country_code}`
-    : "";
+  // Build unique countries from locations
+  const countries = useMemo(() => {
+    const seen = new Set<string>();
+    const result: { code: string; name: string; slug: string }[] = [];
+    for (const loc of locations) {
+      if (!seen.has(loc.country_code)) {
+        seen.add(loc.country_code);
+        result.push({
+          code: loc.country_code,
+          name: COUNTRY_NAMES[loc.country_code] || loc.country_code,
+          slug: countrySlug(loc.country_code),
+        });
+      }
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [locations]);
 
-  // Filter locations client-side
-  const filteredLocations = search.trim()
+  // Selected location display text
+  const isCountrySelected = isCountrySlug(value);
+  const selectedCountry = isCountrySelected
+    ? countries.find((c) => c.slug === value)
+    : null;
+  const selectedLocation = !isCountrySelected
+    ? locations.find((l) => l.slug === value)
+    : null;
+  const displayText = selectedCountry
+    ? `${countryFlag(selectedCountry.code)} ${selectedCountry.name}`
+    : selectedLocation
+      ? `${selectedLocation.city}, ${selectedLocation.country_code}`
+      : "";
+
+  // Filter locations and countries client-side
+  const term = search.trim().toLowerCase();
+  const filteredCountries = term
+    ? countries.filter(
+        (c) =>
+          c.name.toLowerCase().includes(term) ||
+          c.code.toLowerCase().includes(term)
+      )
+    : countries;
+  const filteredLocations = term
     ? locations.filter((l) => {
-        const term = search.trim().toLowerCase();
         return (
           l.city.toLowerCase().includes(term) ||
           l.country_code.toLowerCase().includes(term) ||
@@ -282,9 +356,42 @@ export function LocationCombobox({
             </div>
           )}
 
-          {/* Filtered location list */}
-          {filteredLocations.length > 0 && (
+          {/* Countries group */}
+          {filteredCountries.length > 0 && (
             <div className={geocodeResult ? "border-t" : ""}>
+              <div className="px-3 pt-2 pb-1">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                  Countries
+                </span>
+              </div>
+              {filteredCountries.map((c) => (
+                <button
+                  key={c.slug}
+                  type="button"
+                  onClick={() => handleSelect(c.slug)}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-accent",
+                    value === c.slug && "font-medium"
+                  )}
+                >
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <span>{countryFlag(c.code)} {c.name}</span>
+                  {value === c.slug && (
+                    <Check className="ml-auto h-4 w-4 text-primary" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Cities group */}
+          {filteredLocations.length > 0 && (
+            <div>
+              <div className="px-3 pt-2 pb-1">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                  Cities
+                </span>
+              </div>
               {filteredLocations.map((loc) => (
                 <button
                   key={loc.slug}
@@ -306,7 +413,7 @@ export function LocationCombobox({
           )}
 
           {/* No results */}
-          {filteredLocations.length === 0 && !geocodeResult && !geocoding && search.trim() && (
+          {filteredLocations.length === 0 && filteredCountries.length === 0 && !geocodeResult && !geocoding && search.trim() && (
             <div className="px-3 py-4 text-center text-sm text-muted-foreground">
               No locations found for &ldquo;{search.trim()}&rdquo;
             </div>
