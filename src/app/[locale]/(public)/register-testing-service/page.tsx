@@ -189,7 +189,7 @@ export default function RegisterTestingServicePage() {
             <FlaskConical className="h-6 w-6 text-teal-600" />
           </div>
           <CardTitle className="text-2xl">Register as a Testing Service</CardTitle>
-          <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 dark:bg-teal-950/30">
+          <div className="mx-auto mt-2 inline-flex items-center gap-2 rounded-full bg-teal-50 px-3 py-1 dark:bg-teal-950/30">
             <span className="text-sm font-semibold text-teal-700 dark:text-teal-400">
               {formatPriceForLocale(TESTING_STANDALONE_PLAN.priceMonthlyPence, locale)} / month
             </span>
