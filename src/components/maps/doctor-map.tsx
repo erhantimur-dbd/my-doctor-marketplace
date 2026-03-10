@@ -78,22 +78,21 @@ function FitBounds({
       map.fitBounds(bounds, padding);
     }, 350);
 
-    // When a city is selected, clamp zoom to city-level (~3 mile radius)
-    // to keep surrounding context visible even if doctors are clustered tightly
-    if (centerLocation) {
-      const listener = google.maps.event.addListenerOnce(map, "idle", () => {
-        const currentZoom = map.getZoom();
-        if (currentZoom != null && currentZoom > 14) {
-          map.setZoom(14);
-        }
-      });
-      return () => {
-        clearTimeout(timeout);
-        google.maps.event.removeListener(listener);
-      };
-    }
+    // Always clamp zoom so users can see streets, landmarks, and POIs.
+    // With a location filter active, use zoom 14 (~city level);
+    // otherwise cap at 15 (~neighbourhood level with street names).
+    const maxZoom = centerLocation ? 14 : 15;
+    const listener = google.maps.event.addListenerOnce(map, "idle", () => {
+      const currentZoom = map.getZoom();
+      if (currentZoom != null && currentZoom > maxZoom) {
+        map.setZoom(maxZoom);
+      }
+    });
 
-    return () => clearTimeout(timeout);
+    return () => {
+      clearTimeout(timeout);
+      google.maps.event.removeListener(listener);
+    };
   }, [doctors, map, centerLocation]);
 
   return null;
