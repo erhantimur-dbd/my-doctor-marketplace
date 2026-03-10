@@ -197,18 +197,59 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             </div>
                           )}
                         </div>
-                        <div className="flex shrink-0 gap-1.5">
-                          {isTestingService && (
-                            <Badge className="shrink-0 bg-teal-100 text-teal-800 hover:bg-teal-100 text-xs dark:bg-teal-900/40 dark:text-teal-300">
-                              <FlaskConical className="mr-1 h-3 w-3" />
-                              Testing
-                            </Badge>
-                          )}
-                          {matchScore != null && matchScore > 0 && (
-                            <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
-                              {matchScore}% Match
-                            </Badge>
-                          )}
+                        <div className="shrink-0 flex items-start gap-2">
+                          {/* Existing tag badges */}
+                          <div className="flex shrink-0 gap-1.5">
+                            {isTestingService && (
+                              <Badge className="shrink-0 bg-teal-100 text-teal-800 hover:bg-teal-100 text-xs dark:bg-teal-900/40 dark:text-teal-300">
+                                <FlaskConical className="mr-1 h-3 w-3" />
+                                Testing
+                              </Badge>
+                            )}
+                            {matchScore != null && matchScore > 0 && (
+                              <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
+                                {matchScore}% Match
+                              </Badge>
+                            )}
+                          </div>
+
+                          {/* Profile snapshot — right column, desktop only */}
+                          {(() => {
+                            const hasYears = doctor.years_of_experience != null && doctor.years_of_experience > 0;
+                            const hasLangs = (doctor.languages?.length ?? 0) > 0;
+                            const topEdu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
+                            if (!hasYears && !hasLangs && !topEdu) return null;
+                            return (
+                              <div className="hidden lg:flex flex-col items-end gap-1 text-xs text-muted-foreground">
+                                {hasYears && (
+                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                    <Clock className="h-3 w-3 shrink-0" />
+                                    <span>{doctor.years_of_experience} yrs exp</span>
+                                  </div>
+                                )}
+                                {hasLangs && (
+                                  <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                    <Globe className="h-3 w-3 shrink-0" />
+                                    <span>
+                                      {(() => {
+                                        const codes = doctor.languages!.slice(0, 3).map((c) => c.toUpperCase());
+                                        const remaining = doctor.languages!.length - 3;
+                                        return remaining > 0 ? `${codes.join(", ")} +${remaining}` : codes.join(", ");
+                                      })()}
+                                    </span>
+                                  </div>
+                                )}
+                                {topEdu && (
+                                  <div className="flex items-center gap-1.5">
+                                    <GraduationCap className="h-3 w-3 shrink-0" />
+                                    <span className="max-w-[140px] truncate">
+                                      {[topEdu.degree, topEdu.institution].filter(Boolean).join(", ")}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
@@ -245,44 +286,6 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         )}
                       </div>
 
-                      {/* Profile snapshot: experience, languages, education */}
-                      {(doctor.years_of_experience || (doctor.languages?.length ?? 0) > 0 || (doctor.education as any[])?.some((e: any) => e.degree || e.institution)) && (
-                        <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-                          {doctor.years_of_experience != null && doctor.years_of_experience > 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <Clock className="h-3 w-3 shrink-0" />
-                              <span>{doctor.years_of_experience} years experience</span>
-                            </div>
-                          )}
-                          {doctor.languages?.length > 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <Globe className="h-3 w-3 shrink-0" />
-                              <span className="truncate">
-                                {(() => {
-                                  const names = doctor.languages
-                                    .map((code) => LANGUAGES.find((l) => l.code === code)?.name || code.toUpperCase())
-                                    .slice(0, 3);
-                                  const remaining = doctor.languages.length - 3;
-                                  return remaining > 0
-                                    ? `${names.join(", ")} +${remaining} more`
-                                    : names.join(", ");
-                                })()}
-                              </span>
-                            </div>
-                          )}
-                          {(() => {
-                            const edu = (doctor.education as any[])?.find((e: any) => e.degree || e.institution);
-                            if (!edu) return null;
-                            const label = [edu.degree, edu.institution].filter(Boolean).join(", ");
-                            return (
-                              <div className="flex items-center gap-1.5">
-                                <GraduationCap className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{label}</span>
-                              </div>
-                            );
-                          })()}
-                        </div>
-                      )}
                     </div>
                   </div>
 
