@@ -138,7 +138,16 @@ export function LocationCombobox({
         });
       }
     }
-    return result.sort((a, b) => a.name.localeCompare(b.name));
+    // Pin priority market(s) to the top, then sort the rest alphabetically
+    const PRIORITY_COUNTRIES = ["GB"];
+    return result.sort((a, b) => {
+      const aPriority = PRIORITY_COUNTRIES.indexOf(a.code);
+      const bPriority = PRIORITY_COUNTRIES.indexOf(b.code);
+      if (aPriority !== -1 && bPriority !== -1) return aPriority - bPriority;
+      if (aPriority !== -1) return -1;
+      if (bPriority !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
   }, [locations]);
 
   // Selected location display text
