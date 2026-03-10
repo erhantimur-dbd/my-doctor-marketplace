@@ -70,28 +70,30 @@ function FitBounds({
 
     const padding = { top: 50, right: 50, bottom: 50, left: 50 };
 
-    // Apply fitBounds immediately and also after a short delay to handle
-    // animated containers (e.g. dialog overlays) where the map container
-    // may not have its final dimensions on first render.
+    // Cap the zoom level so users can see streets, landmarks, and POIs.
+    // We use setOptions({ maxZoom }) which is respected by BOTH fitBounds
+    // calls (immediate + delayed). After the delayed call settles we
+    // remove the cap so the user can still manually zoom in.
+    const maxZoom = centerLocation ? 13 : 14;
+    map.setOptions({ maxZoom });
+
     map.fitBounds(bounds, padding);
+
+    // Re-apply after a short delay for animated containers (e.g. dialog
+    // overlays) whose dimensions are not final on the first render.
     const timeout = setTimeout(() => {
       map.fitBounds(bounds, padding);
-    }, 350);
 
-    // Always clamp zoom so users can see streets, landmarks, and POIs.
-    // With a location filter active, use zoom 14 (~city level);
-    // otherwise cap at 15 (~neighbourhood level with street names).
-    const maxZoom = centerLocation ? 14 : 15;
-    const listener = google.maps.event.addListenerOnce(map, "idle", () => {
-      const currentZoom = map.getZoom();
-      if (currentZoom != null && currentZoom > maxZoom) {
-        map.setZoom(maxZoom);
-      }
-    });
+      // Once the delayed fit settles, remove the maxZoom restriction
+      // so the user can freely zoom in past the initial cap.
+      google.maps.event.addListenerOnce(map, "idle", () => {
+        map.setOptions({ maxZoom: undefined });
+      });
+    }, 350);
 
     return () => {
       clearTimeout(timeout);
-      google.maps.event.removeListener(listener);
+      map.setOptions({ maxZoom: undefined });
     };
   }, [doctors, map, centerLocation]);
 
