@@ -713,3 +713,70 @@ export async function signInWithApple(locale: string = "en") {
 
   redirect(data.url);
 }
+
+export async function signInWithFacebook(locale: string = "en") {
+  const supabase = await createClient();
+  const origin = await getOrigin();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "facebook",
+    options: {
+      redirectTo: `${origin}/${locale}/callback`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (!data.url) {
+    return { error: "Facebook sign-in is not configured. Please try another method." };
+  }
+
+  redirect(data.url);
+}
+
+export async function signInWithAzure(locale: string = "en") {
+  const supabase = await createClient();
+  const origin = await getOrigin();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "azure",
+    options: {
+      redirectTo: `${origin}/${locale}/callback`,
+      scopes: "openid profile email",
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (!data.url) {
+    return { error: "Microsoft sign-in is not configured. Please try another method." };
+  }
+
+  redirect(data.url);
+}
+
+export async function signInWithTwitter(locale: string = "en") {
+  const supabase = await createClient();
+  const origin = await getOrigin();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "twitter",
+    options: {
+      redirectTo: `${origin}/${locale}/callback`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  if (!data.url) {
+    return { error: "X sign-in is not configured. Please try another method." };
+  }
+
+  redirect(data.url);
+}
