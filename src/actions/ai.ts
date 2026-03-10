@@ -203,15 +203,25 @@ Common languages: English, German, Turkish, French, Italian, Spanish, Portuguese
 User query: "${trimmed}"
 User locale: ${locale}
 
+IMPORTANT TRIAGE RULES:
+- For common, non-specific symptoms (headaches, general pain, fatigue, fever, cough, cold, flu-like symptoms, dizziness, nausea, general malaise, sore throat, stomach ache), the specialty MUST be "general-practice" (GP).
+- Only set a specialist specialty when the query clearly and specifically refers to that specialty (e.g. "skin rash" → dermatology, "heart palpitations" → cardiology, "broken bone" → orthopedics, "eye exam" → ophthalmology).
+- If the user mentions a symptom without specifying a specialty, default to "general-practice".
+
 Rules:
 - Map specialty references to the exact slug (e.g. "heart doctor" → "cardiology", "skin doctor" → "dermatology")
 - Map prices to CENTS (e.g. "100 euros" → 10000, "50 dollars" → 5000)
 - Map location references to the closest location slug
-- Extract language preferences (e.g. "Turkish-speaking" → "Turkish")
 - Extract rating preferences (e.g. "highly rated" → 4.0, "best rated" → 4.5)
 - Set consultationType only if explicitly mentioned (e.g. "video call", "online", "in person")
 - Put any remaining text that doesn't map to a filter in the "query" field
-- Only include filters that are clearly specified in the query`,
+
+CRITICAL FILTER RULES:
+- ONLY include filters that the user EXPLICITLY states in their query text.
+- Do NOT infer language from the user's locale or the language the query is written in. Only set language if the user explicitly says something like "Turkish-speaking doctor" or "doctor who speaks German".
+- Do NOT infer location from the query. Only set location if the user explicitly names a city or place.
+- When in doubt, leave a filter as null rather than guessing.
+- The "query" field should ONLY contain text that does NOT map to any filter. If the entire input maps to a specialty (e.g. "I have a headache" → general-practice), set query to null. Do NOT echo the user's input back in the query field.`,
       abortSignal: controller.signal,
     });
 

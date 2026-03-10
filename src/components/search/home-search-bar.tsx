@@ -433,7 +433,15 @@ export function HomeSearchBar({
         if (item.analysis.suggestedConsultationType !== "either") {
           params.set("consultationType", item.analysis.suggestedConsultationType);
         }
-        if (location && location !== "all") params.set("location", location);
+        // Carry the user's location selection (Google Place or predefined)
+        if (placeData) {
+          params.set("placeLat", placeData.lat.toFixed(6));
+          params.set("placeLng", placeData.lng.toFixed(6));
+          params.set("placeName", placeData.name);
+          params.set("radius", "10");
+        } else if (location && location !== "all") {
+          params.set("location", location);
+        }
         router.push(`/doctors?${params.toString()}`);
         break;
       }
@@ -458,7 +466,12 @@ export function HomeSearchBar({
         if (result.data.maxPrice) params.set("maxPrice", String(result.data.maxPrice / 100));
         if (result.data.minRating) params.set("minRating", String(result.data.minRating));
         if (result.data.consultationType) params.set("consultationType", result.data.consultationType);
-        if (result.data.query) params.set("query", result.data.query);
+        // Only pass query if it adds value beyond the extracted specialty.
+        // When the AI echoes the symptom text (e.g. "I have a headache") as query
+        // AND already extracted a specialty, the bio search produces 0 results.
+        if (result.data.query && !result.data.specialty) {
+          params.set("query", result.data.query);
+        }
 
         // Location priority: user's explicit selection always wins over AI-parsed location.
         // This prevents the AI from overriding a manually selected location (e.g., London)
