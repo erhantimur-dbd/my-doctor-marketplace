@@ -113,15 +113,15 @@ export function DoctorResultsWithMap({
   const hasMapData = mapDoctors.length > 0;
 
   return (
-    <div className="flex gap-6">
+    <div
+      className={
+        hasMapData
+          ? "grid grid-cols-1 lg:grid-cols-[3fr_2fr] xl:grid-cols-[13fr_7fr] gap-6"
+          : ""
+      }
+    >
       {/* Doctor list — left side */}
-      <div
-        className={
-          hasMapData
-            ? "min-w-0 flex-[3] xl:flex-[13] space-y-4 overflow-y-auto"
-            : "w-full space-y-4"
-        }
-      >
+      <div className="min-w-0 space-y-4 overflow-hidden">
         {doctors.map((doctor) => (
           <DoctorCard
             key={doctor.id}
@@ -139,7 +139,7 @@ export function DoctorResultsWithMap({
 
       {/* Map — right side (only if we have location data) */}
       {hasMapData && (
-        <div className="hidden min-w-0 flex-[2] xl:flex-[7] lg:block">
+        <div className="hidden min-w-0 lg:block">
           <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-hidden rounded-lg border relative">
             <DoctorMap
               doctors={mapDoctors}
