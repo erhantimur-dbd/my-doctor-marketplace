@@ -73,15 +73,15 @@ export function SpecialtyMarquee({ specialties }: SpecialtyMarqueeProps) {
               className="shrink-0"
             >
               <Card
-                className={`group cursor-pointer transition-all ${c.border} hover:shadow-md`}
+                className={`group h-[7.5rem] w-[7.5rem] cursor-pointer transition-all ${c.border} hover:shadow-md`}
               >
-                <CardContent className="flex flex-col items-center gap-3 p-4 text-center">
+                <CardContent className="flex h-full flex-col items-center justify-center gap-3 p-4 text-center">
                   <div
                     className={`rounded-full ${c.bg} p-3 transition-colors ${c.hoverBg}`}
                   >
                     <Icon className={`h-6 w-6 ${c.text}`} />
                   </div>
-                  <span className="w-[5.5rem] text-xs font-medium leading-tight">
+                  <span className="line-clamp-2 text-xs font-medium leading-tight">
                     {spec.label}
                   </span>
                 </CardContent>
