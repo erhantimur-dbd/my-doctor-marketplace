@@ -77,9 +77,25 @@ Given the patient's symptoms, determine:
 4. Whether in-person or video consultation is appropriate
 
 IMPORTANT TRIAGE RULES:
-- For common, non-specific symptoms (headaches, general pain, fatigue, fever, cough, cold, flu-like symptoms, dizziness, nausea, general malaise, sore throat, stomach ache), the primarySpecialty MUST be "general-practice" (GP). Put the relevant specialist in relatedSpecialties.
-- Only set a specialist as primarySpecialty when symptoms are clearly specific to that specialty (e.g. "skin rash" → dermatology, "chest pain with shortness of breath" → cardiology, "broken bone" → orthopedics).
-- A GP is the first point of contact for most patients. They can refer to specialists when needed.
+- For vague, non-specific symptoms (general pain, fatigue, fever, cold, flu-like symptoms, dizziness, nausea, general malaise), the primarySpecialty MUST be "general-practice" (GP). Put the relevant specialist in relatedSpecialties.
+- When symptoms clearly point to a specific body part or organ system, route to the appropriate specialist as primarySpecialty:
+  • Teeth/gums/toothache/dental pain → "dentistry"
+  • Skin rash/acne/mole/eczema → "dermatology"
+  • Heart palpitations/chest pain/blood pressure → "cardiology"
+  • Broken bone/joint pain/knee pain/back pain/sports injury → "orthopedics"
+  • Eye exam/blurry vision/eye pain → "ophthalmology"
+  • Ear pain/hearing loss/sinus/tonsils → "ent"
+  • Headaches/migraines/numbness/seizures → "neurology"
+  • Anxiety/depression/therapy/stress → "psychology"
+  • Breathing difficulty/asthma/chronic cough → "pulmonology"
+  • Stomach pain/acid reflux/digestive issues → "gastroenterology"
+  • Allergies/hay fever/allergic reactions → "allergy"
+  • Child health/baby/pediatric → "pediatrics"
+  • Women's health/pregnancy/gynecological → "gynecology"
+  • Diabetes/thyroid/hormones → "endocrinology"
+  • Kidney pain/urinary issues → "nephrology" or "urology"
+  • Cosmetic/botox/aesthetic → "aesthetic-medicine"
+- Only default to "general-practice" when the symptom is truly vague and does not point to any specific specialist.
 - Always include "general-practice" in relatedSpecialties if it's not the primarySpecialty.
 
 Patient symptoms: "${trimmed}"
@@ -204,9 +220,27 @@ User query: "${trimmed}"
 User locale: ${locale}
 
 IMPORTANT TRIAGE RULES:
-- For common, non-specific symptoms (headaches, general pain, fatigue, fever, cough, cold, flu-like symptoms, dizziness, nausea, general malaise, sore throat, stomach ache), the specialty MUST be "general-practice" (GP).
-- Only set a specialist specialty when the query clearly and specifically refers to that specialty (e.g. "skin rash" → dermatology, "heart palpitations" → cardiology, "broken bone" → orthopedics, "eye exam" → ophthalmology).
-- If the user mentions a symptom without specifying a specialty, default to "general-practice".
+- For vague, non-specific symptoms (general pain, fatigue, fever, cold, flu-like symptoms, dizziness, nausea, general malaise), the specialty MUST be "general-practice" (GP).
+- When a symptom clearly points to a specific body part or organ system, route to the appropriate specialist:
+  • Teeth/gums/toothache/dental pain → "dentistry"
+  • Skin rash/acne/mole/eczema → "dermatology"
+  • Heart palpitations/chest pain/blood pressure → "cardiology"
+  • Broken bone/joint pain/knee pain/back pain/sports injury → "orthopedics"
+  • Eye exam/blurry vision/eye pain → "ophthalmology"
+  • Ear pain/hearing loss/sinus/tonsils → "ent"
+  • Headaches/migraines/numbness/seizures → "neurology"
+  • Anxiety/depression/therapy/stress → "psychology"
+  • Breathing difficulty/asthma/chronic cough → "pulmonology"
+  • Stomach pain/acid reflux/digestive issues → "gastroenterology"
+  • Allergies/hay fever/allergic reactions → "allergy"
+  • Child health/baby/pediatric → "pediatrics"
+  • Women's health/pregnancy/gynecological → "gynecology"
+  • Diabetes/thyroid/hormones → "endocrinology"
+  • Kidney pain/urinary issues → "nephrology" or "urology"
+  • Weight management/diet/nutrition → "nutrition"
+  • Cosmetic/botox/aesthetic → "aesthetic-medicine"
+  • Physical rehab/mobility/physiotherapy → "physiotherapy"
+- Only default to "general-practice" when the symptom is truly vague and does not point to any specific specialist.
 
 Rules:
 - Map specialty references to the exact slug (e.g. "heart doctor" → "cardiology", "skin doctor" → "dermatology")
