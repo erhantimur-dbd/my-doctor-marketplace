@@ -315,10 +315,10 @@ export default function RegisterDoctorPage() {
             const isActive = step === s.number;
             const isCompleted = step > s.number;
             return (
-              <div key={s.number} className="flex items-center">
+              <div key={s.number} className="flex min-w-0 items-center">
                 <div className="flex flex-col items-center">
                   <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                    className={`flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-full text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-primary text-primary-foreground"
                         : isCompleted
@@ -327,20 +327,20 @@ export default function RegisterDoctorPage() {
                     }`}
                   >
                     {isCompleted ? (
-                      <CheckCircle2 className="h-5 w-5" />
+                      <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     ) : (
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                     )}
                   </div>
                   <span
-                    className={`mt-1 text-xs ${isActive ? "font-medium text-primary" : "text-muted-foreground"}`}
+                    className={`mt-1 max-w-[3.5rem] truncate text-center text-[10px] sm:max-w-none sm:text-xs ${isActive ? "font-medium text-primary" : "text-muted-foreground"}`}
                   >
                     {s.title}
                   </span>
                 </div>
                 {i < STEPS.length - 1 && (
                   <div
-                    className={`mx-2 h-0.5 w-8 sm:w-16 ${
+                    className={`mx-1 h-0.5 w-4 sm:mx-2 sm:w-16 ${
                       step > s.number ? "bg-primary" : "bg-muted"
                     }`}
                   />
