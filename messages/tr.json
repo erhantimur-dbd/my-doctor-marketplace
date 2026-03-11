@@ -37,11 +37,11 @@
     "logout": "Cikis Yap",
     "my_bookings": "Randevularim",
     "my_profile": "Profilim",
-    "brand_tagline": "Premium özel sağlık hizmetleri pazaryeri"
+    "brand_tagline": "Hastaların Doğru Doktoru Bulduğu Yer"
   },
   "home": {
     "hero_title": "Doktorunuzu Bulun, Aninda Randevu Alin",
-    "hero_subtitle": "Avrupa genelinde dogrulanmis ozel uzman doktorlarla baglanti kurun. Seffaf fiyatlar, aninda randevu, premium bakim.",
+    "hero_subtitle": "Avrupa genelinde şeffaf fiyatlar ve anında online randevu ile doğrulanmış özel uzman doktorları keşfedin.",
     "search_placeholder": "Uzmanlik, doktor adi veya konum ile arayin...",
     "verified_doctors": "Doğrulanmış Doktorlar",
     "instant_booking": "Anında Randevu",
@@ -484,7 +484,8 @@
     "health_screenings": "Sağlık Taramaları"
   },
   "footer": {
-    "brand_description": "Hastaları Avrupa genelinde doğrulanmış uzmanlarla buluşturan premium özel sağlık pazaryeri.",
+    "brand_description": "Avrupa genelinde şeffaf fiyatlar ve anında online randevu ile doğrulanmış özel uzman doktorları keşfedin.",
+    "brand_tagline": "Hastaların Doğru Doktoru Bulduğu Yer",
     "for_patients": "Hastalar İçin",
     "find_doctor": "Doktor Bul",
     "specialties": "Uzmanlıklar",

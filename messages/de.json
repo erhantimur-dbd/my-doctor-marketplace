@@ -37,11 +37,11 @@
     "logout": "Abmelden",
     "my_bookings": "Meine Termine",
     "my_profile": "Mein Profil",
-    "brand_tagline": "Premium-Marktplatz für private Gesundheitsversorgung"
+    "brand_tagline": "Wo Patienten den richtigen Arzt finden"
   },
   "home": {
     "hero_title": "Finden Sie Ihren Arzt, buchen Sie sofort",
-    "hero_subtitle": "Verbinden Sie sich mit verifizierten Facharzten in ganz Europa. Transparente Preise, sofortige Buchung, erstklassige Betreuung.",
+    "hero_subtitle": "Entdecken Sie verifizierte Fachärzte in ganz Europa mit transparenten Preisen und sofortiger Online-Buchung.",
     "search_placeholder": "Suche nach Fachgebiet, Arztname oder Ort...",
     "verified_doctors": "Verifizierte Ärzte",
     "instant_booking": "Sofort buchen",
@@ -163,7 +163,8 @@
     "verify_wrong_email": "Wrong email? Sign up again"
   },
   "footer": {
-    "brand_description": "Premium-Marktplatz für private Gesundheitsversorgung, der Patienten mit verifizierten Fachärzten in ganz Europa verbindet.",
+    "brand_description": "Entdecken Sie verifizierte Fachärzte in ganz Europa mit transparenten Preisen und sofortiger Online-Buchung.",
+    "brand_tagline": "Wo Patienten den richtigen Arzt finden",
     "for_patients": "Für Patienten",
     "find_doctor": "Arzt finden",
     "specialties": "Fachgebiete",

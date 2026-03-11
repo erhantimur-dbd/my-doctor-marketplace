@@ -151,7 +151,7 @@ export default function PricingPage() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
         <div className="container mx-auto text-center">
-          <Badge variant="secondary" className="mb-4">
+          <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
             For Doctors &amp; Clinics
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
@@ -322,7 +322,7 @@ export default function PricingPage() {
       <section className="px-4 pb-12 md:pb-20">
         <div className="container mx-auto max-w-5xl">
           <div className="text-center">
-            <Badge variant="secondary" className="mb-4">
+            <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
               <FlaskConical className="mr-1.5 h-3 w-3" />
               Medical Testing
             </Badge>
@@ -531,16 +531,16 @@ export default function PricingPage() {
       {/* CTA */}
       <section className="px-4 py-16 md:py-24">
         <div className="container mx-auto">
-          <Card className="overflow-hidden border-0 bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900">
+          <Card className="overflow-hidden border-0 bg-gradient-to-br from-primary via-primary/90 to-primary/80">
             <CardContent className="p-8 md:p-14 lg:p-16">
               <div className="mx-auto max-w-3xl text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
-                  <Stethoscope className="h-7 w-7 text-teal-400" />
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
+                  <Stethoscope className="h-7 w-7 text-white" />
                 </div>
                 <h2 className="mt-5 text-2xl font-bold text-white md:text-3xl">
                   Ready to Grow Your Practice?
                 </h2>
-                <p className="mx-auto mt-3 max-w-xl text-white/70">
+                <p className="mx-auto mt-3 max-w-xl text-white/80">
                   Join hundreds of doctors already using MyDoctors360 to reach new
                   patients and streamline their practice.
                 </p>
@@ -552,51 +552,45 @@ export default function PricingPage() {
                       icon: Calendar,
                       title: "Smart Booking",
                       desc: "Real-time calendar with instant patient booking",
-                      color: "text-teal-400",
                     },
                     {
                       icon: Bell,
                       title: "Auto Reminders",
                       desc: "Reduce no-shows with email, SMS & WhatsApp",
-                      color: "text-amber-400",
                     },
                     {
                       icon: BarChart3,
                       title: "Revenue Analytics",
                       desc: "Track earnings, bookings & growth metrics",
-                      color: "text-blue-400",
                     },
                     {
                       icon: Shield,
                       title: "Verified Profile",
                       desc: "Build trust with a credential-verified badge",
-                      color: "text-emerald-400",
                     },
                     {
                       icon: CreditCard,
                       title: "Secure Payments",
                       desc: "Stripe-powered payouts directly to your bank",
-                      color: "text-violet-400",
                     },
                     {
                       icon: Globe,
                       title: "Multi-Language",
                       desc: "Reach patients across Europe in 4 languages",
-                      color: "text-rose-400",
                     },
                   ].map((feature) => (
                     <div
                       key={feature.title}
-                      className="flex items-start gap-3 rounded-xl bg-white/[0.06] p-4 text-left backdrop-blur-sm transition-colors hover:bg-white/[0.1]"
+                      className="flex items-start gap-3 rounded-xl bg-white/10 p-4 text-left backdrop-blur-sm transition-colors hover:bg-white/15"
                     >
                       <feature.icon
-                        className={`mt-0.5 h-5 w-5 shrink-0 ${feature.color}`}
+                        className="mt-0.5 h-5 w-5 shrink-0 text-white/90"
                       />
                       <div>
                         <p className="text-sm font-semibold text-white">
                           {feature.title}
                         </p>
-                        <p className="mt-0.5 text-xs leading-relaxed text-white/60">
+                        <p className="mt-0.5 text-xs leading-relaxed text-white/70">
                           {feature.desc}
                         </p>
                       </div>
@@ -606,7 +600,7 @@ export default function PricingPage() {
 
                 <Button
                   size="lg"
-                  className="mt-10 rounded-full bg-white text-slate-900 hover:bg-white/90"
+                  className="mt-10 rounded-full bg-white text-primary font-semibold hover:bg-white/90"
                   asChild
                 >
                   <Link href="/register-doctor?tier=professional">

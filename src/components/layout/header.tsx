@@ -71,7 +71,10 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Logo className="h-7 w-7 text-primary" />
-          <span className="text-xl font-bold tracking-tight">MyDoctors360</span>
+          <div className="flex flex-col">
+            <span className="text-xl font-bold tracking-tight leading-tight">MyDoctors360</span>
+            <span className="text-[10px] text-muted-foreground">{t("brand_tagline")}</span>
+          </div>
         </Link>
 
         {/* Desktop Nav */}

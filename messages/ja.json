@@ -37,11 +37,11 @@
     "logout": "ログアウト",
     "my_bookings": "予約一覧",
     "my_profile": "マイプロフィール",
-    "brand_tagline": "プレミアムプライベートヘルスケアマーケットプレイス"
+    "brand_tagline": "患者が適切な医師と出会う場所"
   },
   "home": {
     "hero_title": "あなたの医師を見つけ、すぐに予約",
-    "hero_subtitle": "ヨーロッパ全域の認証済み専門医とつながりましょう。透明な料金設定、即時予約、プレミアムな医療サービス。",
+    "hero_subtitle": "ヨーロッパ全域の認証済み専門医を、透明な料金設定と即時オンライン予約で見つけましょう。",
     "search_placeholder": "診療科、医師名、または地域で検索...",
     "verified_doctors": "認定医師",
     "instant_booking": "即時予約",
@@ -381,7 +381,8 @@
     "health_screenings": "健康診断"
   },
   "footer": {
-    "brand_description": "ヨーロッパ全土の認定専門医と患者をつなぐプレミアムプライベートヘルスケアマーケットプレイス。",
+    "brand_description": "ヨーロッパ全域の認証済み専門医を、透明な料金設定と即時オンライン予約で見つけましょう。",
+    "brand_tagline": "患者が適切な医師と出会う場所",
     "for_patients": "患者の方へ",
     "find_doctor": "医師を探す",
     "specialties": "診療科目",

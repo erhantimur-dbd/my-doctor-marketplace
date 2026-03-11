@@ -78,7 +78,7 @@ export default function SpecialtiesPage() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
         <div className="container mx-auto text-center">
-          <Badge variant="secondary" className="mb-4">
+          <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
             24 Medical Specialties
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">

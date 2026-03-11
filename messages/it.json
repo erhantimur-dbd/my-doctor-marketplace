@@ -37,11 +37,11 @@
     "logout": "Esci",
     "my_bookings": "I Miei Appuntamenti",
     "my_profile": "Il Mio Profilo",
-    "brand_tagline": "Marketplace sanitario privato premium"
+    "brand_tagline": "Dove i pazienti trovano il medico giusto"
   },
   "home": {
     "hero_title": "Trova il Tuo Medico, Prenota Subito",
-    "hero_subtitle": "Connettiti con specialisti privati verificati in tutta Europa. Prezzi trasparenti, prenotazione immediata, cure premium.",
+    "hero_subtitle": "Scopri specialisti privati verificati in tutta Europa con prezzi trasparenti e prenotazione online immediata.",
     "search_placeholder": "Cerca per specialità, nome del medico o località...",
     "verified_doctors": "Medici Verificati",
     "instant_booking": "Prenotazione Istantanea",
@@ -381,7 +381,8 @@
     "health_screenings": "Screening Sanitari"
   },
   "footer": {
-    "brand_description": "Marketplace sanitario privato premium che collega i pazienti con specialisti verificati in tutta Europa.",
+    "brand_description": "Scopri specialisti privati verificati in tutta Europa con prezzi trasparenti e prenotazione online immediata.",
+    "brand_tagline": "Dove i pazienti trovano il medico giusto",
     "for_patients": "Per i Pazienti",
     "find_doctor": "Trova un Medico",
     "specialties": "Specialità",

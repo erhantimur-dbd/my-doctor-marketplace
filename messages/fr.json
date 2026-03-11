@@ -37,11 +37,11 @@
     "logout": "Deconnexion",
     "my_bookings": "Mes Rendez-vous",
     "my_profile": "Mon Profil",
-    "brand_tagline": "Marketplace premium de santé privée"
+    "brand_tagline": "Là où les patients trouvent le bon médecin"
   },
   "home": {
     "hero_title": "Trouvez Votre Medecin, Reservez Instantanement",
-    "hero_subtitle": "Connectez-vous avec des specialistes prives verifies a travers l'Europe. Prix transparents, reservation instantanee, soins premium.",
+    "hero_subtitle": "Découvrez des spécialistes privés vérifiés à travers l'Europe avec des prix transparents et une réservation en ligne instantanée.",
     "search_placeholder": "Rechercher par specialite, nom du medecin ou lieu...",
     "verified_doctors": "Médecins Vérifiés",
     "instant_booking": "Réservation Instantanée",
@@ -484,7 +484,8 @@
     "health_screenings": "Bilans de sante"
   },
   "footer": {
-    "brand_description": "Marketplace premium de santé privée connectant les patients avec des spécialistes vérifiés à travers l'Europe.",
+    "brand_description": "Découvrez des spécialistes privés vérifiés à travers l'Europe avec des prix transparents et une réservation en ligne instantanée.",
+    "brand_tagline": "Là où les patients trouvent le bon médecin",
     "for_patients": "Pour les Patients",
     "find_doctor": "Trouver un Médecin",
     "specialties": "Spécialités",

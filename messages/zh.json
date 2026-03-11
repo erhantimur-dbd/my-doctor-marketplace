@@ -37,11 +37,11 @@
     "logout": "退出",
     "my_bookings": "我的预约",
     "my_profile": "我的资料",
-    "brand_tagline": "高端私人医疗健康平台"
+    "brand_tagline": "患者与合适医生相遇的地方"
   },
   "home": {
     "hero_title": "找到您的医生，即时预约",
-    "hero_subtitle": "与全欧洲经过认证的私人专科医生建立连接。透明定价，即时预约，优质医疗服务。",
+    "hero_subtitle": "发现全欧洲经过认证的私人专科医生，享受透明定价和即时在线预约。",
     "search_placeholder": "按专科、医生姓名或地区搜索...",
     "verified_doctors": "认证医生",
     "instant_booking": "即时预约",
@@ -387,7 +387,8 @@
     "health_screenings": "健康体检"
   },
   "footer": {
-    "brand_description": "连接患者与欧洲各地认证专科医生的高端私人医疗健康平台。",
+    "brand_description": "发现全欧洲经过认证的私人专科医生，享受透明定价和即时在线预约。",
+    "brand_tagline": "患者与合适医生相遇的地方",
     "for_patients": "患者服务",
     "find_doctor": "查找医生",
     "specialties": "专科科室",

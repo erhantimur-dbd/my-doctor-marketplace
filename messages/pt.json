@@ -37,11 +37,11 @@
     "logout": "Sair",
     "my_bookings": "Minhas Consultas",
     "my_profile": "Meu Perfil",
-    "brand_tagline": "Marketplace premium de saúde privada"
+    "brand_tagline": "Onde os pacientes encontram o médico certo"
   },
   "home": {
     "hero_title": "Encontre seu Médico, Agende Instantaneamente",
-    "hero_subtitle": "Conecte-se com especialistas particulares verificados em toda a Europa. Preços transparentes, agendamento imediato, atendimento premium.",
+    "hero_subtitle": "Descubra especialistas particulares verificados em toda a Europa com preços transparentes e agendamento online instantâneo.",
     "search_placeholder": "Pesquisar por especialidade, nome do médico ou localização...",
     "verified_doctors": "Médicos Verificados",
     "instant_booking": "Reserva Instantânea",
@@ -381,7 +381,8 @@
     "health_screenings": "Check-ups de Saúde"
   },
   "footer": {
-    "brand_description": "Marketplace premium de saúde privada que conecta pacientes com especialistas verificados em toda a Europa.",
+    "brand_description": "Descubra especialistas particulares verificados em toda a Europa com preços transparentes e agendamento online instantâneo.",
+    "brand_tagline": "Onde os pacientes encontram o médico certo",
     "for_patients": "Para Pacientes",
     "find_doctor": "Encontrar um Médico",
     "specialties": "Especialidades",

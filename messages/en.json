@@ -37,11 +37,11 @@
     "logout": "Log Out",
     "my_bookings": "My Bookings",
     "my_profile": "My Profile",
-    "brand_tagline": "Premium private healthcare marketplace"
+    "brand_tagline": "Where Patients Meet the Right Doctor"
   },
   "home": {
     "hero_title": "Find Your Doctor, Book Instantly",
-    "hero_subtitle": "Connect with verified private specialists across Europe. Transparent pricing, instant booking, premium care.",
+    "hero_subtitle": "Discover verified private specialists across Europe with transparent pricing and instant online booking.",
     "search_placeholder": "Search by specialty, doctor name, or location...",
     "verified_doctors": "Verified Doctors",
     "instant_booking": "Instant Booking",
@@ -484,7 +484,8 @@
     "health_screenings": "Health Screenings"
   },
   "footer": {
-    "brand_description": "Premium private healthcare marketplace connecting patients with verified specialists across Europe.",
+    "brand_description": "Discover verified private specialists across Europe with transparent pricing and instant online booking.",
+    "brand_tagline": "Where Patients Meet the Right Doctor",
     "for_patients": "For Patients",
     "find_doctor": "Find a Doctor",
     "specialties": "Specialties",

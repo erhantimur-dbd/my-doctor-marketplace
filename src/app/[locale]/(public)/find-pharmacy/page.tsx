@@ -18,7 +18,7 @@ export default function FindPharmacyPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
             <Pill className="h-7 w-7 text-primary" />
           </div>
-          <Badge variant="secondary" className="mb-4">
+          <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
             NHS Pharmacy Finder
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">

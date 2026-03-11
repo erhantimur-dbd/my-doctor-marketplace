@@ -13,7 +13,10 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2">
               <Logo className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold">MyDoctors360</span>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold leading-tight">MyDoctors360</span>
+                <span className="text-[10px] text-muted-foreground">{t("brand_tagline")}</span>
+              </div>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
               {t("brand_description")}

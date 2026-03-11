@@ -37,11 +37,11 @@
     "logout": "Cerrar Sesión",
     "my_bookings": "Mis Citas",
     "my_profile": "Mi Perfil",
-    "brand_tagline": "Marketplace premium de salud privada"
+    "brand_tagline": "Donde los pacientes encuentran al médico adecuado"
   },
   "home": {
     "hero_title": "Encuentra tu Médico, Reserva al Instante",
-    "hero_subtitle": "Conéctate con especialistas privados verificados en toda Europa. Precios transparentes, reserva inmediata, atención premium.",
+    "hero_subtitle": "Descubre especialistas privados verificados en toda Europa con precios transparentes y reserva online instantánea.",
     "search_placeholder": "Buscar por especialidad, nombre del médico o ubicación...",
     "verified_doctors": "Médicos Verificados",
     "instant_booking": "Reserva Instantánea",
@@ -381,7 +381,8 @@
     "health_screenings": "Chequeos de Salud"
   },
   "footer": {
-    "brand_description": "Marketplace premium de salud privada que conecta pacientes con especialistas verificados en toda Europa.",
+    "brand_description": "Descubre especialistas privados verificados en toda Europa con precios transparentes y reserva online instantánea.",
+    "brand_tagline": "Donde los pacientes encuentran al médico adecuado",
     "for_patients": "Para Pacientes",
     "find_doctor": "Buscar un Médico",
     "specialties": "Especialidades",

@@ -122,7 +122,7 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
             <Icon className={`h-10 w-10 ${color.text}`} />
           </div>
 
-          <Badge variant="secondary" className="mb-4">
+          <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
             Medical Specialty
           </Badge>
 
