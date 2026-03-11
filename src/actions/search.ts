@@ -686,3 +686,246 @@ export async function getSpecialtyBySlug(slug: string) {
       : null,
   };
 }
+
+// ── Search Expansion Suggestions ──────────────────────────────────────
+// When AI-parsed search returns ≤2 results, compute alternative counts
+// by relaxing one filter at a time so we can suggest broader searches.
+
+export interface SearchExpansion {
+  type: "remove_location" | "try_video" | "remove_consultation_type" | "broaden_specialty";
+  label: string;
+  count: number;
+  url: string;
+}
+
+export async function getSearchExpansionSuggestions(
+  filters: Record<string, string | undefined>
+): Promise<SearchExpansion[]> {
+  const supabase = createAdminClient();
+  const suggestions: SearchExpansion[] = [];
+
+  // Helper: count verified active doctors matching given filters
+  async function countDoctors(opts: {
+    specialtySlug?: string;
+    consultationType?: string;
+    locationSlug?: string;
+    placeLat?: number;
+    placeLng?: number;
+    radius?: number;
+    language?: string;
+  }): Promise<number> {
+    let q = supabase
+      .from("doctors")
+      .select("id", { count: "exact", head: true })
+      .eq("verification_status", "verified")
+      .eq("is_active", true);
+
+    if (opts.specialtySlug) {
+      const { data: specRow } = await supabase
+        .from("specialties")
+        .select("id")
+        .eq("slug", opts.specialtySlug)
+        .single();
+      if (specRow) {
+        const { data: matchRows } = await supabase
+          .from("doctor_specialties")
+          .select("doctor_id")
+          .eq("specialty_id", specRow.id);
+        const ids = (matchRows || []).map((r: { doctor_id: string }) => r.doctor_id);
+        if (ids.length === 0) return 0;
+        q = q.in("id", ids);
+      }
+    }
+
+    if (opts.consultationType) {
+      q = q.contains("consultation_types", [opts.consultationType]);
+    }
+
+    if (opts.language) {
+      q = q.contains("languages", [opts.language]);
+    }
+
+    if (opts.locationSlug) {
+      // Join on location to filter by slug
+      const isCountry = opts.locationSlug.startsWith("country-");
+      if (isCountry) {
+        const code = opts.locationSlug.replace("country-", "").toUpperCase();
+        const { data } = await supabase
+          .from("locations")
+          .select("id")
+          .eq("country_code", code);
+        if (data && data.length > 0) {
+          const locIds = data.map((l: { id: string }) => l.id);
+          q = q.in("location_id", locIds);
+        }
+      } else {
+        const { data: loc } = await supabase
+          .from("locations")
+          .select("id")
+          .eq("slug", opts.locationSlug)
+          .single();
+        if (loc) {
+          q = q.eq("location_id", loc.id);
+        }
+      }
+    }
+
+    if (opts.placeLat != null && opts.placeLng != null) {
+      const r = opts.radius || 10;
+      const { data: nearby } = await supabase.rpc("sort_doctors_by_distance", {
+        p_lat: opts.placeLat,
+        p_lng: opts.placeLng,
+      });
+      if (nearby) {
+        const nearbyIds = (nearby as { doctor_id: string; distance_km: number }[])
+          .filter((row) => row.distance_km <= r)
+          .map((row) => row.doctor_id);
+        if (nearbyIds.length === 0) return 0;
+        q = q.in("id", nearbyIds);
+      }
+    }
+
+    const { count } = await q;
+    return count || 0;
+  }
+
+  const specialty = filters.specialty;
+  const location = filters.location;
+  const consultationType = filters.consultationType;
+  const language = filters.language;
+  const placeLat = filters.placeLat ? Number(filters.placeLat) : undefined;
+  const placeLng = filters.placeLng ? Number(filters.placeLng) : undefined;
+  const radius = filters.radius ? Number(filters.radius) : undefined;
+  const hasLocation = !!location || (placeLat != null && placeLng != null);
+
+  // Build the base params (preserving existing params) for generating URLs
+  function buildUrl(overrides: Record<string, string | undefined>): string {
+    const params = new URLSearchParams();
+    // Start with current filters
+    for (const [k, v] of Object.entries(filters)) {
+      if (v != null && v !== "" && k !== "page") params.set(k, v);
+    }
+    // Apply overrides (undefined = remove param)
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v === undefined) {
+        params.delete(k);
+      } else {
+        params.set(k, v);
+      }
+    }
+    return `/doctors?${params.toString()}`;
+  }
+
+  // Run expansion checks in parallel
+  const checks: Promise<void>[] = [];
+
+  // 1. Try video consultation (if currently filtering in_person)
+  if (consultationType === "in_person" && specialty) {
+    checks.push(
+      countDoctors({
+        specialtySlug: specialty,
+        consultationType: "video",
+        locationSlug: location,
+        placeLat,
+        placeLng,
+        radius,
+        language,
+      }).then((count) => {
+        if (count > 0) {
+          suggestions.push({
+            type: "try_video",
+            label: "Try video consultation",
+            count,
+            url: buildUrl({ consultationType: "video" }),
+          });
+        }
+      })
+    );
+  }
+
+  // 2. Remove location filter
+  if (hasLocation && specialty) {
+    checks.push(
+      countDoctors({
+        specialtySlug: specialty,
+        consultationType,
+        language,
+      }).then((count) => {
+        if (count > 2) {
+          suggestions.push({
+            type: "remove_location",
+            label: "Search all locations",
+            count,
+            url: buildUrl({
+              location: undefined,
+              placeLat: undefined,
+              placeLng: undefined,
+              placeName: undefined,
+              radius: undefined,
+            }),
+          });
+        }
+      })
+    );
+  }
+
+  // 3. Remove consultation type filter
+  if (consultationType && specialty) {
+    checks.push(
+      countDoctors({
+        specialtySlug: specialty,
+        locationSlug: location,
+        placeLat,
+        placeLng,
+        radius,
+        language,
+      }).then((count) => {
+        if (count > 2) {
+          suggestions.push({
+            type: "remove_consultation_type",
+            label: "Any consultation type",
+            count,
+            url: buildUrl({ consultationType: undefined }),
+          });
+        }
+      })
+    );
+  }
+
+  // 4. Broaden to General Practice (if searching a specialist)
+  if (specialty && specialty !== "general-practice") {
+    checks.push(
+      countDoctors({
+        specialtySlug: "general-practice",
+        consultationType,
+        locationSlug: location,
+        placeLat,
+        placeLng,
+        radius,
+        language,
+      }).then((count) => {
+        if (count > 0) {
+          suggestions.push({
+            type: "broaden_specialty",
+            label: "Also try General Practice",
+            count,
+            url: buildUrl({ specialty: "general-practice" }),
+          });
+        }
+      })
+    );
+  }
+
+  await Promise.all(checks);
+
+  // Sort: video first, then location, then consultation type, then specialty
+  const order: Record<string, number> = {
+    try_video: 0,
+    remove_location: 1,
+    remove_consultation_type: 2,
+    broaden_specialty: 3,
+  };
+  suggestions.sort((a, b) => (order[a.type] ?? 99) - (order[b.type] ?? 99));
+
+  return suggestions;
+}

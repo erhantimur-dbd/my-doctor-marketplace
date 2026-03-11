@@ -42,7 +42,7 @@ import { SYMPTOMS } from "@/lib/constants/symptoms";
 import { MEDICAL_TESTS } from "@/lib/constants/medical-tests";
 import { matchSymptoms, matchTests } from "@/lib/utils/search-matcher";
 import type { SearchMatch } from "@/lib/utils/search-matcher";
-import { shouldUseNLSearch, countWords } from "@/lib/utils/nl-search-detector";
+import { countWords } from "@/lib/utils/nl-search-detector";
 import { AISymptomResult } from "@/components/search/ai-symptom-result";
 import { EmergencyWarning } from "@/components/shared/emergency-warning";
 
@@ -112,8 +112,7 @@ type SuggestionItem =
   | { type: "symptom"; id: string; labelKey: string; specialtySlug: string; score: number }
   | { type: "test"; id: string; labelKey: string; specialtySlug: string; score: number }
   | { type: "gp_fallback" }
-  | { type: "ai_symptom"; analysis: SymptomAnalysis }
-  | { type: "nl_search" };
+  | { type: "ai_symptom"; analysis: SymptomAnalysis };
 
 export function HomeSearchBar({
   specialties,
@@ -151,7 +150,6 @@ export function HomeSearchBar({
   // AI state
   const [aiSymptomResult, setAiSymptomResult] = useState<SymptomAnalysis | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [showNLOption, setShowNLOption] = useState(false);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Popular specialties (resolved from the specialties prop)
@@ -229,15 +227,11 @@ export function HomeSearchBar({
   useEffect(() => {
     if (!isSearchMode) {
       setAiSymptomResult(null);
-      setShowNLOption(false);
       setAiLoading(false);
       return;
     }
 
     const trimmed = query.trim();
-
-    // Check if this looks like a natural language search
-    setShowNLOption(shouldUseNLSearch(trimmed));
 
     // Trigger AI symptom analysis when keyword matcher finds nothing
     // and the input looks like a symptom description (3+ words).
@@ -445,12 +439,6 @@ export function HomeSearchBar({
         router.push(`/doctors?${params.toString()}`);
         break;
       }
-      case "nl_search": {
-        // Trigger NL search parsing
-        setShowSuggestions(false);
-        handleNLSearch();
-        break;
-      }
     }
   };
 
@@ -499,14 +487,28 @@ export function HomeSearchBar({
     }
   }, [query, locale, location, placeData, router, handleSearch]);
 
-  // Smart search: use NL parser when AI detects natural language, otherwise basic search
+  // Smart search: AI-powered by default, instant for exact specialty matches
   const handleSmartSearch = useCallback(() => {
-    if (showNLOption) {
-      handleNLSearch();
-    } else {
-      handleSearch();
+    const trimmed = query.trim();
+    if (!trimmed) {
+      handleSearch(); // empty → show all doctors
+      return;
     }
-  }, [showNLOption, handleNLSearch, handleSearch]);
+    // Fast path: if query exactly matches a specialty name/slug, skip AI
+    const term = trimmed.toLowerCase();
+    const matchedSpec = specialties.find((s) => {
+      const display = s.name_key
+        .replace("specialty.", "")
+        .replace(/_/g, " ")
+        .toLowerCase();
+      return display === term || s.slug === term || s.slug === term.replace(/\s+/g, "-");
+    });
+    if (matchedSpec) {
+      handleSearch(); // instant specialty search, no AI
+    } else {
+      handleNLSearch(); // everything else: symptoms, preferences, complex queries
+    }
+  }, [query, specialties, handleNLSearch, handleSearch]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions || allSuggestions.length === 0) {
@@ -551,8 +553,7 @@ export function HomeSearchBar({
       isPending ||
       showGpFallback ||
       aiLoading ||
-      aiSymptomResult !== null ||
-      showNLOption);
+      aiSymptomResult !== null);
 
   /** Render a symptom/test match row */
   const renderMatchRow = (
@@ -840,28 +841,6 @@ export function HomeSearchBar({
           </div>
         )}
 
-        {/* NL Search option */}
-        {showNLOption && !aiLoading && (
-          <div className="px-3 pb-2 pt-1">
-            <div className="mb-2 border-t" />
-            <button
-              type="button"
-              className="flex w-full items-center justify-between rounded-full border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm transition-colors hover:bg-primary/10 hover:border-primary/30"
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSelectSuggestion({ type: "nl_search" });
-              }}
-            >
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                </span>
-                <span className="font-medium text-primary">{tAi("try_ai_search")}</span>
-              </div>
-              <span className="text-xs text-muted-foreground">{tAi("powered_by_ai")}</span>
-            </button>
-          </div>
-        )}
       </div>
     );
   };
@@ -909,15 +888,21 @@ export function HomeSearchBar({
             />
           </div>
 
-          {/* Search button */}
+          {/* Search button — AI-powered */}
           <div className="pr-2">
             <Button
               size="lg"
               className="rounded-full px-6"
               onClick={handleSmartSearch}
+              disabled={aiLoading}
             >
-              <Search className="mr-2 h-4 w-4" />
+              {aiLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="mr-1.5 h-4 w-4" />
+              )}
               {t("search_button")}
+              <Sparkles className="ml-1.5 h-3 w-3 opacity-50" />
             </Button>
           </div>
         </div>
@@ -1159,28 +1144,6 @@ export function HomeSearchBar({
               </div>
             )}
 
-            {/* NL Search option (mobile) */}
-            {showNLOption && !aiLoading && (
-              <div className="px-3 pb-2 pt-1">
-                <div className="mb-2 border-t" />
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-full border border-primary/20 bg-primary/5 px-4 py-2.5 text-sm active:bg-primary/10"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleSelectSuggestion({ type: "nl_search" });
-                  }}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                      <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    </span>
-                    <span className="font-medium text-primary">{tAi("try_ai_search")}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{tAi("powered_by_ai")}</span>
-                </button>
-              </div>
-            )}
           </div>
         )}
 
@@ -1234,10 +1197,15 @@ export function HomeSearchBar({
           </>
         )}
 
-        {/* Search button */}
-        <Button className="h-11 w-full rounded-lg" onClick={handleSmartSearch}>
-          <Search className="mr-2 h-4 w-4" />
+        {/* Search button — AI-powered */}
+        <Button className="h-11 w-full rounded-lg" onClick={handleSmartSearch} disabled={aiLoading}>
+          {aiLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Search className="mr-1.5 h-4 w-4" />
+          )}
           {t("search_button")}
+          <Sparkles className="ml-1.5 h-3 w-3 opacity-50" />
         </Button>
       </div>
     </div>

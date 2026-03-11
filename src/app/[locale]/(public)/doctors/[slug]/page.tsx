@@ -130,6 +130,12 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     doctor.specialties?.find(
       (s: { is_primary: boolean }) => s.is_primary
     )?.specialty || doctor.specialties?.[0]?.specialty;
+  const secondarySpecialties = doctor.specialties
+    ?.filter(
+      (s: { is_primary: boolean; specialty: { slug: string } }) =>
+        !s.is_primary && s.specialty.slug !== primarySpecialty?.slug
+    )
+    .map((s: { specialty: { name_key: string; slug: string } }) => s.specialty) || [];
 
   const fullName = `${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
 
@@ -171,9 +177,16 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                     </div>
 
                     {primarySpecialty && (
-                      <p className="mt-1 text-muted-foreground">
-                        {formatSpecialtyName(primarySpecialty.name_key)}
-                      </p>
+                      <>
+                        <p className="mt-1 text-muted-foreground">
+                          {formatSpecialtyName(primarySpecialty.name_key)}
+                        </p>
+                        {secondarySpecialties.length > 0 && (
+                          <p className="text-sm text-muted-foreground/60">
+                            Also: {secondarySpecialties.map((s: { name_key: string }) => formatSpecialtyName(s.name_key)).join(", ")}
+                          </p>
+                        )}
+                      </>
                     )}
 
                     <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">

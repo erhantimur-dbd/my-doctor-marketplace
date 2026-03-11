@@ -3,11 +3,13 @@ import {
   getSpecialties,
   getLocations,
   getMultiDayAvailabilityBatch,
+  getSearchExpansionSuggestions,
 } from "@/actions/search";
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
 import { HomeSearchBar } from "@/components/search/home-search-bar";
+import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -67,6 +69,12 @@ export default async function DoctorsPage({
   );
 
   const distances = result.distances;
+
+  // When AI-parsed search returns few results, suggest ways to broaden
+  const expansionSuggestions =
+    result.total <= 2 && sp.aiParsed === "true"
+      ? await getSearchExpansionSuggestions(sp)
+      : [];
 
   // Resolve center location for the map when a location filter is active
   let centerLocation:
@@ -159,6 +167,12 @@ export default async function DoctorsPage({
               </span>
             )}
           </div>
+
+          {/* Smart expansion suggestions for AI searches with few results */}
+          <SearchExpansionBanner
+            suggestions={expansionSuggestions}
+            resultCount={result.total}
+          />
 
           {result.doctors.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">

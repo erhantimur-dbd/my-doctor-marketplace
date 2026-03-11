@@ -102,6 +102,9 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
     const isTestingService = doctor.provider_type === "testing_service";
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
       ?.specialty || doctor.specialties?.[0]?.specialty;
+    const secondarySpecialties = doctor.specialties
+      ?.filter((s) => !s.is_primary && s.specialty.slug !== primarySpecialty?.slug)
+      .map((s) => s.specialty) || [];
 
     const selectedDay = cardAvailability?.days[selectedDayIndex];
 
@@ -186,9 +189,16 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             {doctor.profile.last_name}
                           </h3>
                           {primarySpecialty && (
-                            <p className="truncate text-sm text-muted-foreground">
-                              {formatSpecialtyName(primarySpecialty.name_key)}
-                            </p>
+                            <>
+                              <p className="truncate text-sm text-muted-foreground">
+                                {formatSpecialtyName(primarySpecialty.name_key)}
+                              </p>
+                              {secondarySpecialties.length > 0 && (
+                                <p className="text-xs text-muted-foreground/60">
+                                  Also: {secondarySpecialties.map((s) => formatSpecialtyName(s.name_key)).join(", ")}
+                                </p>
+                              )}
+                            </>
                           )}
                           {doctor.avg_rating > 0 && (
                             <div className="mt-1">
@@ -553,9 +563,16 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
                       </h3>
                       {primarySpecialty && (
-                        <p className="text-sm text-muted-foreground mt-0.5">
-                          {formatSpecialtyName(primarySpecialty.name_key)}
-                        </p>
+                        <>
+                          <p className="text-sm text-muted-foreground mt-0.5">
+                            {formatSpecialtyName(primarySpecialty.name_key)}
+                          </p>
+                          {secondarySpecialties.length > 0 && (
+                            <p className="text-xs text-muted-foreground/60">
+                              Also: {secondarySpecialties.map((s) => formatSpecialtyName(s.name_key)).join(", ")}
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
 
