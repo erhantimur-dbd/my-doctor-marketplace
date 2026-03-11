@@ -13,13 +13,6 @@ import {
   Star,
   ArrowRight,
   Stethoscope,
-  Heart,
-  Brain,
-  Eye,
-  Smile,
-  Sparkles,
-  Baby,
-  Activity,
   Search,
   Bell,
   BarChart3,
@@ -29,28 +22,33 @@ import {
   Clock,
   MessageSquare,
 } from "lucide-react";
-import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
+import { SpecialtyMarquee } from "@/components/shared/specialty-marquee";
 
-const specialtyIcons: Record<string, React.ElementType> = {
-  Stethoscope,
-  Heart,
-  Brain,
-  Eye,
-  Smile,
-  Sparkles,
-  Baby,
-  Activity,
-};
-
-const popularSpecialties = [
+const allSpecialties = [
   { slug: "general-practice", icon: "Stethoscope", key: "general_practice" },
   { slug: "cardiology", icon: "Heart", key: "cardiology" },
   { slug: "dermatology", icon: "Sparkles", key: "dermatology" },
+  { slug: "orthopedics", icon: "Bone", key: "orthopedics" },
   { slug: "neurology", icon: "Brain", key: "neurology" },
+  { slug: "psychiatry", icon: "Brain", key: "psychiatry" },
+  { slug: "psychology", icon: "HeartHandshake", key: "psychology" },
   { slug: "ophthalmology", icon: "Eye", key: "ophthalmology" },
-  { slug: "dentistry", icon: "Smile", key: "dentistry" },
+  { slug: "ent", icon: "Ear", key: "ent" },
+  { slug: "gynecology", icon: "Baby", key: "gynecology" },
+  { slug: "urology", icon: "Activity", key: "urology" },
+  { slug: "gastroenterology", icon: "Apple", key: "gastroenterology" },
+  { slug: "endocrinology", icon: "Droplets", key: "endocrinology" },
+  { slug: "pulmonology", icon: "Wind", key: "pulmonology" },
+  { slug: "oncology", icon: "Shield", key: "oncology" },
   { slug: "pediatrics", icon: "Baby", key: "pediatrics" },
+  { slug: "dentistry", icon: "Smile", key: "dentistry" },
+  { slug: "aesthetic-medicine", icon: "Sparkles", key: "aesthetic_medicine" },
   { slug: "physiotherapy", icon: "Activity", key: "physiotherapy" },
+  { slug: "radiology", icon: "Scan", key: "radiology" },
+  { slug: "nutrition", icon: "Apple", key: "nutrition" },
+  { slug: "allergy", icon: "Flower", key: "allergy" },
+  { slug: "rheumatology", icon: "Bone", key: "rheumatology" },
+  { slug: "nephrology", icon: "Droplets", key: "nephrology" },
 ];
 
 export default async function HomePage() {
@@ -103,9 +101,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Popular Specialties */}
-      <section className="px-4 py-16 md:py-24">
-        <div className="container mx-auto">
+      {/* Popular Specialties — animated marquee */}
+      <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold md:text-3xl">
               {t("popular_specialties")}
@@ -116,28 +114,15 @@ export default async function HomePage() {
               </Link>
             </Button>
           </div>
-
-          <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-            {popularSpecialties.map((spec) => {
-              const Icon = specialtyIcons[spec.icon] || Stethoscope;
-              const c = getSpecialtyColor(spec.slug);
-              return (
-                <Link key={spec.slug} href={`/specialties/${spec.slug}`}>
-                  <Card className={`group cursor-pointer transition-all ${c.border} hover:shadow-md`}>
-                    <CardContent className="flex flex-col items-center gap-3 p-4 text-center">
-                      <div className={`rounded-full ${c.bg} p-3 transition-colors ${c.hoverBg}`}>
-                        <Icon className={`h-6 w-6 ${c.text}`} />
-                      </div>
-                      <span className="text-xs font-medium">
-                        {ts(spec.key)}
-                      </span>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
         </div>
+
+        <SpecialtyMarquee
+          specialties={allSpecialties.map((s) => ({
+            slug: s.slug,
+            icon: s.icon,
+            label: ts(s.key),
+          }))}
+        />
       </section>
 
       {/* How It Works — Enhanced */}
