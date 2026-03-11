@@ -272,7 +272,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       const hasBio = !!doctor.bio;
                       if (!hasLangs && !hasBio) return null;
                       return (
-                        <div className="hidden lg:flex shrink-0 flex-col items-end gap-1.5 pt-1 text-xs text-muted-foreground">
+                        <div className="hidden lg:flex shrink-0 w-[200px] flex-col gap-1.5 pt-1 text-xs text-muted-foreground">
                           {hasLangs && (
                             <div className="flex items-center gap-1.5">
                               <Globe className="h-3 w-3 shrink-0" />
@@ -286,7 +286,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             </div>
                           )}
                           {hasBio && (
-                            <div className="flex items-start gap-1.5 max-w-[200px]">
+                            <div className="flex items-start gap-1.5">
                               <FileText className="h-3 w-3 shrink-0 mt-0.5" />
                               <span className="line-clamp-2">{doctor.bio}</span>
                             </div>
