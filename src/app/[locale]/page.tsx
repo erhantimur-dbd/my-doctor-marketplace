@@ -102,8 +102,8 @@ export default async function HomePage() {
       </section>
 
       {/* Popular Specialties — animated marquee */}
-      <section className="py-16 md:py-24">
-        <div className="container mx-auto px-4">
+      <section className="px-4 py-16 md:py-24">
+        <div className="container mx-auto">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold md:text-3xl">
               {t("popular_specialties")}
@@ -114,15 +114,15 @@ export default async function HomePage() {
               </Link>
             </Button>
           </div>
-        </div>
 
-        <SpecialtyMarquee
-          specialties={allSpecialties.map((s) => ({
-            slug: s.slug,
-            icon: s.icon,
-            label: ts(s.key),
-          }))}
-        />
+          <SpecialtyMarquee
+            specialties={allSpecialties.map((s) => ({
+              slug: s.slug,
+              icon: s.icon,
+              label: ts(s.key),
+            }))}
+          />
+        </div>
       </section>
 
       {/* How It Works — Enhanced */}
