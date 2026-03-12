@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { BookingWizard } from "@/components/booking/booking-wizard";
 import { Link } from "@/i18n/navigation";
@@ -14,9 +15,9 @@ export async function generateMetadata({
   params,
 }: BookPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
+  const adminDb = createAdminClient();
 
-  const { data: doctorData } = await supabase
+  const { data: doctorData } = await adminDb
     .from("doctors")
     .select("*, profile:profiles!doctors_profile_id_fkey(first_name, last_name)")
     .eq("slug", slug)
@@ -54,8 +55,11 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     redirect(`/${locale}/login?redirect=${encodeURIComponent(bookUrl)}`);
   }
 
+  // Use admin client for doctor data queries (RLS on doctors table blocks user-session reads)
+  const adminDb = createAdminClient();
+
   // Fetch doctor with all needed relations
-  const { data: doctorData2 } = await supabase
+  const { data: doctorData2 } = await adminDb
     .from("doctors")
     .select(
       `
@@ -87,7 +91,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     .single();
 
   if (!doctorData2) {
-    redirect("/en/doctors");
+    redirect(`/${locale}/doctors`);
   }
 
   const doctor: any = doctorData2;
@@ -114,7 +118,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
   }
 
   // Fetch services for this doctor (for returning-patient flow)
-  const { data: servicesData } = await supabase
+  const { data: servicesData } = await adminDb
     .from("doctor_services")
     .select("id, name, price_cents, duration_minutes, consultation_type, deposit_type, deposit_value")
     .eq("doctor_id", doctor.id)

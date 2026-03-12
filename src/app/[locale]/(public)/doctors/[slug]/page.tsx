@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { ClickableProfileMap } from "@/components/maps/clickable-profile-map";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -37,9 +37,9 @@ export async function generateMetadata({
   params,
 }: DoctorPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
+  const adminDb = createAdminClient();
 
-  const { data: doctorData } = await supabase
+  const { data: doctorData } = await adminDb
     .from("doctors")
     .select("*, profile:profiles!doctors_profile_id_fkey(first_name, last_name)")
     .eq("slug", slug)
@@ -58,9 +58,9 @@ export async function generateMetadata({
 
 export default async function DoctorProfilePage({ params }: DoctorPageProps) {
   const { slug, locale } = await params;
-  const supabase = await createClient();
+  const adminDb = createAdminClient();
 
-  const { data: doctorData2 } = await supabase
+  const { data: doctorData2 } = await adminDb
     .from("doctors")
     .select(
       `
@@ -82,7 +82,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
   const doctor: any = doctorData2;
 
   // Get reviews
-  const { data: reviews } = await supabase
+  const { data: reviews } = await adminDb
     .from("reviews")
     .select(
       `
@@ -96,14 +96,14 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     .limit(5);
 
   // Get AI review summary (if available)
-  const { data: reviewSummary } = await supabase
+  const { data: reviewSummary } = await adminDb
     .from("doctor_review_summaries")
     .select("summary_text, sentiment_tags")
     .eq("doctor_id", doctor.id)
     .single();
 
   // Check if doctor has an active subscription (for booking eligibility)
-  const { data: doctorSubscription } = await supabase
+  const { data: doctorSubscription } = await adminDb
     .from("doctor_subscriptions")
     .select("id")
     .eq("doctor_id", doctor.id)
@@ -114,14 +114,14 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
   const hasActiveSubscription = !!doctorSubscription;
 
   // Fetch services and price book for public display
-  const { data: doctorServices } = await supabase
+  const { data: doctorServices } = await adminDb
     .from("doctor_services")
     .select("id, name, description, price_cents, duration_minutes, consultation_type")
     .eq("doctor_id", doctor.id)
     .eq("is_active", true)
     .order("display_order", { ascending: true });
 
-  const { data: priceBookEntries } = await supabase
+  const { data: priceBookEntries } = await adminDb
     .from("doctor_price_book")
     .select("test_id, price_cents")
     .eq("doctor_id", doctor.id);
