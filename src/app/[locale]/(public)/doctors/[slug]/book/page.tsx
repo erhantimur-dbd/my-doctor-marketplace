@@ -74,8 +74,6 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
       cancellation_policy,
       clinic_name,
       address,
-      in_person_deposit_type,
-      in_person_deposit_value,
       is_active,
       verification_status,
       stripe_account_id,
