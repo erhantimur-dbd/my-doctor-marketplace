@@ -68,8 +68,8 @@ export function EmergencyWarning({ locale, reason, countryCode }: EmergencyWarni
 
   return (
     <div className="rounded-lg border-2 border-red-500 bg-red-50 p-4 dark:border-red-400 dark:bg-red-950/30">
-      <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
+      <div className="flex flex-col items-center gap-2 text-center sm:flex-row sm:items-start sm:gap-3 sm:text-left">
+        <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
         <div className="flex-1">
           <p className="text-sm font-semibold text-red-800 dark:text-red-200">
             {t("emergency_warning")}
@@ -79,10 +79,10 @@ export function EmergencyWarning({ locale, reason, countryCode }: EmergencyWarni
               {reason}
             </p>
           )}
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-2 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
             <a
               href={`tel:${number}`}
-              className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
+              className="inline-flex items-center justify-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
             >
               <Phone className="h-3.5 w-3.5" />
               {t("emergency_call", { number })}
@@ -92,7 +92,7 @@ export function EmergencyWarning({ locale, reason, countryCode }: EmergencyWarni
                 href={serviceLink.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:border-red-600 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/70"
+                className="inline-flex items-center justify-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:border-red-600 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/70"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 {t(serviceLink.labelKey)}
