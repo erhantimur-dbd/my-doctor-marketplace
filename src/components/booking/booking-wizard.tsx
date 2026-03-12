@@ -96,6 +96,8 @@ interface SlotSelection {
   endTime: string;
 }
 
+const FOLLOWUP_SERVICE_ID = "__followup__";
+
 export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
   const searchParams = useSearchParams();
   const initialDate = searchParams.get("date"); // e.g. "2026-03-05" from availability chip
@@ -110,8 +112,6 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
       ? initialType
       : null;
 
-  const hasServices = services.length > 0;
-
   const [step, setStep] = useState(validInitialType ? 2 : 1);
   const [consultationType, setConsultationType] =
     useState<ConsultationType | null>(validInitialType);
@@ -121,10 +121,8 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
   const [patientNotes, setPatientNotes] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  // Service selection state (only relevant when doctor has services configured)
-  const [isFirstVisit, setIsFirstVisit] = useState<boolean | null>(
-    hasServices ? null : true
-  );
+  // Service selection state
+  const [isFirstVisit, setIsFirstVisit] = useState<boolean | null>(null);
   const [selectedService, setSelectedService] = useState<ServiceOption | null>(
     null
   );
@@ -148,6 +146,20 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
           s.consultation_type === "both"
       )
     : [];
+
+  // Built-in follow-up option using doctor's default fee
+  const followUpService: ServiceOption = {
+    id: FOLLOWUP_SERVICE_ID,
+    name: "Follow-up Appointment",
+    price_cents:
+      consultationType === "video" && doctor.video_consultation_fee_cents
+        ? doctor.video_consultation_fee_cents
+        : doctor.consultation_fee_cents,
+    duration_minutes: 30,
+    consultation_type: consultationType || "in_person",
+  };
+
+  const allServiceOptions = [...filteredServices, followUpService];
 
   // Fee calculations — service-aware
   const consultationFeeCents = selectedService
@@ -206,10 +218,10 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
   function canProceed(): boolean {
     if (step === 1) {
       if (!consultationType) return false;
-      // If doctor has services, must answer first-visit question
-      if (hasServices && isFirstVisit === null) return false;
+      // Must answer first-visit question
+      if (isFirstVisit === null) return false;
       // If returning patient, must select a service
-      if (hasServices && isFirstVisit === false && !selectedService) return false;
+      if (isFirstVisit === false && !selectedService) return false;
       return true;
     }
     if (step === 2) return slotSelection !== null;
@@ -232,7 +244,7 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
   function handleConsultationTypeChange(val: string) {
     setConsultationType(val as ConsultationType);
     // Reset service selection when consultation type changes
-    setIsFirstVisit(hasServices ? null : true);
+    setIsFirstVisit(null);
     setSelectedService(null);
     setSlotSelection(null);
   }
@@ -245,7 +257,7 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
   }
 
   function handleServiceSelect(serviceId: string) {
-    const svc = filteredServices.find((s) => s.id === serviceId) || null;
+    const svc = allServiceOptions.find((s) => s.id === serviceId) || null;
     setSelectedService(svc);
     setSlotSelection(null); // Reset slot since duration may change
   }
@@ -265,7 +277,9 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
         end_time: slotSelection.endTime,
         consultation_type: consultationType,
         patient_notes: patientNotes || undefined,
-        service_id: selectedService?.id || undefined,
+        service_id: selectedService?.id && selectedService.id !== FOLLOWUP_SERVICE_ID
+          ? selectedService.id
+          : undefined,
         duration_minutes: selectedService?.duration_minutes || undefined,
       });
 
@@ -425,8 +439,8 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
               )}
             </RadioGroup>
 
-            {/* First-visit question — only shown when doctor has services */}
-            {hasServices && consultationType && (
+            {/* First-visit question */}
+            {consultationType && (
               <>
                 <Separator />
                 <div className="space-y-3">
@@ -479,8 +493,8 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                   </RadioGroup>
                 </div>
 
-                {/* Service selection — only for returning patients */}
-                {isFirstVisit === false && filteredServices.length > 0 && (
+                {/* Service selection — for returning patients */}
+                {isFirstVisit === false && (
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">
                       Select a service
@@ -493,7 +507,7 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                         <SelectValue placeholder="Choose the service you need..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {filteredServices.map((svc) => (
+                        {allServiceOptions.map((svc) => (
                           <SelectItem key={svc.id} value={svc.id}>
                             <div className="flex items-center gap-2">
                               <span>{svc.name}</span>
@@ -528,12 +542,6 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                       </div>
                     )}
                   </div>
-                )}
-
-                {isFirstVisit === false && filteredServices.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    No services available for the selected consultation type.
-                  </p>
                 )}
               </>
             )}
