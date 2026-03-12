@@ -959,7 +959,7 @@ export function HomeSearchBar({
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
-            placeholder={t("search_name_placeholder")}
+            placeholder={t("search_name_placeholder_mobile")}
             className="h-11 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
             autoComplete="off"
           />

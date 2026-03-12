@@ -91,6 +91,7 @@
     "for_doctors_desc": "Join thousands of private specialists across Europe. Manage bookings, reduce no-shows, and get paid securely — all from one platform.",
     "for_doctors_cta": "Join as a Doctor",
     "search_name_placeholder": "Describe how you feel or search for a specialist...",
+    "search_name_placeholder_mobile": "Describe how you feel or search specialist...",
     "search_specialty_placeholder": "Any specialty",
     "search_location_placeholder": "Any location",
     "search_button": "Search",
