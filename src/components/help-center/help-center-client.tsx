@@ -47,7 +47,11 @@ export function HelpCenterClient() {
   const t = useTranslations("helpCenter");
   const tArticles = useTranslations("helpArticles");
   const helpCategories = useMemo(
-    () => getHelpCategories((k) => t(k), (k) => tArticles(k)),
+    () => getHelpCategories(
+      (k) => t(k),
+      (k) => tArticles(k),
+      (k) => tArticles.raw(k) as string
+    ),
     [t, tArticles]
   );
 

@@ -146,7 +146,11 @@ const categoryI18nKeys: Record<string, { title: string; desc: string }> = {
  * The translator should be scoped to the "helpCenter" namespace + "articles" sub-namespace.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function getHelpCategories(t: (key: string) => string, tArticles: (key: string) => string): HelpCategory[] {
+export function getHelpCategories(
+  t: (key: string) => string,
+  tArticles: (key: string) => string,
+  tArticlesRaw?: (key: string) => string
+): HelpCategory[] {
   return categoryOrder.map((catId) => {
     const meta = categoryMeta[catId];
     const i18n = categoryI18nKeys[catId];
@@ -161,7 +165,7 @@ export function getHelpCategories(t: (key: string) => string, tArticles: (key: s
       articles: defs.map((def) => ({
         id: def.id,
         question: tArticles(`${def.id}.question`),
-        answer: tArticles(`${def.id}.answer`),
+        answer: (tArticlesRaw || tArticles)(`${def.id}.answer`),
         tags: def.tags,
         audience: def.audience,
       })),

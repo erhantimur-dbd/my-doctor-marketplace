@@ -135,33 +135,32 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         onMouseEnter={() => onHover?.(doctor.id)}
         onMouseLeave={() => onHover?.(null)}
       >
-        <Link href={`/doctors/${doctor.slug}`}>
-          <Card
-            className={cn(
-              "group relative h-full overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg",
-              isHighlighted && "border-primary ring-2 ring-primary/20 shadow-lg"
-            )}
-          >
-            {/* Featured badge — positioned at top-left corner */}
-            {doctor.is_featured && (
-              <div className="absolute left-3 top-3 z-10">
-                <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs shadow-sm dark:bg-amber-900/40 dark:text-amber-300">
-                  ★ Featured
-                </Badge>
-              </div>
-            )}
+        <Card
+          className={cn(
+            "group relative h-full overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg",
+            isHighlighted && "border-primary ring-2 ring-primary/20 shadow-lg"
+          )}
+        >
+          {/* Featured badge — positioned at top-left corner */}
+          {doctor.is_featured && (
+            <div className="absolute left-3 top-3 z-10">
+              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs shadow-sm dark:bg-amber-900/40 dark:text-amber-300">
+                ★ Featured
+              </Badge>
+            </div>
+          )}
 
-            <CardContent className={cn("p-5", doctor.is_featured && "pt-10")}>
-              {/* Desktop: horizontal split layout (info left | availability right) — stacked in compact */}
-              <div className={cn(
-                "flex flex-col",
-                hasAvailability && !compact && "lg:flex-row lg:gap-5"
+          <CardContent className={cn("p-5", doctor.is_featured && "pt-10")}>
+            {/* Desktop: horizontal split layout (info left | availability right) — stacked in compact */}
+            <div className={cn(
+              "flex flex-col",
+              hasAvailability && !compact && "lg:flex-row lg:gap-5"
+            )}>
+              {/* ── LEFT SIDE: Doctor info (wrapped in Link for navigation) ── */}
+              <Link href={`/doctors/${doctor.slug}`} className={cn(
+                "min-w-0 block",
+                hasAvailability ? "lg:flex-1" : "w-full"
               )}>
-                {/* ── LEFT SIDE: Doctor info ── */}
-                <div className={cn(
-                  "min-w-0",
-                  hasAvailability ? "lg:flex-1" : "w-full"
-                )}>
                   <div className="flex gap-4">
                     {/* Avatar */}
                     <Avatar className={cn("h-16 w-16 shrink-0", isTestingService && "rounded-xl")}>
@@ -327,7 +326,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       Book Now
                     </Button>
                   </div>
-                </div>
+                </Link>
 
                 {/* ── RIGHT SIDE: Availability (desktop: side-by-side, mobile: below) ── */}
                 {hasAvailability && (
@@ -512,7 +511,6 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
               </div>
             </CardContent>
           </Card>
-        </Link>
 
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (
