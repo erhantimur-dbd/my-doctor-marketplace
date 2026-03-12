@@ -45,6 +45,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
   } = await supabase.auth.getUser();
 
   if (!user) {
+    console.error("[book/page] No user session, redirecting to login. slug:", slug);
     // Preserve date & type query params through the login redirect
     const bookPath = `/${locale}/doctors/${slug}/book`;
     const queryParts: string[] = [];
@@ -59,7 +60,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
   const adminDb = createAdminClient();
 
   // Fetch doctor with all needed relations
-  const { data: doctorData2 } = await adminDb
+  const { data: doctorData2, error: doctorError } = await adminDb
     .from("doctors")
     .select(
       `
@@ -90,7 +91,12 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     .eq("slug", slug)
     .single();
 
+  if (doctorError) {
+    console.error("[book/page] Doctor query error:", doctorError.message, "slug:", slug);
+  }
+
   if (!doctorData2) {
+    console.error("[book/page] No doctor found for slug:", slug, "redirecting to /${locale}/doctors");
     redirect(`/${locale}/doctors`);
   }
 
