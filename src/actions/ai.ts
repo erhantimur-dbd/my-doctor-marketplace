@@ -12,7 +12,25 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import crypto from "crypto";
 
-const AI_TIMEOUT_MS = 8000;
+const AI_TIMEOUT_MS = 5000;
+const LOCATION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+let cachedLocations: { slug: string; city: string; country_code: string }[] | null = null;
+let locationsCachedAt = 0;
+
+async function getActiveLocations() {
+  if (cachedLocations && Date.now() - locationsCachedAt < LOCATION_CACHE_TTL_MS) {
+    return cachedLocations;
+  }
+  const supabase = createAdminClient();
+  const { data } = await supabase
+    .from("locations")
+    .select("slug, city, country_code")
+    .eq("is_active", true);
+  cachedLocations = data ?? [];
+  locationsCachedAt = Date.now();
+  return cachedLocations;
+}
 
 function hashInput(text: string, locale: string): string {
   return crypto
@@ -192,15 +210,11 @@ export async function parseNaturalLanguageSearch(
     (s) => `${s.slug} (${s.nameKey.replace("specialty.", "").replace(/_/g, " ")})`
   ).join(", ");
 
-  const { data: locations } = await supabase
-    .from("locations")
-    .select("slug, city, country_code")
-    .eq("is_active", true);
+  const locations = await getActiveLocations();
 
-  const locationList =
-    locations
-      ?.map((l) => `${l.slug} (${l.city}, ${l.country_code})`)
-      .join(", ") || "";
+  const locationList = locations
+    .map((l) => `${l.slug} (${l.city}, ${l.country_code})`)
+    .join(", ");
 
   // 3. AI call
   try {

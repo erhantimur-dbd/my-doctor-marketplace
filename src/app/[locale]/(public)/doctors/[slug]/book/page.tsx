@@ -75,6 +75,8 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
       address,
       is_active,
       verification_status,
+      in_person_deposit_type,
+      in_person_deposit_value,
       stripe_account_id,
       stripe_onboarding_complete,
       profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),

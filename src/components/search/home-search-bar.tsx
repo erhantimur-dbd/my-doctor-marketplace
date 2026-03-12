@@ -157,6 +157,9 @@ export function HomeSearchBar({
     .map((slug) => specialties.find((s) => s.slug === slug))
     .filter(Boolean) as typeof specialties;
 
+  // Derive country code from selected location for emergency warning
+  const selectedCountryCode = locations.find(l => l.slug === location)?.country_code ?? null;
+
   const geo = useGeolocation("auto");
 
   // Auto-select nearest location when GPS coords arrive
@@ -248,7 +251,7 @@ export function HomeSearchBar({
       return;
     }
 
-    // Debounce AI calls (800ms)
+    // Debounce AI calls (400ms)
     if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
     setAiLoading(true);
     aiDebounceRef.current = setTimeout(async () => {
@@ -264,7 +267,7 @@ export function HomeSearchBar({
       } finally {
         setAiLoading(false);
       }
-    }, 800);
+    }, 400);
 
     return () => {
       if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
@@ -788,7 +791,7 @@ export function HomeSearchBar({
             )}
             {aiSymptomResult && aiSymptomResult.urgency === "emergency" && (
               <div className="px-2 pb-2">
-                <EmergencyWarning locale={locale} reason={aiSymptomResult.urgencyReason} />
+                <EmergencyWarning locale={locale} reason={aiSymptomResult.urgencyReason} countryCode={selectedCountryCode} />
               </div>
             )}
             {aiSymptomResult && (() => {
@@ -1092,7 +1095,7 @@ export function HomeSearchBar({
                 )}
                 {aiSymptomResult && aiSymptomResult.urgency === "emergency" && (
                   <div className="px-2 pb-2">
-                    <EmergencyWarning locale={locale} reason={aiSymptomResult.urgencyReason} />
+                    <EmergencyWarning locale={locale} reason={aiSymptomResult.urgencyReason} countryCode={selectedCountryCode} />
                   </div>
                 )}
                 {aiSymptomResult && (() => {

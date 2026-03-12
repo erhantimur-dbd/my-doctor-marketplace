@@ -139,6 +139,8 @@ export interface Doctor {
   is_active: boolean;
   cancellation_policy: string;
   cancellation_hours: number;
+  in_person_deposit_type: 'none' | 'percentage' | 'flat';
+  in_person_deposit_value: number | null;
   accepted_payments: string[];
   is_wheelchair_accessible: boolean;
   has_testing_addon: boolean;

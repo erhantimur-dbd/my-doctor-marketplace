@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Phone } from "lucide-react";
+import { AlertTriangle, ExternalLink, Phone } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const EMERGENCY_NUMBERS: Record<string, string> = {
@@ -18,30 +18,53 @@ const EMERGENCY_NUMBERS: Record<string, string> = {
   CN: "120",
 };
 
-function getEmergencyNumber(locale: string): string {
-  const countryMap: Record<string, string> = {
-    de: "DE",
-    tr: "TR",
-    fr: "FR",
-    it: "IT",
-    es: "ES",
-    pt: "PT",
-    en: "GB",
-    zh: "CN",
-    ja: "JP",
-  };
-  const country = countryMap[locale] || "DE";
-  return EMERGENCY_NUMBERS[country] || "112";
+const EMERGENCY_SERVICE_URLS: Record<string, { url: string; labelKey: string }> = {
+  GB: {
+    url: "https://www.nhs.uk/nhs-services/urgent-and-emergency-care-services/find-urgent-and-emergency-care-services/",
+    labelKey: "emergency_find_services_nhs",
+  },
+  DE: {
+    url: "https://www.116117.de/de/notdienstpraxen.php",
+    labelKey: "emergency_find_services_de",
+  },
+  FR: {
+    url: "https://www.sante.fr/en-cas-durgence-conseils-et-numeros-utiles",
+    labelKey: "emergency_find_services_fr",
+  },
+  TR: {
+    url: "https://www.saglik.gov.tr/EN-101190/emergency-healthcare-services-are-everywhere.html",
+    labelKey: "emergency_find_services_tr",
+  },
+};
+
+const LOCALE_TO_COUNTRY: Record<string, string> = {
+  de: "DE",
+  tr: "TR",
+  fr: "FR",
+  it: "IT",
+  es: "ES",
+  pt: "PT",
+  en: "GB",
+  zh: "CN",
+  ja: "JP",
+};
+
+function resolveCountry(locale: string, countryCode?: string | null): string {
+  if (countryCode && EMERGENCY_NUMBERS[countryCode]) return countryCode;
+  return LOCALE_TO_COUNTRY[locale] || "DE";
 }
 
 interface EmergencyWarningProps {
   locale: string;
   reason?: string | null;
+  countryCode?: string | null;
 }
 
-export function EmergencyWarning({ locale, reason }: EmergencyWarningProps) {
+export function EmergencyWarning({ locale, reason, countryCode }: EmergencyWarningProps) {
   const t = useTranslations("ai");
-  const number = getEmergencyNumber(locale);
+  const country = resolveCountry(locale, countryCode);
+  const number = EMERGENCY_NUMBERS[country] || "112";
+  const serviceLink = EMERGENCY_SERVICE_URLS[country];
 
   return (
     <div className="rounded-lg border-2 border-red-500 bg-red-50 p-4 dark:border-red-400 dark:bg-red-950/30">
@@ -56,13 +79,26 @@ export function EmergencyWarning({ locale, reason }: EmergencyWarningProps) {
               {reason}
             </p>
           )}
-          <a
-            href={`tel:${number}`}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
-          >
-            <Phone className="h-3.5 w-3.5" />
-            {t("emergency_call", { number })}
-          </a>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <a
+              href={`tel:${number}`}
+              className="inline-flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-700"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              {t("emergency_call", { number })}
+            </a>
+            {serviceLink && (
+              <a
+                href={serviceLink.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 dark:border-red-600 dark:bg-red-950/50 dark:text-red-300 dark:hover:bg-red-950/70"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                {t(serviceLink.labelKey)}
+              </a>
+            )}
+          </div>
         </div>
       </div>
     </div>
