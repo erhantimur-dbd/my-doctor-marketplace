@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -50,4 +51,19 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withSentryConfig(withNextIntl(nextConfig), {
+  // Upload source maps for readable error stack traces
+  org: "socialmediapm",
+  project: "mydoctors360",
+
+  // Only print logs during CI builds
+  silent: !process.env.CI,
+
+  // Route browser requests through a Next.js rewrite to avoid ad blockers
+  tunnelRoute: "/monitoring",
+
+  // Source maps: upload to Sentry but don't expose to users
+  sourcemaps: {
+    deleteSourcemapsAfterUpload: true,
+  },
+});
