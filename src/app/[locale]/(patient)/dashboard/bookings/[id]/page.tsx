@@ -30,6 +30,8 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import { CancelBookingDialog } from "./cancel-booking-dialog";
 import { AddToCalendarButton } from "./add-to-calendar-button";
+import { RescheduleDialog } from "@/components/booking/reschedule-dialog";
+import { PrintButton } from "@/components/shared/print-button";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -54,6 +56,8 @@ type BookingDetail = {
   currency: string;
   patient_notes: string | null;
   doctor_notes: string | null;
+  visit_summary: string | null;
+  visit_summary_at: string | null;
   cancellation_reason: string | null;
   payment_status: string | null;
   payment_intent_id: string | null;
@@ -258,6 +262,7 @@ export default async function BookingDetailPage({
 
   const canCancel =
     typedBooking.status === "confirmed" || typedBooking.status === "approved";
+  const canReschedule = canCancel && startDate > now; // Only future bookings
   const isVideo = typedBooking.consultation_type === "video";
   const canJoinVideo =
     isVideo &&
@@ -530,6 +535,36 @@ export default async function BookingDetailPage({
             </Card>
           )}
 
+          {/* Visit Summary from Doctor */}
+          {typedBooking.visit_summary && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ClipboardList className="h-4 w-4" />
+                  Visit Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap rounded-md bg-blue-50 p-4 text-sm leading-relaxed dark:bg-blue-950/30">
+                  {typedBooking.visit_summary}
+                </p>
+                {typedBooking.visit_summary_at && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Added on{" "}
+                    {new Date(typedBooking.visit_summary_at).toLocaleDateString(
+                      locale === "de"
+                        ? "de-DE"
+                        : locale === "tr"
+                          ? "tr-TR"
+                          : "en-GB",
+                      { day: "numeric", month: "short", year: "numeric" }
+                    )}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Preparation tips - only for upcoming confirmed/approved bookings */}
           {isUpcoming && (
             <Card>
@@ -769,6 +804,15 @@ export default async function BookingDetailPage({
                 />
               )}
 
+              {canReschedule && (
+                <RescheduleDialog
+                  bookingId={typedBooking.id}
+                  doctorId={typedBooking.doctor_id}
+                  consultationType={typedBooking.consultation_type}
+                  bookingNumber={typedBooking.booking_number}
+                />
+              )}
+
               {canCancel && (
                 <CancelBookingDialog
                   bookingId={typedBooking.id}
@@ -790,6 +834,8 @@ export default async function BookingDetailPage({
                   View Doctor Profile
                 </Link>
               </Button>
+
+              <PrintButton label="Print Details" />
             </CardContent>
           </Card>
         </div>

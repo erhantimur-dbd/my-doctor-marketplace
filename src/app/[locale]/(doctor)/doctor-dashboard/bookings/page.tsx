@@ -33,8 +33,14 @@ import {
   Video,
   MapPin,
   Calendar,
+  CalendarClock,
+  FileText,
+  ArrowRight,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { respondToReschedule } from "@/actions/reschedule";
+import { saveVisitSummary } from "@/actions/booking";
+import { toast } from "sonner";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BookingRow = any;
@@ -86,6 +92,19 @@ function BookingsContent() {
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Reschedule requests
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [rescheduleRequests, setRescheduleRequests] = useState<any[]>([]);
+  const [rescheduleRejectDialogOpen, setRescheduleRejectDialogOpen] = useState(false);
+  const [rejectingRescheduleId, setRejectingRescheduleId] = useState<string | null>(null);
+  const [rescheduleRejectReason, setRescheduleRejectReason] = useState("");
+
+  // Visit summary dialog
+  const [summaryDialogOpen, setSummaryDialogOpen] = useState(false);
+  const [summaryBookingId, setSummaryBookingId] = useState<string | null>(null);
+  const [summaryText, setSummaryText] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -110,13 +129,28 @@ function BookingsContent() {
     const { data } = await supabase
       .from("bookings")
       .select(
-        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
+        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
       )
       .eq("doctor_id", doctor.id)
       .order("appointment_date", { ascending: false })
       .order("start_time", { ascending: false });
 
     setBookings((data as unknown as BookingRow[]) || []);
+
+    // Fetch pending reschedule requests for this doctor's bookings
+    const { data: reschedules } = await supabase
+      .from("reschedule_requests")
+      .select(
+        `*, booking:bookings!inner(
+          id, booking_number, appointment_date, start_time, end_time,
+          patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)
+        )`
+      )
+      .eq("status", "pending")
+      .eq("booking.doctor_id", doctor.id)
+      .order("created_at", { ascending: false });
+
+    setRescheduleRequests((reschedules as unknown as any[]) || []);
     setLoading(false);
   }
 
@@ -151,6 +185,57 @@ function BookingsContent() {
     setActionLoading(null);
   }
 
+  async function approveReschedule(rescheduleId: string) {
+    setActionLoading(rescheduleId);
+    const result = await respondToReschedule({
+      reschedule_id: rescheduleId,
+      action: "approve",
+    });
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Reschedule approved. The booking has been updated.");
+    }
+    await loadData();
+    setActionLoading(null);
+  }
+
+  async function handleRejectReschedule() {
+    if (!rejectingRescheduleId) return;
+    setActionLoading(rejectingRescheduleId);
+    const result = await respondToReschedule({
+      reschedule_id: rejectingRescheduleId,
+      action: "reject",
+      rejection_reason: rescheduleRejectReason || undefined,
+    });
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Reschedule request declined.");
+    }
+    setRescheduleRejectDialogOpen(false);
+    setRescheduleRejectReason("");
+    setRejectingRescheduleId(null);
+    await loadData();
+    setActionLoading(null);
+  }
+
+  async function handleSaveVisitSummary() {
+    if (!summaryBookingId || !summaryText.trim()) return;
+    setSummaryLoading(true);
+    const result = await saveVisitSummary(summaryBookingId, summaryText);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Visit summary saved and patient notified.");
+      setSummaryDialogOpen(false);
+      setSummaryText("");
+      setSummaryBookingId(null);
+    }
+    await loadData();
+    setSummaryLoading(false);
+  }
+
   const today = new Date().toISOString().split("T")[0];
 
   const pendingBookings = bookings.filter(
@@ -176,7 +261,12 @@ function BookingsContent() {
     return minsBefore <= 10 && minsBefore >= -60;
   }
 
-  function renderBookingTable(rows: BookingRow[], showActions: boolean, showVideoButton: boolean = false) {
+  function renderBookingTable(
+    rows: BookingRow[],
+    showActions: boolean,
+    showVideoButton: boolean = false,
+    showSummaryAction: boolean = false
+  ) {
     if (rows.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -198,7 +288,9 @@ function BookingsContent() {
             <TableHead>Status</TableHead>
             <TableHead>Amount</TableHead>
             {showVideoButton && <TableHead>Appointment</TableHead>}
-            {showActions && <TableHead className="text-right">Actions</TableHead>}
+            {(showActions || showSummaryAction) && (
+              <TableHead className="text-right">Actions</TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -298,6 +390,26 @@ function BookingsContent() {
                   </div>
                 </TableCell>
               )}
+              {showSummaryAction && booking.status === "completed" && (
+                <TableCell className="text-right">
+                  <Button
+                    size="sm"
+                    variant={booking.visit_summary ? "outline" : "default"}
+                    className="gap-1.5"
+                    onClick={() => {
+                      setSummaryBookingId(booking.id);
+                      setSummaryText(booking.visit_summary || "");
+                      setSummaryDialogOpen(true);
+                    }}
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    {booking.visit_summary ? "Edit Summary" : "Write Summary"}
+                  </Button>
+                </TableCell>
+              )}
+              {showSummaryAction && booking.status !== "completed" && (
+                <TableCell />
+              )}
             </TableRow>
           ))}
         </TableBody>
@@ -323,7 +435,7 @@ function BookingsContent() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-full bg-yellow-50 p-3">
@@ -343,6 +455,17 @@ function BookingsContent() {
             <div>
               <p className="text-sm text-muted-foreground">Upcoming</p>
               <p className="text-2xl font-bold">{upcomingBookings.length}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className="rounded-full bg-blue-50 p-3">
+              <CalendarClock className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Reschedule</p>
+              <p className="text-2xl font-bold">{rescheduleRequests.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -370,6 +493,14 @@ function BookingsContent() {
             )}
           </TabsTrigger>
           <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
+          <TabsTrigger value="reschedule" className="gap-2">
+            Reschedule
+            {rescheduleRequests.length > 0 && (
+              <Badge variant="secondary" className="h-5 min-w-5 px-1.5 bg-blue-100 text-blue-800">
+                {rescheduleRequests.length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="past">Past</TabsTrigger>
         </TabsList>
 
@@ -389,10 +520,128 @@ function BookingsContent() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="reschedule" className="mt-4">
+          <Card>
+            <CardContent className="p-0">
+              {rescheduleRequests.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <CalendarClock className="mb-4 h-12 w-12 text-muted-foreground/50" />
+                  <p className="text-muted-foreground">No pending reschedule requests</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Booking #</TableHead>
+                      <TableHead>Patient</TableHead>
+                      <TableHead>Current Schedule</TableHead>
+                      <TableHead></TableHead>
+                      <TableHead>Requested Schedule</TableHead>
+                      <TableHead>Requested</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rescheduleRequests.map((req) => {
+                      const booking: any = Array.isArray(req.booking) ? req.booking[0] : req.booking;
+                      const patient: any = booking?.patient
+                        ? (Array.isArray(booking.patient) ? booking.patient[0] : booking.patient)
+                        : null;
+                      return (
+                        <TableRow key={req.id}>
+                          <TableCell className="font-mono text-sm">
+                            {booking?.booking_number}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">
+                                {patient?.first_name} {patient?.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {patient?.email}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <p className="font-medium">
+                                {new Date(req.original_date + "T00:00:00").toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {req.original_start_time?.slice(0, 5)} - {req.original_end_time?.slice(0, 5)}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <p className="font-medium text-primary">
+                                {new Date(req.new_date + "T00:00:00").toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })}
+                              </p>
+                              <p className="text-primary/80">
+                                {req.new_start_time?.slice(0, 5)} - {req.new_end_time?.slice(0, 5)}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {new Date(req.created_at).toLocaleDateString("en-GB", {
+                              day: "numeric",
+                              month: "short",
+                            })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => approveReschedule(req.id)}
+                                disabled={actionLoading === req.id}
+                              >
+                                {actionLoading === req.id ? (
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                )}
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  setRejectingRescheduleId(req.id);
+                                  setRescheduleRejectReason("");
+                                  setRescheduleRejectDialogOpen(true);
+                                }}
+                                disabled={actionLoading === req.id}
+                              >
+                                <XCircle className="mr-1 h-3 w-3" />
+                                Decline
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="past" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              {renderBookingTable(pastBookings, false)}
+              {renderBookingTable(pastBookings, false, false, true)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -421,6 +670,90 @@ function BookingsContent() {
             </DialogClose>
             <Button variant="destructive" onClick={rejectBooking}>
               Reject Booking
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Reject Dialog */}
+      <Dialog open={rescheduleRejectDialogOpen} onOpenChange={setRescheduleRejectDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Decline Reschedule Request</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              The patient will be notified that their reschedule request was declined.
+              Their original appointment will remain unchanged.
+            </p>
+            <div className="space-y-2">
+              <Label>Reason (optional)</Label>
+              <Textarea
+                placeholder="Let the patient know why you can't accommodate this change..."
+                value={rescheduleRejectReason}
+                onChange={(e) => setRescheduleRejectReason(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="destructive"
+              onClick={handleRejectReschedule}
+              disabled={actionLoading === rejectingRescheduleId}
+            >
+              {actionLoading === rejectingRescheduleId && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Decline Request
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Visit Summary Dialog */}
+      <Dialog open={summaryDialogOpen} onOpenChange={setSummaryDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Visit Summary
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Write a post-visit summary for your patient. They will be notified
+              when you save it.
+            </p>
+            <div className="space-y-2">
+              <Label>Summary</Label>
+              <Textarea
+                placeholder="Describe the consultation findings, recommendations, follow-up instructions..."
+                value={summaryText}
+                onChange={(e) => setSummaryText(e.target.value)}
+                rows={6}
+                maxLength={5000}
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {summaryText.length} / 5000
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              onClick={handleSaveVisitSummary}
+              disabled={summaryLoading || !summaryText.trim()}
+            >
+              {summaryLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Summary
             </Button>
           </DialogFooter>
         </DialogContent>

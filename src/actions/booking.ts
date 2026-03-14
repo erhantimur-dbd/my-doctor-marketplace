@@ -32,6 +32,7 @@ import {
   getCommissionCents,
   formatCurrency,
 } from "@/lib/utils/currency";
+import { createNotification } from "@/lib/notifications";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -639,5 +640,79 @@ export async function getDoctorAvailableSlots(
   } catch (err) {
     console.error("getDoctorAvailableSlots error:", err);
     return { slots: [], error: "Failed to fetch available slots." };
+  }
+}
+
+// ── Post-Visit Summary ──────────────────────────────────────────────
+
+export async function saveVisitSummary(bookingId: string, summary: string) {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return { error: "You must be logged in." };
+
+    // Verify the user is the doctor for this booking
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("id, status, doctor_id, patient_id")
+      .eq("id", bookingId)
+      .single();
+
+    if (!booking) return { error: "Booking not found." };
+    if (booking.status !== "completed") {
+      return { error: "Visit summary can only be added to completed bookings." };
+    }
+
+    // Check user is the doctor
+    const { data: doctor } = await supabase
+      .from("doctors")
+      .select("id")
+      .eq("profile_id", user.id)
+      .eq("id", booking.doctor_id)
+      .single();
+
+    if (!doctor) return { error: "Only the doctor can add a visit summary." };
+
+    const trimmed = summary.trim();
+    if (!trimmed || trimmed.length > 5000) {
+      return { error: "Summary must be between 1 and 5000 characters." };
+    }
+
+    const admin = createAdminClient();
+    const { error: updateErr } = await admin
+      .from("bookings")
+      .update({
+        visit_summary: trimmed,
+        visit_summary_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
+
+    if (updateErr) {
+      console.error("[VisitSummary] Update error:", updateErr);
+      return { error: "Failed to save visit summary." };
+    }
+
+    // Notify patient
+    try {
+      await createNotification({
+        userId: booking.patient_id,
+        type: "visit_summary",
+        title: "Visit Summary Available",
+        message: "Your doctor has added a summary for your recent appointment.",
+        channels: ["in_app", "email"],
+        metadata: { bookingId },
+      });
+    } catch (err) {
+      console.error("[VisitSummary] Notification error:", err);
+    }
+
+    revalidatePath("/", "layout");
+    return { success: true };
+  } catch (err) {
+    console.error("saveVisitSummary error:", err);
+    return { error: "An unexpected error occurred." };
   }
 }
