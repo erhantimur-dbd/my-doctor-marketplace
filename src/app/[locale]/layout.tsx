@@ -7,6 +7,7 @@ import { AuthProvider } from "@/providers/auth-provider";
 import { createClient } from "@/lib/supabase/server";
 import { CookieConsentBanner } from "@/components/shared/cookie-consent-banner";
 import { AnalyticsScripts } from "@/components/shared/analytics-scripts";
+import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,6 +61,11 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#0284c7" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
@@ -71,6 +77,7 @@ export default async function LocaleLayout({
             {children}
             <Toaster position="top-right" />
             <CookieConsentBanner />
+            <PwaInstallPrompt />
           </AuthProvider>
         </NextIntlClientProvider>
         <AnalyticsScripts />

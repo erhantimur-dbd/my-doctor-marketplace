@@ -57,6 +57,11 @@ export function Footer() {
                   {t("find_pharmacy")}
                 </Link>
               </li>
+              <li>
+                <Link href="/blog" className="hover:text-foreground">
+                  Blog
+                </Link>
+              </li>
             </ul>
           </div>
 
