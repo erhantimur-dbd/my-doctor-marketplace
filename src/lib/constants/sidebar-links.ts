@@ -70,6 +70,7 @@ export const doctorSidebarLinks: SidebarLink[] = [
     label: "License & Billing",
   },
   { href: "/doctor-dashboard/referrals", icon: UserPlus, label: "Referrals" },
+  // { href: "/doctor-dashboard/prescriptions", icon: FileText, label: "Prescriptions" }, // Hidden for now
   {
     href: "/doctor-dashboard/messages",
     icon: MessageSquare,
@@ -135,6 +136,7 @@ export const doctorSidebarGroups: SidebarGroup[] = [
         icon: UserPlus,
         label: "Referrals",
       },
+      // { href: "/doctor-dashboard/prescriptions", icon: FileText, label: "Prescriptions" }, // Hidden for now
     ],
   },
   {
@@ -194,6 +196,8 @@ export const patientSidebarLinks: SidebarLink[] = [
   { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },
   { href: "/dashboard/invoices", icon: Receipt, label: "Invoices" },
   { href: "/dashboard/favorites", icon: Heart, label: "Saved Doctors" },
+  { href: "/dashboard/family", icon: Users, label: "Family" },
+  // { href: "/dashboard/prescriptions", icon: FileText, label: "Prescriptions" }, // Hidden for now
   { href: "/dashboard/reviews", icon: Star, label: "My Reviews" },
   {
     href: "/dashboard/messages",

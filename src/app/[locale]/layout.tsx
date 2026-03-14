@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CookieConsentBanner } from "@/components/shared/cookie-consent-banner";
 import { AnalyticsScripts } from "@/components/shared/analytics-scripts";
 import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
+import { CommandPalette } from "@/components/shared/command-palette";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -78,6 +79,7 @@ export default async function LocaleLayout({
             <Toaster position="top-right" />
             <CookieConsentBanner />
             <PwaInstallPrompt />
+            <CommandPalette />
           </AuthProvider>
         </NextIntlClientProvider>
         <AnalyticsScripts />

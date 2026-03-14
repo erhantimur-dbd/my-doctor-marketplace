@@ -29,6 +29,7 @@ import { ReviewSummaryCard } from "@/components/doctors/review-summary-card";
 import { BackToSearchButton } from "@/components/doctors/back-to-search-button";
 import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 import { TrackDoctorView } from "@/components/doctors/track-doctor-view";
+import { PhotoGallery } from "@/components/doctors/photo-gallery";
 import type { Metadata } from "next";
 
 interface DoctorPageProps {
@@ -260,6 +261,18 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                 <p className="whitespace-pre-wrap text-muted-foreground">
                   {doctor.bio}
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Clinic Photos */}
+          {doctor.photos && (doctor.photos as unknown[]).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Clinic Photos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PhotoGallery photos={doctor.photos} />
               </CardContent>
             </Card>
           )}
