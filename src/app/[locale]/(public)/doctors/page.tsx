@@ -11,6 +11,7 @@ import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-m
 import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
 import { RecentlyViewedCarousel } from "@/components/doctors/recently-viewed-carousel";
+import { CompareProviderWrapper } from "@/components/doctors/compare-provider-wrapper";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -128,6 +129,7 @@ export default async function DoctorsPage({
   }
 
   return (
+    <CompareProviderWrapper>
     <div className="container mx-auto px-4 py-4 lg:py-8">
       <h1 className="mb-3 text-2xl font-bold lg:mb-6 lg:text-3xl">
         {t("title")}
@@ -245,5 +247,6 @@ export default async function DoctorsPage({
         </div>
       </div>
     </div>
+    </CompareProviderWrapper>
   );
 }

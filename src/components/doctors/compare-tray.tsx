@@ -1,0 +1,73 @@
+"use client";
+
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { X, GitCompareArrows } from "lucide-react";
+import { useDoctorCompare } from "@/hooks/use-doctor-compare";
+
+export function CompareTray() {
+  const {
+    compareList,
+    removeFromCompare,
+    clearCompare,
+    setCompareOpen,
+  } = useDoctorCompare();
+
+  if (compareList.length === 0) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
+      <div className="container mx-auto flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground">
+            Compare ({compareList.length}/3)
+          </span>
+          <div className="flex items-center gap-2">
+            {compareList.map((doctor) => (
+              <div
+                key={doctor.id}
+                className="flex items-center gap-1.5 rounded-full border bg-card pl-1 pr-2 py-1"
+              >
+                <Avatar className="h-6 w-6">
+                  {doctor.avatarUrl && (
+                    <AvatarImage src={doctor.avatarUrl} alt={doctor.name} />
+                  )}
+                  <AvatarFallback className="text-[10px]">
+                    {doctor.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .slice(0, 2)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="max-w-24 truncate text-xs font-medium">
+                  {doctor.name}
+                </span>
+                <button
+                  onClick={() => removeFromCompare(doctor.id)}
+                  className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label={`Remove ${doctor.name} from comparison`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={clearCompare}>
+            Clear
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setCompareOpen(true)}
+            disabled={compareList.length < 2}
+          >
+            <GitCompareArrows className="mr-1.5 h-4 w-4" />
+            Compare
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

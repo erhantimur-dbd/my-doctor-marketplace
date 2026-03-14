@@ -769,27 +769,12 @@ export default async function BookingDetailPage({
                 <Button
                   className="w-full"
                   size="lg"
-                  disabled={!isWithinJoinWindow}
-                  asChild={isWithinJoinWindow}
+                  asChild
                 >
-                  {isWithinJoinWindow ? (
-                    <a
-                      href={typedBooking.video_room_url!}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Video className="mr-2 h-4 w-4" />
-                      Join Video Call
-                    </a>
-                  ) : (
-                    <>
-                      <Video className="mr-2 h-4 w-4" />
-                      Join Video Call
-                      <span className="ml-1 text-xs opacity-70">
-                        (available 10 min before)
-                      </span>
-                    </>
-                  )}
+                  <Link href={`/dashboard/bookings/${typedBooking.id}/video-room`}>
+                    <Video className="mr-2 h-4 w-4" />
+                    Join Video Call
+                  </Link>
                 </Button>
               )}
 

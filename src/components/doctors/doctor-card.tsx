@@ -24,6 +24,7 @@ import { AvailabilityCalendar } from "@/components/booking/availability-calendar
 import { getMultiDayAvailabilityBatch } from "@/actions/search";
 import type { DoctorMultiDayAvailability } from "@/actions/search";
 import { getFeaturedReview } from "@/actions/reviews";
+import { CompareCheckbox } from "@/components/doctors/compare-checkbox";
 
 interface DoctorCardProps {
   doctor: {
@@ -313,18 +314,37 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         + booking fee
                       </span>
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="group-hover:bg-primary group-hover:text-primary-foreground"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        router.push(`/doctors/${doctor.slug}/book`);
-                      }}
-                    >
-                      Book Now
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <CompareCheckbox
+                        doctor={{
+                          id: doctor.id,
+                          slug: doctor.slug,
+                          name: `${doctor.title || "Dr."} ${doctor.profile.first_name} ${doctor.profile.last_name}`,
+                          specialty: primarySpecialty ? formatSpecialtyName(primarySpecialty.name_key) : "",
+                          avatarUrl: doctor.profile.avatar_url,
+                          rating: Number(doctor.avg_rating) || 0,
+                          reviewCount: doctor.total_reviews || 0,
+                          consultationFeeCents: doctor.consultation_fee_cents,
+                          videoFeeCents: null,
+                          currency: doctor.base_currency,
+                          city: doctor.location?.city || null,
+                          consultationTypes: doctor.consultation_types || [],
+                          yearsExperience: doctor.years_of_experience || null,
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="group-hover:bg-primary group-hover:text-primary-foreground"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/doctors/${doctor.slug}/book`);
+                        }}
+                      >
+                        Book Now
+                      </Button>
+                    </div>
                   </div>
                 </Link>
 
