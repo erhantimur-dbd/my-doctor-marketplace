@@ -24,6 +24,8 @@ import {
   MapPin,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { OnboardingTour } from "@/components/shared/onboarding-tour";
+import { patientDashboardSteps } from "@/components/shared/onboarding-steps";
 
 function getCountdownBadge(startTime: string) {
   const now = new Date();
@@ -182,12 +184,14 @@ export default async function PatientDashboard() {
 
   return (
     <div className="space-y-6">
+      <OnboardingTour tourId="patient-dashboard" steps={patientDashboardSteps} />
+
       <h1 className="text-2xl font-bold">
         Welcome back, {profile?.first_name}
       </h1>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="patient-settings">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-full bg-blue-50 p-3">
@@ -239,7 +243,7 @@ export default async function PatientDashboard() {
       </div>
 
       {/* Upcoming Appointments */}
-      <Card>
+      <Card data-tour="patient-upcoming">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Upcoming Appointments</CardTitle>
           <Button variant="ghost" size="sm" asChild>
@@ -331,7 +335,7 @@ export default async function PatientDashboard() {
       </Card>
 
       {/* Quick Actions */}
-      <div>
+      <div data-tour="patient-find-doctor">
         <h2 className="mb-3 text-lg font-semibold">Quick Actions</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => (
@@ -355,7 +359,7 @@ export default async function PatientDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <Card>
+      <Card data-tour="patient-messages">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Recent Activity</CardTitle>
           <Button variant="ghost" size="sm" asChild>

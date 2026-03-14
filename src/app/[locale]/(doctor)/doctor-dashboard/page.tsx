@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Users, Star, DollarSign, Crown, ArrowRight, Clock, ShieldAlert, XCircle } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { StartAppointmentButton } from "@/components/booking/start-appointment-button";
+import { ProfileCompletionCard } from "@/components/doctor/profile-completion-card";
+import { OnboardingTour } from "@/components/shared/onboarding-tour";
+import { doctorDashboardSteps } from "@/components/shared/onboarding-steps";
 import { Link } from "@/i18n/navigation";
 
 export default async function DoctorDashboard() {
@@ -36,9 +39,20 @@ export default async function DoctorDashboard() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("first_name")
+    .select("first_name, avatar_url")
     .eq("id", user.id)
     .single();
+
+  // Check for education entries + availability for completion guide
+  const { count: educationCount } = await supabase
+    .from("doctor_education")
+    .select("id", { count: "exact", head: true })
+    .eq("doctor_id", doctor.id);
+
+  const { count: availabilityCount } = await supabase
+    .from("doctor_availability")
+    .select("id", { count: "exact", head: true })
+    .eq("doctor_id", doctor.id);
 
   // Get today's bookings
   const today = new Date().toISOString().split("T")[0];
@@ -69,6 +83,8 @@ export default async function DoctorDashboard() {
 
   return (
     <div className="space-y-6">
+      <OnboardingTour tourId="doctor-dashboard" steps={doctorDashboardSteps} />
+
       <h1 className="text-2xl font-bold">
         Welcome back, {profile?.first_name}
       </h1>
@@ -154,8 +170,24 @@ export default async function DoctorDashboard() {
         </Card>
       )}
 
+      {/* Profile Completion Guide */}
+      <div data-tour="doctor-profile">
+      <ProfileCompletionCard
+        doctor={{
+          bio: doctor.bio,
+          specialties: doctor.specialties,
+          stripe_account_id: doctor.stripe_account_id,
+          consultation_types: doctor.consultation_types,
+          verification_status: doctor.verification_status,
+        }}
+        profile={{ avatar_url: profile?.avatar_url || null }}
+        hasAvailability={(availabilityCount || 0) > 0}
+        hasEducation={(educationCount || 0) > 0}
+      />
+      </div>
+
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="doctor-bookings">
         <Link href="/doctor-dashboard/bookings" className="group">
           <Card className="transition-shadow group-hover:shadow-md">
             <CardContent className="flex items-center gap-4 p-6">
@@ -221,10 +253,10 @@ export default async function DoctorDashboard() {
       </div>
 
       {/* Today's schedule */}
-      <Card>
+      <Card data-tour="doctor-schedule">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Today&apos;s Schedule</CardTitle>
-          <Button variant="ghost" size="sm" asChild>
+          <Button variant="ghost" size="sm" asChild data-tour="doctor-calendar">
             <Link href="/doctor-dashboard/calendar">
               View Calendar <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>

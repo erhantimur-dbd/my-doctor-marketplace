@@ -10,6 +10,7 @@ import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters"
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
 import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
+import { RecentlyViewedCarousel } from "@/components/doctors/recently-viewed-carousel";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -131,6 +132,9 @@ export default async function DoctorsPage({
       <h1 className="mb-3 text-2xl font-bold lg:mb-6 lg:text-3xl">
         {t("title")}
       </h1>
+
+      {/* Recently viewed doctors carousel */}
+      <RecentlyViewedCarousel />
 
       {/* AI-powered search bar – desktop only */}
       <div className="mb-4 hidden lg:block">

@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/dynamic-header";
 import { Footer } from "@/components/layout/footer";
+import { BackToTop } from "@/components/shared/back-to-top";
 
 export default function PublicLayout({
   children,
@@ -11,6 +12,7 @@ export default function PublicLayout({
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      <BackToTop />
     </div>
   );
 }

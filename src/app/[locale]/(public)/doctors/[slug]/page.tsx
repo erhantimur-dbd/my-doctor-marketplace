@@ -28,6 +28,7 @@ import { MEDICAL_TEST_GROUPS } from "@/lib/constants/medical-tests";
 import { ReviewSummaryCard } from "@/components/doctors/review-summary-card";
 import { BackToSearchButton } from "@/components/doctors/back-to-search-button";
 import { NotifyMeButton } from "@/components/doctors/notify-me-button";
+import { TrackDoctorView } from "@/components/doctors/track-doctor-view";
 import type { Metadata } from "next";
 
 interface DoctorPageProps {
@@ -142,6 +143,14 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <TrackDoctorView
+        id={doctor.id}
+        slug={doctor.slug}
+        name={fullName}
+        specialty={primarySpecialty ? formatSpecialtyName(primarySpecialty.name_key) : ""}
+        avatarUrl={doctor.profile.avatar_url || null}
+        rating={Number(doctor.avg_rating) || 0}
+      />
       <BackToSearchButton />
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main content */}
