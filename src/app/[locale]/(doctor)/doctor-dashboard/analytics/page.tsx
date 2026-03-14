@@ -21,6 +21,10 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
+import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
+import { DayOfWeekChart } from "@/components/charts/day-of-week-chart";
+import { ConsultationPieChart } from "@/components/charts/consultation-pie-chart";
+import { StatusPieChart } from "@/components/charts/status-pie-chart";
 
 export default async function AnalyticsPage() {
   const supabase = await createClient();
@@ -399,28 +403,10 @@ export default async function AnalyticsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-end gap-4 h-48">
-            {monthlyData.map((m) => (
-              <div
-                key={m.month}
-                className="flex flex-1 flex-col items-center gap-2"
-              >
-                <span className="text-sm font-medium">{m.bookings}</span>
-                <div className="w-full max-w-16 relative flex-1">
-                  <div
-                    className="absolute bottom-0 left-0 right-0 rounded-t-md bg-primary/80 transition-all"
-                    style={{
-                      height: `${(m.bookings / maxMonthlyBookings) * 100}%`,
-                      minHeight: m.bookings > 0 ? "8px" : "2px",
-                    }}
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {m.month}
-                </span>
-              </div>
-            ))}
-          </div>
+          <MonthlyBarChart
+            data={monthlyData.map((m) => ({ month: m.month, value: m.bookings }))}
+            color="hsl(var(--primary))"
+          />
         </CardContent>
       </Card>
 
@@ -433,30 +419,11 @@ export default async function AnalyticsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-end gap-4 h-48">
-            {monthlyData.map((m) => (
-              <div
-                key={m.month}
-                className="flex flex-1 flex-col items-center gap-2"
-              >
-                <span className="text-xs font-medium">
-                  {formatCurrency(m.revenue, currency)}
-                </span>
-                <div className="w-full max-w-16 relative flex-1">
-                  <div
-                    className="absolute bottom-0 left-0 right-0 rounded-t-md bg-green-500/80 transition-all"
-                    style={{
-                      height: `${(m.revenue / maxMonthlyRevenue) * 100}%`,
-                      minHeight: m.revenue > 0 ? "8px" : "2px",
-                    }}
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {m.month}
-                </span>
-              </div>
-            ))}
-          </div>
+          <MonthlyBarChart
+            data={monthlyData.map((m) => ({ month: m.month, value: m.revenue }))}
+            color="#22c55e"
+            formatValue={(v) => formatCurrency(v, currency)}
+          />
         </CardContent>
       </Card>
 
@@ -472,42 +439,10 @@ export default async function AnalyticsPage() {
                 No bookings data yet
               </p>
             ) : (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <MapPin className="h-5 w-5 text-blue-600" />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">In Person</span>
-                      <span className="text-sm text-muted-foreground">
-                        {inPersonCount} ({inPersonPct}%)
-                      </span>
-                    </div>
-                    <div className="mt-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-blue-500"
-                        style={{ width: `${inPersonPct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Video className="h-5 w-5 text-green-600" />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">Video</span>
-                      <span className="text-sm text-muted-foreground">
-                        {videoCount} ({videoPct}%)
-                      </span>
-                    </div>
-                    <div className="mt-1 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-green-500"
-                        style={{ width: `${videoPct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <ConsultationPieChart
+                inPersonCount={inPersonCount}
+                videoCount={videoCount}
+              />
             )}
           </CardContent>
         </Card>
@@ -523,87 +458,12 @@ export default async function AnalyticsPage() {
                 No bookings data yet
               </p>
             ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-sm">Completed</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {completedCount}
-                    </span>
-                    <div className="w-24 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-green-500"
-                        style={{
-                          width: `${totalAll > 0 ? (completedCount / totalAll) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm">Upcoming</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {confirmedCount}
-                    </span>
-                    <div className="w-24 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-blue-500"
-                        style={{
-                          width: `${totalAll > 0 ? (confirmedCount / totalAll) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-red-600" />
-                    <span className="text-sm">Cancelled</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {cancelledCount}
-                    </span>
-                    <div className="w-24 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-red-500"
-                        style={{
-                          width: `${totalAll > 0 ? (cancelledCount / totalAll) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <span className="text-sm">No Show</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{noShowCount}</span>
-                    <div className="w-24 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-2 rounded-full bg-yellow-500"
-                        style={{
-                          width: `${totalAll > 0 ? (noShowCount / totalAll) * 100 : 0}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-                <Separator className="my-2" />
-                <div className="flex items-center justify-between text-sm font-medium">
-                  <span>Total</span>
-                  <span>{totalAll}</span>
-                </div>
-              </div>
+              <StatusPieChart
+                completedCount={completedCount}
+                confirmedCount={confirmedCount}
+                cancelledCount={cancelledCount}
+                noShowCount={noShowCount}
+              />
             )}
           </CardContent>
         </Card>
@@ -618,31 +478,12 @@ export default async function AnalyticsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-end gap-3 h-32">
-            {dayNames.map((dayName, idx) => (
-              <div
-                key={dayName}
-                className="flex flex-1 flex-col items-center gap-2"
-              >
-                <span className="text-xs font-medium">
-                  {dayOfWeekCounts[idx]}
-                </span>
-                <div className="w-full max-w-12 relative flex-1">
-                  <div
-                    className="absolute bottom-0 left-0 right-0 rounded-t-md bg-indigo-500/80 transition-all"
-                    style={{
-                      height: `${(dayOfWeekCounts[idx] / maxDayCount) * 100}%`,
-                      minHeight:
-                        dayOfWeekCounts[idx] > 0 ? "6px" : "2px",
-                    }}
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {dayName}
-                </span>
-              </div>
-            ))}
-          </div>
+          <DayOfWeekChart
+            data={dayNames.map((day, idx) => ({
+              day,
+              count: dayOfWeekCounts[idx],
+            }))}
+          />
         </CardContent>
       </Card>
 

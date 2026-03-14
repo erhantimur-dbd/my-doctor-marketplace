@@ -56,7 +56,10 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  LayoutGrid,
+  List,
 } from "lucide-react";
+import { VisualCalendar } from "@/components/doctor/visual-calendar";
 
 const DAYS_OF_WEEK = [
   "Monday",
@@ -120,6 +123,7 @@ function CalendarContent() {
   const [isPending, startTransition] = useTransition();
 
   const [syncing, setSyncing] = useState(false);
+  const [calendarView, setCalendarView] = useState<"list" | "visual">("list");
 
   // Schedule form state
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
@@ -346,6 +350,43 @@ function CalendarContent() {
     }
   }
 
+  // Visual calendar handlers
+  async function handleVisualAddSchedule(data: {
+    day_of_week: number;
+    start_time: string;
+    end_time: string;
+    slot_duration_minutes: number;
+    consultation_type: string;
+  }) {
+    if (!doctorId) return;
+    const supabase = createSupabase();
+    const { error } = await supabase.from("availability_schedules").insert({
+      doctor_id: doctorId,
+      ...data,
+      is_active: true,
+    });
+    if (error) {
+      toast.error("Failed to add schedule");
+      return;
+    }
+    toast.success("Schedule added");
+    loadData();
+  }
+
+  async function handleVisualDeleteSchedule(id: string) {
+    const supabase = createSupabase();
+    const { error } = await supabase
+      .from("availability_schedules")
+      .delete()
+      .eq("id", id);
+    if (error) {
+      toast.error("Failed to delete schedule");
+      return;
+    }
+    toast.success("Schedule deleted");
+    loadData();
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -363,18 +404,50 @@ function CalendarContent() {
             Manage your weekly schedule and date overrides
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSyncNow}
-          disabled={syncing}
-        >
-          <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing..." : "Sync Calendars"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-md border">
+            <Button
+              variant={calendarView === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-r-none"
+              onClick={() => setCalendarView("list")}
+            >
+              <List className="mr-1.5 h-4 w-4" />
+              List
+            </Button>
+            <Button
+              variant={calendarView === "visual" ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-l-none"
+              onClick={() => setCalendarView("visual")}
+            >
+              <LayoutGrid className="mr-1.5 h-4 w-4" />
+              Visual
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSyncNow}
+            disabled={syncing}
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Syncing..." : "Sync Calendars"}
+          </Button>
+        </div>
       </div>
 
-      {/* Weekly Schedule */}
+      {/* Visual Calendar View */}
+      {calendarView === "visual" && (
+        <VisualCalendar
+          schedules={schedules}
+          onAddSchedule={handleVisualAddSchedule}
+          onDeleteSchedule={handleVisualDeleteSchedule}
+        />
+      )}
+
+      {/* Weekly Schedule (List View) */}
+      {calendarView === "list" && (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -575,6 +648,7 @@ function CalendarContent() {
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Date Overrides */}
       <Card>

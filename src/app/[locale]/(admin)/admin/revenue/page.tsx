@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
+import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
 import { DateRangeSelector } from "../components/date-range-selector";
 import { ExportCSVButton } from "../components/export-csv-button";
 import { exportRevenueCSV } from "@/actions/admin";
@@ -301,30 +302,12 @@ export default async function AdminRevenuePage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex h-48 items-end gap-2">
-            {monthlyData.map((m) => (
-              <div
-                key={m.month}
-                className="flex flex-1 flex-col items-center gap-1"
-              >
-                <span className="text-[10px] font-medium">
-                  {m.revenue > 0 ? formatCurrency(m.revenue, "EUR") : ""}
-                </span>
-                <div className="relative w-full max-w-12 flex-1">
-                  <div
-                    className="absolute bottom-0 left-0 right-0 rounded-t-md bg-green-500/80 transition-all"
-                    style={{
-                      height: `${(m.revenue / maxRevenue) * 100}%`,
-                      minHeight: m.revenue > 0 ? "6px" : "2px",
-                    }}
-                  />
-                </div>
-                <span className="text-[10px] text-muted-foreground">
-                  {m.month}
-                </span>
-              </div>
-            ))}
-          </div>
+          <MonthlyBarChart
+            data={monthlyData.map((m) => ({ month: m.month, value: m.revenue }))}
+            color="#22c55e"
+            formatValue={(v) => formatCurrency(v, "EUR")}
+            height={240}
+          />
         </CardContent>
       </Card>
 

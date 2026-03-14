@@ -24,6 +24,10 @@ import {
   Video,
 } from "lucide-react";
 import type { Metadata } from "next";
+import {
+  BookingSuccessAnimation,
+  AnimatedSuccessIcon,
+} from "@/components/shared/booking-success-animation";
 
 export const metadata: Metadata = {
   title: "Booking Confirmed",
@@ -134,13 +138,16 @@ export default async function BookingConfirmationPage({
 
   return (
     <div className="container mx-auto px-4 py-12">
+      <BookingSuccessAnimation>
       <div className="mx-auto max-w-lg">
         <Card>
           <CardHeader className="text-center">
             {/* Success Icon */}
+            <AnimatedSuccessIcon>
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
               <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
             </div>
+            </AnimatedSuccessIcon>
 
             <h1 className="text-2xl font-bold">Booking Confirmed!</h1>
             <p className="text-muted-foreground">
@@ -331,6 +338,7 @@ export default async function BookingConfirmationPage({
           </CardFooter>
         </Card>
       </div>
+      </BookingSuccessAnimation>
     </div>
   );
 }
