@@ -189,6 +189,22 @@ export async function getMessages(conversationId: string) {
     .neq("sender_id", user.id)
     .is("read_at", null);
 
+  // Fetch attachments for all messages in this conversation
+  const messageIds = (messages || []).map((m) => m.id);
+  const { data: attachments } = messageIds.length > 0
+    ? await supabase
+        .from("message_attachments")
+        .select("id, message_id, file_name, file_type, file_size, storage_path")
+        .in("message_id", messageIds)
+    : { data: [] };
+
+  const attachmentMap = new Map<string, typeof attachments>();
+  (attachments || []).forEach((a) => {
+    const existing = attachmentMap.get(a.message_id) || [];
+    existing.push(a);
+    attachmentMap.set(a.message_id, existing);
+  });
+
   return (messages || []).map((m) => ({
     id: m.id,
     senderId: m.sender_id,
@@ -197,18 +213,32 @@ export async function getMessages(conversationId: string) {
     readAt: m.read_at,
     createdAt: m.created_at,
     isMine: m.sender_id === user.id,
+    attachments: (attachmentMap.get(m.id) || []).map((a: any) => ({
+      id: a.id,
+      fileName: a.file_name,
+      fileType: a.file_type,
+      fileSize: a.file_size,
+      storagePath: a.storage_path,
+    })),
   }));
 }
 
 /**
  * Send a message to a patient (doctor) or reply (patient).
+ * Optionally includes a file attachment.
  * Creates the conversation if it doesn't exist.
  * Triggers email notification to the recipient.
  */
 export async function sendMessage(
   recipientId: string,
-  body: string
-): Promise<{ success: boolean; conversationId?: string; error?: string }> {
+  body: string,
+  attachment?: {
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    storagePath: string;
+  }
+): Promise<{ success: boolean; conversationId?: string; messageId?: string; error?: string }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -308,16 +338,33 @@ export async function sendMessage(
 
   // Insert message
   const senderRole = isDoctor ? "doctor" : "patient";
-  const { error: msgError } = await adminSupabase
+  const { data: insertedMsg, error: msgError } = await adminSupabase
     .from("direct_messages")
     .insert({
       conversation_id: conversationId,
       sender_id: user.id,
       sender_role: senderRole,
-      body: body.trim(),
-    });
+      body: body.trim() || (attachment ? `Sent a file: ${attachment.fileName}` : ""),
+    })
+    .select("id")
+    .single();
 
-  if (msgError) return { success: false, error: msgError.message };
+  if (msgError || !insertedMsg) return { success: false, error: msgError?.message || "Failed to send message" };
+
+  const messageId = insertedMsg.id;
+
+  // Save attachment record if present
+  if (attachment) {
+    await adminSupabase.from("message_attachments").insert({
+      message_id: messageId,
+      conversation_id: conversationId,
+      file_name: attachment.fileName,
+      file_type: attachment.fileType,
+      file_size: attachment.fileSize,
+      storage_path: attachment.storagePath,
+      uploaded_by: user.id,
+    });
+  }
 
   // Update conversation timestamp
   await adminSupabase
@@ -369,7 +416,7 @@ export async function sendMessage(
   revalidatePath("/doctor-dashboard/messages");
   revalidatePath("/dashboard/messages");
 
-  return { success: true, conversationId };
+  return { success: true, conversationId, messageId };
 }
 
 /**

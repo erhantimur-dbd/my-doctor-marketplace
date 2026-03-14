@@ -30,6 +30,18 @@ import {
   ArrowLeft,
   User,
 } from "lucide-react";
+import { toast } from "sonner";
+import { uploadMessageAttachment } from "@/actions/attachments";
+import { FileUploadButton } from "@/components/shared/file-upload-button";
+import { AttachmentPreview } from "@/components/shared/attachment-preview";
+
+interface MessageAttachment {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  storagePath: string;
+}
 
 interface Conversation {
   id: string;
@@ -54,6 +66,7 @@ interface Message {
   readAt: string | null;
   createdAt: string;
   isMine: boolean;
+  attachments?: MessageAttachment[];
 }
 
 interface EligiblePatient {
@@ -78,6 +91,7 @@ function MessagesContent() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [eligiblePatients, setEligiblePatients] = useState<EligiblePatient[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [pendingFile, setPendingFile] = useState<{ file: File } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newConvOpen, setNewConvOpen] = useState(false);
@@ -109,14 +123,29 @@ function MessagesContent() {
   }
 
   async function handleSend() {
-    if (!newMessage.trim() || !selectedConv) return;
+    if ((!newMessage.trim() && !pendingFile) || !selectedConv) return;
     const conv = conversations.find((c) => c.id === selectedConv);
     if (!conv) return;
 
     startTransition(async () => {
-      const result = await sendMessage(conv.patientId, newMessage.trim());
+      let attachment: { fileName: string; fileType: string; fileSize: number; storagePath: string } | undefined;
+
+      if (pendingFile) {
+        const formData = new FormData();
+        formData.append("file", pendingFile.file);
+        formData.append("conversationId", selectedConv);
+        const uploadResult = await uploadMessageAttachment(formData);
+        if (uploadResult.error) {
+          toast.error(uploadResult.error);
+          return;
+        }
+        attachment = uploadResult.attachment;
+      }
+
+      const result = await sendMessage(conv.patientId, newMessage.trim(), attachment);
       if (result.success) {
         setNewMessage("");
+        setPendingFile(null);
         const msgs = await getMessages(selectedConv);
         setMessages(msgs);
         loadConversations();
@@ -382,6 +411,17 @@ function MessagesContent() {
                           <p className="text-sm whitespace-pre-wrap break-words">
                             {msg.body}
                           </p>
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="mt-1 space-y-1">
+                              {msg.attachments.map((att) => (
+                                <AttachmentPreview
+                                  key={att.id}
+                                  attachment={att}
+                                  isMine={msg.isMine}
+                                />
+                              ))}
+                            </div>
+                          )}
                           <p
                             className={`text-[10px] mt-1 ${
                               msg.isMine
@@ -400,8 +440,24 @@ function MessagesContent() {
               </ScrollArea>
 
               {/* Compose */}
-              <div className="border-t p-4">
+              <div className="border-t p-4 space-y-2">
+                {pendingFile && (
+                  <FileUploadButton
+                    onFileSelect={(f) => setPendingFile({ file: f })}
+                    pendingFile={pendingFile}
+                    onClear={() => setPendingFile(null)}
+                    disabled={isPending}
+                  />
+                )}
                 <div className="flex gap-2">
+                  {!pendingFile && (
+                    <FileUploadButton
+                      onFileSelect={(f) => setPendingFile({ file: f })}
+                      pendingFile={null}
+                      onClear={() => setPendingFile(null)}
+                      disabled={isPending}
+                    />
+                  )}
                   <Textarea
                     placeholder="Type a message..."
                     value={newMessage}
@@ -417,7 +473,7 @@ function MessagesContent() {
                   />
                   <Button
                     onClick={handleSend}
-                    disabled={!newMessage.trim() || isPending}
+                    disabled={(!newMessage.trim() && !pendingFile) || isPending}
                     size="icon"
                     className="shrink-0 h-11 w-11"
                   >

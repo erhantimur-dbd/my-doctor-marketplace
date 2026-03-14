@@ -194,6 +194,7 @@ export async function updateMedicalProfile(data: {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   notes: string | null;
+  sharing_consent?: boolean;
 }): Promise<{ error?: string }> {
   const supabase = await createClient();
   const {
@@ -204,22 +205,29 @@ export async function updateMedicalProfile(data: {
     return { error: "You must be logged in." };
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const upsertData: Record<string, any> = {
+    patient_id: user.id,
+    blood_type: data.blood_type,
+    allergies: data.allergies,
+    chronic_conditions: data.chronic_conditions,
+    current_medications: data.current_medications,
+    emergency_contact_name: data.emergency_contact_name,
+    emergency_contact_phone: data.emergency_contact_phone,
+    notes: data.notes,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (data.sharing_consent !== undefined) {
+    upsertData.sharing_consent = data.sharing_consent;
+    if (data.sharing_consent) {
+      upsertData.consent_given_at = new Date().toISOString();
+    }
+  }
+
   const { error } = await supabase
     .from("medical_profiles")
-    .upsert(
-      {
-        patient_id: user.id,
-        blood_type: data.blood_type,
-        allergies: data.allergies,
-        chronic_conditions: data.chronic_conditions,
-        current_medications: data.current_medications,
-        emergency_contact_name: data.emergency_contact_name,
-        emergency_contact_phone: data.emergency_contact_phone,
-        notes: data.notes,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "patient_id" }
-    );
+    .upsert(upsertData, { onConflict: "patient_id" });
 
   if (error) {
     return { error: "Failed to update medical profile." };

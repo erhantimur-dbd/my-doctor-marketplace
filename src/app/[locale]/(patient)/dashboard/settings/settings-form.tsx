@@ -63,6 +63,7 @@ interface MedicalProfileData {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   notes: string | null;
+  sharing_consent: boolean;
 }
 
 interface SettingsFormProps {

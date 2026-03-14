@@ -15,7 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { HeartPulse, Loader2, X } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { HeartPulse, Loader2, X, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { updateMedicalProfile } from "./actions";
 
@@ -27,6 +28,7 @@ interface MedicalProfileData {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   notes: string | null;
+  sharing_consent: boolean;
 }
 
 interface MedicalProfileSectionProps {
@@ -118,6 +120,9 @@ export function MedicalProfileSection({
     medicalProfile?.emergency_contact_phone || ""
   );
   const [notes, setNotes] = useState(medicalProfile?.notes || "");
+  const [sharingConsent, setSharingConsent] = useState(
+    medicalProfile?.sharing_consent || false
+  );
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -131,6 +136,7 @@ export function MedicalProfileSection({
         emergency_contact_name: emergencyName.trim() || null,
         emergency_contact_phone: emergencyPhone.trim() || null,
         notes: notes.trim() || null,
+        sharing_consent: sharingConsent,
       });
 
       if (result.error) {
@@ -228,6 +234,30 @@ export function MedicalProfileSection({
             rows={3}
             className="mt-1.5"
           />
+        </div>
+
+        {/* Sharing Consent */}
+        <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <ShieldCheck className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sharing-consent" className="font-medium">
+                  Share with my doctors
+                </Label>
+                <Switch
+                  id="sharing-consent"
+                  checked={sharingConsent}
+                  onCheckedChange={setSharingConsent}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                When enabled, doctors who have completed a consultation with you
+                can view your medical profile to provide better care. You can
+                revoke access at any time by toggling this off.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end">

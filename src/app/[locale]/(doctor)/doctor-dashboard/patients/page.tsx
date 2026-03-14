@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Search, User, Mail, Calendar } from "lucide-react";
+import { Users, Search, User, Mail, Calendar, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 import { FollowUpInvitationDialog } from "@/components/doctor/follow-up-invitation-dialog";
@@ -229,7 +230,10 @@ export default async function PatientsPage({
                 {patients.map((patient) => (
                   <TableRow key={patient.patient_id}>
                     <TableCell>
-                      <div className="flex items-center gap-3">
+                      <Link
+                        href={`doctor-dashboard/patients/${patient.patient_id}`}
+                        className="flex items-center gap-3 hover:underline"
+                      >
                         <Avatar className="h-8 w-8">
                           {patient.avatar_url ? (
                             <AvatarImage
@@ -245,7 +249,7 @@ export default async function PatientsPage({
                         <span className="font-medium">
                           {patient.first_name} {patient.last_name}
                         </span>
-                      </div>
+                      </Link>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       <div className="flex items-center gap-1">

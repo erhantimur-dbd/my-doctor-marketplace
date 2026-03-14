@@ -18,6 +18,10 @@ import {
   Loader2,
   ArrowLeft,
 } from "lucide-react";
+import { toast } from "sonner";
+import { uploadMessageAttachment } from "@/actions/attachments";
+import { FileUploadButton } from "@/components/shared/file-upload-button";
+import { AttachmentPreview } from "@/components/shared/attachment-preview";
 
 interface Conversation {
   id: string;
@@ -34,6 +38,14 @@ interface Conversation {
   unreadCount: number;
 }
 
+interface MessageAttachment {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  storagePath: string;
+}
+
 interface Message {
   id: string;
   senderId: string;
@@ -42,6 +54,7 @@ interface Message {
   readAt: string | null;
   createdAt: string;
   isMine: boolean;
+  attachments?: MessageAttachment[];
 }
 
 export default function PatientMessagesPage() {
@@ -49,6 +62,7 @@ export default function PatientMessagesPage() {
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [pendingFile, setPendingFile] = useState<{ file: File } | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -78,15 +92,31 @@ export default function PatientMessagesPage() {
   }
 
   async function handleSend() {
-    if (!newMessage.trim() || !selectedConv) return;
+    if ((!newMessage.trim() && !pendingFile) || !selectedConv) return;
     const conv = conversations.find((c) => c.id === selectedConv);
     if (!conv) return;
 
     startTransition(async () => {
+      let attachment: { fileName: string; fileType: string; fileSize: number; storagePath: string } | undefined;
+
+      // Upload file if present
+      if (pendingFile) {
+        const formData = new FormData();
+        formData.append("file", pendingFile.file);
+        formData.append("conversationId", selectedConv);
+        const uploadResult = await uploadMessageAttachment(formData);
+        if (uploadResult.error) {
+          toast.error(uploadResult.error);
+          return;
+        }
+        attachment = uploadResult.attachment;
+      }
+
       // For patients, recipientId is the doctor's profile ID
-      const result = await sendMessage(conv.otherParty.id, newMessage.trim());
+      const result = await sendMessage(conv.otherParty.id, newMessage.trim(), attachment);
       if (result.success) {
         setNewMessage("");
+        setPendingFile(null);
         const msgs = await getMessages(selectedConv);
         setMessages(msgs);
         loadConversations();
@@ -253,6 +283,17 @@ export default function PatientMessagesPage() {
                             <p className="text-sm whitespace-pre-wrap break-words">
                               {msg.body}
                             </p>
+                            {msg.attachments && msg.attachments.length > 0 && (
+                              <div className="mt-1 space-y-1">
+                                {msg.attachments.map((att) => (
+                                  <AttachmentPreview
+                                    key={att.id}
+                                    attachment={att}
+                                    isMine={msg.isMine}
+                                  />
+                                ))}
+                              </div>
+                            )}
                             <p
                               className={`text-[10px] mt-1 ${
                                 msg.isMine
@@ -271,8 +312,24 @@ export default function PatientMessagesPage() {
                 </ScrollArea>
 
                 {/* Compose */}
-                <div className="border-t p-4">
+                <div className="border-t p-4 space-y-2">
+                  {pendingFile && (
+                    <FileUploadButton
+                      onFileSelect={(f) => setPendingFile({ file: f })}
+                      pendingFile={pendingFile}
+                      onClear={() => setPendingFile(null)}
+                      disabled={isPending}
+                    />
+                  )}
                   <div className="flex gap-2">
+                    {!pendingFile && (
+                      <FileUploadButton
+                        onFileSelect={(f) => setPendingFile({ file: f })}
+                        pendingFile={null}
+                        onClear={() => setPendingFile(null)}
+                        disabled={isPending}
+                      />
+                    )}
                     <Textarea
                       placeholder="Type a reply..."
                       value={newMessage}
@@ -288,7 +345,7 @@ export default function PatientMessagesPage() {
                     />
                     <Button
                       onClick={handleSend}
-                      disabled={!newMessage.trim() || isPending}
+                      disabled={(!newMessage.trim() && !pendingFile) || isPending}
                       size="icon"
                       className="shrink-0 h-11 w-11"
                     >
