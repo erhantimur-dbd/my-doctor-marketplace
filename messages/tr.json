@@ -1066,5 +1066,21 @@
       "fixBilling": "Faturalandırmayı Düzelt",
       "reactivate": "Yeniden Etkinleştir"
     }
+  },
+  "cookie_consent": {
+    "title": "Gizliliğinize önem veriyoruz",
+    "description": "Deneyiminizi geliştirmek, site trafiğini analiz etmek ve içeriği kişiselleştirmek için çerezler kullanıyoruz. Hangi çerezlere izin vermek istediğinizi seçebilirsiniz.",
+    "accept_all": "Tümünü Kabul Et",
+    "reject_all": "Tümünü Reddet",
+    "customize": "Tercihleri Özelleştir",
+    "save_preferences": "Tercihleri Kaydet",
+    "necessary_label": "Gerekli",
+    "necessary_desc": "Sitenin çalışması için gereklidir. Devre dışı bırakılamaz.",
+    "analytics_label": "Analiz",
+    "analytics_desc": "Ziyaretçilerin siteyi nasıl kullandığını anlamamıza yardımcı olur.",
+    "marketing_label": "Pazarlama",
+    "marketing_desc": "İlgili reklamlar sunmak ve kampanya performansını izlemek için kullanılır.",
+    "always_on": "Her zaman açık",
+    "privacy_link": "Gizlilik Politikamızı Okuyun"
   }
 }

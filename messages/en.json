@@ -1066,5 +1066,21 @@
       "fixBilling": "Fix Billing",
       "reactivate": "Reactivate"
     }
+  },
+  "cookie_consent": {
+    "title": "We value your privacy",
+    "description": "We use cookies to improve your experience, analyse site traffic, and personalise content. You can choose which cookies to allow.",
+    "accept_all": "Accept All",
+    "reject_all": "Reject All",
+    "customize": "Customise Preferences",
+    "save_preferences": "Save Preferences",
+    "necessary_label": "Necessary",
+    "necessary_desc": "Required for the site to function. Cannot be disabled.",
+    "analytics_label": "Analytics",
+    "analytics_desc": "Help us understand how visitors use the site so we can improve it.",
+    "marketing_label": "Marketing",
+    "marketing_desc": "Used to deliver relevant advertisements and track campaign performance.",
+    "always_on": "Always on",
+    "privacy_link": "Read our Privacy Policy"
   }
 }

@@ -1066,5 +1066,21 @@
       "fixBilling": "Corriger la facturation",
       "reactivate": "Réactiver"
     }
+  },
+  "cookie_consent": {
+    "title": "Nous respectons votre vie privée",
+    "description": "Nous utilisons des cookies pour améliorer votre expérience, analyser le trafic du site et personnaliser le contenu. Vous pouvez choisir les cookies que vous souhaitez autoriser.",
+    "accept_all": "Tout accepter",
+    "reject_all": "Tout refuser",
+    "customize": "Personnaliser les préférences",
+    "save_preferences": "Enregistrer les préférences",
+    "necessary_label": "Nécessaires",
+    "necessary_desc": "Indispensables au fonctionnement du site. Ne peuvent pas être désactivés.",
+    "analytics_label": "Analyse",
+    "analytics_desc": "Nous aident à comprendre comment les visiteurs utilisent le site afin de l'améliorer.",
+    "marketing_label": "Marketing",
+    "marketing_desc": "Utilisés pour diffuser des publicités pertinentes et suivre les performances des campagnes.",
+    "always_on": "Toujours actif",
+    "privacy_link": "Lire notre politique de confidentialité"
   }
 }

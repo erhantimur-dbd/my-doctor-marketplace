@@ -5,6 +5,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/providers/auth-provider";
 import { createClient } from "@/lib/supabase/server";
+import { CookieConsentBanner } from "@/components/shared/cookie-consent-banner";
+import { AnalyticsScripts } from "@/components/shared/analytics-scripts";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,8 +70,10 @@ export default async function LocaleLayout({
           >
             {children}
             <Toaster position="top-right" />
+            <CookieConsentBanner />
           </AuthProvider>
         </NextIntlClientProvider>
+        <AnalyticsScripts />
       </body>
     </html>
   );
