@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState, useRef, useTransition } from "react";
+import { useEffect, useState, useRef, useTransition, useCallback } from "react";
 import {
   getConversations,
   getMessages,
   getEligiblePatients,
   sendMessage,
 } from "@/actions/messages";
+import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
+import { createBrowserClient } from "@supabase/ssr";
 import { SubscriptionGate } from "@/components/shared/subscription-gate";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -96,7 +98,30 @@ function MessagesContent() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [newConvOpen, setNewConvOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Get current user ID for realtime
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setCurrentUserId(user.id);
+    });
+  }, []);
+
+  // Real-time message subscription
+  const handleRealtimeMessage = useCallback(
+    (msg: Message) => {
+      setMessages((prev) => [...prev, msg]);
+      loadConversations();
+    },
+    []
+  );
+
+  useRealtimeMessages(selectedConv, currentUserId, handleRealtimeMessage);
 
   useEffect(() => {
     loadConversations();

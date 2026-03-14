@@ -27,6 +27,7 @@ import { AvailabilityCalendar } from "@/components/booking/availability-calendar
 import { MEDICAL_TEST_GROUPS } from "@/lib/constants/medical-tests";
 import { ReviewSummaryCard } from "@/components/doctors/review-summary-card";
 import { BackToSearchButton } from "@/components/doctors/back-to-search-button";
+import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 import type { Metadata } from "next";
 
 interface DoctorPageProps {
@@ -629,11 +630,18 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                           ? "Free cancellation up to 24 hours before"
                           : "Free cancellation up to 48 hours before"}
                     </p>
+
+                    <div className="mt-3">
+                      <NotifyMeButton doctorId={doctor.id} />
+                    </div>
                   </>
                 ) : (
-                  <p className="text-center text-sm text-muted-foreground">
-                    This doctor is not currently accepting online bookings.
-                  </p>
+                  <div className="space-y-3">
+                    <p className="text-center text-sm text-muted-foreground">
+                      This doctor is not currently accepting online bookings.
+                    </p>
+                    <NotifyMeButton doctorId={doctor.id} />
+                  </div>
                 )}
 
                 {/* Clinic info */}
