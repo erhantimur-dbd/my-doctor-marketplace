@@ -85,20 +85,20 @@ export default async function HomePage() {
           </div>
 
           {/* Trust indicators */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-white/70">
-            <div className="flex items-center gap-1.5">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-white">
+            <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
               <Shield className="h-4 w-4 text-green-300" />
               <span>{t("verified_doctors")}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-blue-200" />
+            <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
+              <Calendar className="h-4 w-4 text-sky-200" />
               <span>{t("instant_booking")}</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
               <Video className="h-4 w-4 text-purple-300" />
               <span>{t("video_consultations")}</span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
               <Star className="h-4 w-4 text-yellow-300" />
               <span>{t("trusted_by")}</span>
             </div>
