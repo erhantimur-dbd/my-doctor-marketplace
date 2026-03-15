@@ -131,18 +131,6 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       hasActiveLicense = !!orgLicense;
     }
 
-    // Legacy fallback: check doctor_subscriptions during transition
-    if (!hasActiveLicense) {
-      const { data: legacySub } = await adminSupabase
-        .from("doctor_subscriptions")
-        .select("id")
-        .eq("doctor_id", doctor.id)
-        .in("status", ["active", "trialing", "past_due"])
-        .limit(1)
-        .maybeSingle();
-      hasActiveLicense = !!legacySub;
-    }
-
     if (!hasActiveLicense) {
       return {
         error: "This doctor is not currently accepting online bookings.",

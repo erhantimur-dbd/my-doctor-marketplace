@@ -67,9 +67,9 @@ export default async function AdminDashboard() {
       .select("*", { count: "exact", head: true })
       .eq("verification_status", "pending"),
     supabase
-      .from("doctor_subscriptions")
+      .from("licenses")
       .select("*", { count: "exact", head: true })
-      .eq("status", "active"),
+      .in("status", ["active", "trialing"]),
     supabase
       .from("bookings")
       .select(

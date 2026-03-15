@@ -107,16 +107,18 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     .eq("doctor_id", doctor.id)
     .single();
 
-  // Check if doctor has an active subscription (for booking eligibility)
-  const { data: doctorSubscription } = await adminDb
-    .from("doctor_subscriptions")
-    .select("id")
-    .eq("doctor_id", doctor.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
+  // Check if doctor has an active license (for booking eligibility)
+  const { data: doctorLicense } = doctor.organization_id
+    ? await adminDb
+        .from("licenses")
+        .select("id")
+        .eq("organization_id", doctor.organization_id)
+        .in("status", ["active", "trialing", "past_due"])
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
 
-  const hasActiveSubscription = !!doctorSubscription;
+  const hasActiveSubscription = !!doctorLicense;
 
   // Fetch services and price book for public display
   const { data: doctorServices } = await adminDb

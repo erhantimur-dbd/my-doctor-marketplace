@@ -67,15 +67,23 @@ export default async function AdminDoctorsPage({
 
   const { data: allDoctors } = await doctorQuery;
 
-  // Fetch active subscriptions to show plan per doctor
-  const { data: subscriptions } = await supabase
-    .from("doctor_subscriptions")
-    .select("doctor_id, plan_id")
+  // Fetch active licenses to show plan per doctor (via organization)
+  const { data: licenses } = await supabase
+    .from("licenses")
+    .select("organization_id, tier")
     .in("status", ["active", "trialing", "past_due"]);
 
-  const subMap = new Map(
-    (subscriptions || []).map((s: any) => [s.doctor_id, s.plan_id])
+  const orgTierMap = new Map(
+    (licenses || []).map((l: any) => [l.organization_id, l.tier])
   );
+
+  // Build doctor → tier map using organization_id
+  const subMap = new Map<string, string>();
+  (allDoctors || []).forEach((doc: any) => {
+    if (doc.organization_id && orgTierMap.has(doc.organization_id)) {
+      subMap.set(doc.id, orgTierMap.get(doc.organization_id)!);
+    }
+  });
 
   // Client-side text search + plan filter
   let doctors = allDoctors || [];

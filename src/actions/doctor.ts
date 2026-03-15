@@ -356,14 +356,19 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
 
   const { stripe } = await import("@/lib/stripe/client");
 
-  // Get or create Stripe customer
-  const { data: existingSub } = await supabase
-    .from("doctor_subscriptions")
-    .select("stripe_customer_id")
-    .eq("doctor_id", doctor.id)
-    .single();
+  // Get or create Stripe customer — check licenses (org-based) first
+  let customerId: string | null = null;
 
-  let customerId = existingSub?.stripe_customer_id;
+  if (doctor.organization_id) {
+    const { data: license } = await supabase
+      .from("licenses")
+      .select("stripe_customer_id")
+      .eq("organization_id", doctor.organization_id)
+      .in("status", ["active", "trialing", "past_due"])
+      .limit(1)
+      .maybeSingle();
+    customerId = license?.stripe_customer_id ?? null;
+  }
 
   if (!customerId) {
     const { data: profile } = await supabase

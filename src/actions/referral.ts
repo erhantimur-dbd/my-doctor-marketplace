@@ -275,16 +275,24 @@ export async function processReferralReward(referredDoctorId: string) {
       });
     }
 
-    // Apply coupon to referring doctor's subscription
-    const { data: referrerSub } = await adminSupabase
-      .from("doctor_subscriptions")
-      .select("stripe_subscription_id, status")
-      .eq("doctor_id", referral.referrer_doctor_id)
-      .in("status", ["active", "trialing"])
-      .maybeSingle();
+    // Apply coupon to referring doctor's license subscription
+    const { data: referrerDoctor } = await adminSupabase
+      .from("doctors")
+      .select("organization_id")
+      .eq("id", referral.referrer_doctor_id)
+      .single();
 
-    if (referrerSub?.stripe_subscription_id) {
-      await stripe.subscriptions.update(referrerSub.stripe_subscription_id, {
+    const { data: referrerLicense } = referrerDoctor?.organization_id
+      ? await adminSupabase
+          .from("licenses")
+          .select("stripe_subscription_id, status")
+          .eq("organization_id", referrerDoctor.organization_id)
+          .in("status", ["active", "trialing"])
+          .maybeSingle()
+      : { data: null };
+
+    if (referrerLicense?.stripe_subscription_id) {
+      await stripe.subscriptions.update(referrerLicense.stripe_subscription_id, {
         discounts: [{ coupon: REFERRAL_COUPON_ID }],
       });
 

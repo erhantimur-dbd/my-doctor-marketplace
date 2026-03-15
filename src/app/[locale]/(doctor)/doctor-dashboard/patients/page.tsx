@@ -15,6 +15,7 @@ import { Users, Search, User, Mail, Calendar, ChevronRight } from "lucide-react"
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
+import { hasActiveLicense } from "@/lib/license/check";
 import { FollowUpInvitationDialog } from "@/components/doctor/follow-up-invitation-dialog";
 import { CreateInvoiceDialog } from "@/components/doctor/create-invoice-dialog";
 
@@ -49,15 +50,7 @@ export default async function PatientsPage({
 
   if (!doctor) redirect("/en/register-doctor");
 
-  const { data: subscription } = await supabase
-    .from("doctor_subscriptions")
-    .select("id")
-    .eq("doctor_id", doctor.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!subscription) {
+  if (!(await hasActiveLicense(supabase, doctor.id))) {
     return <UpgradePrompt feature="Patient CRM" />;
   }
 

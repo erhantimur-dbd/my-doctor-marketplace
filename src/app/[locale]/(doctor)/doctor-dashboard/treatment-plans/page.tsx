@@ -16,6 +16,7 @@ import { ClipboardList, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
+import { hasActiveLicense } from "@/lib/license/check";
 
 const STATUS_STYLES: Record<string, { label: string; variant: string; className: string }> = {
   sent: {
@@ -66,15 +67,7 @@ export default async function TreatmentPlansPage() {
 
   if (!doctor) redirect("/en/register-doctor");
 
-  const { data: subscription } = await supabase
-    .from("doctor_subscriptions")
-    .select("id")
-    .eq("doctor_id", doctor.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!subscription) {
+  if (!(await hasActiveLicense(supabase, doctor.id))) {
     return <UpgradePrompt feature="Treatment Plans" />;
   }
 

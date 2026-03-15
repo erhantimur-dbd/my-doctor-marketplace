@@ -465,37 +465,6 @@ export async function POST(request: NextRequest) {
           },
           { onConflict: "stripe_subscription_id" }
         );
-      } else if (doctorId) {
-        // LEGACY: Doctor-level subscription (existing flow)
-        await supabase.from("doctor_subscriptions").upsert(
-          {
-            doctor_id: doctorId,
-            stripe_subscription_id: subscription.id,
-            stripe_customer_id: subscription.customer as string,
-            plan_id: (subscription.items.data[0]?.price?.lookup_key || "basic"),
-            status: subscription.status === "active" ? "active" : subscription.status === "past_due" ? "past_due" : "cancelled",
-            current_period_start: periodStart
-              ? new Date(periodStart * 1000).toISOString()
-              : new Date().toISOString(),
-            current_period_end: periodEnd
-              ? new Date(periodEnd * 1000).toISOString()
-              : new Date().toISOString(),
-            cancel_at_period_end: subscription.cancel_at_period_end,
-          },
-          { onConflict: "stripe_subscription_id" }
-        );
-
-        // Process referral rewards when subscription is first created
-        if (event.type === "customer.subscription.created") {
-          try {
-            const { processReferralReward } = await import(
-              "@/actions/referral"
-            );
-            await processReferralReward(doctorId);
-          } catch (err) {
-            console.error("[Webhook] Referral reward processing error:", err);
-          }
-        }
       }
       break;
     }
@@ -504,17 +473,11 @@ export async function POST(request: NextRequest) {
       const subscription = event.data.object as Stripe.Subscription;
       const orgId = subscription.metadata?.organization_id;
 
+      // License cancellation
       if (orgId) {
-        // License cancellation
         await supabase
           .from("licenses")
           .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-          .eq("stripe_subscription_id", subscription.id);
-      } else {
-        // Legacy subscription cancellation
-        await supabase
-          .from("doctor_subscriptions")
-          .update({ status: "cancelled" })
           .eq("stripe_subscription_id", subscription.id);
       }
       break;

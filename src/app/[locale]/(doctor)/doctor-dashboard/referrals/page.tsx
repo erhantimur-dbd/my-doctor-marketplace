@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { CopyButton, InviteForm } from "./referral-form";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
+import { hasActiveLicense } from "@/lib/license/check";
 
 const statusColors: Record<string, string> = {
   invited: "bg-blue-100 text-blue-700",
@@ -58,15 +59,7 @@ export default async function DoctorReferralsPage() {
 
   if (!doctor) redirect("/en/register-doctor");
 
-  const { data: subscription } = await supabase
-    .from("doctor_subscriptions")
-    .select("id")
-    .eq("doctor_id", doctor.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!subscription) {
+  if (!(await hasActiveLicense(supabase, doctor.id))) {
     return <UpgradePrompt feature="Referrals" />;
   }
 

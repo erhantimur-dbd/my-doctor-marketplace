@@ -328,16 +328,11 @@ export async function sendUpgradeInvite(doctorId: string) {
 
   if (!doctor) return { error: "Doctor not found" };
 
-  // Check they don't already have an active subscription
-  const { data: activeSub } = await supabase
-    .from("doctor_subscriptions")
-    .select("id, plan_id")
-    .eq("doctor_id", doctorId)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
-
-  if (activeSub) return { error: "Doctor already has an active subscription" };
+  // Check they don't already have an active license
+  const { hasActiveLicense } = await import("@/lib/license/check");
+  if (await hasActiveLicense(supabase, doctorId)) {
+    return { error: "Doctor already has an active subscription" };
+  }
 
   const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -1145,8 +1140,7 @@ export async function adminCreateLicense(data: {
 
 /**
  * Grant a trial or complimentary subscription directly to a doctor.
- * Creates a license on the doctor's organization and a legacy
- * doctor_subscriptions record for backward compat.
+ * Creates a license on the doctor's organization.
  */
 export async function adminGrantDoctorSubscription(data: {
   doctorId: string;
@@ -1253,37 +1247,6 @@ export async function adminGrantDoctorSubscription(data: {
       .single();
     if (licenseError) return { error: licenseError.message };
     licenseId = newLicense.id;
-  }
-
-  // Upsert legacy doctor_subscriptions record for backward compat
-  const grantId = crypto.randomUUID();
-  // Try to update existing, otherwise insert
-  const { data: existingSub } = await adminDb
-    .from("doctor_subscriptions")
-    .select("id")
-    .eq("doctor_id", data.doctorId)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingSub) {
-    await adminDb.from("doctor_subscriptions").update({
-      plan_id: data.tier,
-      status: data.status,
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      cancel_at_period_end: false,
-    }).eq("id", existingSub.id);
-  } else {
-    await adminDb.from("doctor_subscriptions").insert({
-      doctor_id: data.doctorId,
-      stripe_subscription_id: `admin-grant-${grantId}`,
-      stripe_customer_id: `admin-grant-${user.id}`,
-      plan_id: data.tier,
-      status: data.status,
-      current_period_start: now.toISOString(),
-      current_period_end: periodEnd.toISOString(),
-      cancel_at_period_end: false,
-    });
   }
 
   const doctorName = `${doc.profile.first_name} ${doc.profile.last_name}`;
@@ -1540,16 +1503,6 @@ export async function adminCreateBookingOnBehalf(input: {
       .limit(1)
       .maybeSingle();
     hasActiveLicense = !!orgLicense;
-  }
-  if (!hasActiveLicense) {
-    const { data: legacySub } = await adminSupabase
-      .from("doctor_subscriptions")
-      .select("id")
-      .eq("doctor_id", doctor.id)
-      .in("status", ["active", "trialing", "past_due"])
-      .limit(1)
-      .maybeSingle();
-    hasActiveLicense = !!legacySub;
   }
   if (!hasActiveLicense) {
     return { error: "This doctor does not have an active subscription." };

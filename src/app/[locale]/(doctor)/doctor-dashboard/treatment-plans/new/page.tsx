@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { TreatmentPlanWizard } from "./wizard";
+import { hasActiveLicense } from "@/lib/license/check";
 
 export default async function NewTreatmentPlanPage() {
   const supabase = await createClient();
@@ -16,16 +17,8 @@ export default async function NewTreatmentPlanPage() {
     .single();
   if (!doctor) redirect("/en/register-doctor");
 
-  // Check subscription
-  const { data: subscription } = await supabase
-    .from("doctor_subscriptions")
-    .select("id")
-    .eq("doctor_id", doctor.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!subscription) {
+  // Check license
+  if (!(await hasActiveLicense(supabase, doctor.id))) {
     redirect("/doctor-dashboard");
   }
 

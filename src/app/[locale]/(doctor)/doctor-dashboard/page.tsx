@@ -6,6 +6,7 @@ import { Calendar, Users, Star, DollarSign, Crown, ArrowRight, Clock, ShieldAler
 import { formatCurrency } from "@/lib/utils/currency";
 import { StartAppointmentButton } from "@/components/booking/start-appointment-button";
 import { ProfileCompletionCard } from "@/components/doctor/profile-completion-card";
+import { getDoctorLicense } from "@/lib/license/check";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { doctorDashboardSteps } from "@/components/shared/onboarding-steps";
 import { Link } from "@/i18n/navigation";
@@ -26,16 +27,9 @@ export default async function DoctorDashboard() {
 
   if (!doctor) redirect("/en/register-doctor");
 
-  // Check subscription status
-  const { data: subscription } = await supabase
-    .from("doctor_subscriptions")
-    .select("id, plan_id, status")
-    .eq("doctor_id", doctor.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
-
-  const isFreeTier = !subscription;
+  // Check license status (org-based)
+  const license = await getDoctorLicense(supabase, doctor.id);
+  const isFreeTier = !license;
 
   const { data: profile } = await supabase
     .from("profiles")

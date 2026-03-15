@@ -61,16 +61,7 @@ export default async function AdminDoctorDetailPage({
     .select("*", { count: "exact", head: true })
     .eq("doctor_id", id);
 
-  const { data: subscription } = await supabase
-    .from("doctor_subscriptions")
-    .select("plan_id, status, current_period_end, cancel_at_period_end")
-    .eq("doctor_id", id)
-    .in("status", ["active", "trialing", "past_due"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  // Also check the newer licenses table via the doctor's organization
+  // Check license via organization
   let licenseInfo: { tier: string; status: string } | null = null;
   if (doctor.organization_id) {
     const { data: license } = await supabase
@@ -84,8 +75,7 @@ export default async function AdminDoctorDetailPage({
     if (license) licenseInfo = license as any;
   }
 
-  // Prefer license tier if available, fall back to legacy subscription
-  const currentPlan = licenseInfo?.tier || (subscription as any)?.plan_id || "free";
+  const currentPlan = licenseInfo?.tier || "free";
 
   // Fetch approval checklist for this doctor
   const { data: checklistData } = await supabase
@@ -219,9 +209,9 @@ export default async function AdminDoctorDetailPage({
                 ) : (
                   <Badge variant="secondary" className="capitalize">{currentPlan}</Badge>
                 )}
-                {(subscription as any)?.status && (
+                {licenseInfo?.status && (
                   <span className="text-xs text-muted-foreground">
-                    ({(subscription as any).status})
+                    ({licenseInfo.status})
                   </span>
                 )}
               </span>

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
+import { hasActiveLicense } from "@/lib/license/check";
 import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
 import { DayOfWeekChart } from "@/components/charts/day-of-week-chart";
 import { ConsultationPieChart } from "@/components/charts/consultation-pie-chart";
@@ -44,15 +45,7 @@ export default async function AnalyticsPage() {
 
   if (!doctor) redirect("/en/register-doctor");
 
-  const { data: subscription } = await supabase
-    .from("doctor_subscriptions")
-    .select("id")
-    .eq("doctor_id", doctor.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
-
-  if (!subscription) {
+  if (!(await hasActiveLicense(supabase, doctor.id))) {
     return <UpgradePrompt feature="Analytics" />;
   }
 

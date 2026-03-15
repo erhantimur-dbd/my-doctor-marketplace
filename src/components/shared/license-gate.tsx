@@ -82,28 +82,6 @@ export function LicenseGate({
           }
         }
 
-        // Legacy fallback: check doctor_subscriptions
-        const { data: doctor } = await supabase
-          .from("doctors")
-          .select("id")
-          .eq("profile_id", user.id)
-          .single();
-
-        if (doctor) {
-          const { data: sub } = await supabase
-            .from("doctor_subscriptions")
-            .select("id")
-            .eq("doctor_id", doctor.id)
-            .in("status", ["active", "trialing", "past_due"])
-            .limit(1)
-            .maybeSingle();
-
-          if (sub) {
-            setStatus("licensed");
-            return;
-          }
-        }
-
         setStatus("unlicensed");
       } catch {
         setStatus("unlicensed");
