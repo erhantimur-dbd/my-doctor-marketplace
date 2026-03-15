@@ -21,6 +21,7 @@ import {
   Stethoscope,
   Tag,
 } from "lucide-react";
+import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
@@ -143,7 +144,10 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
   const fullName = `${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="relative min-h-screen">
+      {/* Decorative specialty icons across page background */}
+      <HeroSpecialtyIcons />
+
       <TrackDoctorView
         id={doctor.id}
         slug={doctor.slug}
@@ -152,104 +156,109 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
         avatarUrl={doctor.profile.avatar_url || null}
         rating={Number(doctor.avg_rating) || 0}
       />
-      <BackToSearchButton />
+
+      {/* ── Blue gradient hero header ── */}
+      <div className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
+        <div className="relative container mx-auto px-4 pb-20 pt-6">
+          <BackToSearchButton />
+          <div className="mt-4 flex flex-col gap-6 sm:flex-row sm:items-center">
+            <Avatar className="h-20 w-20 shrink-0 border-[3px] border-white/30 shadow-lg sm:h-24 sm:w-24">
+              {doctor.profile.avatar_url ? (
+                <AvatarImage src={doctor.profile.avatar_url} alt={fullName} />
+              ) : null}
+              <AvatarFallback className="bg-white/20 text-white text-2xl">
+                <User className="h-10 w-10" />
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-bold text-white sm:text-3xl">{fullName}</h1>
+                {doctor.verification_status === "verified" && (
+                  <div className="flex items-center gap-1 rounded-full bg-green-500/20 px-2 py-0.5">
+                    <Shield className="h-3.5 w-3.5 shrink-0 text-green-300" />
+                    <span className="text-xs font-medium text-green-200">Verified</span>
+                  </div>
+                )}
+                {doctor.is_featured && (
+                  <Badge className="bg-amber-400/20 text-amber-200 hover:bg-amber-400/30 text-xs border-0">
+                    ★ Featured
+                  </Badge>
+                )}
+              </div>
+
+              {primarySpecialty && (
+                <>
+                  <p className="mt-1 text-white/80 text-lg">
+                    {formatSpecialtyName(primarySpecialty.name_key)}
+                  </p>
+                  {secondarySpecialties.length > 0 && (
+                    <p className="text-sm text-white/50">
+                      Also: {secondarySpecialties.map((s: { name_key: string }) => formatSpecialtyName(s.name_key)).join(", ")}
+                    </p>
+                  )}
+                </>
+              )}
+
+              <div className="mt-3 flex flex-wrap gap-4 text-sm text-white/70">
+                {doctor.location && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {doctor.location.city}, {doctor.location.country_code}
+                  </div>
+                )}
+                {doctor.years_of_experience && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {doctor.years_of_experience} years experience
+                  </div>
+                )}
+                {doctor.avg_rating > 0 && (
+                  <div className="flex items-center gap-1">
+                    <Star className="h-4 w-4 fill-yellow-300 text-yellow-300" />
+                    <span className="text-white/90">{Number(doctor.avg_rating).toFixed(1)}</span> (
+                    {doctor.total_reviews} reviews)
+                  </div>
+                )}
+              </div>
+
+              {/* Consultation types */}
+              <div className="mt-3 flex gap-2">
+                {doctor.consultation_types?.map((type: string) => (
+                  <Badge key={type} variant="outline" className="border-white/30 text-white/90 bg-white/10">
+                    {type === "video" && (
+                      <Video className="mr-1 h-3 w-3" />
+                    )}
+                    {type === "in_person" ? "In Person" : "Video Call"}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Main content — pulled up over the hero ── */}
+      <div className="relative container mx-auto px-4 -mt-12 pb-8">
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Profile header */}
-          <Card className="overflow-hidden">
-            <CardContent className="p-0">
-              <div className="flex flex-col md:flex-row">
-                {/* Doctor info */}
-                <div className="flex flex-1 flex-col gap-6 p-6 sm:flex-row">
-                  <Avatar className="h-24 w-24 shrink-0">
-                    {doctor.profile.avatar_url ? (
-                      <AvatarImage src={doctor.profile.avatar_url} alt={fullName} />
-                    ) : null}
-                    <AvatarFallback className="text-2xl">
-                      <User className="h-10 w-10" />
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h1 className="text-2xl font-bold">{fullName}</h1>
-                      {doctor.verification_status === "verified" && (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <Shield className="h-3.5 w-3.5 shrink-0" />
-                          <span className="text-xs font-medium">Verified</span>
-                        </div>
-                      )}
-                      {doctor.is_featured && (
-                        <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs shadow-sm dark:bg-amber-900/40 dark:text-amber-300">
-                          ★ Featured
-                        </Badge>
-                      )}
-                    </div>
-
-                    {primarySpecialty && (
-                      <>
-                        <p className="mt-1 text-muted-foreground">
-                          {formatSpecialtyName(primarySpecialty.name_key)}
-                        </p>
-                        {secondarySpecialties.length > 0 && (
-                          <p className="text-sm text-muted-foreground/60">
-                            Also: {secondarySpecialties.map((s: { name_key: string }) => formatSpecialtyName(s.name_key)).join(", ")}
-                          </p>
-                        )}
-                      </>
-                    )}
-
-                    <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      {doctor.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          {doctor.location.city}, {doctor.location.country_code}
-                        </div>
-                      )}
-                      {doctor.years_of_experience && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4" />
-                          {doctor.years_of_experience} years experience
-                        </div>
-                      )}
-                      {doctor.avg_rating > 0 && (
-                        <div className="flex items-center gap-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          {Number(doctor.avg_rating).toFixed(1)} (
-                          {doctor.total_reviews} reviews)
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Consultation types */}
-                    <div className="mt-3 flex gap-2">
-                      {doctor.consultation_types?.map((type: string) => (
-                        <Badge key={type} variant="outline">
-                          {type === "video" && (
-                            <Video className="mr-1 h-3 w-3" />
-                          )}
-                          {type === "in_person" ? "In Person" : "Video Call"}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Embedded map */}
-                {(doctor.clinic_latitude || doctor.location?.latitude) &&
-                 (doctor.clinic_longitude || doctor.location?.longitude) && (
-                  <ClickableProfileMap
-                    lat={Number(doctor.clinic_latitude ?? doctor.location.latitude)}
-                    lng={Number(doctor.clinic_longitude ?? doctor.location.longitude)}
-                    label={doctor.clinic_name || doctor.location?.city}
-                    containerClassName="w-full shrink-0 md:w-64 lg:w-72"
-                    className="h-48 w-full md:h-full"
-                  />
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Map card (pulled up into the overlap zone) */}
+          {(doctor.clinic_latitude || doctor.location?.latitude) &&
+           (doctor.clinic_longitude || doctor.location?.longitude) && (
+            <Card className="overflow-hidden">
+              <CardContent className="p-0">
+                <ClickableProfileMap
+                  lat={Number(doctor.clinic_latitude ?? doctor.location.latitude)}
+                  lng={Number(doctor.clinic_longitude ?? doctor.location.longitude)}
+                  label={doctor.clinic_name || doctor.location?.city}
+                  containerClassName="w-full"
+                  className="h-48 w-full"
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* About */}
           {doctor.bio && (
@@ -689,6 +698,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
             </Card>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
