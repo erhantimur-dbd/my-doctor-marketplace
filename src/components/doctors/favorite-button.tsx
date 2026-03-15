@@ -65,24 +65,9 @@ export function FavoriteButton({ doctorId, variant = "hero" }: FavoriteButtonPro
     });
   }
 
-  // Don't render until we know auth + favourite state
-  // If we already know the user isn't a patient, skip the spinner entirely
-  if (!loaded) {
-    if (!userLoading && (!user || !isPatient)) return null;
-    if (variant === "hero") {
-      return (
-        <button
-          type="button"
-          disabled
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white/50"
-          aria-label="Loading"
-        >
-          <Loader2 className="h-5 w-5 animate-spin" />
-        </button>
-      );
-    }
-    return null;
-  }
+  // Render nothing until we know auth + favourite state.
+  // No spinner — the heart simply appears once confirmed as a patient.
+  if (!loaded) return null;
 
   // Only show for logged-in patients (not doctors or admins)
   if (!user || !isPatient) return null;
