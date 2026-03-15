@@ -2,25 +2,8 @@ import { getPublishedPosts } from "@/actions/blog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
-import {
-  Calendar,
-  Eye,
-  ArrowRight,
-  BookOpen,
-  Stethoscope,
-  Heart,
-  Brain,
-  Activity,
-  Flower,
-  Baby,
-  Ear,
-  Smile,
-  Apple,
-  Droplets,
-  Wind,
-  Shield,
-  Scan,
-} from "lucide-react";
+import { Calendar, Eye, ArrowRight } from "lucide-react";
+import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -43,58 +26,18 @@ export default async function BlogPage({ params, searchParams }: BlogPageProps) 
 
   return (
     <div>
-      {/* ── Hero gradient bar ── */}
-      <div className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800">
-        {/* Subtle pattern overlay */}
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
-
-        {/* Decorative specialty icons */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          {/* Row 1 — top edge */}
-          <Stethoscope className="absolute top-2 left-[3%] h-7 w-7 text-white/[0.07] rotate-12" />
-          <Heart className="absolute top-3 left-[12%] h-5 w-5 text-white/[0.06] -rotate-6" />
-          <Flower className="absolute top-1 left-[22%] h-5 w-5 text-white/[0.07] rotate-[18deg]" />
-          <Activity className="absolute top-4 left-[31%] h-6 w-6 text-white/[0.05] -rotate-12" />
-          <Brain className="absolute top-2 left-[41%] h-7 w-7 text-white/[0.06] rotate-6" />
-          <Brain className="absolute top-3 left-[52%] h-5 w-5 text-white/[0.05] -rotate-[15deg]" />
-          <Heart className="absolute top-1 left-[61%] h-4 w-4 text-white/[0.06] rotate-[22deg]" />
-          <Eye className="absolute top-4 left-[71%] h-6 w-6 text-white/[0.07] -rotate-6" />
-          <Ear className="absolute top-2 left-[80%] h-5 w-5 text-white/[0.06] rotate-[10deg]" />
-          <Baby className="absolute top-3 left-[89%] h-6 w-6 text-white/[0.05] -rotate-12" />
-          <Scan className="absolute top-1 left-[96%] h-5 w-5 text-white/[0.06] rotate-6" />
-
-          {/* Row 2 — bottom edge */}
-          <Activity className="absolute bottom-2 left-[1%] h-5 w-5 text-white/[0.06] -rotate-[20deg]" />
-          <Apple className="absolute bottom-4 left-[10%] h-6 w-6 text-white/[0.05] rotate-12" />
-          <Droplets className="absolute bottom-2 left-[19%] h-5 w-5 text-white/[0.07] -rotate-6" />
-          <Wind className="absolute bottom-3 left-[28%] h-6 w-6 text-white/[0.06] rotate-[15deg]" />
-          <Shield className="absolute bottom-1 left-[37%] h-5 w-5 text-white/[0.05] -rotate-12" />
-          <Baby className="absolute bottom-4 left-[46%] h-5 w-5 text-white/[0.07] rotate-6" />
-          <Smile className="absolute bottom-2 left-[55%] h-6 w-6 text-white/[0.06] -rotate-[8deg]" />
-          <Flower className="absolute bottom-3 left-[64%] h-5 w-5 text-white/[0.05] rotate-[20deg]" />
-          <Activity className="absolute bottom-1 left-[73%] h-6 w-6 text-white/[0.06] -rotate-12" />
-          <Apple className="absolute bottom-4 left-[82%] h-5 w-5 text-white/[0.07] rotate-[10deg]" />
-          <Flower className="absolute bottom-2 left-[88%] h-4 w-4 text-white/[0.06] -rotate-6" />
-          <Activity className="absolute bottom-3 left-[93%] h-5 w-5 text-white/[0.05] rotate-[25deg]" />
-          <Droplets className="absolute bottom-1 left-[98%] h-5 w-5 text-white/[0.06] -rotate-[15deg]" />
+      {/* Hero */}
+      <section className="relative bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
+        <HeroSpecialtyIcons />
+        <div className="relative container mx-auto text-center">
+          <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
+            Health Blog
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+            Expert health articles, tips, and medical insights from our doctors
+          </p>
         </div>
-
-        <div className="relative container mx-auto px-4 pb-5 pt-6 lg:pb-7 lg:pt-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 backdrop-blur-sm">
-              <BookOpen className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white lg:text-3xl">
-                Health Blog
-              </h1>
-              <p className="text-sm text-white/70">
-                Expert health articles, tips, and medical insights from our doctors
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      </section>
 
       {/* ── Content ── */}
       <div className="container mx-auto px-4 py-8">

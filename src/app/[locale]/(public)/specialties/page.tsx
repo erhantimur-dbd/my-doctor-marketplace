@@ -21,6 +21,7 @@ import {
   Scan,
   ArrowRight,
 } from "lucide-react";
+import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
 
 const iconMap: Record<string, React.ElementType> = {
@@ -76,8 +77,9 @@ export default function SpecialtiesPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
-        <div className="container mx-auto text-center">
+      <section className="relative bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
+        <HeroSpecialtyIcons />
+        <div className="relative container mx-auto text-center">
           <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
             24 Medical Specialties
           </Badge>

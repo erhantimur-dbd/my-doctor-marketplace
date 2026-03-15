@@ -21,6 +21,7 @@ import {
   Building2,
   Crown,
 } from "lucide-react";
+import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import {
   LICENSE_TIERS,
   AVAILABLE_MODULES,
@@ -149,8 +150,9 @@ export default function PricingPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
-        <div className="container mx-auto text-center">
+      <section className="relative bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
+        <HeroSpecialtyIcons />
+        <div className="relative container mx-auto text-center">
           <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
             For Doctors &amp; Clinics
           </Badge>

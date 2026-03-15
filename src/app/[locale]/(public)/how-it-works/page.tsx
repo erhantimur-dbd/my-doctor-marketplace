@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Stethoscope,
 } from "lucide-react";
+import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 
 const benefits = [
   {
@@ -57,8 +58,9 @@ export default function HowItWorksPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
-        <div className="container mx-auto text-center">
+      <section className="relative bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
+        <HeroSpecialtyIcons />
+        <div className="relative container mx-auto text-center">
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
             How MyDoctors360 Works
           </h1>
