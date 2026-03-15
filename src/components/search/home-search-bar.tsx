@@ -987,7 +987,7 @@ export function HomeSearchBar({
             </div>
 
             {/* AI search hint — desktop */}
-            <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70">
+            <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-white/80 drop-shadow-sm">
               <Sparkles className="h-3 w-3 shrink-0" />
               <span>{t("ai_search_hint")}</span>
             </p>
@@ -1269,7 +1269,7 @@ export function HomeSearchBar({
             </div>
 
             {/* AI search hint — mobile */}
-            <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70 text-center leading-snug px-2">
+            <p className="flex items-center justify-center gap-1.5 text-[11px] text-white/80 drop-shadow-sm text-center leading-snug px-2">
               <Sparkles className="h-3 w-3 shrink-0" />
               <span>{t("ai_search_hint")}</span>
             </p>
