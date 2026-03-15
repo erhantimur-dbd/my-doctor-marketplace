@@ -1,4 +1,4 @@
-const CACHE_NAME = "mydoctor-v1";
+const CACHE_NAME = "mydoctor-v2";
 const OFFLINE_URL = "/offline.html";
 
 // App shell files to cache on install
