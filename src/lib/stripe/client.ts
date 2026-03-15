@@ -9,6 +9,8 @@ export function getStripe(): Stripe {
     }
     _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       typescript: true,
+      maxNetworkRetries: 3,
+      timeout: 30000, // 30 seconds
     });
   }
   return _stripe;

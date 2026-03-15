@@ -60,17 +60,24 @@ export function SpecialtyMarquee({ specialties }: SpecialtyMarqueeProps) {
   const autoScrollRef = useRef(true);
   const rafRef = useRef<number | null>(null);
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const speedRef = useRef(0.5); // px per frame — base auto-scroll speed
+  const positionRef = useRef(0); // sub-pixel accumulator
+  const speedRef = useRef(0.6); // px per frame — base auto-scroll speed
 
-  // Auto-scroll loop
+  // Auto-scroll loop using sub-pixel accumulator
+  // (scrollLeft only accepts integers, so we track fractional position ourselves)
   const tick = useCallback(() => {
     const el = scrollRef.current;
     if (el && autoScrollRef.current) {
-      el.scrollLeft += speedRef.current;
+      positionRef.current += speedRef.current;
+      const newPos = Math.floor(positionRef.current);
+      if (newPos !== el.scrollLeft) {
+        el.scrollLeft = newPos;
+      }
       // When we've scrolled past the first set, jump back seamlessly
       const halfWidth = el.scrollWidth / 2;
-      if (el.scrollLeft >= halfWidth) {
-        el.scrollLeft -= halfWidth;
+      if (positionRef.current >= halfWidth) {
+        positionRef.current -= halfWidth;
+        el.scrollLeft = Math.floor(positionRef.current);
       }
     }
     rafRef.current = requestAnimationFrame(tick);
@@ -89,6 +96,9 @@ export function SpecialtyMarquee({ specialties }: SpecialtyMarqueeProps) {
     autoScrollRef.current = false;
     if (resumeTimerRef.current) clearTimeout(resumeTimerRef.current);
     resumeTimerRef.current = setTimeout(() => {
+      // Sync accumulator to current manual position before resuming
+      const el = scrollRef.current;
+      if (el) positionRef.current = el.scrollLeft;
       autoScrollRef.current = true;
     }, 3000);
   }, []);
@@ -100,19 +110,19 @@ export function SpecialtyMarquee({ specialties }: SpecialtyMarqueeProps) {
   }, []);
 
   const handleMouseLeave = useCallback(() => {
+    const el = scrollRef.current;
+    if (el) positionRef.current = el.scrollLeft;
     autoScrollRef.current = true;
   }, []);
 
-  // Handle manual scroll (touch swipe or mouse wheel)
+  // Handle manual scroll (touch swipe) — wrap for seamless loop
   const handleScroll = useCallback(() => {
+    if (autoScrollRef.current) return; // only wrap during manual interaction
     const el = scrollRef.current;
     if (!el) return;
-    // Seamless loop: wrap scroll position
     const halfWidth = el.scrollWidth / 2;
     if (el.scrollLeft >= halfWidth) {
       el.scrollLeft -= halfWidth;
-    } else if (el.scrollLeft <= 0) {
-      el.scrollLeft += halfWidth;
     }
   }, []);
 

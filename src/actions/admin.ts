@@ -1143,6 +1143,125 @@ export async function adminCreateLicense(data: {
   return { success: true, licenseId: newLicense.id };
 }
 
+/**
+ * Grant a trial or complimentary subscription directly to a doctor.
+ * Creates a license on the doctor's organization and a legacy
+ * doctor_subscriptions record for backward compat.
+ */
+export async function adminGrantDoctorSubscription(data: {
+  doctorId: string;
+  tier: "starter" | "professional" | "clinic";
+  durationDays: number;
+  status: "active" | "trialing";
+  promoNote?: string;
+}) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  // Look up doctor and their organization
+  const adminDb = createAdminClient();
+  const { data: doctor } = await adminDb
+    .from("doctors")
+    .select("id, organization_id, profile:profiles!doctors_profile_id_fkey(first_name, last_name)")
+    .eq("id", data.doctorId)
+    .single();
+  if (!doctor) return { error: "Doctor not found" };
+
+  const doc: any = doctor;
+  if (!doc.organization_id) {
+    return { error: "Doctor has no organization. Please create one first." };
+  }
+
+  // Determine max_seats from tier defaults
+  const seatDefaults: Record<string, number> = {
+    starter: 1,
+    professional: 1,
+    clinic: 5,
+  };
+
+  // Create license via the existing function logic (inline to handle legacy compat)
+  const { data: org } = await adminDb
+    .from("organizations")
+    .select("id, name")
+    .eq("id", doc.organization_id)
+    .single();
+  if (!org) return { error: "Organization not found" };
+
+  // Check no existing non-cancelled license
+  const { data: existing } = await adminDb
+    .from("licenses")
+    .select("id, status")
+    .eq("organization_id", doc.organization_id)
+    .not("status", "eq", "cancelled")
+    .limit(1)
+    .maybeSingle();
+  if (existing) {
+    return { error: `Doctor already has an active license (${existing.status}). Cancel it first.` };
+  }
+
+  const now = new Date();
+  const periodEnd = new Date(now);
+  periodEnd.setDate(periodEnd.getDate() + data.durationDays);
+
+  const metadata: Record<string, unknown> = {
+    created_by_admin: user.id,
+    is_promotional: true,
+    promo_note: data.promoNote || "Admin-granted subscription",
+  };
+
+  const insertData: Record<string, unknown> = {
+    organization_id: doc.organization_id,
+    tier: data.tier,
+    status: data.status,
+    max_seats: seatDefaults[data.tier] || 1,
+    used_seats: 0,
+    extra_seat_count: 0,
+    current_period_start: now.toISOString(),
+    current_period_end: periodEnd.toISOString(),
+    metadata,
+  };
+  if (data.status === "trialing") {
+    insertData.trial_ends_at = periodEnd.toISOString();
+  }
+
+  const { data: newLicense, error: licenseError } = await adminDb
+    .from("licenses")
+    .insert(insertData)
+    .select("id")
+    .single();
+  if (licenseError) return { error: licenseError.message };
+
+  // Also insert legacy doctor_subscriptions record for backward compat
+  const grantId = crypto.randomUUID();
+  await adminDb.from("doctor_subscriptions").insert({
+    doctor_id: data.doctorId,
+    stripe_subscription_id: `admin-grant-${grantId}`,
+    stripe_customer_id: `admin-grant-${user.id}`,
+    plan_id: data.tier,
+    status: data.status,
+    current_period_start: now.toISOString(),
+    current_period_end: periodEnd.toISOString(),
+    cancel_at_period_end: false,
+  });
+
+  const doctorName = `${doc.profile.first_name} ${doc.profile.last_name}`;
+
+  await logAdminAction(supabase, user.id, "subscription_granted", "doctor", data.doctorId, {
+    tier: data.tier,
+    status: data.status,
+    duration_days: data.durationDays,
+    is_promotional: true,
+    promo_note: data.promoNote || "",
+    license_id: newLicense.id,
+    doctor_name: doctorName,
+  });
+
+  revalidatePath(`/admin/doctors/${data.doctorId}`);
+  revalidatePath("/admin/doctors");
+  revalidatePath("/admin/licenses");
+  return { success: true, licenseId: newLicense.id, tier: data.tier };
+}
+
 // ===================== CSV Export Actions =====================
 
 // ===================== Admin Booking on Behalf =====================

@@ -70,7 +70,22 @@ export default async function AdminDoctorDetailPage({
     .limit(1)
     .maybeSingle();
 
-  const currentPlan = (subscription as any)?.plan_id || "free";
+  // Also check the newer licenses table via the doctor's organization
+  let licenseInfo: { tier: string; status: string } | null = null;
+  if (doctor.organization_id) {
+    const { data: license } = await supabase
+      .from("licenses")
+      .select("tier, status")
+      .eq("organization_id", doctor.organization_id)
+      .not("status", "eq", "cancelled")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (license) licenseInfo = license as any;
+  }
+
+  // Prefer license tier if available, fall back to legacy subscription
+  const currentPlan = licenseInfo?.tier || (subscription as any)?.plan_id || "free";
 
   // Fetch approval checklist for this doctor
   const { data: checklistData } = await supabase

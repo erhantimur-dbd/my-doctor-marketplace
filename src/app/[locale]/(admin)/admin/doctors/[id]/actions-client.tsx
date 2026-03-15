@@ -11,6 +11,7 @@ import {
   sendUpgradeInvite,
 } from "@/actions/admin";
 import { CheckCircle, XCircle, Star, Ban, Shield, Mail } from "lucide-react";
+import { GrantSubscriptionDialog } from "./grant-subscription-dialog";
 
 export function AdminDoctorActions({
   doctorId,
@@ -31,6 +32,7 @@ export function AdminDoctorActions({
   const [checklistDone, setChecklistDone] = useState(initialChecklistComplete);
   const [active, setActive] = useState(isActive);
   const [featured, setFeatured] = useState(isFeatured);
+  const [plan, setPlan] = useState(currentPlan);
   const [loading, setLoading] = useState("");
 
   async function handleVerify(newStatus: string) {
@@ -170,8 +172,8 @@ export function AdminDoctorActions({
 
       <div>
         <p className="mb-2 text-sm font-medium">Subscription</p>
-        {currentPlan === "free" ? (
-          <div className="flex items-center gap-3">
+        {plan === "free" ? (
+          <div className="flex flex-wrap items-center gap-3">
             <Badge variant="outline">Free Plan</Badge>
             <Button
               variant="outline"
@@ -182,17 +184,25 @@ export function AdminDoctorActions({
               <Mail className="mr-1 h-4 w-4" />
               {loading === "invite" ? "Sending..." : "Send Upgrade Invite"}
             </Button>
+            <GrantSubscriptionDialog
+              doctorId={doctorId}
+              onGranted={(tier) => setPlan(tier)}
+            />
           </div>
         ) : (
           <Badge
             className={
-              currentPlan === "professional"
+              plan === "professional"
                 ? "bg-blue-600"
-                : "capitalize"
+                : plan === "starter"
+                  ? "bg-teal-600"
+                  : plan === "clinic"
+                    ? "bg-purple-600"
+                    : "capitalize"
             }
-            variant={currentPlan === "professional" ? "default" : "secondary"}
+            variant={["professional", "starter", "clinic"].includes(plan) ? "default" : "secondary"}
           >
-            {currentPlan}
+            {plan}
           </Badge>
         )}
       </div>
