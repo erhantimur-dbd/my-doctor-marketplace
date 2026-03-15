@@ -12,7 +12,18 @@ import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
 import { RecentlyViewedCarousel } from "@/components/doctors/recently-viewed-carousel";
 import { CompareProviderWrapper } from "@/components/doctors/compare-provider-wrapper";
-import { Search } from "lucide-react";
+import {
+  Search,
+  Stethoscope,
+  Heart,
+  Brain,
+  Eye,
+  Baby,
+  Activity,
+  Flower,
+  Ear,
+  Smile,
+} from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -136,6 +147,21 @@ export default async function DoctorsPage({
       <div className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800">
         {/* Subtle pattern overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
+
+        {/* Decorative specialty icons scattered across hero */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+          <Stethoscope className="absolute top-3 right-[8%] h-9 w-9 text-white/[0.07] rotate-12 hidden lg:block" />
+          <Heart className="absolute bottom-4 right-[22%] h-6 w-6 text-white/[0.06] -rotate-12 hidden lg:block" />
+          <Brain className="absolute top-7 right-[38%] h-8 w-8 text-white/[0.05] rotate-6 hidden lg:block" />
+          <Eye className="absolute bottom-6 right-[52%] h-5 w-5 text-white/[0.07] -rotate-6 hidden md:block" />
+          <Activity className="absolute top-4 left-[5%] h-7 w-7 text-white/[0.06] rotate-[-15deg] hidden lg:block" />
+          <Flower className="absolute bottom-3 left-[18%] h-5 w-5 text-white/[0.07] rotate-[20deg] hidden lg:block" />
+          <Ear className="absolute top-8 left-[32%] h-6 w-6 text-white/[0.05] -rotate-12 hidden lg:block" />
+          <Baby className="absolute bottom-5 left-[45%] h-7 w-7 text-white/[0.06] rotate-6 hidden md:block" />
+          <Smile className="absolute top-2 right-[65%] h-5 w-5 text-white/[0.06] -rotate-[8deg] hidden lg:block" />
+          <Heart className="absolute top-5 right-[78%] h-4 w-4 text-white/[0.05] rotate-[25deg] hidden xl:block" />
+          <Stethoscope className="absolute bottom-2 right-[4%] h-5 w-5 text-white/[0.05] -rotate-[20deg] hidden xl:block" />
+        </div>
         <div className="relative container mx-auto px-4 pb-5 pt-6 lg:pb-7 lg:pt-8">
           <h1 className="mb-0.5 text-2xl font-bold tracking-tight text-white lg:text-3xl">
             {t("title")}
