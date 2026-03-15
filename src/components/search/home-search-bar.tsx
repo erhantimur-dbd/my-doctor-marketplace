@@ -151,6 +151,9 @@ export function HomeSearchBar({
   const [aiSymptomResult, setAiSymptomResult] = useState<SymptomAnalysis | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Sticky emergency: once an emergency is shown during a typing session,
+  // keep it visible until the user clears the input or the new result is "routine"
+  const emergencyStickyRef = useRef(false);
 
   // Popular specialties (resolved from the specialties prop)
   const popularSpecialties = POPULAR_SLUGS
@@ -231,6 +234,7 @@ export function HomeSearchBar({
     if (!isSearchMode) {
       setAiSymptomResult(null);
       setAiLoading(false);
+      emergencyStickyRef.current = false;
       return;
     }
 
@@ -247,6 +251,7 @@ export function HomeSearchBar({
     if (!shouldTryAI) {
       setAiSymptomResult(null);
       setAiLoading(false);
+      emergencyStickyRef.current = false;
       if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
       return;
     }
@@ -258,7 +263,20 @@ export function HomeSearchBar({
       try {
         const result = await analyzeSymptoms(trimmed, locale);
         if (result.data) {
-          setAiSymptomResult(result.data);
+          // Sticky emergency: if a previous analysis flagged emergency and the
+          // new (more-complete) query is still at least "urgent", preserve the
+          // emergency level. Only downgrade if the refined query is "routine"
+          // (meaning the user typed something clearly non-emergency).
+          if (emergencyStickyRef.current && result.data.urgency === "urgent") {
+            setAiSymptomResult({ ...result.data, urgency: "emergency" });
+          } else {
+            if (result.data.urgency === "emergency") {
+              emergencyStickyRef.current = true;
+            } else {
+              emergencyStickyRef.current = false;
+            }
+            setAiSymptomResult(result.data);
+          }
         } else {
           setAiSymptomResult(null);
         }
