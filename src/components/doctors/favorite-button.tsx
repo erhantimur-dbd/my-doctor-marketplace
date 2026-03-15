@@ -19,10 +19,12 @@ export function FavoriteButton({ doctorId, variant = "hero" }: FavoriteButtonPro
   const [loaded, setLoaded] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Check initial favourited state on mount (only if logged in)
+  const isPatient = user?.user_metadata?.role === "patient";
+
+  // Check initial favourited state on mount (only if logged-in patient)
   useEffect(() => {
     if (userLoading) return;
-    if (!user) {
+    if (!user || !isPatient) {
       setLoaded(true);
       return;
     }
@@ -31,7 +33,7 @@ export function FavoriteButton({ doctorId, variant = "hero" }: FavoriteButtonPro
       setFavorited(result);
       setLoaded(true);
     });
-  }, [doctorId, user, userLoading]);
+  }, [doctorId, user, userLoading, isPatient]);
 
   function handleToggle(e?: React.MouseEvent) {
     // Prevent navigation when inside a Link (e.g. doctor card)
@@ -79,6 +81,9 @@ export function FavoriteButton({ doctorId, variant = "hero" }: FavoriteButtonPro
     }
     return null;
   }
+
+  // Only show for logged-in patients (not doctors or admins)
+  if (!user || !isPatient) return null;
 
   if (variant === "hero") {
     return (
