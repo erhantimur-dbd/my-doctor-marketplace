@@ -66,6 +66,14 @@ export function formatPriceForLocale(
 }
 
 // ─── Tier Config ───────────────────────────────────────────
+// TODO: If you haven't created these Stripe prices yet in your Stripe Dashboard,
+// you'll need to create products/prices for each paid tier and then add the
+// price IDs (e.g. `price_1Abc...`) to Vercel's environment variables:
+//   STRIPE_PRICE_STARTER      → Starter plan (£199/mo, annual)
+//   STRIPE_PRICE_PROFESSIONAL → Professional plan (£299/mo per user, annual)
+//   STRIPE_PRICE_CLINIC       → Clinic Starter Pack (£1,495/mo, annual)
+// Also add the extra-seat add-on price if you charge for additional seats:
+//   STRIPE_PRICE_EXTRA_SEAT   → Extra seat (£299/mo, annual)
 
 export interface LicenseTierConfig {
   id: LicenseTier;
