@@ -18,12 +18,16 @@ interface ProfileCompletionCardProps {
     stripe_account_id: string | null;
     consultation_types: string[] | null;
     verification_status: string;
+    has_testing_addon?: boolean;
+    provider_type?: string;
   };
   profile: {
     avatar_url: string | null;
   };
   hasAvailability: boolean;
   hasEducation: boolean;
+  hasServices: boolean;
+  hasTestingServices: boolean;
 }
 
 export function ProfileCompletionCard({
@@ -31,7 +35,11 @@ export function ProfileCompletionCard({
   profile,
   hasAvailability,
   hasEducation,
+  hasServices,
+  hasTestingServices,
 }: ProfileCompletionCardProps) {
+  const isTestingProvider = doctor.provider_type === "testing_service";
+
   const items: CompletionItem[] = [
     {
       label: "Add a profile photo",
@@ -59,6 +67,21 @@ export function ProfileCompletionCard({
         !!doctor.consultation_types && doctor.consultation_types.length > 0,
       href: "/doctor-dashboard/profile",
     },
+    {
+      label: "Add your services & pricing",
+      completed: hasServices,
+      href: "/doctor-dashboard/profile",
+    },
+    // Show testing services step for testing providers or doctors with the addon
+    ...(isTestingProvider || doctor.has_testing_addon
+      ? [
+          {
+            label: "Set up your test catalogue & pricing",
+            completed: hasTestingServices,
+            href: "/doctor-dashboard/medical-testing",
+          },
+        ]
+      : []),
     {
       label: "Set your availability",
       completed: hasAvailability,

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const STORAGE_KEY = "recently_viewed_doctors";
 const MAX_ITEMS = 10;
+const EXPIRY_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
 
 export interface RecentlyViewedDoctor {
   id: string;
@@ -26,7 +27,15 @@ export function useRecentlyViewed() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        setDoctors(JSON.parse(stored));
+        const parsed: RecentlyViewedDoctor[] = JSON.parse(stored);
+        // Filter out entries older than 14 days
+        const now = Date.now();
+        const fresh = parsed.filter((d) => now - d.viewedAt < EXPIRY_MS);
+        setDoctors(fresh);
+        // Persist the cleaned list back
+        if (fresh.length !== parsed.length) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(fresh));
+        }
       }
     } catch {
       // Invalid data — ignore

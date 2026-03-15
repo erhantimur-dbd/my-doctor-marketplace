@@ -29,6 +29,7 @@ import {
   Building2,
   Video,
   Sparkles,
+  Mic,
 } from "lucide-react";
 import { cn, formatSpecialtyName } from "@/lib/utils";
 import { useGeolocation } from "@/hooks/use-geolocation";
@@ -45,6 +46,8 @@ import type { SearchMatch } from "@/lib/utils/search-matcher";
 import { countWords } from "@/lib/utils/nl-search-detector";
 import { AISymptomResult } from "@/components/search/ai-symptom-result";
 import { EmergencyWarning } from "@/components/shared/emergency-warning";
+import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { toast } from "sonner";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
 const specialtyIconMap: Record<string, React.ElementType> = {
@@ -164,6 +167,36 @@ export function HomeSearchBar({
   const selectedCountryCode = locations.find(l => l.slug === location)?.country_code ?? null;
 
   const geo = useGeolocation("auto");
+
+  // Voice search (mobile only)
+  const speech = useSpeechRecognition({
+    locale,
+    onResult: (text) => {
+      setQuery(text);
+      setShowSuggestions(true);
+      // Focus the mobile input so autocomplete flows naturally
+      mobileInputRef.current?.focus();
+    },
+  });
+
+  // Show toast on speech recognition error
+  useEffect(() => {
+    if (!speech.error) return;
+    if (speech.error === "not-allowed") {
+      toast.error(t("voice_error_permission"));
+    } else if (speech.error === "no-speech") {
+      toast.error(t("voice_error_no_speech"));
+    } else if (speech.error === "not-supported") {
+      toast.error(t("voice_error_not_supported"));
+    }
+  }, [speech.error, t]);
+
+  // Update query with interim transcript while listening
+  useEffect(() => {
+    if (speech.isListening && speech.transcript) {
+      setQuery(speech.transcript);
+    }
+  }, [speech.isListening, speech.transcript]);
 
   // Auto-select nearest location when GPS coords arrive
   useEffect(() => {
@@ -977,10 +1010,35 @@ export function HomeSearchBar({
             onChange={(e) => setQuery(e.target.value)}
             onFocus={() => setShowSuggestions(true)}
             onKeyDown={handleKeyDown}
-            placeholder={t("search_name_placeholder_mobile")}
+            placeholder={speech.isListening ? t("voice_listening") : t("search_name_placeholder_mobile")}
             className="h-11 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
             autoComplete="off"
           />
+          {/* Voice search mic button (mobile only, feature-detected) */}
+          {speech.isSupported && (
+            <button
+              type="button"
+              onClick={() => {
+                if (speech.isListening) {
+                  speech.stop();
+                } else {
+                  speech.start();
+                }
+              }}
+              className={cn(
+                "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
+                speech.isListening
+                  ? "bg-red-100 text-red-600"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+              aria-label={speech.isListening ? "Stop listening" : "Voice search"}
+            >
+              <Mic className={cn("h-4 w-4", speech.isListening && "animate-pulse")} />
+              {speech.isListening && (
+                <span className="absolute inset-0 animate-ping rounded-full bg-red-400/30" />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Autocomplete dropdown — mobile (positioned inside the card) */}

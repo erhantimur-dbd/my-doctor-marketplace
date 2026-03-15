@@ -27,11 +27,13 @@ import { Gift, Loader2 } from "lucide-react";
 
 interface GrantSubscriptionDialogProps {
   doctorId: string;
+  currentPlan?: string;
   onGranted?: (tier: string) => void;
 }
 
 export function GrantSubscriptionDialog({
   doctorId,
+  currentPlan = "free",
   onGranted,
 }: GrantSubscriptionDialogProps) {
   const [open, setOpen] = useState(false);
@@ -70,15 +72,16 @@ export function GrantSubscriptionDialog({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Gift className="mr-1 h-4 w-4" />
-          Grant Subscription
+          {currentPlan === "free" ? "Grant Subscription" : "Change Plan"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Grant Subscription</DialogTitle>
+          <DialogTitle>{currentPlan === "free" ? "Grant Subscription" : "Change Subscription"}</DialogTitle>
           <DialogDescription>
-            Grant a trial or complimentary subscription to this doctor. No
-            payment required.
+            {currentPlan === "free"
+              ? "Grant a trial or complimentary subscription to this doctor. No payment required."
+              : `Currently on ${currentPlan}. Update the plan tier, duration, or type.`}
           </DialogDescription>
         </DialogHeader>
 

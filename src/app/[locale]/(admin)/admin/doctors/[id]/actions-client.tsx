@@ -172,9 +172,26 @@ export function AdminDoctorActions({
 
       <div>
         <p className="mb-2 text-sm font-medium">Subscription</p>
-        {plan === "free" ? (
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {plan === "free" ? (
             <Badge variant="outline">Free Plan</Badge>
+          ) : (
+            <Badge
+              className={
+                plan === "professional"
+                  ? "bg-blue-600"
+                  : plan === "starter"
+                    ? "bg-teal-600"
+                    : plan === "clinic"
+                      ? "bg-purple-600"
+                      : "capitalize"
+              }
+              variant={["professional", "starter", "clinic"].includes(plan) ? "default" : "secondary"}
+            >
+              {plan}
+            </Badge>
+          )}
+          {plan === "free" && (
             <Button
               variant="outline"
               size="sm"
@@ -184,27 +201,13 @@ export function AdminDoctorActions({
               <Mail className="mr-1 h-4 w-4" />
               {loading === "invite" ? "Sending..." : "Send Upgrade Invite"}
             </Button>
-            <GrantSubscriptionDialog
-              doctorId={doctorId}
-              onGranted={(tier) => setPlan(tier)}
-            />
-          </div>
-        ) : (
-          <Badge
-            className={
-              plan === "professional"
-                ? "bg-blue-600"
-                : plan === "starter"
-                  ? "bg-teal-600"
-                  : plan === "clinic"
-                    ? "bg-purple-600"
-                    : "capitalize"
-            }
-            variant={["professional", "starter", "clinic"].includes(plan) ? "default" : "secondary"}
-          >
-            {plan}
-          </Badge>
-        )}
+          )}
+          <GrantSubscriptionDialog
+            doctorId={doctorId}
+            currentPlan={plan}
+            onGranted={(tier) => setPlan(tier)}
+          />
+        </div>
       </div>
     </div>
   );

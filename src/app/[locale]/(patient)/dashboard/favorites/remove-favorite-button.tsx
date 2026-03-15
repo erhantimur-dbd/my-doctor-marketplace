@@ -8,18 +8,18 @@ import { toast } from "sonner";
 import { removeFavorite } from "./actions";
 
 interface RemoveFavoriteButtonProps {
-  favoriteId: string;
+  doctorId: string;
 }
 
 export function RemoveFavoriteButton({
-  favoriteId,
+  doctorId,
 }: RemoveFavoriteButtonProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   function handleRemove() {
     startTransition(async () => {
-      const result = await removeFavorite(favoriteId);
+      const result = await removeFavorite(doctorId);
 
       if (result.error) {
         toast.error(result.error);

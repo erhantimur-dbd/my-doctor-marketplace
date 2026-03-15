@@ -54,6 +54,18 @@ export default async function DoctorDashboard() {
     .select("id", { count: "exact", head: true })
     .eq("doctor_id", doctor.id);
 
+  // Check for services + price book entries for completion guide
+  const { count: servicesCount } = await supabase
+    .from("doctor_services")
+    .select("id", { count: "exact", head: true })
+    .eq("doctor_id", doctor.id)
+    .eq("is_active", true);
+
+  const { count: priceBookCount } = await supabase
+    .from("doctor_price_book")
+    .select("doctor_id", { count: "exact", head: true })
+    .eq("doctor_id", doctor.id);
+
   // Get today's bookings
   const today = new Date().toISOString().split("T")[0];
   const { data: todayBookings } = await supabase
@@ -179,10 +191,14 @@ export default async function DoctorDashboard() {
           stripe_account_id: doctor.stripe_account_id,
           consultation_types: doctor.consultation_types,
           verification_status: doctor.verification_status,
+          has_testing_addon: doctor.has_testing_addon,
+          provider_type: doctor.provider_type,
         }}
         profile={{ avatar_url: profile?.avatar_url || null }}
         hasAvailability={(availabilityCount || 0) > 0}
         hasEducation={(educationCount || 0) > 0}
+        hasServices={(servicesCount || 0) > 0}
+        hasTestingServices={(priceBookCount || 0) > 0}
       />
       </div>
 

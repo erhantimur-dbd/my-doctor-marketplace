@@ -28,6 +28,7 @@ import { AvailabilityCalendar } from "@/components/booking/availability-calendar
 import { MEDICAL_TEST_GROUPS } from "@/lib/constants/medical-tests";
 import { ReviewSummaryCard } from "@/components/doctors/review-summary-card";
 import { BackToSearchButton } from "@/components/doctors/back-to-search-button";
+import { FavoriteButton } from "@/components/doctors/favorite-button";
 import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 import { TrackDoctorView } from "@/components/doctors/track-doctor-view";
 import { PhotoGallery } from "@/components/doctors/photo-gallery";
@@ -161,7 +162,10 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
       <div className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
         <div className="relative container mx-auto px-4 pb-20 pt-6">
-          <BackToSearchButton />
+          <div className="flex items-center justify-between">
+            <BackToSearchButton />
+            <FavoriteButton doctorId={doctor.id} />
+          </div>
           <div className="mt-4 flex flex-col gap-6 sm:flex-row sm:items-center">
             <Avatar className="h-20 w-20 shrink-0 border-[3px] border-white/30 shadow-lg sm:h-24 sm:w-24">
               {doctor.profile.avatar_url ? (

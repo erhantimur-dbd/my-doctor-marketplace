@@ -1187,17 +1187,14 @@ export async function adminGrantDoctorSubscription(data: {
     .single();
   if (!org) return { error: "Organization not found" };
 
-  // Check no existing non-cancelled license
+  // Check for existing non-cancelled license
   const { data: existing } = await adminDb
     .from("licenses")
-    .select("id, status")
+    .select("id, status, tier")
     .eq("organization_id", doc.organization_id)
     .not("status", "eq", "cancelled")
     .limit(1)
     .maybeSingle();
-  if (existing) {
-    return { error: `Doctor already has an active license (${existing.status}). Cancel it first.` };
-  }
 
   const now = new Date();
   const periodEnd = new Date(now);
@@ -1209,40 +1206,85 @@ export async function adminGrantDoctorSubscription(data: {
     promo_note: data.promoNote || "Admin-granted subscription",
   };
 
-  const insertData: Record<string, unknown> = {
-    organization_id: doc.organization_id,
-    tier: data.tier,
-    status: data.status,
-    max_seats: seatDefaults[data.tier] || 1,
-    used_seats: 0,
-    extra_seat_count: 0,
-    current_period_start: now.toISOString(),
-    current_period_end: periodEnd.toISOString(),
-    metadata,
-  };
-  if (data.status === "trialing") {
-    insertData.trial_ends_at = periodEnd.toISOString();
+  let licenseId: string;
+
+  if (existing) {
+    // Update existing license instead of blocking
+    const updateData: Record<string, unknown> = {
+      tier: data.tier,
+      status: data.status,
+      max_seats: seatDefaults[data.tier] || 1,
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      cancel_at_period_end: false,
+      metadata,
+    };
+    if (data.status === "trialing") {
+      updateData.trial_ends_at = periodEnd.toISOString();
+    }
+
+    const { error: updateError } = await adminDb
+      .from("licenses")
+      .update(updateData)
+      .eq("id", existing.id);
+    if (updateError) return { error: updateError.message };
+    licenseId = existing.id;
+  } else {
+    // Create new license
+    const insertData: Record<string, unknown> = {
+      organization_id: doc.organization_id,
+      tier: data.tier,
+      status: data.status,
+      max_seats: seatDefaults[data.tier] || 1,
+      used_seats: 0,
+      extra_seat_count: 0,
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      metadata,
+    };
+    if (data.status === "trialing") {
+      insertData.trial_ends_at = periodEnd.toISOString();
+    }
+
+    const { data: newLicense, error: licenseError } = await adminDb
+      .from("licenses")
+      .insert(insertData)
+      .select("id")
+      .single();
+    if (licenseError) return { error: licenseError.message };
+    licenseId = newLicense.id;
   }
 
-  const { data: newLicense, error: licenseError } = await adminDb
-    .from("licenses")
-    .insert(insertData)
-    .select("id")
-    .single();
-  if (licenseError) return { error: licenseError.message };
-
-  // Also insert legacy doctor_subscriptions record for backward compat
+  // Upsert legacy doctor_subscriptions record for backward compat
   const grantId = crypto.randomUUID();
-  await adminDb.from("doctor_subscriptions").insert({
-    doctor_id: data.doctorId,
-    stripe_subscription_id: `admin-grant-${grantId}`,
-    stripe_customer_id: `admin-grant-${user.id}`,
-    plan_id: data.tier,
-    status: data.status,
-    current_period_start: now.toISOString(),
-    current_period_end: periodEnd.toISOString(),
-    cancel_at_period_end: false,
-  });
+  // Try to update existing, otherwise insert
+  const { data: existingSub } = await adminDb
+    .from("doctor_subscriptions")
+    .select("id")
+    .eq("doctor_id", data.doctorId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingSub) {
+    await adminDb.from("doctor_subscriptions").update({
+      plan_id: data.tier,
+      status: data.status,
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      cancel_at_period_end: false,
+    }).eq("id", existingSub.id);
+  } else {
+    await adminDb.from("doctor_subscriptions").insert({
+      doctor_id: data.doctorId,
+      stripe_subscription_id: `admin-grant-${grantId}`,
+      stripe_customer_id: `admin-grant-${user.id}`,
+      plan_id: data.tier,
+      status: data.status,
+      current_period_start: now.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      cancel_at_period_end: false,
+    });
+  }
 
   const doctorName = `${doc.profile.first_name} ${doc.profile.last_name}`;
 
@@ -1252,14 +1294,14 @@ export async function adminGrantDoctorSubscription(data: {
     duration_days: data.durationDays,
     is_promotional: true,
     promo_note: data.promoNote || "",
-    license_id: newLicense.id,
+    license_id: licenseId,
     doctor_name: doctorName,
   });
 
   revalidatePath(`/admin/doctors/${data.doctorId}`);
   revalidatePath("/admin/doctors");
   revalidatePath("/admin/licenses");
-  return { success: true, licenseId: newLicense.id, tier: data.tier };
+  return { success: true, licenseId, tier: data.tier };
 }
 
 // ===================== CSV Export Actions =====================

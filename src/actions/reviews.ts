@@ -142,19 +142,20 @@ export async function toggleFavorite(doctorId: string) {
 
   if (!user) return { error: "Not authenticated" };
 
-  // Check if already favorited
+  // Check if already favorited (composite PK: patient_id + doctor_id)
   const { data: existing } = await supabase
     .from("favorites")
-    .select("id")
+    .select("patient_id")
     .eq("patient_id", user.id)
     .eq("doctor_id", doctorId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     const { error } = await supabase
       .from("favorites")
       .delete()
-      .eq("id", existing.id);
+      .eq("patient_id", user.id)
+      .eq("doctor_id", doctorId);
     if (error) return { error: error.message };
     revalidatePath("/dashboard/favorites");
     return { favorited: false };
@@ -167,4 +168,23 @@ export async function toggleFavorite(doctorId: string) {
     revalidatePath("/dashboard/favorites");
     return { favorited: true };
   }
+}
+
+/** Check if the current user has favorited a specific doctor */
+export async function checkIsFavorited(doctorId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return false;
+
+  const { data } = await supabase
+    .from("favorites")
+    .select("patient_id")
+    .eq("patient_id", user.id)
+    .eq("doctor_id", doctorId)
+    .maybeSingle();
+
+  return !!data;
 }

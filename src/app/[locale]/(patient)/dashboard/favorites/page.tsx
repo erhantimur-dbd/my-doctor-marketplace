@@ -43,7 +43,6 @@ export default async function FavoritesPage({ params }: FavoritesPageProps) {
     .from("favorites")
     .select(
       `
-      id,
       created_at,
       doctor:doctors(
         id, slug, title,
@@ -112,13 +111,13 @@ export default async function FavoritesPage({ params }: FavoritesPageProps) {
 
             return (
               <Card
-                key={favorite.id}
+                key={doctor.id}
                 className="group relative h-full transition-all hover:border-primary/50 hover:shadow-lg"
               >
                 <CardContent className="p-5">
                   {/* Remove button */}
                   <div className="absolute right-3 top-3 z-10">
-                    <RemoveFavoriteButton favoriteId={favorite.id} />
+                    <RemoveFavoriteButton doctorId={doctor.id} />
                   </div>
 
                   <div className="flex gap-4">

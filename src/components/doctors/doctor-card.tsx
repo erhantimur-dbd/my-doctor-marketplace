@@ -24,6 +24,7 @@ import { getMultiDayAvailabilityBatch } from "@/actions/search";
 import type { DoctorMultiDayAvailability } from "@/actions/search";
 import { getFeaturedReview } from "@/actions/reviews";
 import { CompareCheckbox } from "@/components/doctors/compare-checkbox";
+import { FavoriteButton } from "@/components/doctors/favorite-button";
 
 interface DoctorCardProps {
   doctor: {
@@ -325,6 +326,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
+                      <FavoriteButton doctorId={doctor.id} variant="card" />
                       <CompareCheckbox
                         doctor={{
                           id: doctor.id,
