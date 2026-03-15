@@ -23,6 +23,11 @@ import {
   Flower,
   Ear,
   Smile,
+  Apple,
+  Droplets,
+  Wind,
+  Shield,
+  Scan,
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
@@ -148,19 +153,35 @@ export default async function DoctorsPage({
         {/* Subtle pattern overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
 
-        {/* Decorative specialty icons scattered across hero */}
+        {/* Decorative specialty icons — all 24 specialties scattered across hero */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-          <Stethoscope className="absolute top-3 right-[8%] h-9 w-9 text-white/[0.07] rotate-12 hidden lg:block" />
-          <Heart className="absolute bottom-4 right-[22%] h-6 w-6 text-white/[0.06] -rotate-12 hidden lg:block" />
-          <Brain className="absolute top-7 right-[38%] h-8 w-8 text-white/[0.05] rotate-6 hidden lg:block" />
-          <Eye className="absolute bottom-6 right-[52%] h-5 w-5 text-white/[0.07] -rotate-6 hidden md:block" />
-          <Activity className="absolute top-4 left-[5%] h-7 w-7 text-white/[0.06] rotate-[-15deg] hidden lg:block" />
-          <Flower className="absolute bottom-3 left-[18%] h-5 w-5 text-white/[0.07] rotate-[20deg] hidden lg:block" />
-          <Ear className="absolute top-8 left-[32%] h-6 w-6 text-white/[0.05] -rotate-12 hidden lg:block" />
-          <Baby className="absolute bottom-5 left-[45%] h-7 w-7 text-white/[0.06] rotate-6 hidden md:block" />
-          <Smile className="absolute top-2 right-[65%] h-5 w-5 text-white/[0.06] -rotate-[8deg] hidden lg:block" />
-          <Heart className="absolute top-5 right-[78%] h-4 w-4 text-white/[0.05] rotate-[25deg] hidden xl:block" />
-          <Stethoscope className="absolute bottom-2 right-[4%] h-5 w-5 text-white/[0.05] -rotate-[20deg] hidden xl:block" />
+          {/* Row 1 — top edge */}
+          <Stethoscope className="absolute top-2 left-[3%] h-7 w-7 text-white/[0.07] rotate-12" />          {/* General Practice */}
+          <Heart className="absolute top-3 left-[12%] h-5 w-5 text-white/[0.06] -rotate-6" />              {/* Cardiology */}
+          <Flower className="absolute top-1 left-[22%] h-5 w-5 text-white/[0.07] rotate-[18deg]" />        {/* Dermatology */}
+          <Activity className="absolute top-4 left-[31%] h-6 w-6 text-white/[0.05] -rotate-12" />          {/* Orthopedics */}
+          <Brain className="absolute top-2 left-[41%] h-7 w-7 text-white/[0.06] rotate-6" />               {/* Neurology */}
+          <Brain className="absolute top-3 left-[52%] h-5 w-5 text-white/[0.05] -rotate-[15deg]" />        {/* Psychiatry */}
+          <Heart className="absolute top-1 left-[61%] h-4 w-4 text-white/[0.06] rotate-[22deg]" />         {/* Psychology */}
+          <Eye className="absolute top-4 left-[71%] h-6 w-6 text-white/[0.07] -rotate-6" />                {/* Ophthalmology */}
+          <Ear className="absolute top-2 left-[80%] h-5 w-5 text-white/[0.06] rotate-[10deg]" />           {/* ENT */}
+          <Baby className="absolute top-3 left-[89%] h-6 w-6 text-white/[0.05] -rotate-12" />              {/* Gynecology */}
+          <Scan className="absolute top-1 left-[96%] h-5 w-5 text-white/[0.06] rotate-6" />                {/* Radiology */}
+
+          {/* Row 2 — bottom edge */}
+          <Activity className="absolute bottom-2 left-[1%] h-5 w-5 text-white/[0.06] -rotate-[20deg]" />   {/* Urology */}
+          <Apple className="absolute bottom-4 left-[10%] h-6 w-6 text-white/[0.05] rotate-12" />           {/* Gastroenterology */}
+          <Droplets className="absolute bottom-2 left-[19%] h-5 w-5 text-white/[0.07] -rotate-6" />        {/* Endocrinology */}
+          <Wind className="absolute bottom-3 left-[28%] h-6 w-6 text-white/[0.06] rotate-[15deg]" />       {/* Pulmonology */}
+          <Shield className="absolute bottom-1 left-[37%] h-5 w-5 text-white/[0.05] -rotate-12" />         {/* Oncology */}
+          <Baby className="absolute bottom-4 left-[46%] h-5 w-5 text-white/[0.07] rotate-6" />             {/* Pediatrics */}
+          <Smile className="absolute bottom-2 left-[55%] h-6 w-6 text-white/[0.06] -rotate-[8deg]" />      {/* Dentistry */}
+          <Flower className="absolute bottom-3 left-[64%] h-5 w-5 text-white/[0.05] rotate-[20deg]" />     {/* Aesthetic Medicine */}
+          <Activity className="absolute bottom-1 left-[73%] h-6 w-6 text-white/[0.06] -rotate-12" />       {/* Physiotherapy */}
+          <Apple className="absolute bottom-4 left-[82%] h-5 w-5 text-white/[0.07] rotate-[10deg]" />      {/* Nutrition */}
+          <Flower className="absolute bottom-2 left-[88%] h-4 w-4 text-white/[0.06] -rotate-6" />          {/* Allergy */}
+          <Activity className="absolute bottom-3 left-[93%] h-5 w-5 text-white/[0.05] rotate-[25deg]" />   {/* Rheumatology */}
+          <Droplets className="absolute bottom-1 left-[98%] h-5 w-5 text-white/[0.06] -rotate-[15deg]" />  {/* Nephrology */}
         </div>
         <div className="relative container mx-auto px-4 pb-5 pt-6 lg:pb-7 lg:pt-8">
           <h1 className="mb-0.5 text-2xl font-bold tracking-tight text-white lg:text-3xl">
