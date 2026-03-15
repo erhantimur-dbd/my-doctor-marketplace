@@ -66,7 +66,9 @@ export function FavoriteButton({ doctorId, variant = "hero" }: FavoriteButtonPro
   }
 
   // Don't render until we know auth + favourite state
+  // If we already know the user isn't a patient, skip the spinner entirely
   if (!loaded) {
+    if (!userLoading && (!user || !isPatient)) return null;
     if (variant === "hero") {
       return (
         <button
