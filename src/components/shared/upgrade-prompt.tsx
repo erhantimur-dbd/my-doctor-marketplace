@@ -21,7 +21,7 @@ export function UpgradePrompt({ feature, description }: UpgradePromptProps) {
           </h2>
           <p className="mt-2 max-w-sm text-sm text-muted-foreground">
             {description ||
-              `${feature} is available on Professional and Premium plans. Upgrade your subscription to access this feature and grow your practice.`}
+              `${feature} is available on paid licence plans. Upgrade to Starter, Professional, or Clinic to access this feature and grow your practice.`}
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <Button asChild>

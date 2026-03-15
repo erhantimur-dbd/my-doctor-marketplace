@@ -84,7 +84,7 @@ const steps = [
     description:
       "Attend at the clinic or join a secure video call from anywhere.",
     features: [
-      "Premium clinic locations",
+      "Top-rated clinic locations",
       "HD video consultations",
       "Secure & private sessions",
       "Easy follow-up booking",

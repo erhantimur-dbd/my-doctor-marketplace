@@ -550,8 +550,8 @@
       "answer": "进入患者控制面板 → <strong>我的预约</strong>。\n\n找到您要更改的预约，点击<strong>取消预约</strong>或<strong>改约</strong>。\n\n<strong>取消：</strong>如果在医生取消政策的时间范围内取消，您将获得全额退款。否则将收取取消费用。\n\n<strong>改约：</strong>从医生的可用时段中选择新的日期和时间。如果诊费未变，则无需额外支付。\n\n预约被取消或改约时，患者和医生都会收到邮件通知。"
     },
     "doctor-subscription": {
-      "question": "医生有哪些订阅方案可选？",
-      "answer": "MyDoctors360为希望获得增强功能和更高曝光度的医生提供订阅方案：\n\n<strong>免费方案：</strong>基础个人资料、标准搜索排名、日历集成和收款功能。\n\n<strong>高级方案：</strong>搜索结果优先展示、优先客服支持、高级数据分析，以及帮助拓展诊所业务的营销工具。\n\n所有方案均包含通过Stripe Connect的安全支付处理。您可以随时在医生控制面板 → 订阅中升级或降级方案。"
+      "question": "医生有哪些许可证方案可选？",
+      "answer": "MyDoctors360为医生和诊所提供许可证方案：\n\n<strong>免费：</strong>目录中的基本医生资料。\n\n<strong>Starter（£199/月）：</strong>在线预约日历、无限预约、邮件提醒、视频问诊和短信及WhatsApp提醒。\n\n<strong>Professional（£299/月）：</strong>包含Starter所有功能，加高级数据分析、患者CRM、治疗方案和优先支持。支持最多4位医生。\n\n<strong>Clinic Starter Pack（£1,495/月）：</strong>包含Professional所有功能，加5个医生资料、专属入门培训、自定义品牌、集中诊所控制面板和专属客户经理。\n\n所有付费方案均包含通过Stripe Connect的安全支付处理。您可以在医生控制面板 → 组织 → 账单中管理您的许可证。"
     },
     "account-security": {
       "question": "如何保障账户安全？",

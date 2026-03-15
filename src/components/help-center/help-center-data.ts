@@ -109,7 +109,7 @@ const articleDefs: Record<string, ArticleDef[]> = {
     { id: "update-profile", tags: ["profile", "update", "edit", "contact", "settings", "personal"], audience: "all" },
     { id: "notification-preferences", tags: ["notifications", "email", "sms", "whatsapp", "preferences", "alerts"], audience: "all" },
     { id: "cancel-reschedule-booking", tags: ["cancel", "reschedule", "booking", "appointment", "change", "modify"], audience: "patient" },
-    { id: "doctor-subscription", tags: ["subscription", "plan", "premium", "pricing", "doctor", "upgrade"], audience: "doctor" },
+    { id: "doctor-subscription", tags: ["subscription", "plan", "licence", "pricing", "doctor", "upgrade", "starter", "professional", "clinic"], audience: "doctor" },
     { id: "account-security", tags: ["security", "password", "account", "safety", "privacy", "protection"], audience: "all" },
   ],
   troubleshooting: [

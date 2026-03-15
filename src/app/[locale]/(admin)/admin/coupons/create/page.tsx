@@ -20,8 +20,8 @@ import { createCoupon } from "@/actions/admin";
 import { Link } from "@/i18n/navigation";
 
 const PLAN_OPTIONS = [
+  { id: "starter", label: "Starter" },
   { id: "professional", label: "Professional" },
-  { id: "premium", label: "Premium" },
   { id: "clinic", label: "Clinic" },
 ];
 

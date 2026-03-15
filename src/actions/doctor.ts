@@ -397,8 +397,8 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { doctor_id: doctor.id },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/subscription?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/subscription`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing?success=true`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing`,
   };
 
   // Apply manual coupon code (if provided and no referral discount)
@@ -409,8 +409,8 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
     // Determine planId from priceId
     const planId = priceId === process.env.STRIPE_PRICE_PROFESSIONAL
       ? "professional"
-      : priceId === process.env.STRIPE_PRICE_PREMIUM
-        ? "premium"
+      : priceId === process.env.STRIPE_PRICE_STARTER
+        ? "starter"
         : priceId === process.env.STRIPE_PRICE_CLINIC
           ? "clinic"
           : "unknown";
@@ -453,8 +453,8 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
     const { recordCouponRedemption } = await import("@/actions/coupon");
     const planId = priceId === process.env.STRIPE_PRICE_PROFESSIONAL
       ? "professional"
-      : priceId === process.env.STRIPE_PRICE_PREMIUM
-        ? "premium"
+      : priceId === process.env.STRIPE_PRICE_STARTER
+        ? "starter"
         : priceId === process.env.STRIPE_PRICE_CLINIC
           ? "clinic"
           : "unknown";

@@ -160,10 +160,10 @@ export default async function DoctorDashboard() {
               </div>
               <div>
                 <p className="font-semibold text-amber-900 dark:text-amber-100">
-                  You&apos;re on the Free Plan
+                  You&apos;re on the Free Licence
                 </p>
                 <p className="text-sm text-amber-800/80 dark:text-amber-200/70">
-                  Your profile is live in our directory. Upgrade to unlock bookings, calendar, analytics, and more.
+                  Your profile is live in our directory. Upgrade to a Starter, Professional, or Clinic licence to unlock bookings, video consultations, analytics, and more.
                 </p>
               </div>
             </div>
