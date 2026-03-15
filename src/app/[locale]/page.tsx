@@ -66,14 +66,16 @@ export default async function HomePage() {
       <Header />
 
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-20 md:py-32">
-        <HeroSpecialtyIcons hideOnMobile />
+      <section className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800 px-4 py-20 md:py-32">
+        {/* Radial highlight overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
+        <HeroSpecialtyIcons hideOnMobile variant="dark" />
 
         <div className="relative container mx-auto text-center">
-          <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight md:text-6xl">
+          <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-white md:text-6xl">
             {t("hero_title")}
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-white/80 md:text-xl">
             {t("hero_subtitle")}
           </p>
 
@@ -83,21 +85,21 @@ export default async function HomePage() {
           </div>
 
           {/* Trust indicators */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-sm text-white/70">
             <div className="flex items-center gap-1.5">
-              <Shield className="h-4 w-4 text-green-600" />
+              <Shield className="h-4 w-4 text-green-300" />
               <span>{t("verified_doctors")}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-blue-600" />
+              <Calendar className="h-4 w-4 text-blue-200" />
               <span>{t("instant_booking")}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Video className="h-4 w-4 text-purple-600" />
+              <Video className="h-4 w-4 text-purple-300" />
               <span>{t("video_consultations")}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Star className="h-4 w-4 text-yellow-500" />
+              <Star className="h-4 w-4 text-yellow-300" />
               <span>{t("trusted_by")}</span>
             </div>
           </div>
