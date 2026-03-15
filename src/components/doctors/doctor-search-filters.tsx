@@ -319,7 +319,7 @@ export function DoctorSearchFilters({
       </div>
 
       {/* Desktop: horizontal filter bar */}
-      <div className="hidden lg:block">
+      <div className="relative z-20 hidden lg:block">
         <DesktopFilterBar
           specialties={specialties}
           locations={locations}
