@@ -125,18 +125,9 @@
   }
 }
 
-/* Specialty marquee animation */
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-@utility animate-marquee {
-  animation: marquee 15s linear infinite;
+/* Hide scrollbar for marquee / carousel elements */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }
 
 /* ── Print-friendly styles ──────────────────────────────────────── */
