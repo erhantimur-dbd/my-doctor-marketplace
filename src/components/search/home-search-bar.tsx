@@ -852,7 +852,7 @@ export function HomeSearchBar({
     <div className={cn("mx-auto", compact ? "max-w-full" : "max-w-3xl")} ref={wrapperRef}>
       {/* Desktop layout */}
       <div className="relative hidden md:block">
-        <div className={cn("flex items-center gap-0 rounded-full border bg-background", compact ? "shadow-md" : "shadow-lg transition-shadow hover:shadow-xl")}>
+        <div className={cn("flex items-center gap-0 rounded-full border bg-background", compact ? "shadow-lg ring-1 ring-white/20" : "shadow-lg transition-shadow hover:shadow-xl")}>
           {/* Text input */}
           <div className="flex items-center gap-2 flex-1 pl-5 pr-2 overflow-hidden">
             <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -864,7 +864,7 @@ export function HomeSearchBar({
               onFocus={() => setShowSuggestions(true)}
               onKeyDown={handleKeyDown}
               placeholder={t("search_name_placeholder")}
-              className={cn("flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground", compact ? "h-12" : "h-14")}
+              className={cn("flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground", compact ? "h-10" : "h-14")}
               autoComplete="off"
             />
           </div>
@@ -892,10 +892,10 @@ export function HomeSearchBar({
           </div>
 
           {/* Search button — AI-powered */}
-          <div className="pr-2">
+          <div className="pr-1.5">
             <Button
-              size="lg"
-              className="rounded-full px-6"
+              size={compact ? "default" : "lg"}
+              className={cn("rounded-full", compact ? "px-4" : "px-6")}
               onClick={handleSmartSearch}
               disabled={aiLoading}
             >

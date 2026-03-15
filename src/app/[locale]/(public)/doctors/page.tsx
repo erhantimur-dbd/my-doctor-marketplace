@@ -132,16 +132,18 @@ export default async function DoctorsPage({
   return (
     <CompareProviderWrapper>
     <div>
-      {/* ── Search hero area with subtle gradient ── */}
-      <div className="border-b bg-gradient-to-b from-muted/50 to-background">
-        <div className="container mx-auto px-4 pb-4 pt-6 lg:pb-6 lg:pt-10">
-          <h1 className="mb-1 text-2xl font-bold tracking-tight lg:text-3xl">
+      {/* ── Search hero area with brand gradient ── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800">
+        {/* Subtle pattern overlay */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
+        <div className="relative container mx-auto px-4 pb-5 pt-6 lg:pb-7 lg:pt-8">
+          <h1 className="mb-0.5 text-2xl font-bold tracking-tight text-white lg:text-3xl">
             {t("title")}
           </h1>
-          <p className="mb-4 text-sm text-muted-foreground lg:text-base">
+          <p className="mb-4 text-sm text-white/70 lg:text-base">
             {t("results_count", { count: result.total })}
             {sp.placeName && (
-              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-medium text-white/90 backdrop-blur-sm">
                 Near {sp.placeName}
                 {sp.radius && ` (${sp.radius} km)`}
               </span>
