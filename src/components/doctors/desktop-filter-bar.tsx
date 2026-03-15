@@ -70,7 +70,7 @@ export function DesktopFilterBar({
     "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer";
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-3">
+    <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/40 p-2.5 backdrop-blur-sm">
       {/* Available Today toggle chip */}
       <button
         type="button"

@@ -12,6 +12,7 @@ import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
 import { RecentlyViewedCarousel } from "@/components/doctors/recently-viewed-carousel";
 import { CompareProviderWrapper } from "@/components/doctors/compare-provider-wrapper";
+import { Search } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -130,49 +131,54 @@ export default async function DoctorsPage({
 
   return (
     <CompareProviderWrapper>
-    <div className="container mx-auto px-4 py-4 lg:py-8">
-      <h1 className="mb-3 text-2xl font-bold lg:mb-6 lg:text-3xl">
-        {t("title")}
-      </h1>
-
-      {/* Recently viewed doctors carousel */}
-      <RecentlyViewedCarousel />
-
-      {/* AI-powered search bar – desktop only */}
-      <div className="mb-4 hidden lg:block">
-        <HomeSearchBar
-          specialties={specialties}
-          locations={locations}
-          initialQuery={sp.query || ""}
-          initialLocation={sp.location || ""}
-          initialConsultationType={
-            (sp.consultationType as "all" | "in_person" | "video") || "all"
-          }
-          compact
-        />
-      </div>
-
-      <div className="flex flex-col gap-4">
-        {/* Filters — full-width horizontal bar */}
-        <DoctorSearchFilters
-          specialties={specialties}
-          locations={locations}
-          currentFilters={sp}
-        />
-
-        {/* Results */}
-        <div>
-          <div className="mb-4 flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              {t("results_count", { count: result.total })}
-            </span>
+    <div>
+      {/* ── Search hero area with subtle gradient ── */}
+      <div className="border-b bg-gradient-to-b from-muted/50 to-background">
+        <div className="container mx-auto px-4 pb-4 pt-6 lg:pb-6 lg:pt-10">
+          <h1 className="mb-1 text-2xl font-bold tracking-tight lg:text-3xl">
+            {t("title")}
+          </h1>
+          <p className="mb-4 text-sm text-muted-foreground lg:text-base">
+            {t("results_count", { count: result.total })}
             {sp.placeName && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
                 Near {sp.placeName}
                 {sp.radius && ` (${sp.radius} km)`}
               </span>
             )}
+          </p>
+
+          {/* Recently viewed doctors carousel */}
+          <RecentlyViewedCarousel />
+
+          {/* AI-powered search bar – desktop only */}
+          <div className="hidden lg:block">
+            <HomeSearchBar
+              specialties={specialties}
+              locations={locations}
+              initialQuery={sp.query || ""}
+              initialLocation={sp.location || ""}
+              initialConsultationType={
+                (sp.consultationType as "all" | "in_person" | "video") || "all"
+              }
+              compact
+            />
           </div>
+        </div>
+      </div>
+
+      {/* ── Results area ── */}
+      <div className="container mx-auto px-4 py-4 lg:py-6">
+        <div className="flex flex-col gap-4">
+          {/* Filters — full-width horizontal bar */}
+          <DoctorSearchFilters
+            specialties={specialties}
+            locations={locations}
+            currentFilters={sp}
+          />
+
+          {/* Results */}
+          <div>
 
           {/* Smart expansion suggestions for AI searches with few results */}
           <SearchExpansionBanner
@@ -181,12 +187,15 @@ export default async function DoctorsPage({
           />
 
           {result.doctors.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-center">
-              <p className="text-lg font-medium text-muted-foreground">
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted-foreground/20 py-20 text-center">
+              <div className="mb-3 rounded-full bg-muted p-4">
+                <Search className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <p className="text-lg font-medium">
                 No doctors found
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Try adjusting your filters
+                Try adjusting your filters or broadening your search
               </p>
             </div>
           ) : (
@@ -233,10 +242,10 @@ export default async function DoctorsPage({
                     ...sp,
                     page: String(page),
                   } as Record<string, string>).toString()}`}
-                  className={`inline-flex h-9 w-9 items-center justify-center rounded-md text-sm ${
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${
                     page === result.page
-                      ? "bg-primary text-primary-foreground"
-                      : "border hover:bg-accent"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
                 >
                   {page}
@@ -244,6 +253,7 @@ export default async function DoctorsPage({
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

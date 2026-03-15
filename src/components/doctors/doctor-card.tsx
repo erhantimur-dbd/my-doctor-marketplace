@@ -2,7 +2,6 @@
 
 import { forwardRef, useEffect, useRef, useState } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -136,22 +135,31 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
         onMouseEnter={() => onHover?.(doctor.id)}
         onMouseLeave={() => onHover?.(null)}
       >
-        <Card
+        <div
           className={cn(
-            "group relative h-full overflow-hidden transition-all hover:border-primary/50 hover:shadow-lg",
-            isHighlighted && "border-primary ring-2 ring-primary/20 shadow-lg"
+            "group relative h-full overflow-hidden rounded-2xl bg-background transition-all duration-200",
+            "shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.06)]",
+            "hover:shadow-[0_10px_25px_rgba(0,0,0,0.08),0_4px_10px_rgba(0,0,0,0.04)]",
+            "hover:-translate-y-0.5",
+            isHighlighted && "ring-2 ring-primary/30 shadow-[0_10px_25px_rgba(0,0,0,0.08)]",
+            doctor.is_featured && "ring-1 ring-amber-200/60 dark:ring-amber-700/40"
           )}
         >
-          {/* Featured badge — positioned at top-left corner */}
+          {/* Featured accent gradient bar */}
           {doctor.is_featured && (
-            <div className="absolute left-3 top-3 z-10">
-              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 text-xs shadow-sm dark:bg-amber-900/40 dark:text-amber-300">
-                ★ Featured
-              </Badge>
-            </div>
+            <div className="h-1 bg-gradient-to-r from-amber-400 via-amber-300 to-orange-400" />
           )}
 
-          <CardContent className={cn("p-5", doctor.is_featured && "pt-10")}>
+          <div className={cn("p-5", doctor.is_featured && "pt-4")}>
+            {/* Featured label */}
+            {doctor.is_featured && (
+              <div className="mb-3">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                  ★ Featured
+                </span>
+              </div>
+            )}
+
             {/* Desktop: horizontal split layout (info left | availability right) — stacked in compact */}
             <div className={cn(
               "flex flex-col",
@@ -164,18 +172,23 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
               )}>
                   <div className="flex gap-4">
                     {/* Avatar */}
-                    <Avatar className={cn("h-16 w-16 shrink-0", isTestingService && "rounded-xl")}>
+                    <Avatar className={cn("h-14 w-14 shrink-0 ring-2 ring-background shadow-sm", isTestingService && "rounded-xl")}>
                       {doctor.profile.avatar_url ? (
                         <AvatarImage
                           src={doctor.profile.avatar_url}
                           alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
                         />
                       ) : null}
-                      <AvatarFallback className={cn("text-lg", isTestingService && "rounded-xl bg-teal-50 dark:bg-teal-950/30")}>
+                      <AvatarFallback className={cn(
+                        "text-base font-semibold",
+                        isTestingService
+                          ? "rounded-xl bg-teal-50 dark:bg-teal-950/30"
+                          : "bg-gradient-to-br from-primary/10 to-primary/5 text-primary/70"
+                      )}>
                         {isTestingService ? (
-                          <FlaskConical className="h-6 w-6 text-teal-600" />
+                          <FlaskConical className="h-5 w-5 text-teal-600" />
                         ) : (
-                          <User className="h-6 w-6" />
+                          `${doctor.profile.first_name[0]}${doctor.profile.last_name[0]}`
                         )}
                       </AvatarFallback>
                     </Avatar>
@@ -297,9 +310,9 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   </div>
 
                   {/* Price + Book — always visible on left side */}
-                  <div className="mt-4 flex items-center justify-between border-t pt-3">
+                  <div className="mt-4 flex items-center justify-between pt-3">
                     <div>
-                      <span className="text-lg font-bold">
+                      <span className="text-lg font-bold tracking-tight">
                         {formatCurrency(
                           doctor.consultation_fee_cents,
                           doctor.base_currency,
@@ -310,11 +323,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         {" "}
                         / {isTestingService ? "test" : "session"}
                       </span>
-                      <span className="block text-[10px] text-muted-foreground/70">
-                        + booking fee
-                      </span>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <CompareCheckbox
                         doctor={{
                           id: doctor.id,
@@ -334,8 +344,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       />
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="group-hover:bg-primary group-hover:text-primary-foreground"
+                        className="rounded-full px-4 shadow-sm"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
@@ -486,7 +495,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                                     `/doctors/${doctor.slug}/book?date=${selectedDay.date}&type=${activeConsultationType}&time=${encodeURIComponent(slot.start)}`
                                   );
                                 }}
-                                className="inline-flex items-center justify-center rounded-md border border-primary/20 bg-primary/5 px-1 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                                className="inline-flex items-center justify-center rounded-lg border border-primary/15 bg-primary/[0.04] px-1.5 py-1.5 text-xs font-medium text-primary transition-all hover:bg-primary hover:text-primary-foreground hover:shadow-sm"
                               >
                                 {formatSlotTime(slot.start)}
                               </button>
@@ -529,8 +538,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
         {/* Full Availability Calendar Modal */}
         {showFullAvailability && (

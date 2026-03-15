@@ -123,7 +123,7 @@ export function DoctorResultsWithMap({
       }
     >
       {/* Doctor list — left side */}
-      <div className="min-w-0 space-y-4 overflow-hidden">
+      <div className="min-w-0 space-y-3 overflow-hidden">
         {doctors.map((doctor) => (
           <DoctorCard
             key={doctor.id}
@@ -143,7 +143,7 @@ export function DoctorResultsWithMap({
       {/* Map — right side (only if we have location data) */}
       {hasMapData && (
         <div className="hidden min-w-0 lg:block">
-          <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-hidden rounded-lg border relative">
+          <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-hidden rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] relative">
             <DoctorMap
               doctors={mapDoctors}
               hoveredDoctorId={hoveredDoctorId}
