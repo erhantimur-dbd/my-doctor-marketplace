@@ -23,6 +23,10 @@ import {
   type BlogPostInput,
 } from "@/actions/blog";
 import {
+  searchCoverImages,
+  type ImageSearchResult,
+} from "@/actions/images";
+import {
   Save,
   Eye,
   Trash2,
@@ -33,6 +37,11 @@ import {
   Globe,
   Upload,
   FileUp,
+  Search,
+  ImageIcon,
+  Loader2,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -110,6 +119,12 @@ export function BlogEditor({ post }: BlogEditorProps) {
   );
   const [status, setStatus] = useState(post?.status || "draft");
 
+  // Image search state
+  const [imageResults, setImageResults] = useState<ImageSearchResult[]>([]);
+  const [imageSearchQuery, setImageSearchQuery] = useState("");
+  const [imageSearching, setImageSearching] = useState(false);
+  const [showImageSearch, setShowImageSearch] = useState(false);
+
   // Auto-generate slug from title
   const generateSlug = (text: string) => {
     return text
@@ -141,6 +156,34 @@ export function BlogEditor({ post }: BlogEditorProps) {
 
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
+  };
+
+  // ── Image search ──────────────────────────────────────────────────
+  const handleImageSearch = async (query?: string) => {
+    const searchTerm = query || imageSearchQuery || title;
+    if (!searchTerm.trim()) {
+      toast.error("Enter a search term or add a title first");
+      return;
+    }
+    setImageSearching(true);
+    setShowImageSearch(true);
+    setImageSearchQuery(searchTerm);
+    const result = await searchCoverImages(searchTerm);
+    setImageSearching(false);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    setImageResults(result.images);
+    if (result.images.length === 0) {
+      toast.info("No images found. Try a different search term.");
+    }
+  };
+
+  const selectCoverImage = (image: ImageSearchResult) => {
+    setCoverImageUrl(image.url);
+    setShowImageSearch(false);
+    toast.success(`Cover image set — photo by ${image.photographer}`);
   };
 
   // ── File upload handling ──────────────────────────────────────────
@@ -803,7 +846,10 @@ Your paragraph text goes here. Separate paragraphs with a blank line.
           {/* Cover Image */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Cover Image</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ImageIcon className="h-4 w-4" />
+                Cover Image
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <Input
@@ -812,7 +858,7 @@ Your paragraph text goes here. Separate paragraphs with a blank line.
                 placeholder="https://example.com/image.jpg"
               />
               {coverImageUrl && (
-                <div className="overflow-hidden rounded-md border">
+                <div className="relative overflow-hidden rounded-md border">
                   <img
                     src={coverImageUrl}
                     alt="Cover preview"
@@ -821,8 +867,138 @@ Your paragraph text goes here. Separate paragraphs with a blank line.
                       (e.target as HTMLImageElement).style.display = "none";
                     }}
                   />
+                  <button
+                    onClick={() => setCoverImageUrl("")}
+                    className="absolute right-1.5 top-1.5 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                    aria-label="Remove cover image"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               )}
+
+              <Separator />
+
+              {/* Image Search */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Search royalty-free images
+                </p>
+                <div className="flex gap-1.5">
+                  <Input
+                    value={imageSearchQuery}
+                    onChange={(e) => setImageSearchQuery(e.target.value)}
+                    placeholder={title ? `e.g. "${title.split(" ").slice(0, 3).join(" ")}..."` : "Search images..."}
+                    className="text-xs"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleImageSearch();
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleImageSearch()}
+                    disabled={imageSearching}
+                    className="shrink-0"
+                  >
+                    {imageSearching ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+
+                {/* Quick suggestion chips based on title/tags */}
+                {(title || tags.length > 0) && !showImageSearch && (
+                  <div className="flex flex-wrap gap-1">
+                    {title && (
+                      <button
+                        onClick={() => handleImageSearch(title.split(":")[0].trim())}
+                        className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        {title.split(":")[0].trim().substring(0, 25)}
+                        {title.split(":")[0].trim().length > 25 ? "…" : ""}
+                      </button>
+                    )}
+                    {tags.slice(0, 4).map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => handleImageSearch(tag)}
+                        className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Image results grid */}
+                {showImageSearch && (
+                  <div className="space-y-2">
+                    {imageSearching ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : imageResults.length > 0 ? (
+                      <>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {imageResults.map((img) => (
+                            <button
+                              key={img.id}
+                              onClick={() => selectCoverImage(img)}
+                              className="group relative aspect-[4/3] overflow-hidden rounded-md border hover:ring-2 hover:ring-primary transition-all"
+                            >
+                              <img
+                                src={img.thumbnailUrl}
+                                alt={img.alt}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+                                <Check className="h-6 w-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              <div className="absolute bottom-0 left-0 right-0 truncate bg-gradient-to-t from-black/70 to-transparent px-1 pb-0.5 pt-3 text-[9px] text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                {img.photographer}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] text-muted-foreground">
+                            Photos from{" "}
+                            <a
+                              href="https://www.pexels.com"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="underline hover:text-primary"
+                            >
+                              Pexels
+                            </a>{" "}
+                            — free to use
+                          </p>
+                          <button
+                            onClick={() => {
+                              setShowImageSearch(false);
+                              setImageResults([]);
+                            }}
+                            className="text-[10px] text-muted-foreground hover:text-primary"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="py-4 text-center text-xs text-muted-foreground">
+                        No images found. Try a different search.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
