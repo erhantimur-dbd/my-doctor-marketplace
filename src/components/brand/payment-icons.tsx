@@ -1,10 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import {
   VisaFlatRoundedIcon,
   MastercardFlatRoundedIcon,
   AmericanExpressFlatRoundedIcon,
-  PayPalFlatRoundedIcon,
   GenericFlatRoundedIcon,
 } from "react-svg-credit-card-payment-icons";
 
@@ -77,7 +77,15 @@ export function PaymentIcons() {
       <VisaFlatRoundedIcon width={ICON_WIDTH} />
       <MastercardFlatRoundedIcon width={ICON_WIDTH} />
       <AmericanExpressFlatRoundedIcon width={ICON_WIDTH} />
-      <PayPalFlatRoundedIcon width={ICON_WIDTH} />
+      {/* Official PayPal acceptance mark from PayPal CDN */}
+      <Image
+        src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg"
+        alt="PayPal"
+        width={ICON_WIDTH}
+        height={28}
+        className="rounded-[4px]"
+        unoptimized
+      />
       <ApplePayIcon />
       <GooglePayIcon />
       <GenericFlatRoundedIcon width={ICON_WIDTH} />
