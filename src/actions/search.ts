@@ -192,8 +192,48 @@ export async function searchDoctors(filters: SearchFilters) {
         query = query.eq("location.slug", filters.location);
       }
     } else {
-      // In-person / default: filter by exact city
-      query = query.eq("location.slug", filters.location);
+      // In-person / default: prefer proximity-based matching so that
+      // nearby cities (e.g. Islington → London doctors) are included.
+      // Falls back to exact slug match if the location has no coordinates.
+      const { data: selectedLoc } = await supabase
+        .from("locations")
+        .select("latitude, longitude, country_code")
+        .eq("slug", filters.location)
+        .single();
+
+      if (selectedLoc?.latitude != null && selectedLoc?.longitude != null) {
+        const CITY_RADIUS_KM = 30; // generous radius to include nearby cities/boroughs
+        const { data: nearby, error: nearbyErr } = await supabase.rpc(
+          "sort_doctors_by_distance",
+          { p_lat: selectedLoc.latitude, p_lng: selectedLoc.longitude }
+        );
+
+        if (!nearbyErr && nearby) {
+          const withinRadius = (
+            nearby as { doctor_id: string; distance_km: number }[]
+          ).filter((r) => r.distance_km <= CITY_RADIUS_KM);
+
+          if (withinRadius.length > 0) {
+            const nearbyIds = withinRadius.map((r) => r.doctor_id);
+            query = query.in("id", nearbyIds);
+            // Store distances for sorting/display
+            if (!proximityDistances) {
+              proximityDistances = new Map(
+                withinRadius.map((r) => [r.doctor_id, r.distance_km])
+              );
+            }
+          } else {
+            // No doctors within radius — fall back to same country
+            query = query.eq("location.country_code", selectedLoc.country_code);
+          }
+        } else {
+          // RPC failed — fall back to exact slug match
+          query = query.eq("location.slug", filters.location);
+        }
+      } else {
+        // No coordinates — fall back to exact slug match
+        query = query.eq("location.slug", filters.location);
+      }
     }
   }
   // ── Launch region check ──────────────────────────────────────────

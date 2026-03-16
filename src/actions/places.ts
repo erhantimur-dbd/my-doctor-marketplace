@@ -27,7 +27,7 @@ export async function searchPlaces(
   try {
     const encoded = encodeURIComponent(input.trim());
     const res = await fetch(
-      `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encoded}&types=geocode&key=${apiKey}`,
+      `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encoded}&types=geocode&components=country:gb|country:ie|country:it|country:tr|country:es&key=${apiKey}`,
       { cache: "no-store" }
     );
     const json = await res.json();

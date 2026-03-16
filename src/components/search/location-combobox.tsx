@@ -162,7 +162,7 @@ export function LocationCombobox({
   const displayText = selectedCountry
     ? `${countryFlag(selectedCountry.code)} ${selectedCountry.name}`
     : selectedLocation
-      ? `${selectedLocation.city}, ${selectedLocation.country_code}`
+      ? `${selectedLocation.city}, ${COUNTRY_NAMES[selectedLocation.country_code] || selectedLocation.country_code}`
       : placeName || "";
 
   // Filter locations and countries client-side
@@ -252,7 +252,11 @@ export function LocationCombobox({
       if (autocompleteServiceRef.current) {
         startPlacesTransition(() => {
           autocompleteServiceRef.current!.getPlacePredictions(
-            { input: trimmed, types: ["geocode"] },
+            {
+              input: trimmed,
+              types: ["geocode"],
+              componentRestrictions: { country: ["gb", "ie", "it", "tr", "es"] },
+            },
             (predictions, status) => {
               if (
                 status === google.maps.places.PlacesServiceStatus.OK &&
