@@ -5,7 +5,6 @@ import {
   VisaFlatRoundedIcon,
   MastercardFlatRoundedIcon,
   AmericanExpressFlatRoundedIcon,
-  GenericFlatRoundedIcon,
 } from "react-svg-credit-card-payment-icons";
 
 /**
@@ -88,7 +87,6 @@ export function PaymentIcons() {
       />
       <ApplePayIcon />
       <GooglePayIcon />
-      <GenericFlatRoundedIcon width={ICON_WIDTH} />
     </div>
   );
 }
