@@ -91,7 +91,7 @@ export default async function HomePage() {
               <span>{t("verified_doctors")}</span>
             </div>
             <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
-              <Calendar className="h-4 w-4 fill-blue-200 text-blue-200 drop-shadow-sm" />
+              <Calendar className="h-4 w-4 fill-blue-200 text-white drop-shadow-sm" />
               <span>{t("instant_booking")}</span>
             </div>
             <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
