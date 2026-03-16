@@ -106,55 +106,108 @@ export function BlogEditor({ post }: BlogEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
 
+  /** Parsed result from an uploaded file */
+  interface ParsedFile {
+    title?: string;
+    slug?: string;
+    excerpt?: string;
+    body: string;
+    tags?: string[];
+    metaTitle?: string;
+    metaDescription?: string;
+    status?: string;
+    locale?: string;
+    coverImageUrl?: string;
+  }
+
   /**
    * Parse uploaded file content. Supports:
-   * - .txt / .md — read as plain text
+   * - .txt / .md — read as plain text, extracts frontmatter metadata
    * - .docx — extract text from XML (paragraphs, headings, lists)
    */
   const parseFileContent = useCallback(
-    async (file: File): Promise<{ title: string; body: string } | null> => {
+    async (file: File): Promise<ParsedFile | null> => {
       const name = file.name.toLowerCase();
 
       // ── Plain text / Markdown ──
       if (name.endsWith(".txt") || name.endsWith(".md")) {
         const text = await file.text();
-        // Try to extract title from first line if it's a markdown heading
         const lines = text.split("\n");
-        let extractedTitle = "";
+        const meta: Record<string, string> = {};
         let bodyStart = 0;
 
-        // Skip metadata block if present (lines like "Title: ..." at top)
-        const metaRegex = /^(title|slug|excerpt|tags|meta[_ ]title|meta[_ ]description|status):/i;
-        let metaEnd = 0;
+        // Parse metadata block: lines matching "Key: Value" at the top.
+        // Supports multi-word keys like "Meta Title" or "Meta Description".
+        // Stops at the first line that doesn't match the pattern (skipping
+        // decorative separator lines like "=====" or "BODY (copy...").
+        const metaKeyRegex = /^(title|slug|excerpt|tags|meta[_ ]?title|meta[_ ]?description|status|locale|cover[_ ]?image[_ ]?url):\s*(.*)/i;
+        const decorativeRegex = /^[=\-~*]{3,}$|^BODY\b/i;
+
         for (let i = 0; i < lines.length; i++) {
-          if (metaRegex.test(lines[i].trim())) {
-            // Extract title from metadata
-            if (/^title:/i.test(lines[i].trim())) {
-              extractedTitle = lines[i].replace(/^title:\s*/i, "").trim();
-            }
-            metaEnd = i + 1;
-          } else if (lines[i].trim() === "" && metaEnd > 0) {
-            metaEnd = i + 1; // skip blank line after metadata
+          const trimmed = lines[i].trim();
+
+          // Skip blank lines and decorative separators within the header
+          if (trimmed === "" || decorativeRegex.test(trimmed)) {
+            bodyStart = i + 1;
+            continue;
+          }
+
+          const match = trimmed.match(metaKeyRegex);
+          if (match) {
+            const key = match[1].toLowerCase().replace(/[\s_]+/g, "_");
+            meta[key] = match[2].trim();
+            bodyStart = i + 1;
+          } else {
+            // First non-meta, non-decorative line — body starts here
             break;
+          }
+        }
+
+        // Skip any remaining blank/decorative lines between metadata and body
+        while (bodyStart < lines.length) {
+          const trimmed = lines[bodyStart].trim();
+          if (trimmed === "" || decorativeRegex.test(trimmed)) {
+            bodyStart++;
           } else {
             break;
           }
         }
 
-        bodyStart = metaEnd;
-
-        // If no metadata title, check for markdown heading
-        if (!extractedTitle && lines[bodyStart]?.startsWith("# ")) {
-          extractedTitle = lines[bodyStart].replace(/^#+\s*/, "");
+        // If no metadata title, check for markdown heading as first body line
+        if (!meta.title && lines[bodyStart]?.startsWith("# ")) {
+          meta.title = lines[bodyStart].replace(/^#+\s*/, "");
           bodyStart++;
         }
 
-        const bodyText = lines
-          .slice(bodyStart)
-          .join("\n")
-          .trim();
+        const bodyText = lines.slice(bodyStart).join("\n").trim();
 
-        return { title: extractedTitle, body: bodyText };
+        // Parse tags — supports JSON array ["a","b"] or comma-separated "a, b"
+        let parsedTags: string[] | undefined;
+        if (meta.tags) {
+          try {
+            const parsed = JSON.parse(meta.tags);
+            if (Array.isArray(parsed)) parsedTags = parsed.map(String);
+          } catch {
+            // Comma-separated fallback
+            parsedTags = meta.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean);
+          }
+        }
+
+        return {
+          title: meta.title,
+          slug: meta.slug,
+          excerpt: meta.excerpt,
+          body: bodyText,
+          tags: parsedTags,
+          metaTitle: meta.meta_title || meta.metatitle,
+          metaDescription: meta.meta_description || meta.metadescription,
+          status: meta.status,
+          locale: meta.locale,
+          coverImageUrl: meta.cover_image_url || meta.coverimageurl,
+        };
       }
 
       // ── DOCX ──
@@ -259,15 +312,56 @@ export function BlogEditor({ post }: BlogEditorProps) {
 
       if (!result) return;
 
+      // Populate all fields from parsed metadata
+      const populated: string[] = [];
+
       if (result.title) {
         setTitle(result.title);
-        if (!post) setSlug(generateSlug(result.title));
+        populated.push("title");
+      }
+      if (result.slug) {
+        setSlug(result.slug);
+        populated.push("slug");
+      } else if (result.title && !post) {
+        setSlug(generateSlug(result.title));
+        populated.push("slug");
+      }
+      if (result.excerpt) {
+        setExcerpt(result.excerpt);
+        populated.push("excerpt");
       }
       if (result.body) {
         setBody(result.body);
+        populated.push("body");
+      }
+      if (result.tags && result.tags.length > 0) {
+        setTags(result.tags);
+        populated.push("tags");
+      }
+      if (result.metaTitle) {
+        setMetaTitle(result.metaTitle);
+        populated.push("meta title");
+      }
+      if (result.metaDescription) {
+        setMetaDescription(result.metaDescription);
+        populated.push("meta description");
+      }
+      if (result.status && ["draft", "published", "archived"].includes(result.status)) {
+        setStatus(result.status);
+        populated.push("status");
+      }
+      if (result.locale) {
+        setLocale(result.locale);
+        populated.push("locale");
+      }
+      if (result.coverImageUrl) {
+        setCoverImageUrl(result.coverImageUrl);
+        populated.push("cover image");
       }
 
-      toast.success(`Imported "${file.name}" successfully`);
+      toast.success(
+        `Imported "${file.name}" — populated ${populated.length} fields: ${populated.join(", ")}`
+      );
     },
     [parseFileContent, post]
   );
