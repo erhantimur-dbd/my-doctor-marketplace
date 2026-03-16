@@ -7,12 +7,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { ChevronDown } from "lucide-react";
 import { useCurrency, type DisplayCurrency } from "@/providers/currency-provider";
 
-const currencies: { code: DisplayCurrency; flag: string; label: string }[] = [
-  { code: "GBP", flag: "🇬🇧", label: "GBP (£)" },
-  { code: "EUR", flag: "🇪🇺", label: "EUR (€)" },
-  { code: "USD", flag: "🇺🇸", label: "USD ($)" },
+const currencies: { code: DisplayCurrency; symbol: string; label: string }[] = [
+  { code: "GBP", symbol: "£", label: "GBP (£)" },
+  { code: "EUR", symbol: "€", label: "EUR (€)" },
+  { code: "USD", symbol: "$", label: "USD ($)" },
 ];
 
 export function CurrencySelector() {
@@ -22,9 +23,9 @@ export function CurrencySelector() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-1.5 px-2">
-          <span className="text-sm">{current.flag}</span>
-          <span className="hidden text-xs sm:inline">{current.code}</span>
+        <Button variant="ghost" size="sm" className="gap-1 px-2 text-muted-foreground hover:text-foreground">
+          <span className="text-sm font-medium">{current.code}</span>
+          <ChevronDown className="h-3 w-3 opacity-50" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -34,7 +35,7 @@ export function CurrencySelector() {
             onClick={() => setCurrency(c.code)}
             className={currency === c.code ? "bg-accent" : ""}
           >
-            <span className="mr-2">{c.flag}</span>
+            <span className="mr-2 text-muted-foreground">{c.symbol}</span>
             {c.label}
           </DropdownMenuItem>
         ))}
