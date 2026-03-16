@@ -184,12 +184,18 @@ export function BlogEditor({ post }: BlogEditorProps) {
         const metaKeyRegex = /^(title|slug|excerpt|tags|meta[_ ]?title|meta[_ ]?description|status|locale|cover[_ ]?image[_ ]?url):\s*(.*)/i;
         const decorativeRegex = /^[=\-~*]{3,}$|^BODY\b/i;
 
+        // Phase 1: scan the header area for metadata key-value lines.
+        // Skip decorative/header lines that appear before or between metadata.
+        let foundAnyMeta = false;
+        let consecutiveNonMeta = 0;
+
         for (let i = 0; i < lines.length; i++) {
           const trimmed = lines[i].trim();
 
-          // Skip blank lines and decorative separators within the header
+          // Skip blank lines and decorative separators
           if (trimmed === "" || decorativeRegex.test(trimmed)) {
             bodyStart = i + 1;
+            consecutiveNonMeta = 0;
             continue;
           }
 
@@ -198,9 +204,16 @@ export function BlogEditor({ post }: BlogEditorProps) {
             const key = match[1].toLowerCase().replace(/[\s_]+/g, "_");
             meta[key] = match[2].trim();
             bodyStart = i + 1;
+            foundAnyMeta = true;
+            consecutiveNonMeta = 0;
+          } else if (!foundAnyMeta && !trimmed.includes(":")) {
+            // Before any metadata found, skip non-key lines (e.g. "BLOG POST DETAILS")
+            bodyStart = i + 1;
+            consecutiveNonMeta = 0;
           } else {
-            // First non-meta, non-decorative line — body starts here
-            break;
+            // After metadata section, a non-matching line means body starts
+            consecutiveNonMeta++;
+            if (consecutiveNonMeta >= 1) break;
           }
         }
 
