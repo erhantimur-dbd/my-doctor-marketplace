@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Logo } from "@/components/brand/logo";
+import { PaymentIcons } from "@/components/brand/payment-icons";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -115,7 +116,15 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 border-t pt-6 text-center text-sm text-muted-foreground">
+        {/* Payment methods */}
+        <div className="mt-8 border-t pt-6">
+          <p className="mb-3 text-center text-xs font-medium text-muted-foreground">
+            {t("payment_methods")}
+          </p>
+          <PaymentIcons />
+        </div>
+
+        <div className="mt-6 border-t pt-6 text-center text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} MyDoctors360. {t("copyright")}
         </div>
       </div>
