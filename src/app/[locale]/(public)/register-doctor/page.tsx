@@ -31,6 +31,8 @@ import { registerDoctor, registerDoctorWithCheckout, signInWithGoogle, signInWit
 import { validateReferralCode } from "@/actions/referral";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
+import { isLaunchRegion } from "@/lib/constants/launch-regions";
+import { DoctorWaitlistForm } from "@/components/shared/doctor-waitlist-form";
 import {
   LICENSE_TIERS,
   AVAILABLE_MODULES,
@@ -304,6 +306,28 @@ export default function RegisterDoctorPage() {
 
   // Testing addon config
   const testingAddon = AVAILABLE_MODULES.find((m) => m.key === "medical_testing");
+
+  // Launch region check — show waitlist form if country is outside launch regions
+  const outsideLaunchRegion = country !== "" && !isLaunchRegion(country);
+
+  if (outsideLaunchRegion && step >= 3) {
+    return (
+      <div className="container mx-auto max-w-2xl px-4 py-8">
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-bold">Register as a Doctor</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            We&apos;re not yet available in your region, but you can join our waitlist
+          </p>
+        </div>
+        <DoctorWaitlistForm preselectedCountry={country} />
+        <div className="mt-4 text-center">
+          <Button variant="ghost" size="sm" onClick={() => { setCountry(""); setStep(3); }}>
+            ← Select a different country
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
@@ -686,6 +710,11 @@ export default function RegisterDoctorPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {outsideLaunchRegion && (
+                  <p className="mt-1.5 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800 border border-amber-200">
+                    ⚠️ We&apos;re not yet live in this country. You&apos;ll be redirected to our waitlist when you proceed.
+                  </p>
+                )}
               </div>
               <Separator />
               <div className="space-y-2">

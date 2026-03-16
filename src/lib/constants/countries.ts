@@ -2,6 +2,7 @@ export const COUNTRIES = [
   { code: "DE", name: "Germany", currency: "EUR", locale: "de" },
   { code: "TR", name: "Turkey", currency: "TRY", locale: "tr" },
   { code: "GB", name: "United Kingdom", currency: "GBP", locale: "en" },
+  { code: "IE", name: "Ireland", currency: "EUR", locale: "en" },
   { code: "FR", name: "France", currency: "EUR", locale: "fr" },
   { code: "NL", name: "Netherlands", currency: "EUR", locale: "en" },
   { code: "AT", name: "Austria", currency: "EUR", locale: "de" },

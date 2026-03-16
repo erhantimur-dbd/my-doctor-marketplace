@@ -195,7 +195,16 @@
     "clear_these_filters": "清除",
     "price_min": "最低价格",
     "price_max": "最高价格",
-    "price_range_label": "每次就诊价格"
+    "price_range_label": "每次就诊价格",
+    "region_not_available_title": "We're not yet available in {region}",
+    "region_not_available_description": "We're expanding soon! In the meantime, video consultations are available with doctors across all our launch regions.",
+    "video_available_globally": "Video consultations are available globally — browse doctors below",
+    "region_notify_prompt": "Get notified when we launch in your area",
+    "region_notify_success": "You're on the list! We'll email you when we launch in your area.",
+    "notify_me": "Notify Me",
+    "your_name": "Your name",
+    "your_email": "Your email",
+    "submitting": "Submitting..."
   },
   "booking": {
     "select_date": "选择日期",
@@ -945,5 +954,18 @@
       "fixBilling": "Fix Billing",
       "reactivate": "重新激活"
     }
+  },
+  "registerDoctor": {
+    "waitlist_title": "Join Our Waitlist",
+    "waitlist_description": "We're not yet available in your region, but we're expanding fast. Join our waitlist and we'll notify you as soon as we launch.",
+    "waitlist_success_title": "You're on the waitlist!",
+    "waitlist_success_description": "Thank you for your interest. We'll email you as soon as we launch in your region.",
+    "waitlist_current_regions": "Currently live in",
+    "full_name": "Full name",
+    "email_address": "Email address",
+    "select_specialty": "Select your specialty",
+    "select_country": "Select your country",
+    "submitting": "Submitting...",
+    "join_waitlist": "Join Waitlist"
   }
 }

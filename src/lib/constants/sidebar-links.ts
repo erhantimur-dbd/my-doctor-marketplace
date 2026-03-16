@@ -223,6 +223,7 @@ export const adminSidebarLinks: SidebarLink[] = [
   { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
   { href: "/admin/organizations", icon: Building2, label: "Organizations" },
   { href: "/admin/licenses", icon: Crown, label: "Licenses" },
+  { href: "/admin/waitlist", icon: ClipboardList, label: "Waitlist" },
   { href: "/admin/coupons", icon: Tag, label: "Coupons" },
   { href: "/admin/support", icon: HelpCircle, label: "Support" },
   { href: "/admin/audit-log", icon: ScrollText, label: "Audit Log" },

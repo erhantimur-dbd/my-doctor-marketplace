@@ -6,6 +6,10 @@ import {
   type MatchContext,
   type DoctorMatchInput,
 } from "@/lib/utils/doctor-match-scorer";
+import {
+  isLaunchRegion,
+  LAUNCH_REGION_CODES,
+} from "@/lib/constants/launch-regions";
 
 export interface SearchFilters {
   specialty?: string;
@@ -192,6 +196,41 @@ export async function searchDoctors(filters: SearchFilters) {
       query = query.eq("location.slug", filters.location);
     }
   }
+  // ── Launch region check ──────────────────────────────────────────
+  // Detect if the user is searching in a region we haven't launched in yet.
+  // For non-launch regions, only video consultations are available.
+  let searchCountryCode: string | null = null;
+  let outsideLaunchRegion = false;
+
+  if (filters.location) {
+    if (isCountryFilter) {
+      searchCountryCode = filters.location.replace("country-", "").toUpperCase();
+    } else {
+      // Look up the country_code from the location slug
+      const { data: locRow } = await supabase
+        .from("locations")
+        .select("country_code")
+        .eq("slug", filters.location)
+        .single();
+      searchCountryCode = locRow?.country_code || null;
+    }
+  }
+
+  if (searchCountryCode && !isLaunchRegion(searchCountryCode)) {
+    outsideLaunchRegion = true;
+    // Force video-only results from all launch regions
+    if (filters.consultationType !== "video") {
+      query = query.contains("consultation_types", ["video"]);
+    }
+    // Remove the location filter for non-launch regions — show all video doctors
+    // We need to re-create the query without the location inner join constraint
+    // Instead, just expand to all launch region doctors offering video
+    query = query.in(
+      "location.country_code",
+      LAUNCH_REGION_CODES as unknown as string[]
+    );
+  }
+
   // Free-text query: match against specialty names, doctor names, and bio
   if (filters.query && !filters.specialty) {
     const term = filters.query.trim().toLowerCase();
@@ -387,7 +426,7 @@ export async function searchDoctors(filters: SearchFilters) {
     }
   }
 
-  return { doctors: finalDoctors, total: count || 0, page, perPage, matchScores: undefined, distances };
+  return { doctors: finalDoctors, total: count || 0, page, perPage, matchScores: undefined, distances, outsideLaunchRegion, searchCountryCode };
 }
 
 export async function getSpecialties() {

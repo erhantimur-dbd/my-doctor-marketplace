@@ -12,6 +12,8 @@ import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
 import { RecentlyViewedCarousel } from "@/components/doctors/recently-viewed-carousel";
 import { CompareProviderWrapper } from "@/components/doctors/compare-provider-wrapper";
+import { RegionNotAvailableBanner } from "@/components/search/region-not-available-banner";
+import { COUNTRIES } from "@/lib/constants/countries";
 import {
   Search,
   Stethoscope,
@@ -228,6 +230,18 @@ export default async function DoctorsPage({
 
           {/* Results */}
           <div>
+
+          {/* Region not available banner */}
+          {result.outsideLaunchRegion && result.searchCountryCode && (
+            <RegionNotAvailableBanner
+              regionName={
+                COUNTRIES.find(
+                  (c) => c.code === result.searchCountryCode
+                )?.name || result.searchCountryCode
+              }
+              regionCode={result.searchCountryCode}
+            />
+          )}
 
           {/* Smart expansion suggestions for AI searches with few results */}
           <SearchExpansionBanner
