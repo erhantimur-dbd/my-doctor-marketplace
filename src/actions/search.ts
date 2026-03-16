@@ -445,6 +445,7 @@ export async function getLocations() {
     .from("locations")
     .select("*")
     .eq("is_active", true)
+    .in("country_code", [...LAUNCH_REGION_CODES])
     .order("city");
   return data || [];
 }

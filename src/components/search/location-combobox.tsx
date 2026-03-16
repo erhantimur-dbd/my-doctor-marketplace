@@ -15,31 +15,14 @@ export interface LocationItem {
   longitude: number | null;
 }
 
-// Map of country codes to display names for countries with registered doctors
+// Map of country codes to display names — limited to launch regions.
+// Add new countries here as we expand to new markets.
 const COUNTRY_NAMES: Record<string, string> = {
   GB: "United Kingdom",
-  DE: "Germany",
-  NL: "Netherlands",
-  FR: "France",
+  IE: "Ireland",
+  IT: "Italy",
   TR: "Turkey",
   ES: "Spain",
-  IT: "Italy",
-  AT: "Austria",
-  CH: "Switzerland",
-  BE: "Belgium",
-  IE: "Ireland",
-  PT: "Portugal",
-  GR: "Greece",
-  PL: "Poland",
-  CZ: "Czechia",
-  SE: "Sweden",
-  DK: "Denmark",
-  NO: "Norway",
-  FI: "Finland",
-  RO: "Romania",
-  BG: "Bulgaria",
-  HU: "Hungary",
-  HR: "Croatia",
 };
 
 /** Build a country slug like "country-gb" from a country code */
