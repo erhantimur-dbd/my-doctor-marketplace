@@ -91,9 +91,13 @@ export function BlogEditor({ post }: BlogEditorProps) {
   };
 
   const addTag = () => {
-    const trimmed = tagInput.trim();
-    if (trimmed && !tags.includes(trimmed)) {
-      setTags([...tags, trimmed]);
+    // Support comma-separated input: "Health, Nutrition, Wellness"
+    const newTags = tagInput
+      .split(",")
+      .map((t) => t.trim().replace(/^["']+|["']+$/g, ""))
+      .filter((t) => t && !tags.includes(t));
+    if (newTags.length > 0) {
+      setTags([...tags, ...newTags]);
       setTagInput("");
     }
   };
@@ -184,14 +188,22 @@ export function BlogEditor({ post }: BlogEditorProps) {
         // Parse tags — supports JSON array ["a","b"] or comma-separated "a, b"
         let parsedTags: string[] | undefined;
         if (meta.tags) {
+          // Normalise smart/curly quotes to straight quotes before parsing
+          const normalised = meta.tags
+            .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+            .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+            .trim();
           try {
-            const parsed = JSON.parse(meta.tags);
-            if (Array.isArray(parsed)) parsedTags = parsed.map(String);
+            const parsed = JSON.parse(normalised);
+            if (Array.isArray(parsed)) {
+              parsedTags = parsed.map((t) => String(t).trim()).filter(Boolean);
+            }
           } catch {
-            // Comma-separated fallback
-            parsedTags = meta.tags
+            // Comma-separated fallback — strip brackets and any remaining quotes
+            parsedTags = normalised
+              .replace(/^\[|\]$/g, "")
               .split(",")
-              .map((t) => t.trim())
+              .map((t) => t.trim().replace(/^["']+|["']+$/g, ""))
               .filter(Boolean);
           }
         }
@@ -792,22 +804,33 @@ Your paragraph text goes here. Separate paragraphs with a blank line.
                 </Button>
               </div>
               {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {tags.map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="secondary"
-                      className="gap-1 pr-1"
-                    >
-                      {tag}
-                      <button
-                        onClick={() => removeTag(tag)}
-                        className="rounded-full p-0.5 hover:bg-muted-foreground/20"
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="gap-1 pr-0.5 cursor-default"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                        {tag}
+                        <button
+                          onClick={() => removeTag(tag)}
+                          className="ml-0.5 rounded-full p-0.5 text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
+                          aria-label={`Remove tag: ${tag}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  {tags.length > 1 && (
+                    <button
+                      onClick={() => setTags([])}
+                      className="text-xs text-muted-foreground hover:text-destructive"
+                    >
+                      Clear all tags
+                    </button>
+                  )}
                 </div>
               )}
             </CardContent>
