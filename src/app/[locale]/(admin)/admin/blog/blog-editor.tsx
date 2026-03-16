@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,8 @@ import {
   Plus,
   FileText,
   Globe,
+  Upload,
+  FileUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -99,6 +101,195 @@ export function BlogEditor({ post }: BlogEditorProps) {
   const removeTag = (tag: string) => {
     setTags(tags.filter((t) => t !== tag));
   };
+
+  // ── File upload handling ──────────────────────────────────────────
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+
+  /**
+   * Parse uploaded file content. Supports:
+   * - .txt / .md — read as plain text
+   * - .docx — extract text from XML (paragraphs, headings, lists)
+   */
+  const parseFileContent = useCallback(
+    async (file: File): Promise<{ title: string; body: string } | null> => {
+      const name = file.name.toLowerCase();
+
+      // ── Plain text / Markdown ──
+      if (name.endsWith(".txt") || name.endsWith(".md")) {
+        const text = await file.text();
+        // Try to extract title from first line if it's a markdown heading
+        const lines = text.split("\n");
+        let extractedTitle = "";
+        let bodyStart = 0;
+
+        // Skip metadata block if present (lines like "Title: ..." at top)
+        const metaRegex = /^(title|slug|excerpt|tags|meta[_ ]title|meta[_ ]description|status):/i;
+        let metaEnd = 0;
+        for (let i = 0; i < lines.length; i++) {
+          if (metaRegex.test(lines[i].trim())) {
+            // Extract title from metadata
+            if (/^title:/i.test(lines[i].trim())) {
+              extractedTitle = lines[i].replace(/^title:\s*/i, "").trim();
+            }
+            metaEnd = i + 1;
+          } else if (lines[i].trim() === "" && metaEnd > 0) {
+            metaEnd = i + 1; // skip blank line after metadata
+            break;
+          } else {
+            break;
+          }
+        }
+
+        bodyStart = metaEnd;
+
+        // If no metadata title, check for markdown heading
+        if (!extractedTitle && lines[bodyStart]?.startsWith("# ")) {
+          extractedTitle = lines[bodyStart].replace(/^#+\s*/, "");
+          bodyStart++;
+        }
+
+        const bodyText = lines
+          .slice(bodyStart)
+          .join("\n")
+          .trim();
+
+        return { title: extractedTitle, body: bodyText };
+      }
+
+      // ── DOCX ──
+      if (name.endsWith(".docx")) {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const JSZip = (await import("jszip")).default;
+          const zip = await JSZip.loadAsync(arrayBuffer);
+
+          const docXml = await zip.file("word/document.xml")?.async("string");
+          if (!docXml) {
+            toast.error("Could not read document.xml from .docx file");
+            return null;
+          }
+
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(docXml, "application/xml");
+          const ns = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+
+          const paragraphs = doc.getElementsByTagNameNS(ns, "p");
+          const result: string[] = [];
+          let extractedTitle = "";
+
+          for (let i = 0; i < paragraphs.length; i++) {
+            const p = paragraphs[i];
+            // Get paragraph style (heading level)
+            const pStyle = p.getElementsByTagNameNS(ns, "pStyle")[0];
+            const styleVal = pStyle?.getAttribute(`${ns.split("/").pop()}:val`) || pStyle?.getAttribute("w:val") || "";
+
+            // Collect all text runs
+            const runs = p.getElementsByTagNameNS(ns, "t");
+            let text = "";
+            for (let j = 0; j < runs.length; j++) {
+              text += runs[j].textContent || "";
+            }
+
+            if (!text.trim()) {
+              // Preserve blank lines as paragraph separators
+              if (result.length > 0 && result[result.length - 1] !== "") {
+                result.push("");
+              }
+              continue;
+            }
+
+            // Detect heading styles
+            const headingMatch = styleVal.match(/Heading(\d)/i);
+            if (headingMatch) {
+              const level = parseInt(headingMatch[1]);
+              if (level === 1 && !extractedTitle) {
+                extractedTitle = text.trim();
+                continue; // Don't include H1 in body
+              }
+              const prefix = level <= 2 ? "# " : "## ";
+              result.push(prefix + text.trim());
+            }
+            // Detect list items
+            else if (p.getElementsByTagNameNS(ns, "numPr").length > 0) {
+              result.push("- " + text.trim());
+            }
+            // Regular paragraph
+            else {
+              if (!extractedTitle && result.length === 0) {
+                // First non-empty paragraph could be the title
+                extractedTitle = text.trim();
+                continue;
+              }
+              result.push(text.trim());
+            }
+          }
+
+          // Clean up: collapse multiple blank lines into double newlines
+          const bodyText = result
+            .join("\n")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+
+          return { title: extractedTitle, body: bodyText };
+        } catch (err) {
+          console.error("DOCX parse error:", err);
+          toast.error("Failed to parse .docx file");
+          return null;
+        }
+      }
+
+      toast.error("Unsupported file type. Use .txt, .md, or .docx");
+      return null;
+    },
+    []
+  );
+
+  const handleFileUpload = useCallback(
+    async (file: File) => {
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        toast.error("File too large (max 10MB)");
+        return;
+      }
+
+      const toastId = toast.loading(`Reading ${file.name}...`);
+      const result = await parseFileContent(file);
+      toast.dismiss(toastId);
+
+      if (!result) return;
+
+      if (result.title) {
+        setTitle(result.title);
+        if (!post) setSlug(generateSlug(result.title));
+      }
+      if (result.body) {
+        setBody(result.body);
+      }
+
+      toast.success(`Imported "${file.name}" successfully`);
+    },
+    [parseFileContent, post]
+  );
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileUpload(file);
+    },
+    [handleFileUpload]
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(false);
+  }, []);
 
   const handleSave = (saveStatus: string) => {
     if (!title.trim() || !slug.trim() || !body.trim()) {
@@ -264,6 +455,53 @@ export function BlogEditor({ post }: BlogEditorProps) {
                 <p className="text-xs text-muted-foreground text-right">
                   {excerpt.length}/500
                 </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* File Upload */}
+          <Card
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            className={dragOver ? "border-primary border-2 bg-primary/5" : ""}
+          >
+            <CardContent className="pt-6">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.docx"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileUpload(file);
+                  e.target.value = ""; // reset so same file can be re-uploaded
+                }}
+              />
+              <div
+                className="flex cursor-pointer flex-col items-center gap-3 rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 transition-colors hover:border-primary/50 hover:bg-muted/50"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="rounded-full bg-primary/10 p-3">
+                  <Upload className="h-6 w-6 text-primary" />
+                </div>
+                <div className="text-center">
+                  <p className="font-medium">
+                    {dragOver
+                      ? "Drop file here..."
+                      : "Import from file"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Drag & drop or click to upload — supports{" "}
+                    <span className="font-medium">.txt</span>,{" "}
+                    <span className="font-medium">.md</span>, and{" "}
+                    <span className="font-medium">.docx</span> files
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" type="button">
+                  <FileUp className="mr-1.5 h-4 w-4" />
+                  Choose File
+                </Button>
               </div>
             </CardContent>
           </Card>
