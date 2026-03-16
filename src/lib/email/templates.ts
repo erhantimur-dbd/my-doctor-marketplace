@@ -2,6 +2,7 @@
 // No external React Email dependency needed - uses inline CSS for compatibility
 
 const BRAND_COLOR = "#0284c7";
+const BRAND_COLOR_END = "#0d9488"; // teal-600 — gradient end
 const BRAND_NAME = "MyDoctors360";
 
 // Inline SVG data URIs for specialty icons (white, works in all email clients)
@@ -17,7 +18,7 @@ const ICON_SHIELD = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg
 // Row of specialty icons for the email header decoration
 const SPECIALTY_ICONS_ROW = `
           <tr>
-            <td style="background-color: ${BRAND_COLOR}; padding: 0 32px 16px; text-align: center;">
+            <td style="background-color: ${BRAND_COLOR}; background: linear-gradient(135deg, ${BRAND_COLOR} 0%, ${BRAND_COLOR_END} 100%); padding: 0 32px 16px; text-align: center;">
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
                 <tr>
                   <td style="padding: 0 6px;"><img src="${ICON_STETHOSCOPE}" alt="" width="20" height="20" style="display: block;" /></td>
@@ -48,12 +49,12 @@ function baseLayout(content: string): string {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
           <!-- Header -->
           <tr>
-            <td style="background-color: ${BRAND_COLOR}; padding: 24px 32px 12px;">
+            <td style="background-color: ${BRAND_COLOR}; background: linear-gradient(135deg, ${BRAND_COLOR} 0%, ${BRAND_COLOR_END} 100%); padding: 24px 32px 12px; text-align: center;">
               <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">
                 ${BRAND_NAME}
               </h1>
               <p style="margin: 4px 0 0; color: rgba(255, 255, 255, 0.85); font-size: 13px;">
-                Your Trusted Medical Marketplace
+                Where Patients Meet the Right Doctor
               </p>
             </td>
           </tr>
