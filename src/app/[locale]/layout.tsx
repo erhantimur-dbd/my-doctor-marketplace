@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/providers/auth-provider";
 import { createClient } from "@/lib/supabase/server";
+import { CurrencyProvider } from "@/providers/currency-provider";
 import { CookieConsentBanner } from "@/components/shared/cookie-consent-banner";
 import { AnalyticsScripts } from "@/components/shared/analytics-scripts";
 import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
@@ -71,16 +72,18 @@ export default async function LocaleLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <AuthProvider
-            initialUser={initialUser}
-            initialProfile={initialProfile}
-          >
-            {children}
-            <Toaster position="top-right" />
-            <CookieConsentBanner />
-            <PwaInstallPrompt />
-            <CommandPalette />
-          </AuthProvider>
+          <CurrencyProvider locale={locale}>
+            <AuthProvider
+              initialUser={initialUser}
+              initialProfile={initialProfile}
+            >
+              {children}
+              <Toaster position="top-right" />
+              <CookieConsentBanner />
+              <PwaInstallPrompt />
+              <CommandPalette />
+            </AuthProvider>
+          </CurrencyProvider>
         </NextIntlClientProvider>
         <AnalyticsScripts />
       </body>

@@ -39,6 +39,7 @@ import {
 import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
 import { LocaleSwitcher } from "./locale-switcher";
+import { CurrencySelector } from "./currency-selector";
 import { logout } from "@/actions/auth";
 import { Logo } from "@/components/brand/logo";
 
@@ -98,6 +99,7 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
+          <CurrencySelector />
           <LocaleSwitcher />
 
           {!user && (

@@ -20,6 +20,24 @@ export function formatCurrency(
   }).format(amountCents / 100);
 }
 
+/**
+ * Format a converted price with "≈" prefix to indicate approximation.
+ * Use when displaying a price in a different currency than the original.
+ */
+export function formatConvertedCurrency(
+  amountCents: number,
+  fromCurrency: string,
+  toCurrency: string,
+  locale: string,
+  convertFn: (cents: number, from: string) => number
+): { text: string; isConverted: boolean } {
+  if (fromCurrency === toCurrency) {
+    return { text: formatCurrency(amountCents, fromCurrency, locale), isConverted: false };
+  }
+  const converted = convertFn(amountCents, fromCurrency);
+  return { text: `≈ ${formatCurrency(converted, toCurrency, locale)}`, isConverted: true };
+}
+
 export function centsToAmount(cents: number): number {
   return cents / 100;
 }

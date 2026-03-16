@@ -16,7 +16,8 @@ import {
 import { MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, FileText, Quote, X } from "lucide-react";
 import { LANGUAGES } from "@/lib/constants/countries";
 import { StarRating } from "@/components/shared/star-rating";
-import { formatCurrency } from "@/lib/utils/currency";
+import { formatCurrency, formatConvertedCurrency } from "@/lib/utils/currency";
+import { useCurrency } from "@/providers/currency-provider";
 import { cn, formatSpecialtyName } from "@/lib/utils";
 import { formatShortDateLabel, formatSlotTime } from "@/lib/utils/availability";
 import { AvailabilityCalendar } from "@/components/booking/availability-calendar";
@@ -77,6 +78,7 @@ interface DoctorCardProps {
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
   function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact, distanceKm }, ref) {
     const router = useRouter();
+    const { currency: displayCurrency, convert } = useCurrency();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const [showFullAvailability, setShowFullAvailability] = useState(false);
     const [activeConsultationType, setActiveConsultationType] = useState(
@@ -314,11 +316,20 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   <div className="mt-4 flex items-center justify-between pt-3">
                     <div>
                       <span className="text-lg font-bold tracking-tight">
-                        {formatCurrency(
-                          doctor.consultation_fee_cents,
-                          doctor.base_currency,
-                          locale
-                        )}
+                        {(() => {
+                          const { text, isConverted } = formatConvertedCurrency(
+                            doctor.consultation_fee_cents,
+                            doctor.base_currency,
+                            displayCurrency,
+                            locale,
+                            convert
+                          );
+                          return isConverted ? (
+                            <span title={formatCurrency(doctor.consultation_fee_cents, doctor.base_currency, locale)}>
+                              {text}
+                            </span>
+                          ) : text;
+                        })()}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {" "}
@@ -666,7 +677,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     {/* Fee card */}
                     <div className="w-full rounded-lg bg-muted/50 p-3 text-center">
                       <span className="text-xl font-bold">
-                        {formatCurrency(doctor.consultation_fee_cents, doctor.base_currency, locale)}
+                        {formatConvertedCurrency(doctor.consultation_fee_cents, doctor.base_currency, displayCurrency, locale, convert).text}
                       </span>
                       <span className="text-sm text-muted-foreground">
                         {" "}/ {isTestingService ? "test" : "session"}
