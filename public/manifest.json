@@ -1,12 +1,14 @@
 {
-  "name": "MyDoctor360",
-  "short_name": "MyDoctor",
-  "description": "Find and book appointments with verified doctors",
-  "start_url": "/",
+  "name": "MyDoctors360 — Find Your Doctor, Book Instantly",
+  "short_name": "MyDoctors360",
+  "description": "Discover verified private specialists across Europe with transparent pricing and instant online booking.",
+  "start_url": "/en",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0284c7",
   "orientation": "portrait-primary",
+  "id": "/",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -19,12 +21,37 @@
       "type": "image/png"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }
   ],
-  "categories": ["health", "medical"],
-  "lang": "en"
+  "screenshots": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "MyDoctors360 Home"
+    }
+  ],
+  "categories": ["health", "medical", "lifestyle"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Find a Doctor",
+      "short_name": "Doctors",
+      "url": "/en/doctors",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Bookings",
+      "short_name": "Bookings",
+      "url": "/en/dashboard/bookings",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }

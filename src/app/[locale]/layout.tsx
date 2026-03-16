@@ -64,9 +64,19 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
+        {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0284c7" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+
+        {/* iOS PWA */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="MyDoctors360" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+        {/* General mobile */}
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="format-detection" content="telephone=no" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}

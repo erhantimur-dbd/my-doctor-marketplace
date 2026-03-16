@@ -315,6 +315,29 @@ export async function updatePlatformSetting(key: string, value: string) {
   return { success: true };
 }
 
+export async function updateAdminProfile(firstName: string, lastName: string) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+    })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+
+  await logAdminAction(supabase, user.id, "profile_updated", "profile", user.id, {
+    first_name: firstName.trim(),
+    last_name: lastName.trim(),
+  });
+
+  revalidatePath("/admin/settings");
+  return { success: true };
+}
+
 export async function sendUpgradeInvite(doctorId: string) {
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };

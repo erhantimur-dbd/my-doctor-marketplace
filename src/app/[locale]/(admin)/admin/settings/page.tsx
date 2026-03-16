@@ -14,7 +14,7 @@ export default async function AdminSettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, first_name, last_name, email")
     .eq("id", user.id)
     .single();
   if (profile?.role !== "admin") redirect("/en");
@@ -35,7 +35,14 @@ export default async function AdminSettingsPage() {
         <h1 className="text-2xl font-bold">Platform Settings</h1>
       </div>
 
-      <AdminSettingsForm settings={settingsMap} />
+      <AdminSettingsForm
+        settings={settingsMap}
+        adminProfile={{
+          firstName: profile?.first_name || "",
+          lastName: profile?.last_name || "",
+          email: profile?.email || user.email || "",
+        }}
+      />
     </div>
   );
 }
