@@ -172,7 +172,7 @@ function PayPal() {
 
 export function PaymentIcons() {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2">
+    <div className="flex flex-wrap items-center gap-1.5">
       <Visa />
       <Mastercard />
       <Amex />

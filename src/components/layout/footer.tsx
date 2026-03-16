@@ -93,7 +93,7 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Legal */}
+          {/* Legal + Payment methods */}
           <div>
             <h4 className="mb-3 text-sm font-semibold">{t("legal")}</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
@@ -113,15 +113,14 @@ export function Footer() {
                 </Link>
               </li>
             </ul>
-          </div>
-        </div>
 
-        {/* Payment methods */}
-        <div className="mt-8 border-t pt-6">
-          <p className="mb-3 text-center text-xs font-medium text-muted-foreground">
-            {t("payment_methods")}
-          </p>
-          <PaymentIcons />
+            <div className="mt-6">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">
+                {t("payment_methods")}
+              </p>
+              <PaymentIcons />
+            </div>
+          </div>
         </div>
 
         <div className="mt-6 border-t pt-6 text-center text-sm text-muted-foreground">
