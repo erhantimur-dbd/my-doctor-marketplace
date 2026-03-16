@@ -1,7 +1,7 @@
 // Email templates as pure functions returning { subject, html }
 // No external React Email dependency needed - uses inline CSS for compatibility
 
-const BRAND_COLOR = "#2563EB";
+const BRAND_COLOR = "#0284c7";
 const BRAND_NAME = "MyDoctors360";
 
 function baseLayout(content: string): string {
