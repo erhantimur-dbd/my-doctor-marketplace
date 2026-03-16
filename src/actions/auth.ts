@@ -7,6 +7,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { rateLimit } from "@/lib/rate-limit";
+import { sendEmail } from "@/lib/email/client";
+import { welcomeEmail } from "@/lib/email/templates";
 
 /** Derive the app origin from incoming request headers (works on localhost,
  *  Vercel preview deploys, and production). Falls back to env var. */
@@ -125,6 +127,12 @@ export async function register(formData: FormData) {
         "An account with this email already exists. Please sign in instead.",
     };
   }
+
+  // Send welcome email (non-blocking)
+  const { subject, html } = welcomeEmail({ name: firstName || "there" });
+  sendEmail({ to: email, subject, html }).catch((err) =>
+    console.error("[Auth] Welcome email error:", err)
+  );
 
   revalidatePath("/", "layout");
   redirect(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);

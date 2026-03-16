@@ -11,6 +11,7 @@ import {
 } from "@/lib/validators/reschedule";
 import { createNotification } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email/client";
+import { rescheduleRequestEmail, rescheduleResponseEmail } from "@/lib/email/templates";
 
 // ── Patient requests a reschedule ───────────────────────────────────
 
@@ -106,7 +107,19 @@ export async function requestReschedule(input: RequestRescheduleInput) {
       ? `${patientProfile.first_name} ${patientProfile.last_name}`
       : "A patient";
 
-    // Send notification
+    // Build reschedule email
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+    const { subject: emailSubject, html: emailHtml } = rescheduleRequestEmail({
+      doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+      patientName,
+      originalDate: origDate,
+      originalTime: origStart,
+      newDate: parsed.data.new_date,
+      newTime: parsed.data.new_start_time,
+      dashboardUrl: `${appUrl}/en/doctor-dashboard/bookings`,
+    });
+
+    // Send notification with proper email template
     try {
       await createNotification({
         userId: doctorProfile.email === user.email ? user.id : booking.doctor_id,
@@ -119,6 +132,7 @@ export async function requestReschedule(input: RequestRescheduleInput) {
           newDate: parsed.data.new_date,
           newStartTime: parsed.data.new_start_time,
         },
+        email: { to: doctorProfile.email, subject: emailSubject, html: emailHtml },
       });
     } catch (err) {
       console.error("[Reschedule] Notification error:", err);
@@ -177,6 +191,27 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
     return { error: "You are not authorized to respond to this request." };
   }
 
+  // Fetch patient profile and doctor name for emails
+  const { data: patientProfile } = await admin
+    .from("profiles")
+    .select("first_name, last_name, email")
+    .eq("id", bookingData.patient_id)
+    .single();
+
+  const { data: doctorProfile } = await admin
+    .from("profiles")
+    .select("first_name, last_name")
+    .eq("id", user.id)
+    .single();
+
+  const patientName = patientProfile
+    ? `${patientProfile.first_name} ${patientProfile.last_name}`
+    : "Patient";
+  const doctorName = doctorProfile
+    ? `${doctorProfile.first_name} ${doctorProfile.last_name}`
+    : "your doctor";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+
   if (parsed.data.action === "approve") {
     // Update booking with new date/time
     const { error: updateBookingErr } = await admin
@@ -199,6 +234,18 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
       .update({ status: "approved", responded_at: new Date().toISOString() })
       .eq("id", request.id);
 
+    // Build approval email
+    const { subject: emailSubject, html: emailHtml } = rescheduleResponseEmail({
+      patientName: patientProfile?.first_name || "there",
+      doctorName,
+      approved: true,
+      newDate: request.new_date,
+      newTime: request.new_start_time,
+      originalDate: request.original_date,
+      originalTime: request.original_start_time,
+      dashboardUrl: `${appUrl}/en/dashboard/bookings`,
+    });
+
     // Notify patient
     try {
       await createNotification({
@@ -212,6 +259,9 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
           newDate: request.new_date,
           newStartTime: request.new_start_time,
         },
+        email: patientProfile?.email
+          ? { to: patientProfile.email, subject: emailSubject, html: emailHtml }
+          : undefined,
       });
     } catch (err) {
       console.error("[Reschedule] Notification error:", err);
@@ -227,6 +277,17 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
       })
       .eq("id", request.id);
 
+    // Build rejection email
+    const { subject: emailSubject, html: emailHtml } = rescheduleResponseEmail({
+      patientName: patientProfile?.first_name || "there",
+      doctorName,
+      approved: false,
+      originalDate: request.original_date,
+      originalTime: request.original_start_time,
+      rejectionReason: parsed.data.rejection_reason || undefined,
+      dashboardUrl: `${appUrl}/en/dashboard/bookings`,
+    });
+
     // Notify patient
     try {
       await createNotification({
@@ -238,6 +299,9 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
           : "Your reschedule request was declined. Your original appointment remains unchanged.",
         channels: ["in_app", "email"],
         metadata: { bookingId: bookingData.id },
+        email: patientProfile?.email
+          ? { to: patientProfile.email, subject: emailSubject, html: emailHtml }
+          : undefined,
       });
     } catch (err) {
       console.error("[Reschedule] Notification error:", err);

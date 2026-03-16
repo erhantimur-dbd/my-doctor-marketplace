@@ -1,7 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { sendEmail } from "@/lib/email/client";
+import { reviewReceivedEmail } from "@/lib/email/templates";
 
 /** Fetch a single highlighted 5-star review (most recent with a comment) */
 export async function getFeaturedReview(doctorId: string) {
@@ -83,6 +86,42 @@ export async function submitReview(formData: FormData) {
   });
 
   if (error) return { error: error.message };
+
+  // Send review notification email to the doctor (non-blocking)
+  const admin = createAdminClient();
+  const { data: doctorWithProfile } = await admin
+    .from("doctors")
+    .select("profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)")
+    .eq("id", booking.doctor_id)
+    .single();
+
+  if (doctorWithProfile) {
+    const profile: any = Array.isArray(doctorWithProfile.profile)
+      ? doctorWithProfile.profile[0]
+      : doctorWithProfile.profile;
+
+    if (profile?.email) {
+      const { data: patientProfile } = await admin
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", user.id)
+        .single();
+
+      const patientName = patientProfile
+        ? `${patientProfile.first_name} ${patientProfile.last_name}`
+        : "A patient";
+
+      const { subject, html } = reviewReceivedEmail({
+        doctorName: `${profile.first_name} ${profile.last_name}`,
+        patientName,
+        rating,
+      });
+
+      sendEmail({ to: profile.email, subject, html }).catch((err) =>
+        console.error("[Reviews] Review notification email error:", err)
+      );
+    }
+  }
 
   revalidatePath("/dashboard/reviews");
   revalidatePath("/doctor-dashboard/reviews");

@@ -1524,3 +1524,130 @@ export function adminBookingPaymentLinkEmail({
 
   return { subject, html };
 }
+
+// ---------------------------------------------------------------------------
+// Reschedule Request Email (sent to doctor)
+// ---------------------------------------------------------------------------
+
+interface RescheduleRequestParams {
+  doctorName: string;
+  patientName: string;
+  originalDate: string;
+  originalTime: string;
+  newDate: string;
+  newTime: string;
+  dashboardUrl: string;
+}
+
+export function rescheduleRequestEmail({
+  doctorName,
+  patientName,
+  originalDate,
+  originalTime,
+  newDate,
+  newTime,
+  dashboardUrl,
+}: RescheduleRequestParams): { subject: string; html: string } {
+  const subject = `Reschedule Request from ${patientName}`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Reschedule Request</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi Dr. ${doctorName}, <strong>${patientName}</strong> has requested to reschedule their appointment.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 6px; margin-bottom: 24px;">
+      <tr>
+        <td style="padding: 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${infoRow("Original Date", originalDate)}
+            ${infoRow("Original Time", originalTime)}
+            <tr><td colspan="2" style="padding: 8px 0;"><hr style="border: none; border-top: 1px solid #e5e7eb;"></td></tr>
+            ${infoRow("Requested Date", `<strong style="color: ${BRAND_COLOR};">${newDate}</strong>`)}
+            ${infoRow("Requested Time", `<strong style="color: ${BRAND_COLOR};">${newTime}</strong>`)}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Please review and approve or decline this request from your dashboard.
+    </p>
+
+    ${button("Review Request", dashboardUrl)}
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
+// Reschedule Response Email (sent to patient)
+// ---------------------------------------------------------------------------
+
+interface RescheduleResponseParams {
+  patientName: string;
+  doctorName: string;
+  approved: boolean;
+  newDate?: string;
+  newTime?: string;
+  originalDate: string;
+  originalTime: string;
+  rejectionReason?: string;
+  dashboardUrl: string;
+}
+
+export function rescheduleResponseEmail({
+  patientName,
+  doctorName,
+  approved,
+  newDate,
+  newTime,
+  originalDate,
+  originalTime,
+  rejectionReason,
+  dashboardUrl,
+}: RescheduleResponseParams): { subject: string; html: string } {
+  const subject = approved
+    ? "Reschedule Approved — Your New Appointment"
+    : "Reschedule Request Declined";
+
+  const statusColor = approved ? "#059669" : "#dc2626";
+  const statusText = approved ? "Approved" : "Declined";
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Reschedule ${statusText}</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, your reschedule request with <strong>Dr. ${doctorName}</strong> has been <span style="color: ${statusColor}; font-weight: 600;">${statusText.toLowerCase()}</span>.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 6px; margin-bottom: 24px;">
+      <tr>
+        <td style="padding: 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${approved
+              ? `${infoRow("New Date", `<strong>${newDate}</strong>`)}
+                 ${infoRow("New Time", `<strong>${newTime}</strong>`)}`
+              : `${infoRow("Original Date", originalDate)}
+                 ${infoRow("Original Time", originalTime)}
+                 <tr><td colspan="2" style="padding: 8px 0;">
+                   <p style="margin: 0; font-size: 13px; color: #6b7280;">Your original appointment remains unchanged.</p>
+                 </td></tr>`
+            }
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${rejectionReason ? `
+    <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 13px; color: #991b1b; line-height: 1.5;">
+        <strong>Reason:</strong> ${rejectionReason}
+      </p>
+    </div>
+    ` : ""}
+
+    ${button("View My Bookings", dashboardUrl)}
+  `);
+
+  return { subject, html };
+}
