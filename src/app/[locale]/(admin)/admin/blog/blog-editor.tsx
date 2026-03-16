@@ -65,7 +65,44 @@ export function BlogEditor({ post }: BlogEditorProps) {
   const [coverImageUrl, setCoverImageUrl] = useState(
     post?.cover_image_url || ""
   );
-  const [tags, setTags] = useState<string[]>(post?.tags || []);
+  const [tags, setTags] = useState<string[]>(() => {
+    // Normalise tags loaded from DB — they may have been saved as malformed
+    // strings (e.g. entire JSON array as one string, or space-joined)
+    const raw = post?.tags || [];
+    const cleaned: string[] = [];
+    for (const tag of raw) {
+      // If a tag looks like a JSON array string, parse it
+      if (tag.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(
+            tag.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'")
+          );
+          if (Array.isArray(parsed)) {
+            cleaned.push(
+              ...parsed.map((t: unknown) => String(t).trim()).filter(Boolean)
+            );
+            continue;
+          }
+        } catch {
+          // fall through
+        }
+      }
+      // If a tag contains commas + quotes, it's likely a malformed CSV
+      if (tag.includes('",') || tag.includes('", ')) {
+        cleaned.push(
+          ...tag
+            .replace(/^\[|\]$/g, "")
+            .split(",")
+            .map((t) => t.trim().replace(/^["']+|["']+$/g, ""))
+            .filter(Boolean)
+        );
+        continue;
+      }
+      cleaned.push(tag.trim());
+    }
+    // Deduplicate
+    return [...new Set(cleaned)];
+  });
   const [tagInput, setTagInput] = useState("");
   const [metaTitle, setMetaTitle] = useState(post?.meta_title || "");
   const [metaDescription, setMetaDescription] = useState(
@@ -457,8 +494,8 @@ export function BlogEditor({ post }: BlogEditorProps) {
         toast.error(result.error);
       } else {
         toast.success("Article deleted");
-        router.push("/admin/blog");
-        router.refresh();
+        // Hard redirect — router.push inside startTransition can stall
+        window.location.href = `/${locale}/admin/blog`;
       }
     });
   };
