@@ -59,6 +59,18 @@ export function Header() {
 
   const isPatient = profile?.role === "patient";
 
+  // Show currency selector only on pages where pricing is visible
+  const showCurrency =
+    pathname.startsWith("/doctors") ||
+    pathname.startsWith("/specialties") ||
+    pathname.startsWith("/booking") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/doctor-dashboard") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/pricing") ||
+    pathname.startsWith("/treatment-plan") ||
+    pathname.startsWith("/invitation");
+
   const navLinks = [
     { href: "/doctors", label: t("find_doctor"), icon: Search, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
     { href: "/specialties", label: t("specialties"), icon: Stethoscope, iconBg: "bg-teal-50", iconColor: "text-teal-600" },
@@ -99,7 +111,7 @@ export function Header() {
 
         {/* Right side */}
         <div className="flex items-center gap-3">
-          <CurrencySelector />
+          {showCurrency && <CurrencySelector />}
           <LocaleSwitcher />
 
           {!user && (
