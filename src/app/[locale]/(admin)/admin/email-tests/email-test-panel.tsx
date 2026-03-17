@@ -13,12 +13,8 @@ import {
   Loader2,
   SendHorizonal,
 } from "lucide-react";
-import {
-  sendTestEmail,
-  sendAllTestEmails,
-  TEMPLATE_LIST,
-  type TemplateKey,
-} from "@/actions/test-emails";
+import { sendTestEmail, sendAllTestEmails } from "@/actions/test-emails";
+import { TEMPLATE_LIST, type TemplateKey } from "@/lib/email/template-list";
 
 type Status = "idle" | "sending" | "success" | "error";
 

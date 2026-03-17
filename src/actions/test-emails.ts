@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/client";
 import * as templates from "@/lib/email/templates";
+import { TEMPLATE_LIST, type TemplateKey } from "@/lib/email/template-list";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
 
@@ -205,42 +206,7 @@ const SAMPLE_DATA = {
     }),
 };
 
-export type TemplateKey = keyof typeof SAMPLE_DATA;
-
-export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string }[] = [
-  // Booking
-  { key: "bookingConfirmation", label: "Booking Confirmation", category: "Booking" },
-  { key: "bookingCancellation", label: "Booking Cancellation", category: "Booking" },
-  { key: "bookingReminder", label: "Booking Reminder", category: "Booking" },
-  { key: "rescheduleRequest", label: "Reschedule Request (→ Doctor)", category: "Booking" },
-  { key: "rescheduleResponse", label: "Reschedule Approved (→ Patient)", category: "Booking" },
-  { key: "adminBookingPaymentLink", label: "Admin Payment Link", category: "Booking" },
-  // Onboarding
-  { key: "welcome", label: "Welcome Email", category: "Onboarding" },
-  { key: "doctorVerified", label: "Doctor Verified", category: "Onboarding" },
-  { key: "doctorRejected", label: "Doctor Rejected", category: "Onboarding" },
-  // Reviews & Messages
-  { key: "reviewReceived", label: "Review Received (→ Doctor)", category: "Engagement" },
-  { key: "newMessage", label: "New Message", category: "Engagement" },
-  { key: "adminMessage", label: "Admin Broadcast", category: "Engagement" },
-  // Treatment
-  { key: "treatmentPlan", label: "Treatment Plan", category: "Treatment" },
-  { key: "followUpInvitation", label: "Follow-Up Invitation", category: "Treatment" },
-  { key: "treatmentContinuation", label: "Treatment Continuation", category: "Treatment" },
-  { key: "invoice", label: "Invoice", category: "Treatment" },
-  // Support
-  { key: "supportTicketCreated", label: "Ticket Created", category: "Support" },
-  { key: "supportTicketReply", label: "Ticket Reply", category: "Support" },
-  { key: "supportTicketResolved", label: "Ticket Resolved", category: "Support" },
-  // Contact
-  { key: "contactInquiryAdmin", label: "Contact → Admin", category: "Contact" },
-  { key: "contactInquiryAutoReply", label: "Contact Auto-Reply", category: "Contact" },
-  // Referrals
-  { key: "doctorReferralInvitation", label: "Referral Invitation", category: "Referral" },
-  { key: "referralReward", label: "Referral Reward", category: "Referral" },
-  // Subscription
-  { key: "subscriptionUpgradeInvite", label: "Upgrade Invite", category: "Subscription" },
-];
+// TemplateKey and TEMPLATE_LIST imported from @/lib/email/template-list
 
 export async function sendTestEmail(templateKey: TemplateKey, toEmail: string) {
   // Auth check — admin only
@@ -258,13 +224,16 @@ export async function sendTestEmail(templateKey: TemplateKey, toEmail: string) {
 
   const { subject, html } = generator();
 
-  const result = await sendEmail({
-    to: toEmail,
-    subject: `[TEST] ${subject}`,
-    html,
-  });
-
-  return result;
+  try {
+    const result = await sendEmail({
+      to: toEmail,
+      subject: `[TEST] ${subject}`,
+      html,
+    });
+    return { success: result.success, error: result.error || undefined };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Unknown error" };
+  }
 }
 
 export async function sendAllTestEmails(toEmail: string) {
