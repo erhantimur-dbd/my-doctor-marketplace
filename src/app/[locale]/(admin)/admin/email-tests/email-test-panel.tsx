@@ -67,8 +67,13 @@ export function EmailTestPanel({ userEmail }: { userEmail: string }) {
       const result = await sendAllTestEmails(email);
       if (result.error) {
         const errStatuses: Record<string, Status> = {};
-        TEMPLATE_LIST.forEach(({ key }) => (errStatuses[key] = "error"));
+        const errMessages: Record<string, string> = {};
+        TEMPLATE_LIST.forEach(({ key }) => {
+          errStatuses[key] = "error";
+          errMessages[key] = result.error as string;
+        });
         setStatuses(errStatuses);
+        setErrors(errMessages);
         setSendingAll(false);
         return;
       }
