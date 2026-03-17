@@ -209,15 +209,17 @@ const SAMPLE_DATA = {
 // TemplateKey and TEMPLATE_LIST imported from @/lib/email/template-list
 
 export async function sendTestEmail(templateKey: TemplateKey, toEmail: string) {
-  // Auth check — admin only
+  // Auth check — admin only (by profile role)
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase());
-  if (!adminEmails.includes(user.email?.toLowerCase() || "")) {
-    return { error: "Admin access required" };
-  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") return { error: "Admin access required" };
 
   const generator = SAMPLE_DATA[templateKey];
   if (!generator) return { error: `Unknown template: ${templateKey}` };
@@ -242,10 +244,12 @@ export async function sendAllTestEmails(toEmail: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated", results: [] };
 
-  const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim().toLowerCase());
-  if (!adminEmails.includes(user.email?.toLowerCase() || "")) {
-    return { error: "Admin access required", results: [] };
-  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") return { error: "Admin access required", results: [] };
 
   const results: { key: string; success: boolean; error?: string }[] = [];
 
