@@ -372,6 +372,34 @@ export async function acceptInvitation(organizationId: string) {
   return { error: null };
 }
 
+export async function declineInvitation(organizationId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const adminSupabase = createAdminClient();
+
+  const { data: invite } = await adminSupabase
+    .from("organization_members")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", user.id)
+    .eq("status", "invited")
+    .single();
+
+  if (!invite) return { error: "No pending invitation found" };
+
+  await adminSupabase
+    .from("organization_members")
+    .delete()
+    .eq("id", invite.id);
+
+  revalidatePath("/doctor-dashboard");
+  return { error: null };
+}
+
 export async function removeMember(formData: FormData) {
   const { error: authError, supabase, org } = await requireOrgMember(["owner", "admin"]);
   if (authError || !supabase || !org) return { error: authError };

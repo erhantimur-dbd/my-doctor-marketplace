@@ -30,6 +30,11 @@ const ACTION_TYPES = [
   { value: "coupon", label: "Coupon Actions" },
   { value: "setting_updated", label: "Settings Updated" },
   { value: "subscription_upgrade", label: "Subscription Invite" },
+  { value: "booking_created_on_behalf", label: "Admin Booking Created" },
+  { value: "booking_cancelled_by_admin", label: "Admin Booking Cancelled" },
+  { value: "payment_link_resent", label: "Payment Link Resent" },
+  { value: "patient_created", label: "Patient Created" },
+  { value: "license", label: "License Actions" },
 ];
 
 export function AuditLogFilters() {

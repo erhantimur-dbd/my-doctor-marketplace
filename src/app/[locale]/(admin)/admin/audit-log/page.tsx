@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollText } from "lucide-react";
 import { AuditLogFilters } from "./audit-log-filters";
+import { AuditMetadataCell } from "./audit-metadata-cell";
 
 const actionColors: Record<string, string> = {
   approved: "bg-green-100 text-green-700",
@@ -36,9 +37,11 @@ function getActionColor(action: string): string {
 export default async function AdminAuditLogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ action?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ action?: string; from?: string; to?: string; page?: string }>;
 }) {
-  const { action, from, to } = await searchParams;
+  const { action, from, to, page: pageStr } = await searchParams;
+  const page = Math.max(1, parseInt(pageStr || "1", 10));
+  const pageSize = 50;
 
   const supabase = await createClient();
   const {
@@ -60,7 +63,7 @@ export default async function AdminAuditLogPage({
        actor:profiles!audit_log_actor_id_fkey(first_name, last_name, email)`
     )
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range((page - 1) * pageSize, page * pageSize - 1);
 
   if (action) {
     query = query.ilike("action", `%${action}%`);
@@ -133,10 +136,8 @@ export default async function AdminAuditLogPage({
                   <TableCell className="max-w-32 truncate font-mono text-xs">
                     {log.target_id}
                   </TableCell>
-                  <TableCell className="max-w-48 truncate text-xs text-muted-foreground">
-                    {log.metadata && Object.keys(log.metadata).length > 0
-                      ? JSON.stringify(log.metadata)
-                      : "—"}
+                  <TableCell className="max-w-48">
+                    <AuditMetadataCell metadata={log.metadata} />
                   </TableCell>
                 </TableRow>
               ))}
@@ -154,6 +155,41 @@ export default async function AdminAuditLogPage({
           </Table>
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Page {page} &middot; Showing {logs?.length || 0} entries
+        </p>
+        <div className="flex gap-2">
+          {page > 1 && (
+            <a
+              href={`?${new URLSearchParams({
+                ...(action ? { action } : {}),
+                ...(from ? { from } : {}),
+                ...(to ? { to } : {}),
+                page: String(page - 1),
+              }).toString()}`}
+              className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-accent"
+            >
+              Previous
+            </a>
+          )}
+          {(logs?.length || 0) >= pageSize && (
+            <a
+              href={`?${new URLSearchParams({
+                ...(action ? { action } : {}),
+                ...(from ? { from } : {}),
+                ...(to ? { to } : {}),
+                page: String(page + 1),
+              }).toString()}`}
+              className="inline-flex items-center rounded-lg border px-3 py-1.5 text-sm hover:bg-accent"
+            >
+              Next
+            </a>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

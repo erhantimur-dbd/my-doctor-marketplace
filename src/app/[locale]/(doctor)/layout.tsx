@@ -5,6 +5,7 @@ import { UnreadBadge } from "@/components/shared/unread-badge";
 import { DoctorSessionGuard } from "@/components/shared/session-timeout-guard";
 import { DashboardMobileNav } from "@/components/layout/dashboard-mobile-nav";
 import { LicenseBanner } from "@/components/shared/license-banner";
+import { InvitationBanner } from "@/components/shared/invitation-banner";
 import { doctorSidebarLinks } from "@/lib/constants/sidebar-links";
 
 export default function DoctorLayout({
@@ -16,6 +17,7 @@ export default function DoctorLayout({
     <div className="flex min-h-screen flex-col">
       <DoctorSessionGuard />
       <Header />
+      <InvitationBanner />
       <LicenseBanner />
       <div className="container mx-auto flex flex-1 gap-8 px-4 py-8 pb-20 md:pb-8">
         <aside className="hidden w-56 shrink-0 md:block">
