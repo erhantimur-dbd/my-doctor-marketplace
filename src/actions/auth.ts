@@ -32,7 +32,7 @@ async function getClientIp(): Promise<string> {
 export async function login(formData: FormData) {
   // Rate limit: 5 login attempts per 15 minutes per IP
   const ip = await getClientIp();
-  const { limited } = rateLimit(`login:${ip}`, 5, 15 * 60 * 1000);
+  const { limited } = await rateLimit(`login:${ip}`, 5, 15 * 60 * 1000);
   if (limited) {
     return { error: "Too many login attempts. Please try again in a few minutes." };
   }
@@ -91,7 +91,7 @@ export async function login(formData: FormData) {
 export async function register(formData: FormData) {
   // Rate limit: 3 registrations per 30 minutes per IP
   const ip = await getClientIp();
-  const { limited } = rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
+  const { limited } = await rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
   if (limited) {
     return { error: "Too many registration attempts. Please try again later." };
   }
@@ -175,7 +175,7 @@ async function createDoctorAccount(formData: FormData): Promise<
     }
 > {
   const ip = await getClientIp();
-  const { limited } = rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
+  const { limited } = await rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
   if (limited) {
     return { error: "Too many registration attempts. Please try again later." };
   }
@@ -505,7 +505,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
 
 export async function registerTestingService(formData: FormData) {
   const ip = await getClientIp();
-  const { limited } = rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
+  const { limited } = await rateLimit(`register:${ip}`, 3, 30 * 60 * 1000);
   if (limited) {
     return { error: "Too many registration attempts. Please try again later." };
   }
@@ -663,7 +663,7 @@ export async function registerTestingService(formData: FormData) {
 
 export async function resendVerificationEmail(email: string, locale: string = "en") {
   const ip = await getClientIp();
-  const { limited } = rateLimit(`resend:${ip}`, 3, 15 * 60 * 1000);
+  const { limited } = await rateLimit(`resend:${ip}`, 3, 15 * 60 * 1000);
   if (limited) {
     return { error: "Too many requests. Please try again later." };
   }
@@ -689,7 +689,7 @@ export async function resendVerificationEmail(email: string, locale: string = "e
 export async function forgotPassword(formData: FormData) {
   // Rate limit: 3 password reset requests per 15 minutes per IP
   const ip = await getClientIp();
-  const { limited } = rateLimit(`forgot:${ip}`, 3, 15 * 60 * 1000);
+  const { limited } = await rateLimit(`forgot:${ip}`, 3, 15 * 60 * 1000);
   if (limited) {
     return { error: "Too many password reset requests. Please try again later." };
   }

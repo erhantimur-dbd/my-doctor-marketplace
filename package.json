@@ -21,6 +21,8 @@
     "@stripe/stripe-js": "^8.8.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.97.0",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.37.0",
     "@vis.gl/react-google-maps": "^1.7.1",
     "ai": "^6.0.108",
     "class-variance-authority": "^0.7.1",

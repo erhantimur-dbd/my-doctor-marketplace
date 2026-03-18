@@ -41,7 +41,7 @@ interface NHSPharmacyResult {
 export async function POST(request: NextRequest) {
   // Rate limit: 10 searches per minute per IP
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const { limited } = rateLimit(`pharmacy:${ip}`, 10, 60 * 1000);
+  const { limited } = await rateLimit(`pharmacy:${ip}`, 10, 60 * 1000);
   if (limited) {
     return NextResponse.json(
       { error: "Too many requests. Please try again in a moment." },
