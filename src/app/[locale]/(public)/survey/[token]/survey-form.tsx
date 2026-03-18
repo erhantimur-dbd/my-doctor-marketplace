@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, CheckCircle2, Star } from "lucide-react";
 import { submitSurvey } from "@/actions/surveys";
+import { useTranslations } from "next-intl";
 
 interface SurveyFormProps {
   token: string;
@@ -16,6 +17,7 @@ interface SurveyFormProps {
 }
 
 export function SurveyForm({ token, doctorName, appointmentDate }: SurveyFormProps) {
+  const t = useTranslations("survey");
   const [npsScore, setNpsScore] = useState<number | null>(null);
   const [wouldRecommend, setWouldRecommend] = useState(true);
   const [feedback, setFeedback] = useState("");
@@ -23,15 +25,9 @@ export function SurveyForm({ token, doctorName, appointmentDate }: SurveyFormPro
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const npsLabels: Record<number, string> = {
-    0: "Not at all likely",
-    5: "Neutral",
-    10: "Extremely likely",
-  };
-
   const handleSubmit = () => {
     if (npsScore === null) {
-      setError("Please select a score.");
+      setError(t("select_score"));
       return;
     }
 
@@ -57,9 +53,9 @@ export function SurveyForm({ token, doctorName, appointmentDate }: SurveyFormPro
       <Card>
         <CardContent className="py-12 text-center">
           <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-green-500" />
-          <h2 className="text-xl font-bold">Thank You!</h2>
+          <h2 className="text-xl font-bold">{t("thank_you")}</h2>
           <p className="mt-2 text-muted-foreground">
-            Your feedback helps us improve our service. We appreciate your time.
+            {t("thank_you_message")}
           </p>
         </CardContent>
       </Card>
@@ -72,26 +68,29 @@ export function SurveyForm({ token, doctorName, appointmentDate }: SurveyFormPro
         <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
           <Star className="h-6 w-6 text-primary" />
         </div>
-        <CardTitle>How was your experience?</CardTitle>
+        <CardTitle>{t("title")}</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Your appointment with <strong>Dr. {doctorName}</strong>
-          {appointmentDate && (
-            <>
-              {" "}on{" "}
-              {new Date(appointmentDate + "T00:00:00").toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
+          {appointmentDate
+            ? t.rich("subtitle_with_date", {
+                doctorName,
+                date: new Date(appointmentDate + "T00:00:00").toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                }),
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })
+            : t.rich("subtitle_no_date", {
+                doctorName,
+                strong: (chunks) => <strong>{chunks}</strong>,
               })}
-            </>
-          )}
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* NPS Score */}
         <div>
           <Label className="mb-3 block text-center text-sm">
-            How likely are you to recommend our service to a friend or colleague?
+            {t("nps_question")}
           </Label>
           <div className="flex flex-wrap justify-center gap-1.5">
             {Array.from({ length: 11 }, (_, i) => (
@@ -113,15 +112,15 @@ export function SurveyForm({ token, doctorName, appointmentDate }: SurveyFormPro
             ))}
           </div>
           <div className="mt-1.5 flex justify-between text-xs text-muted-foreground">
-            <span>{npsLabels[0]}</span>
-            <span>{npsLabels[10]}</span>
+            <span>{t("nps_low")}</span>
+            <span>{t("nps_high")}</span>
           </div>
         </div>
 
         {/* Would Recommend */}
         <div className="flex items-center justify-between rounded-lg border p-3">
           <Label htmlFor="recommend" className="text-sm">
-            Would you book with us again?
+            {t("would_recommend")}
           </Label>
           <Switch
             id="recommend"
@@ -133,13 +132,13 @@ export function SurveyForm({ token, doctorName, appointmentDate }: SurveyFormPro
         {/* Feedback */}
         <div>
           <Label htmlFor="feedback" className="mb-1.5 block text-sm">
-            Any additional feedback? (optional)
+            {t("feedback_label")}
           </Label>
           <Textarea
             id="feedback"
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Tell us what went well or what we could improve..."
+            placeholder={t("feedback_placeholder")}
             rows={3}
           />
         </div>
@@ -156,15 +155,15 @@ export function SurveyForm({ token, doctorName, appointmentDate }: SurveyFormPro
           {isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
+              {t("submitting")}
             </>
           ) : (
-            "Submit Feedback"
+            t("submit")
           )}
         </Button>
 
         <p className="text-center text-xs text-muted-foreground">
-          Your response is confidential and takes less than a minute.
+          {t("confidential")}
         </p>
       </CardContent>
     </Card>

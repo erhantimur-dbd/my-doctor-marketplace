@@ -13,6 +13,7 @@ import {
   MapPin,
   ExternalLink,
   CreditCard,
+  Eye,
 } from "lucide-react";
 import { ApprovalSection } from "./approval-section";
 import { EditDoctorDialog } from "./edit-doctor-dialog";
@@ -361,10 +362,15 @@ export default async function AdminDoctorDetailPage({
         checklist={checklistData}
       />
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Link href={`/doctors/${doctor.slug}`}>
           <span className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
             <ExternalLink className="h-4 w-4" /> View Public Profile
+          </span>
+        </Link>
+        <Link href={`/admin/impersonate/doctor/${doctor.id}`}>
+          <span className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+            <Eye className="h-4 w-4" /> View as Doctor
           </span>
         </Link>
         <SendEmailDialog

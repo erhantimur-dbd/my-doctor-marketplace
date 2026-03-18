@@ -6,14 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Mail,
   Send,
   CheckCircle2,
   XCircle,
   Loader2,
   SendHorizonal,
+  Eye,
 } from "lucide-react";
-import { sendTestEmail, sendAllTestEmails } from "@/actions/test-emails";
+import { sendTestEmail, sendAllTestEmails, previewTemplate } from "@/actions/test-emails";
 import { TEMPLATE_LIST, type TemplateKey } from "@/lib/email/template-list";
 
 type Status = "idle" | "sending" | "success" | "error";
@@ -25,6 +32,24 @@ export function EmailTestPanel({ userEmail }: { userEmail: string }) {
   const [sendingAll, setSendingAll] = useState(false);
   const [allDone, setAllDone] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewSubject, setPreviewSubject] = useState("");
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const handlePreview = async (key: TemplateKey) => {
+    setPreviewLoading(true);
+    setPreviewOpen(true);
+    const result = await previewTemplate(key);
+    if (result.html) {
+      setPreviewHtml(result.html);
+      setPreviewSubject(result.subject || "");
+    } else {
+      setPreviewHtml("<p>Failed to load preview</p>");
+      setPreviewSubject("Error");
+    }
+    setPreviewLoading(false);
+  };
 
   // Group templates by category
   const categories = TEMPLATE_LIST.reduce(
@@ -199,21 +224,31 @@ export function EmailTestPanel({ userEmail }: { userEmail: string }) {
                         )}
                       </div>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleSendOne(key)}
-                      disabled={
-                        !email || status === "sending" || sendingAll || isPending
-                      }
-                      className="shrink-0 ml-2"
-                    >
-                      {status === "sending" ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Send className="h-3.5 w-3.5" />
-                      )}
-                    </Button>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePreview(key)}
+                        title="Preview"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSendOne(key)}
+                        disabled={
+                          !email || status === "sending" || sendingAll || isPending
+                        }
+                        title="Send test"
+                      >
+                        {status === "sending" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Send className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
@@ -221,6 +256,31 @@ export function EmailTestPanel({ userEmail }: { userEmail: string }) {
           </CardContent>
         </Card>
       ))}
+
+      {/* Preview Dialog */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-medium">
+              {previewSubject || "Email Preview"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto rounded border bg-white">
+            {previewLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <iframe
+                srcDoc={previewHtml}
+                className="h-[600px] w-full border-0"
+                title="Email Preview"
+                sandbox=""
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -204,9 +204,42 @@ const SAMPLE_DATA = {
       originalTime: "10:00",
       dashboardUrl: `${APP_URL}/en/dashboard/bookings`,
     }),
+  availabilityAlert: () =>
+    templates.availabilityAlertEmail({
+      patientName: "John",
+      doctorName: "Dr. Sarah Williams",
+      bookingUrl: `${APP_URL}/en/doctors/dr-sarah-williams/book`,
+    }),
+  satisfactionSurvey: () =>
+    templates.satisfactionSurveyEmail({
+      patientName: "John",
+      doctorName: "Sarah Williams",
+      date: "1 April 2026",
+      surveyUrl: `${APP_URL}/en/survey/test-token-123`,
+    }),
 };
 
 // TemplateKey and TEMPLATE_LIST imported from @/lib/email/template-list
+
+/** Preview a template's rendered HTML without sending */
+export async function previewTemplate(templateKey: TemplateKey) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") return { error: "Admin access required" };
+
+  const generator = SAMPLE_DATA[templateKey];
+  if (!generator) return { error: `Unknown template: ${templateKey}` };
+
+  const { subject, html } = generator();
+  return { subject, html };
+}
 
 export async function sendTestEmail(templateKey: TemplateKey, toEmail: string) {
   // Auth check — admin only (by profile role)
