@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/email/client";
 import { reviewReceivedEmail } from "@/lib/email/templates";
+import { log } from "@/lib/utils/logger";
 
 /** Fetch a single highlighted 5-star review (most recent with a comment) */
 export async function getFeaturedReview(doctorId: string) {
@@ -119,7 +120,7 @@ export async function submitReview(formData: FormData) {
       });
 
       sendEmail({ to: profile.email, subject, html }).catch((err) =>
-        console.error("[Reviews] Review notification email error:", err)
+        log.error("[Reviews] Review notification email error:", { err: err })
       );
     }
   }

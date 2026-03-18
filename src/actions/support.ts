@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/email/client";
+import { log } from "@/lib/utils/logger";
 
 // ============================================================
 // Helpers
@@ -90,7 +91,7 @@ export async function createTicket(formData: FormData) {
     .single();
 
   if (ticketError || !ticket) {
-    console.error("[Support] Failed to create ticket:", ticketError);
+    log.error("[Support] Failed to create ticket:", { err: ticketError });
     return { error: "Failed to create support ticket." };
   }
 
@@ -105,7 +106,7 @@ export async function createTicket(formData: FormData) {
     });
 
   if (messageError) {
-    console.error("[Support] Failed to create initial message:", messageError);
+    log.error("[Support] Failed to create initial message:", { err: messageError });
   }
 
   // Send confirmation email (non-blocking)
@@ -122,10 +123,10 @@ export async function createTicket(formData: FormData) {
     });
 
     sendEmail({ to: profile.email, subject: emailSubject, html }).catch(
-      (err) => console.error("[Support] Confirmation email error:", err)
+      (err) => log.error("[Support] Confirmation email error:", { err: err })
     );
   } catch (err) {
-    console.error("[Support] Email template error:", err);
+    log.error("[Support] Email template error:", { err: err });
   }
 
   return { success: true, ticketNumber: ticket.ticket_number, ticketId: ticket.id };
@@ -157,7 +158,7 @@ export async function getMyTickets() {
     .order("updated_at", { ascending: false });
 
   if (error) {
-    console.error("[Support] Failed to fetch tickets:", error);
+    log.error("[Support] Failed to fetch tickets:", { err: error });
     return { error: "Failed to load tickets.", tickets: [] };
   }
 
@@ -356,7 +357,7 @@ export async function replyToTicket(formData: FormData) {
     });
 
   if (insertError) {
-    console.error("[Support] Failed to insert reply:", insertError);
+    log.error("[Support] Failed to insert reply:", { err: insertError });
     return { error: "Failed to send reply." };
   }
 
@@ -399,7 +400,7 @@ export async function replyToTicket(formData: FormData) {
         });
 
         sendEmail({ to: ticketUser.email, subject, html }).catch((err) =>
-          console.error("[Support] Reply email error:", err)
+          log.error("[Support] Reply email error:", { err: err })
         );
 
         // Send WhatsApp notification if opted in
@@ -422,12 +423,12 @@ export async function replyToTicket(formData: FormData) {
               ticketNumber: ticket.ticket_number,
             }),
           }).catch((err) =>
-            console.error("[Support] WhatsApp reply notification error:", err)
+            log.error("[Support] WhatsApp reply notification error:", { err: err })
           );
         }
       }
     } catch (err) {
-      console.error("[Support] Reply notification error:", err);
+      log.error("[Support] Reply notification error:", { err: err });
     }
   }
 
@@ -516,7 +517,7 @@ export async function getAdminTickets(filters?: {
   const { data: tickets, error: queryError } = await query;
 
   if (queryError) {
-    console.error("[Support] Admin tickets query error:", queryError);
+    log.error("[Support] Admin tickets query error:", { err: queryError });
     return { error: "Failed to load tickets.", tickets: [] };
   }
 
@@ -590,7 +591,7 @@ export async function updateTicketStatus(ticketId: string, status: string) {
     .eq("id", ticketId);
 
   if (updateError) {
-    console.error("[Support] Status update error:", updateError);
+    log.error("[Support] Status update error:", { err: updateError });
     return { error: "Failed to update ticket status." };
   }
 
@@ -632,12 +633,12 @@ export async function updateTicketStatus(ticketId: string, status: string) {
           });
 
           sendEmail({ to: ticketUser.email, subject: emailSubject, html }).catch(
-            (err) => console.error("[Support] Resolved email error:", err)
+            (err) => log.error("[Support] Resolved email error:", { err: err })
           );
         }
       }
     } catch (err) {
-      console.error("[Support] Resolved notification error:", err);
+      log.error("[Support] Resolved notification error:", { err: err });
     }
   }
 

@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
+import { log } from "@/lib/utils/logger";
 
 export async function updateProfile(formData: FormData) {
   const supabase = await createClient();
@@ -255,7 +256,7 @@ export async function getPatientPaymentMethods() {
       error: null,
     };
   } catch (err) {
-    console.error("Failed to fetch payment methods:", err);
+    log.error("Failed to fetch payment methods:", { err: err });
     return { methods: [], error: null }; // Fail silently
   }
 }

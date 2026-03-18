@@ -10,6 +10,7 @@ import {
   isLaunchRegion,
   LAUNCH_REGION_CODES,
 } from "@/lib/constants/launch-regions";
+import { log } from "@/lib/utils/logger";
 
 export interface SearchFilters {
   specialty?: string;
@@ -86,7 +87,7 @@ export async function searchDoctors(filters: SearchFilters) {
     );
 
     if (rpcError) {
-      console.error("Same-day availability RPC error:", rpcError);
+      log.error("Same-day availability RPC error:", { err: rpcError });
       return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
     }
 
@@ -334,7 +335,7 @@ export async function searchDoctors(filters: SearchFilters) {
     );
 
     if (rpcError) {
-      console.error("Distance sort RPC error:", rpcError);
+      log.error("Distance sort RPC error:", { err: rpcError });
       // Fallback to featured
       query = query
         .order("is_featured", { ascending: false })
@@ -359,7 +360,7 @@ export async function searchDoctors(filters: SearchFilters) {
       const { data, error } = await query;
 
       if (error) {
-        console.error("Search error:", error);
+        log.error("Search error:", { err: error });
         return { doctors: [], total: 0, page, perPage };
       }
 
@@ -401,7 +402,7 @@ export async function searchDoctors(filters: SearchFilters) {
   const { data, count, error } = await query;
 
   if (error) {
-    console.error("Search error:", error);
+    log.error("Search error:", { err: error });
     return { doctors: [], total: 0, page, perPage, matchScores: undefined };
   }
 
@@ -595,7 +596,7 @@ export async function getNextAvailabilityBatch(
   );
 
   if (error || !data) {
-    console.error("Batch availability RPC error:", error);
+    log.error("Batch availability RPC error:", { err: error });
     return {};
   }
 
@@ -650,7 +651,7 @@ export async function getMultiDayAvailabilityBatch(
   );
 
   if (error || !data) {
-    console.error("Multi-day batch availability RPC error:", error);
+    log.error("Multi-day batch availability RPC error:", { err: error });
     return {};
   }
 

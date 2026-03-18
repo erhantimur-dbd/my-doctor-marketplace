@@ -4,6 +4,7 @@ import { safeError } from "@/lib/utils/safe-error";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type Stripe from "stripe";
+import { log } from "@/lib/utils/logger";
 
 async function requireDoctor() {
   const supabase = await createClient();
@@ -443,7 +444,7 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
       // Mark the referred doctor's reward as applied
       if (referralId) await markReferredRewarded(referralId);
     } catch (err) {
-      console.error("[Referral] Failed to apply checkout discount:", err);
+      log.error("[Referral] Failed to apply checkout discount:", { err: err });
     }
   }
 

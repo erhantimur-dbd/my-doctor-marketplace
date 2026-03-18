@@ -25,6 +25,7 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
 import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
+import { forecast, bookingVelocity } from "@/lib/utils/forecast";
 import { DateRangeSelector } from "../components/date-range-selector";
 import { ExportCSVButton } from "../components/export-csv-button";
 import { exportRevenueCSV } from "@/actions/admin";
@@ -121,6 +122,23 @@ export default async function AdminRevenuePage({
   }
 
   const maxRevenue = Math.max(...monthlyData.map((m) => m.revenue), 1);
+
+  // --- Revenue Forecast (next 3 months) ---
+  const revenueValues = monthlyData.map((m) => m.revenue);
+  const forecastResult = revenueValues.length >= 3 ? forecast(revenueValues, 3) : null;
+
+  const forecastMonths: string[] = [];
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date();
+    d.setMonth(d.getMonth() + i);
+    forecastMonths.push(
+      d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" })
+    );
+  }
+
+  // --- Booking Velocity ---
+  const bookingCounts = monthlyData.map((m) => m.bookings);
+  const velocity = bookingCounts.length >= 2 ? bookingVelocity(bookingCounts) : null;
 
   // --- Platform fees table ---
   const { data: fees } = await supabase
@@ -310,6 +328,70 @@ export default async function AdminRevenuePage({
           />
         </CardContent>
       </Card>
+
+      {/* Revenue Forecast */}
+      {forecastResult && (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Revenue Forecast (Next 3 Months)
+                <Badge variant={forecastResult.r2 > 0.7 ? "default" : "secondary"} className="ml-auto text-xs">
+                  R² = {forecastResult.r2.toFixed(2)}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {forecastResult.predicted.map((value, i) => (
+                  <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                    <span className="text-sm font-medium">{forecastMonths[i]}</span>
+                    <span className="text-sm font-bold">
+                      {formatCurrency(value, "EUR")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {forecastResult.trend === "up"
+                  ? "📈 Revenue is trending upward"
+                  : forecastResult.trend === "down"
+                    ? "📉 Revenue is trending downward"
+                    : "➡️ Revenue is stable"}
+                {forecastResult.r2 < 0.5 && " (low confidence — limited data)"}
+              </p>
+            </CardContent>
+          </Card>
+
+          {velocity && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Booking Velocity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center">
+                  <p className="text-4xl font-bold">{velocity.current}</p>
+                  <p className="text-sm text-muted-foreground">bookings/month (avg last 4)</p>
+                  <div className={`mt-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium ${
+                    velocity.trend === "up"
+                      ? "bg-green-100 text-green-700"
+                      : velocity.trend === "down"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-gray-100 text-gray-700"
+                  }`}>
+                    {velocity.trend === "up" ? "↑" : velocity.trend === "down" ? "↓" : "→"}
+                    {velocity.changePercent > 0 ? "+" : ""}{velocity.changePercent}% vs previous period
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Recent Platform Fees */}
       <Card>

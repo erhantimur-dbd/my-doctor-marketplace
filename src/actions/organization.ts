@@ -15,10 +15,11 @@ import {
 } from "@/lib/validators/organization";
 import { sendEmail } from "@/lib/email/client";
 import { organizationInvitationEmail } from "@/lib/email/templates";
+import { log } from "@/lib/utils/logger";
 
 // ─── Helpers ────────────────────────────────────────────────
 
-async function requireOrgMember(requiredRoles?: string[]) {
+export async function requireOrgMember(requiredRoles?: string[]) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -315,7 +316,7 @@ export async function inviteMember(formData: FormData) {
     to: inviteeProfile.email,
     subject,
     html,
-  }).catch((err) => console.error("Invitation email error:", err));
+  }).catch((err) => log.error("Invitation email error:", { err: err }));
 
   revalidatePath("/doctor-dashboard/organization/members");
   return { error: null };

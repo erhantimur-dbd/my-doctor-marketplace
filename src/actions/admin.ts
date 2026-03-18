@@ -26,6 +26,9 @@ import {
 } from "@/lib/whatsapp/templates";
 import { headers } from "next/headers";
 
+import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
+import { log } from "@/lib/utils/logger";
+
 // Admin email allowlist — mirrors middleware check for defense-in-depth
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
@@ -560,7 +563,7 @@ export async function deleteCoupon(couponId: string) {
       const { getStripe } = await import("@/lib/stripe/client");
       await getStripe().coupons.del(coupon.stripe_coupon_id);
     } catch (err) {
-      console.error("[Coupon] Failed to delete Stripe coupon:", err);
+      log.error("[Coupon] Failed to delete Stripe coupon:", { err: err });
     }
   }
 
@@ -1611,7 +1614,7 @@ export async function adminCreateBookingOnBehalf(input: {
     .single();
 
   if (bookingError || !booking) {
-    console.error("Admin booking insert error:", bookingError);
+    log.error("Admin booking insert error:", { err: bookingError });
     return { error: "Failed to create booking. Please try again." };
   }
 
@@ -1681,7 +1684,7 @@ export async function adminCreateBookingOnBehalf(input: {
   });
 
   sendEmail({ to: patient.email, subject, html }).catch((err) =>
-    console.error("Admin booking payment link email error:", err)
+    log.error("Admin booking payment link email error:", { err: err })
   );
 
   await logAdminAction(supabase, user.id, "booking_created_on_behalf", "booking", booking.id, {
@@ -1827,7 +1830,7 @@ export async function adminResendPaymentLink(bookingId: string) {
   });
 
   sendEmail({ to: patient.email, subject, html }).catch((err) =>
-    console.error("Resend payment link email error:", err)
+    log.error("Resend payment link email error:", { err: err })
   );
 
   await logAdminAction(supabase, user.id, "payment_link_resent", "booking", bookingId, {
@@ -1856,7 +1859,7 @@ export async function adminCancelBooking(
          first_name, last_name, email, phone, notification_whatsapp, preferred_locale
        ),
        doctor:doctors!inner(
-         cancellation_policy, cancellation_hours, stripe_account_id,
+         slug, cancellation_policy, cancellation_hours, stripe_account_id,
          profile:profiles!doctors_profile_id_fkey(first_name, last_name)
        )`
     )
@@ -1947,7 +1950,7 @@ export async function adminCancelBooking(
         refund_application_fee: true,
       } as any);
     } catch (err: any) {
-      console.error("Admin cancel refund error:", err);
+      log.error("Admin cancel refund error:", { err: err });
       return { error: safeError(err) };
     }
   }
@@ -1970,19 +1973,19 @@ export async function adminCancelBooking(
 
   // Remove from calendars (non-blocking)
   removeBookingFromGoogleCalendar(bookingId).catch((err) =>
-    console.error("Google Calendar removal error:", err)
+    log.error("Google Calendar removal error:", { err: err })
   );
   removeBookingFromMicrosoftCalendar(bookingId).catch((err) =>
-    console.error("Microsoft Calendar removal error:", err)
+    log.error("Microsoft Calendar removal error:", { err: err })
   );
   removeBookingFromCalDAV(bookingId).catch((err) =>
-    console.error("CalDAV removal error:", err)
+    log.error("CalDAV removal error:", { err: err })
   );
 
   // Delete Daily.co video room
   if (booking.daily_room_name) {
     deleteRoom(booking.daily_room_name).catch((err) =>
-      console.error("Daily.co room deletion error:", err)
+      log.error("Daily.co room deletion error:", { err: err })
     );
   }
 
@@ -2007,7 +2010,7 @@ export async function adminCancelBooking(
     });
 
     sendEmail({ to: patient.email, subject, html }).catch((err) =>
-      console.error("Admin cancellation email error:", err)
+      log.error("Admin cancellation email error:", { err: err })
     );
 
     // WhatsApp notification
@@ -2028,9 +2031,18 @@ export async function adminCancelBooking(
           refundInfo,
         }),
       }).catch((err) =>
-        console.error("WhatsApp cancellation error:", err)
+        log.error("WhatsApp cancellation error:", { err: err })
       );
     }
+  }
+
+  // Notify waitlisted patients that a slot opened up (non-blocking)
+  if (doctorProfile) {
+    notifyAvailabilitySubscribers(
+      booking.doctor_id,
+      `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}`,
+      doctor.slug
+    ).catch((err) => log.error("Waitlist notification failed", { err, doctorId: booking.doctor_id }));
   }
 
   await logAdminAction(supabase, user.id, "booking_cancelled_by_admin", "booking", bookingId, {

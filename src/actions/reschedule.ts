@@ -12,6 +12,7 @@ import {
 import { createNotification } from "@/lib/notifications";
 import { sendEmail } from "@/lib/email/client";
 import { rescheduleRequestEmail, rescheduleResponseEmail } from "@/lib/email/templates";
+import { log } from "@/lib/utils/logger";
 
 // ── Patient requests a reschedule ───────────────────────────────────
 
@@ -85,7 +86,7 @@ export async function requestReschedule(input: RequestRescheduleInput) {
     });
 
   if (insertErr) {
-    console.error("[Reschedule] Insert error:", insertErr);
+    log.error("[Reschedule] Insert error:", { err: insertErr });
     return { error: "Failed to create reschedule request." };
   }
 
@@ -135,7 +136,7 @@ export async function requestReschedule(input: RequestRescheduleInput) {
         email: { to: doctorProfile.email, subject: emailSubject, html: emailHtml },
       });
     } catch (err) {
-      console.error("[Reschedule] Notification error:", err);
+      log.error("[Reschedule] Notification error:", { err: err });
     }
   }
 
@@ -224,7 +225,7 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
       .eq("id", bookingData.id);
 
     if (updateBookingErr) {
-      console.error("[Reschedule] Booking update error:", updateBookingErr);
+      log.error("[Reschedule] Booking update error:", { err: updateBookingErr });
       return { error: "Failed to update booking." };
     }
 
@@ -264,7 +265,7 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
           : undefined,
       });
     } catch (err) {
-      console.error("[Reschedule] Notification error:", err);
+      log.error("[Reschedule] Notification error:", { err: err });
     }
   } else {
     // Reject
@@ -304,7 +305,7 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
           : undefined,
       });
     } catch (err) {
-      console.error("[Reschedule] Notification error:", err);
+      log.error("[Reschedule] Notification error:", { err: err });
     }
   }
 

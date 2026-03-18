@@ -15,6 +15,7 @@ import {
   createSubscription,
   type MicrosoftTokens,
 } from "./calendar";
+import { log } from "@/lib/utils/logger";
 
 const SYNC_DAYS_AHEAD = 30;
 
@@ -138,7 +139,7 @@ export async function importMicrosoftCalendarEvents(
     // Check for conflicts with existing bookings
     if (overrides.length > 0) {
       detectAndNotifyConflicts(doctorId, overrides, "Microsoft").catch((err) =>
-        console.error("Conflict detection error:", err)
+        log.error("Conflict detection error:", { err: err })
       );
     }
 
@@ -149,7 +150,7 @@ export async function importMicrosoftCalendarEvents(
 
     return { success: true, eventsProcessed: events.length };
   } catch (err) {
-    console.error("Microsoft import sync error:", err);
+    log.error("Microsoft import sync error:", { err: err });
     return {
       success: false,
       eventsProcessed: 0,
@@ -267,7 +268,7 @@ export async function exportBookingToMicrosoftCalendar(
 
     return { success: true, eventId: event.id };
   } catch (err) {
-    console.error("Export booking to Microsoft Calendar error:", err);
+    log.error("Export booking to Microsoft Calendar error:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -335,7 +336,7 @@ export async function removeBookingFromMicrosoftCalendar(
 
     return { success: true };
   } catch (err) {
-    console.error("Remove Microsoft Calendar event error:", err);
+    log.error("Remove Microsoft Calendar event error:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -402,7 +403,7 @@ export async function setupMicrosoftWebhook(
 
     return { success: true };
   } catch (err) {
-    console.error("Setup Microsoft webhook error:", err);
+    log.error("Setup Microsoft webhook error:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -439,9 +440,7 @@ export async function syncAllMicrosoftDoctors(): Promise<{
       synced++;
     } else {
       errors++;
-      console.error(
-        `Microsoft sync failed for doctor ${conn.doctor_id}: ${result.error}`
-      );
+      log.error("Microsoft sync failed", { doctorId: conn.doctor_id, error: result.error });
     }
   }
 

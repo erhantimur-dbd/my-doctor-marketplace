@@ -3,6 +3,8 @@
  * Handles token refresh, list calendars, list events, create/delete events
  */
 
+import { log } from "@/lib/utils/logger";
+
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_CALENDAR_BASE = "https://www.googleapis.com/calendar/v3";
 
@@ -319,6 +321,6 @@ export async function stopWatching(
 
   // Ignore errors — channel may have already expired
   if (!res.ok && res.status !== 404) {
-    console.warn(`Stop watching returned ${res.status}`);
+    log.warn("Stop watching returned non-OK status", { status: res.status });
   }
 }

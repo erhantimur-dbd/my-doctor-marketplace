@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { log } from "@/lib/utils/logger";
 
 async function requireDoctorWithAddon() {
   const supabase = await createClient();
@@ -56,13 +57,13 @@ export async function getTestingLocations(): Promise<{
       .order("created_at");
 
     if (error) {
-      console.error("getTestingLocations error:", error);
+      log.error("getTestingLocations error:", { err: error });
       return { locations: [], error: "Failed to fetch testing locations." };
     }
 
     return { locations: (data || []) as TestingLocation[] };
   } catch (err) {
-    console.error("getTestingLocations error:", err);
+    log.error("getTestingLocations error:", { err: err });
     return { locations: [], error: "An unexpected error occurred." };
   }
 }
@@ -102,7 +103,7 @@ export async function saveTestingLocation(input: {
         .eq("doctor_id", doctor.id);
 
       if (error) {
-        console.error("updateTestingLocation error:", error);
+        log.error("updateTestingLocation error:", { err: error });
         return { error: "Failed to update location." };
       }
     } else {
@@ -118,7 +119,7 @@ export async function saveTestingLocation(input: {
       });
 
       if (error) {
-        console.error("saveTestingLocation error:", error);
+        log.error("saveTestingLocation error:", { err: error });
         return { error: "Failed to save location." };
       }
     }
@@ -126,7 +127,7 @@ export async function saveTestingLocation(input: {
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("saveTestingLocation error:", err);
+    log.error("saveTestingLocation error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -147,14 +148,14 @@ export async function deleteTestingLocation(
       .eq("doctor_id", doctor.id);
 
     if (error) {
-      console.error("deleteTestingLocation error:", error);
+      log.error("deleteTestingLocation error:", { err: error });
       return { error: "Failed to delete location." };
     }
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("deleteTestingLocation error:", err);
+    log.error("deleteTestingLocation error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -176,14 +177,14 @@ export async function toggleTestingLocation(
       .eq("doctor_id", doctor.id);
 
     if (error) {
-      console.error("toggleTestingLocation error:", error);
+      log.error("toggleTestingLocation error:", { err: error });
       return { error: "Failed to update location." };
     }
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("toggleTestingLocation error:", err);
+    log.error("toggleTestingLocation error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }

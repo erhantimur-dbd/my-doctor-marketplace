@@ -1,4 +1,6 @@
 "use server";
+import { log } from "@/lib/utils/logger";
+
 
 /**
  * Search royalty-free images from Pexels.
@@ -92,7 +94,7 @@ export async function searchCoverImages(
       })),
     };
   } catch (err) {
-    console.error("Pexels search error:", err);
+    log.error("Pexels search error:", { err: err });
     return { images: [], error: "Failed to search images" };
   }
 }

@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
+import { log } from "@/lib/utils/logger";
 
 type NotificationChannel = "in_app" | "email" | "sms" | "whatsapp";
 
@@ -47,13 +48,13 @@ export async function createNotification({
   });
 
   if (error) {
-    console.error("[Notification] Failed to create:", error);
+    log.error("[Notification] Failed to create:", { err: error });
   }
 
   // Send email if provided
   if (email && channels.includes("email")) {
     await sendEmail(email).catch((err) =>
-      console.error("[Notification] Email send failed:", err)
+      log.error("[Notification] Email send failed:", { err: err })
     );
   }
 
@@ -65,7 +66,7 @@ export async function createNotification({
       );
       await sendWhatsAppTemplate(whatsapp);
     } catch (err) {
-      console.error("[Notification] WhatsApp send failed:", err);
+      log.error("[Notification] WhatsApp send failed:", { err: err });
     }
   }
 

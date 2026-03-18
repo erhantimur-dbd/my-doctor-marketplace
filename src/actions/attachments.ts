@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { log } from "@/lib/utils/logger";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -83,7 +84,7 @@ export async function uploadMessageAttachment(
     });
 
   if (uploadError) {
-    console.error("[Attachments] Upload error:", uploadError);
+    log.error("[Attachments] Upload error:", { err: uploadError });
     return { success: false, error: "Failed to upload file." };
   }
 
@@ -127,7 +128,7 @@ export async function getAttachmentUrl(
     .createSignedUrl(storagePath, 3600); // 1 hour expiry
 
   if (error || !data) {
-    console.error("[Attachments] Signed URL error:", error);
+    log.error("[Attachments] Signed URL error:", { err: error });
     return { error: "Failed to generate download link." };
   }
 
@@ -160,7 +161,7 @@ export async function saveAttachmentRecord(data: {
   });
 
   if (error) {
-    console.error("[Attachments] Save record error:", error);
+    log.error("[Attachments] Save record error:", { err: error });
     return { success: false, error: "Failed to save attachment record." };
   }
 

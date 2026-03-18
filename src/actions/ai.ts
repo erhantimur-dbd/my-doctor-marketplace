@@ -11,6 +11,7 @@ import {
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import crypto from "crypto";
+import { log } from "@/lib/utils/logger";
 
 const AI_TIMEOUT_MS = 5000;
 const LOCATION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -46,7 +47,7 @@ export async function analyzeSymptoms(
   locale: string
 ): Promise<{ data: SymptomAnalysis | null; error: string | null }> {
   if (!isAIEnabled()) {
-    console.warn("[AI] analyzeSymptoms: OPENAI_API_KEY not found in env");
+    log.warn("[AI] analyzeSymptoms: OPENAI_API_KEY not found in env");
     return { data: null, error: "AI not configured" };
   }
   console.log("[AI] analyzeSymptoms: starting for input:", input.substring(0, 50));
@@ -159,7 +160,7 @@ Return ONLY specialty slugs from the allowed list above.`,
 
     return { data: result, error: null };
   } catch (err) {
-    console.error("AI symptom analysis error:", err);
+    log.error("AI symptom analysis error:", { err: err });
     return { data: null, error: "AI analysis failed" };
   }
 }
@@ -171,7 +172,7 @@ export async function parseNaturalLanguageSearch(
   locale: string
 ): Promise<{ data: NLSearchFilters | null; error: string | null }> {
   if (!isAIEnabled()) {
-    console.warn("[AI] parseNaturalLanguageSearch: OPENAI_API_KEY not found in env");
+    log.warn("[AI] parseNaturalLanguageSearch: OPENAI_API_KEY not found in env");
     return { data: null, error: "AI not configured" };
   }
   console.log("[AI] parseNaturalLanguageSearch: starting for input:", input.substring(0, 50));
@@ -326,7 +327,7 @@ CRITICAL FILTER RULES:
 
     return { data: result, error: null };
   } catch (err) {
-    console.error("NL search parse error:", err);
+    log.error("NL search parse error:", { err: err });
     return { data: null, error: "AI search parsing failed" };
   }
 }

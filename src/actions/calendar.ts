@@ -10,6 +10,7 @@ import { importMicrosoftCalendarEvents, setupMicrosoftWebhook } from "@/lib/micr
 import { testConnection as testCalDAV, listCalendars as listCalDAVCalendars, CALDAV_PROVIDERS, type CalDAVProvider, type CalDAVCredentials } from "@/lib/caldav/client";
 import { importCalDAVEvents } from "@/lib/caldav/sync";
 import crypto from "crypto";
+import { log } from "@/lib/utils/logger";
 
 // ---- Helpers ----
 async function getDoctorId(): Promise<string | null> {
@@ -80,7 +81,7 @@ export async function disconnectCalendar(): Promise<{ success: boolean; error?: 
       const { access_token } = await getGoogleToken(tokens);
       await stopWatching(access_token, connection.webhook_channel_id, connection.webhook_resource_id);
     } catch (err) {
-      console.warn("Failed to stop Google webhook:", err);
+      log.warn("Failed to stop Google webhook:", { err: err });
     }
   }
 
@@ -119,8 +120,8 @@ export async function toggleCalendarSync(enabled: boolean): Promise<{ success: b
   if (error) return { success: false, error: safeError(error) };
 
   if (enabled) {
-    importGoogleCalendarEvents(doctorId).catch(console.error);
-    setupGoogleWebhook(doctorId).catch(console.error);
+    importGoogleCalendarEvents(doctorId).catch((err) => log.error("Google calendar import failed", { err }));
+    setupGoogleWebhook(doctorId).catch((err) => log.error("Google webhook setup failed", { err }));
   }
 
   return { success: true };
@@ -175,8 +176,8 @@ export async function selectCalendar(calendarId: string): Promise<{ success: boo
 
   if (error) return { success: false, error: safeError(error) };
 
-  importGoogleCalendarEvents(doctorId).catch(console.error);
-  setupGoogleWebhook(doctorId).catch(console.error);
+  importGoogleCalendarEvents(doctorId).catch((err) => log.error("Google calendar import failed", { err }));
+  setupGoogleWebhook(doctorId).catch((err) => log.error("Google webhook setup failed", { err }));
 
   return { success: true };
 }
@@ -229,7 +230,7 @@ export async function disconnectMicrosoftCalendar(): Promise<{ success: boolean;
       const { access_token } = await getMicrosoftToken(tokens);
       await deleteSubscription(access_token, connection.webhook_channel_id);
     } catch (err) {
-      console.warn("Failed to delete Microsoft subscription:", err);
+      log.warn("Failed to delete Microsoft subscription:", { err: err });
     }
   }
 
@@ -268,8 +269,8 @@ export async function toggleMicrosoftCalendarSync(enabled: boolean): Promise<{ s
   if (error) return { success: false, error: safeError(error) };
 
   if (enabled) {
-    importMicrosoftCalendarEvents(doctorId).catch(console.error);
-    setupMicrosoftWebhook(doctorId).catch(console.error);
+    importMicrosoftCalendarEvents(doctorId).catch((err) => log.error("Microsoft calendar import failed", { err }));
+    setupMicrosoftWebhook(doctorId).catch((err) => log.error("Microsoft webhook setup failed", { err }));
   }
 
   return { success: true };
@@ -327,8 +328,8 @@ export async function selectMicrosoftCalendar(calendarId: string): Promise<{ suc
 
   if (error) return { success: false, error: safeError(error) };
 
-  importMicrosoftCalendarEvents(doctorId).catch(console.error);
-  setupMicrosoftWebhook(doctorId).catch(console.error);
+  importMicrosoftCalendarEvents(doctorId).catch((err) => log.error("Microsoft calendar import failed", { err }));
+  setupMicrosoftWebhook(doctorId).catch((err) => log.error("Microsoft webhook setup failed", { err }));
 
   return { success: true };
 }
@@ -450,7 +451,7 @@ export async function connectCalDAV(
   if (error) return { success: false, calendars: [], error: safeError(error) };
 
   if (testResult.calendars[0]?.href) {
-    importCalDAVEvents(doctorId).catch(console.error);
+    importCalDAVEvents(doctorId).catch((err) => log.error("CalDAV import failed", { err }));
   }
 
   return { success: true, calendars: testResult.calendars };
@@ -498,7 +499,7 @@ export async function toggleCalDAVSync(enabled: boolean): Promise<{ success: boo
   if (error) return { success: false, error: safeError(error) };
 
   if (enabled) {
-    importCalDAVEvents(doctorId).catch(console.error);
+    importCalDAVEvents(doctorId).catch((err) => log.error("CalDAV import failed", { err }));
   }
 
   return { success: true };
@@ -517,7 +518,7 @@ export async function selectCalDAVCalendar(calendarHref: string): Promise<{ succ
 
   if (error) return { success: false, error: safeError(error) };
 
-  importCalDAVEvents(doctorId).catch(console.error);
+  importCalDAVEvents(doctorId).catch((err) => log.error("CalDAV import failed", { err }));
 
   return { success: true };
 }

@@ -12,6 +12,7 @@ import {
 } from "@/lib/validators/license";
 import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_PENCE, convertPrice, BASE_CURRENCY } from "@/lib/constants/license-tiers";
 import type { LicenseTier } from "@/types";
+import { log } from "@/lib/utils/logger";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -293,7 +294,7 @@ export async function addExtraSeats(formData: FormData) {
         ],
       });
     } catch (err) {
-      console.error("[License] Failed to update Stripe subscription for extra seats:", err);
+      log.error("[License] Failed to update Stripe subscription for extra seats:", { err: err });
     }
   }
 

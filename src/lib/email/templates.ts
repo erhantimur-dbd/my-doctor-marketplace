@@ -1548,6 +1548,89 @@ export function adminBookingPaymentLinkEmail({
 }
 
 // ---------------------------------------------------------------------------
+// Availability Alert Email (sent to waitlisted patients)
+// ---------------------------------------------------------------------------
+
+interface AvailabilityAlertParams {
+  patientName: string;
+  doctorName: string;
+  bookingUrl: string;
+}
+
+export function availabilityAlertEmail({
+  patientName,
+  doctorName,
+  bookingUrl,
+}: AvailabilityAlertParams): { subject: string; html: string } {
+  const subject = `New Availability — Dr. ${doctorName} has an opening`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Good News!</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, <strong>Dr. ${doctorName}</strong> now has new appointment slots available. Book your appointment before the slot is taken.
+    </p>
+
+    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
+        Slots are available on a first-come, first-served basis. We recommend booking as soon as possible.
+      </p>
+    </div>
+
+    ${button("Book Now", bookingUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      You received this email because you signed up for availability alerts for Dr. ${doctorName}.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
+// Satisfaction Survey Email (sent 24h after completed appointment)
+// ---------------------------------------------------------------------------
+
+interface SatisfactionSurveyParams {
+  patientName: string;
+  doctorName: string;
+  date: string;
+  surveyUrl: string;
+}
+
+export function satisfactionSurveyEmail({
+  patientName,
+  doctorName,
+  date,
+  surveyUrl,
+}: SatisfactionSurveyParams): { subject: string; html: string } {
+  const subject = `How was your appointment with Dr. ${doctorName}?`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">We Value Your Feedback</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, we hope your appointment with <strong>Dr. ${doctorName}</strong> on ${date} went well. Your feedback helps us maintain the highest standard of care.
+    </p>
+
+    <div style="background-color: #f9fafb; border-radius: 6px; padding: 20px; margin-bottom: 24px; text-align: center;">
+      <p style="margin: 0 0 8px; font-size: 14px; color: #6b7280;">
+        On a scale of 0-10, how likely are you to recommend our service?
+      </p>
+      <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+        0 = Not at all likely &nbsp;&nbsp;|&nbsp;&nbsp; 10 = Extremely likely
+      </p>
+    </div>
+
+    ${button("Rate Your Experience", surveyUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      This survey takes less than a minute to complete. Your response is confidential and helps us improve our service.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
 // Reschedule Request Email (sent to doctor)
 // ---------------------------------------------------------------------------
 

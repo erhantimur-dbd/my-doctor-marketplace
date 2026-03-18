@@ -4,6 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotification } from "@/lib/notifications";
 import { revalidatePath } from "next/cache";
+import { sendEmail } from "@/lib/email/client";
+import { availabilityAlertEmail } from "@/lib/email/templates";
+import { log } from "@/lib/utils/logger";
 
 /**
  * Subscribe to notifications when a doctor has new availability.
@@ -38,7 +41,7 @@ export async function subscribeToAvailability(
   );
 
   if (error) {
-    console.error("[AvailabilityAlerts] Subscribe error:", error);
+    log.error("[AvailabilityAlerts] Subscribe error:", { err: error });
     return { success: false, error: "Failed to subscribe." };
   }
 
@@ -66,7 +69,7 @@ export async function unsubscribeFromAvailability(
     .eq("doctor_id", doctorId);
 
   if (error) {
-    console.error("[AvailabilityAlerts] Unsubscribe error:", error);
+    log.error("[AvailabilityAlerts] Unsubscribe error:", { err: error });
     return { success: false, error: "Failed to unsubscribe." };
   }
 
@@ -109,19 +112,23 @@ export async function notifyAvailabilitySubscribers(
 ): Promise<{ notifiedCount: number }> {
   const admin = createAdminClient();
 
-  // Fetch un-notified alerts for this doctor
+  // Fetch un-notified alerts with patient profile for email
   const { data: alerts } = await admin
     .from("availability_alerts")
-    .select("id, patient_id")
+    .select("id, patient_id, patient:profiles!availability_alerts_patient_id_fkey(first_name, email)")
     .eq("doctor_id", doctorId)
     .is("notified_at", null);
 
   if (!alerts || alerts.length === 0) return { notifiedCount: 0 };
 
+  const bookingUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com"}/en/doctors/${doctorSlug}/book`;
   let notifiedCount = 0;
 
   for (const alert of alerts) {
     try {
+      const patient: any = Array.isArray(alert.patient) ? alert.patient[0] : alert.patient;
+
+      // In-app notification
       await createNotification({
         userId: alert.patient_id,
         type: "availability_alert",
@@ -135,6 +142,18 @@ export async function notifyAvailabilitySubscribers(
         },
       });
 
+      // Email notification
+      if (patient?.email) {
+        const { subject, html } = availabilityAlertEmail({
+          patientName: patient.first_name || "there",
+          doctorName,
+          bookingUrl,
+        });
+        sendEmail({ to: patient.email, subject, html }).catch((err) =>
+          log.error("Availability alert email failed", { err, patientId: alert.patient_id })
+        );
+      }
+
       // Mark as notified
       await admin
         .from("availability_alerts")
@@ -143,7 +162,7 @@ export async function notifyAvailabilitySubscribers(
 
       notifiedCount++;
     } catch (err) {
-      console.error("[AvailabilityAlerts] Notification error:", err);
+      log.error("Availability alert notification error", { err, patientId: alert.patient_id });
     }
   }
 

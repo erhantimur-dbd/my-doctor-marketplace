@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { log } from "@/lib/utils/logger";
 
 // Lazy-initialise so the missing API key doesn't crash the build.
 // When RESEND_API_KEY is absent the sendEmail function falls back
@@ -38,7 +39,7 @@ export async function sendEmail({
     });
     return { success: true };
   } catch (error) {
-    console.error("[Email] Failed to send:", error);
+    log.error("[Email] Failed to send:", { err: error });
     const message = error instanceof Error ? error.message : String(error);
     return { success: false, error: message };
   }

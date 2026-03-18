@@ -1,4 +1,6 @@
 "use server";
+import { log } from "@/lib/utils/logger";
+
 
 /**
  * Server-side Google Places Autocomplete + Details.
@@ -34,7 +36,7 @@ export async function searchPlaces(
 
     if (json.status !== "OK" || !json.predictions) {
       if (json.status !== "ZERO_RESULTS") {
-        console.error("[searchPlaces] API error:", json.status, json.error_message);
+        log.error("Places API error", { status: json.status, message: json.error_message });
       }
       return [];
     }
@@ -52,7 +54,7 @@ export async function searchPlaces(
             ?.secondary_text || "",
       }));
   } catch (err) {
-    console.error("[searchPlaces] Fetch error:", err);
+    log.error("[searchPlaces] Fetch error:", { err: err });
     return [];
   }
 }

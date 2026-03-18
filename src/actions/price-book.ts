@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { log } from "@/lib/utils/logger";
 
 async function requireDoctor() {
   const supabase = await createClient();
@@ -44,13 +45,13 @@ export async function getPriceBook(): Promise<{
       .order("test_id");
 
     if (error) {
-      console.error("getPriceBook error:", error);
+      log.error("getPriceBook error:", { err: error });
       return { entries: [], error: "Failed to fetch price book." };
     }
 
     return { entries: (data || []) as PriceBookEntry[] };
   } catch (err) {
-    console.error("getPriceBook error:", err);
+    log.error("getPriceBook error:", { err: err });
     return { entries: [], error: "An unexpected error occurred." };
   }
 }
@@ -84,14 +85,14 @@ export async function savePriceBookEntries(
       .upsert(upsertData, { onConflict: "doctor_id,test_id" });
 
     if (error) {
-      console.error("savePriceBookEntries error:", error);
+      log.error("savePriceBookEntries error:", { err: error });
       return { error: "Failed to save price book." };
     }
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("savePriceBookEntries error:", err);
+    log.error("savePriceBookEntries error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -112,14 +113,14 @@ export async function deletePriceBookEntry(
       .eq("test_id", testId);
 
     if (error) {
-      console.error("deletePriceBookEntry error:", error);
+      log.error("deletePriceBookEntry error:", { err: error });
       return { error: "Failed to delete entry." };
     }
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("deletePriceBookEntry error:", err);
+    log.error("deletePriceBookEntry error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }

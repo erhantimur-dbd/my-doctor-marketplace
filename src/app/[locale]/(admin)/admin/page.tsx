@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Clock,
   AlertTriangle,
+  ThumbsUp,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
@@ -49,6 +50,7 @@ export default async function AdminDashboard() {
     { count: activeSubscriptions },
     { data: recentBookings },
     { count: stripeIssueCount },
+    { data: surveyData },
   ] = await Promise.all([
     supabase.from("doctors").select("*", { count: "exact", head: true }),
     supabase
@@ -84,12 +86,26 @@ export default async function AdminDashboard() {
       .select("*", { count: "exact", head: true })
       .or("stripe_requires_action.eq.true,stripe_payouts_enabled.eq.false")
       .eq("is_active", true),
+    supabase
+      .from("satisfaction_surveys")
+      .select("nps_score")
+      .not("submitted_at", "is", null),
   ]);
 
   const totalRevenue = (revenueBookings || []).reduce(
     (sum, b) => sum + ((b as any).platform_fee_cents || 0),
     0
   );
+
+  // Calculate NPS
+  const surveys = (surveyData || []) as { nps_score: number }[];
+  let npsScore: number | null = null;
+  let npsResponseCount = surveys.length;
+  if (surveys.length > 0) {
+    const promoters = surveys.filter((s) => s.nps_score >= 9).length;
+    const detractors = surveys.filter((s) => s.nps_score <= 6).length;
+    npsScore = Math.round(((promoters - detractors) / surveys.length) * 100);
+  }
 
   // Get patient + doctor names for recent bookings
   type BookingWithNames = {
@@ -345,6 +361,22 @@ export default async function AdminDashboard() {
             </CardContent>
           </Card>
         </Link>
+        {npsScore !== null && (
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className={`rounded-full p-3 ${npsScore >= 50 ? "bg-green-50" : npsScore >= 0 ? "bg-yellow-50" : "bg-red-50"}`}>
+                <ThumbsUp className={`h-5 w-5 ${npsScore >= 50 ? "text-green-600" : npsScore >= 0 ? "text-yellow-600" : "text-red-600"}`} />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">NPS Score</p>
+                <p className="text-2xl font-bold">{npsScore > 0 ? "+" : ""}{npsScore}</p>
+                <p className="text-xs text-muted-foreground">
+                  {npsResponseCount} responses
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Monthly Revenue Chart */}

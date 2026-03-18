@@ -7,6 +7,7 @@ import {
   type DoctorServiceInput,
 } from "@/lib/validators/booking";
 import type { DoctorService } from "@/types";
+import { log } from "@/lib/utils/logger";
 
 async function requireDoctor() {
   const supabase = await createClient();
@@ -40,13 +41,13 @@ export async function getDoctorServices(
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("getDoctorServices error:", error);
+      log.error("getDoctorServices error:", { err: error });
       return { services: [], error: "Failed to fetch services." };
     }
 
     return { services: (data as DoctorService[]) || [] };
   } catch (err) {
-    console.error("getDoctorServices error:", err);
+    log.error("getDoctorServices error:", { err: err });
     return { services: [], error: "Failed to fetch services." };
   }
 }
@@ -83,14 +84,14 @@ export async function createDoctorService(
       .single();
 
     if (error) {
-      console.error("createDoctorService error:", error);
+      log.error("createDoctorService error:", { err: error });
       return { error: "Failed to create service." };
     }
 
     revalidatePath("/", "layout");
     return { service: data as DoctorService };
   } catch (err) {
-    console.error("createDoctorService error:", err);
+    log.error("createDoctorService error:", { err: err });
     return { error: "Failed to create service." };
   }
 }
@@ -129,14 +130,14 @@ export async function updateDoctorService(
       .single();
 
     if (error) {
-      console.error("updateDoctorService error:", error);
+      log.error("updateDoctorService error:", { err: error });
       return { error: "Failed to update service." };
     }
 
     revalidatePath("/", "layout");
     return { service: data as DoctorService };
   } catch (err) {
-    console.error("updateDoctorService error:", err);
+    log.error("updateDoctorService error:", { err: err });
     return { error: "Failed to update service." };
   }
 }
@@ -158,14 +159,14 @@ export async function deleteDoctorService(
       .eq("doctor_id", doctor.id);
 
     if (error) {
-      console.error("deleteDoctorService error:", error);
+      log.error("deleteDoctorService error:", { err: error });
       return { error: "Failed to delete service." };
     }
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("deleteDoctorService error:", err);
+    log.error("deleteDoctorService error:", { err: err });
     return { error: "Failed to delete service." };
   }
 }

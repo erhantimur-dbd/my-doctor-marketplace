@@ -25,6 +25,7 @@ import {
   buildBookingCancellationComponents,
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
+import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
 
 import {
   getBookingFeeCents,
@@ -33,6 +34,7 @@ import {
   formatCurrency,
 } from "@/lib/utils/currency";
 import { createNotification } from "@/lib/notifications";
+import { log } from "@/lib/utils/logger";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -61,8 +63,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
   try {
     const parsed = createBookingSchema.safeParse(input);
     if (!parsed.success) {
-      console.error("Booking validation errors:", JSON.stringify(parsed.error.issues, null, 2));
-      console.error("Booking input received:", JSON.stringify(input, null, 2));
+      log.error("Booking validation errors", { issues: parsed.error.issues });
+      log.error("Booking input received", { input: { doctor_id: input.doctor_id, date: input.appointment_date } });
       return { error: "Invalid booking data. Please check your input." };
     }
 
@@ -255,7 +257,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       .single();
 
     if (bookingError || !booking) {
-      console.error("Booking insert error:", bookingError);
+      log.error("Booking insert error:", { err: bookingError });
       return { error: "Failed to create booking. Please try again." };
     }
 
@@ -307,7 +309,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     return { url: session.url };
   } catch (err) {
-    console.error("createBookingAndCheckout error:", err);
+    log.error("createBookingAndCheckout error:", { err: err });
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -336,6 +338,7 @@ export async function cancelBooking(input: CancelBookingInput) {
         *,
         patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
         doctor:doctors!inner(
+          slug,
           cancellation_policy,
           cancellation_hours,
           stripe_account_id,
@@ -424,25 +427,25 @@ export async function cancelBooking(input: CancelBookingInput) {
       .eq("id", booking.id);
 
     if (updateError) {
-      console.error("Booking cancellation update error:", updateError);
+      log.error("Booking cancellation update error:", { err: updateError });
       return { error: "Failed to update booking status." };
     }
 
     // Remove event from doctor's connected calendars (non-blocking)
     removeBookingFromGoogleCalendar(booking.id).catch((err) =>
-      console.error("Google Calendar removal error:", err)
+      log.error("Google Calendar removal error:", { err: err })
     );
     removeBookingFromMicrosoftCalendar(booking.id).catch((err) =>
-      console.error("Microsoft Calendar removal error:", err)
+      log.error("Microsoft Calendar removal error:", { err: err })
     );
     removeBookingFromCalDAV(booking.id).catch((err) =>
-      console.error("CalDAV removal error:", err)
+      log.error("CalDAV removal error:", { err: err })
     );
 
     // Delete Daily.co video room if one was created (non-blocking)
     if (booking.daily_room_name) {
       deleteRoom(booking.daily_room_name).catch((err) =>
-        console.error("Daily.co room deletion error:", err)
+        log.error("Daily.co room deletion error:", { err: err })
       );
     }
 
@@ -469,7 +472,7 @@ export async function cancelBooking(input: CancelBookingInput) {
       });
 
       sendEmail({ to: patient.email, subject, html }).catch((err) =>
-        console.error("Cancellation email error:", err)
+        log.error("Cancellation email error:", { err: err })
       );
 
       // Send WhatsApp cancellation notification if opted in
@@ -489,9 +492,18 @@ export async function cancelBooking(input: CancelBookingInput) {
             refundInfo,
           }),
         }).catch((err) =>
-          console.error("WhatsApp cancellation error:", err)
+          log.error("WhatsApp cancellation error:", { err: err })
         );
       }
+    }
+
+    // Notify waitlisted patients that a slot opened up (non-blocking)
+    if (doctorProfile) {
+      notifyAvailabilitySubscribers(
+        booking.doctor_id,
+        `Dr. ${doctorProfile.first_name} ${doctorProfile.last_name}`,
+        doctor.slug
+      ).catch((err) => log.error("Waitlist notification failed", { err, doctorId: booking.doctor_id }));
     }
 
     revalidatePath("/", "layout");
@@ -504,7 +516,7 @@ export async function cancelBooking(input: CancelBookingInput) {
           : "Booking cancelled. No refund is applicable based on the cancellation policy.",
     };
   } catch (err) {
-    console.error("cancelBooking error:", err);
+    log.error("cancelBooking error:", { err: err });
     return { error: "An unexpected error occurred while cancelling." };
   }
 }
@@ -557,7 +569,7 @@ export async function getBookingDetails(bookingId: string) {
 
     return { booking };
   } catch (err) {
-    console.error("getBookingDetails error:", err);
+    log.error("getBookingDetails error:", { err: err });
     return { error: "Failed to fetch booking details." };
   }
 }
@@ -584,7 +596,7 @@ export async function getDoctorAvailableDates(
     });
 
     if (error) {
-      console.error("get_available_dates_in_range RPC error:", error);
+      log.error("get_available_dates_in_range RPC error:", { err: error });
       return { dates: [], error: "Failed to fetch available dates." };
     }
 
@@ -597,7 +609,7 @@ export async function getDoctorAvailableDates(
       })),
     };
   } catch (err) {
-    console.error("getDoctorAvailableDates error:", err);
+    log.error("getDoctorAvailableDates error:", { err: err });
     return { dates: [], error: "Failed to fetch available dates." };
   }
 }
@@ -621,13 +633,13 @@ export async function getDoctorAvailableSlots(
     });
 
     if (error) {
-      console.error("get_available_slots RPC error:", error);
+      log.error("get_available_slots RPC error:", { err: error });
       return { slots: [], error: "Failed to fetch available slots." };
     }
 
     return { slots: (data as AvailableSlot[]) || [] };
   } catch (err) {
-    console.error("getDoctorAvailableSlots error:", err);
+    log.error("getDoctorAvailableSlots error:", { err: err });
     return { slots: [], error: "Failed to fetch available slots." };
   }
 }
@@ -680,7 +692,7 @@ export async function saveVisitSummary(bookingId: string, summary: string) {
       .eq("id", bookingId);
 
     if (updateErr) {
-      console.error("[VisitSummary] Update error:", updateErr);
+      log.error("[VisitSummary] Update error:", { err: updateErr });
       return { error: "Failed to save visit summary." };
     }
 
@@ -695,13 +707,13 @@ export async function saveVisitSummary(bookingId: string, summary: string) {
         metadata: { bookingId },
       });
     } catch (err) {
-      console.error("[VisitSummary] Notification error:", err);
+      log.error("[VisitSummary] Notification error:", { err: err });
     }
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("saveVisitSummary error:", err);
+    log.error("saveVisitSummary error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }

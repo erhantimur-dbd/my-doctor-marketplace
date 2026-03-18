@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
+import { log } from "@/lib/utils/logger";
 
 const VALID_INQUIRY_TYPES = [
   "doctor_onboarding",
@@ -62,7 +63,7 @@ export async function submitContactInquiry(formData: FormData) {
     });
 
   if (dbError) {
-    console.error("[Contact] DB insert error:", dbError);
+    log.error("[Contact] DB insert error:", { err: dbError });
     // Don't fail the user — still send emails
   }
 
@@ -82,10 +83,10 @@ export async function submitContactInquiry(formData: FormData) {
       process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
       "sales@mydoctors360.com";
     sendEmail({ to: adminEmail, subject, html }).catch((err) =>
-      console.error("[Contact] Admin email error:", err)
+      log.error("[Contact] Admin email error:", { err: err })
     );
   } catch (err) {
-    console.error("[Contact] Admin email template error:", err);
+    log.error("[Contact] Admin email template error:", { err: err });
   }
 
   // Send auto-reply to sender
@@ -98,10 +99,10 @@ export async function submitContactInquiry(formData: FormData) {
       inquiryType,
     });
     sendEmail({ to: email, subject, html }).catch((err) =>
-      console.error("[Contact] Auto-reply email error:", err)
+      log.error("[Contact] Auto-reply email error:", { err: err })
     );
   } catch (err) {
-    console.error("[Contact] Auto-reply template error:", err);
+    log.error("[Contact] Auto-reply template error:", { err: err });
   }
 
   return { success: true };

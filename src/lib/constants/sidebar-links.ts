@@ -149,6 +149,16 @@ export const doctorSidebarGroups: SidebarGroup[] = [
         label: "Organization",
       },
       {
+        href: "/doctor-dashboard/organization/bookings",
+        icon: Clock,
+        label: "Org Bookings",
+      },
+      {
+        href: "/doctor-dashboard/organization/analytics",
+        icon: BarChart3,
+        label: "Org Analytics",
+      },
+      {
         href: "/doctor-dashboard/organization/members",
         icon: Users,
         label: "Team Members",

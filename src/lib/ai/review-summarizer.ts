@@ -1,6 +1,7 @@
 import { generateObject } from "ai";
 import { aiModel, isAIEnabled } from "@/lib/ai/provider";
 import { reviewSummarySchema, type ReviewSummary } from "@/lib/ai/schemas";
+import { log } from "@/lib/utils/logger";
 
 interface ReviewInput {
   rating: number;
@@ -44,7 +45,7 @@ ${reviewTexts}`,
 
     return object;
   } catch (err) {
-    console.error("Review summary generation failed:", err);
+    log.error("Review summary generation failed:", { err: err });
     return null;
   }
 }

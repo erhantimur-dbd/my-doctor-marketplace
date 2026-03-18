@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { log } from "@/lib/utils/logger";
 
 // ─── Public actions (no auth required) ────────────────────────────
 
@@ -39,7 +40,7 @@ export async function joinDoctorWaitlist(formData: FormData) {
   );
 
   if (error) {
-    console.error("Doctor waitlist error:", error);
+    log.error("Doctor waitlist error:", { err: error });
     return { error: "Something went wrong. Please try again." };
   }
 
@@ -74,7 +75,7 @@ export async function subscribeToLaunchNotification(formData: FormData) {
   );
 
   if (error) {
-    console.error("Launch notification error:", error);
+    log.error("Launch notification error:", { err: error });
     return { error: "Something went wrong. Please try again." };
   }
 

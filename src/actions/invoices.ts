@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email/client";
 import { invoiceEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
+import { log } from "@/lib/utils/logger";
 
 // ─── helpers ───────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ export async function createInvoice(
       .single();
 
     if (insertError || !invoice) {
-      console.error("Invoice insert error:", insertError);
+      log.error("Invoice insert error:", { err: insertError });
       // If sequence-based number fails, try timestamp-based
       if (insertError?.code === "23505") {
         const fallbackNumber = `INV-${Date.now()}`;
@@ -186,7 +187,7 @@ export async function createInvoice(
     revalidatePath("/", "layout");
     return { success: true, invoice_id: invoice.id };
   } catch (err) {
-    console.error("createInvoice error:", err);
+    log.error("createInvoice error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -231,7 +232,7 @@ async function sendInvoiceNotifications(
   });
 
   sendEmail({ to: patient.email, subject, html }).catch((err) =>
-    console.error("Invoice email error:", err)
+    log.error("Invoice email error:", { err: err })
   );
 
   createNotification({
@@ -241,7 +242,7 @@ async function sendInvoiceNotifications(
     message: `Dr. ${doctorName} sent you invoice ${invoice.invoice_number} for ${formatCurrency(totalCents, doctor.base_currency)}`,
     channels: ["in_app"],
     metadata: { invoice_id: invoice.id },
-  }).catch((err) => console.error("Invoice notification error:", err));
+  }).catch((err) => log.error("Invoice notification error:", { err: err }));
 }
 
 export async function createInvoiceCheckout(
@@ -322,7 +323,7 @@ export async function createInvoiceCheckout(
 
     return { url: session.url };
   } catch (err) {
-    console.error("createInvoiceCheckout error:", err);
+    log.error("createInvoiceCheckout error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -354,7 +355,7 @@ export async function cancelInvoice(
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("cancelInvoice error:", err);
+    log.error("cancelInvoice error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -375,13 +376,13 @@ export async function getDoctorInvoices() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("getDoctorInvoices error:", error);
+      log.error("getDoctorInvoices error:", { err: error });
       return { invoices: [], error: "Failed to fetch invoices." };
     }
 
     return { invoices: data || [] };
   } catch (err) {
-    console.error("getDoctorInvoices error:", err);
+    log.error("getDoctorInvoices error:", { err: err });
     return { invoices: [], error: "An unexpected error occurred." };
   }
 }

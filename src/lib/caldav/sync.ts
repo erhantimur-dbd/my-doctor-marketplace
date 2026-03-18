@@ -12,6 +12,7 @@ import {
   deleteEvent,
   type CalDAVCredentials,
 } from "./client";
+import { log } from "@/lib/utils/logger";
 
 const SYNC_DAYS_AHEAD = 30;
 
@@ -147,7 +148,7 @@ export async function importCalDAVEvents(
     // Check for conflicts with existing bookings
     if (overrides.length > 0) {
       detectAndNotifyConflicts(doctorId, overrides, "CalDAV").catch((err) =>
-        console.error("Conflict detection error:", err)
+        log.error("Conflict detection error:", { err: err })
       );
     }
 
@@ -158,7 +159,7 @@ export async function importCalDAVEvents(
 
     return { success: true, eventsProcessed: events.length };
   } catch (err) {
-    console.error("CalDAV import sync error:", err);
+    log.error("CalDAV import sync error:", { err: err });
     return {
       success: false,
       eventsProcessed: 0,
@@ -233,7 +234,7 @@ export async function exportBookingToCalDAV(
 
     return { success: true };
   } catch (err) {
-    console.error("Export booking to CalDAV error:", err);
+    log.error("Export booking to CalDAV error:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -284,7 +285,7 @@ export async function removeBookingFromCalDAV(
 
     return { success: true };
   } catch (err) {
-    console.error("Remove CalDAV event error:", err);
+    log.error("Remove CalDAV event error:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -321,9 +322,7 @@ export async function syncAllCalDAVDoctors(): Promise<{
       synced++;
     } else {
       errors++;
-      console.error(
-        `CalDAV sync failed for doctor ${conn.doctor_id}: ${result.error}`
-      );
+      log.error("CalDAV sync failed", { doctorId: conn.doctor_id, error: result.error });
     }
   }
 

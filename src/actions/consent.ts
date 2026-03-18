@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cookieConsentSchema } from "@/lib/validators/consent";
+import { log } from "@/lib/utils/logger";
 
 export async function saveCookieConsent(input: {
   analytics: boolean;
@@ -41,7 +42,7 @@ export async function saveCookieConsent(input: {
       );
 
     if (error) {
-      console.error("[Consent] DB upsert error:", error);
+      log.error("[Consent] DB upsert error:", { err: error });
       return { error: "Failed to save consent." };
     }
   } else if (input.anonymousId) {
@@ -57,7 +58,7 @@ export async function saveCookieConsent(input: {
 
     if (error) {
       // Likely duplicate — not critical for anonymous users
-      console.error("[Consent] Anonymous insert error:", error);
+      log.error("[Consent] Anonymous insert error:", { err: error });
     }
   }
 

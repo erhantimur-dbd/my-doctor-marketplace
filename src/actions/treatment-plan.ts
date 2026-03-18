@@ -16,6 +16,7 @@ import { exportBookingToMicrosoftCalendar } from "@/lib/microsoft/sync";
 import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
+import { log } from "@/lib/utils/logger";
 
 // ─── types ────────────────────────────────────────────────────
 
@@ -225,7 +226,7 @@ export async function createTreatmentPlan(
       .single();
 
     if (insertError || !plan) {
-      console.error("Treatment plan insert error:", insertError);
+      log.error("Treatment plan insert error:", { err: insertError });
       return { error: "Failed to create treatment plan. Please try again." };
     }
 
@@ -270,7 +271,7 @@ export async function createTreatmentPlan(
       });
 
       sendEmail({ to: patient.email, subject, html }).catch((err) =>
-        console.error("Treatment plan email error:", err)
+        log.error("Treatment plan email error:", { err: err })
       );
 
       // In-app notification
@@ -282,14 +283,14 @@ export async function createTreatmentPlan(
         channels: ["in_app"],
         metadata: { treatment_plan_id: plan.id, token },
       }).catch((err) =>
-        console.error("Treatment plan notification error:", err)
+        log.error("Treatment plan notification error:", { err: err })
       );
     }
 
     revalidatePath("/", "layout");
     return { success: true, plan_id: plan.id };
   } catch (err) {
-    console.error("createTreatmentPlan error:", err);
+    log.error("createTreatmentPlan error:", { err: err });
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -337,7 +338,7 @@ export async function getTreatmentPlanByToken(token: string) {
 
     return { plan, error: null };
   } catch (err) {
-    console.error("getTreatmentPlanByToken error:", err);
+    log.error("getTreatmentPlanByToken error:", { err: err });
     return { plan: null, error: "Failed to fetch treatment plan." };
   }
 }
@@ -421,7 +422,7 @@ export async function acceptTreatmentPlanFull(
       .single();
 
     if (bookingError || !booking) {
-      console.error("Treatment plan booking insert error:", bookingError);
+      log.error("Treatment plan booking insert error:", { err: bookingError });
       return { error: "Failed to create booking. Please try again." };
     }
 
@@ -466,7 +467,7 @@ export async function acceptTreatmentPlanFull(
 
     return { url: session.url };
   } catch (err) {
-    console.error("acceptTreatmentPlanFull error:", err);
+    log.error("acceptTreatmentPlanFull error:", { err: err });
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -518,7 +519,7 @@ export async function acceptTreatmentPlanPerVisit(
       .eq("id", plan.id);
 
     if (updateError) {
-      console.error("Treatment plan accept error:", updateError);
+      log.error("Treatment plan accept error:", { err: updateError });
       return { error: "Failed to accept treatment plan. Please try again." };
     }
 
@@ -541,13 +542,13 @@ export async function acceptTreatmentPlanPerVisit(
       channels: ["in_app"],
       metadata: { treatment_plan_id: plan.id },
     }).catch((err) =>
-      console.error("Treatment plan accepted notification error:", err)
+      log.error("Treatment plan accepted notification error:", { err: err })
     );
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("acceptTreatmentPlanPerVisit error:", err);
+    log.error("acceptTreatmentPlanPerVisit error:", { err: err });
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -615,7 +616,7 @@ export async function bookTreatmentPlanSession(
         .single();
 
       if (bookingError || !booking) {
-        console.error("Treatment plan session booking error:", bookingError);
+        log.error("Treatment plan session booking error:", { err: bookingError });
         return { error: "Failed to book session. Please try again." };
       }
 
@@ -657,19 +658,19 @@ export async function bookTreatmentPlanSession(
             .update({ video_room_url: room.url, daily_room_name: room.name })
             .eq("id", booking.id);
         } catch (err) {
-          console.error("Daily.co room creation error:", err);
+          log.error("Daily.co room creation error:", { err: err });
         }
       }
 
       // Export to connected calendars (non-blocking)
       exportBookingToGoogleCalendar(booking.id).catch((err) =>
-        console.error("Google Calendar export error:", err)
+        log.error("Google Calendar export error:", { err: err })
       );
       exportBookingToMicrosoftCalendar(booking.id).catch((err) =>
-        console.error("Microsoft Calendar export error:", err)
+        log.error("Microsoft Calendar export error:", { err: err })
       );
       exportBookingToCalDAV(booking.id).catch((err) =>
-        console.error("CalDAV export error:", err)
+        log.error("CalDAV export error:", { err: err })
       );
 
       // Send confirmation email (non-blocking)
@@ -710,7 +711,7 @@ export async function bookTreatmentPlanSession(
         });
 
         sendEmail({ to: patient.email, subject, html }).catch((err) =>
-          console.error("Confirmation email error:", err)
+          log.error("Confirmation email error:", { err: err })
         );
       }
 
@@ -745,7 +746,7 @@ export async function bookTreatmentPlanSession(
       .single();
 
     if (bookingError || !booking) {
-      console.error("Treatment plan per-visit booking error:", bookingError);
+      log.error("Treatment plan per-visit booking error:", { err: bookingError });
       return { error: "Failed to create booking. Please try again." };
     }
 
@@ -803,7 +804,7 @@ export async function bookTreatmentPlanSession(
 
     return { url: session.url };
   } catch (err) {
-    console.error("bookTreatmentPlanSession error:", err);
+    log.error("bookTreatmentPlanSession error:", { err: err });
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -851,13 +852,13 @@ export async function cancelTreatmentPlan(
       channels: ["in_app"],
       metadata: { treatment_plan_id: planId },
     }).catch((err) =>
-      console.error("Treatment plan cancellation notification error:", err)
+      log.error("Treatment plan cancellation notification error:", { err: err })
     );
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("cancelTreatmentPlan error:", err);
+    log.error("cancelTreatmentPlan error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -890,14 +891,14 @@ export async function saveDoctorNotes(
       .eq("id", bookingId);
 
     if (updateError) {
-      console.error("saveDoctorNotes error:", updateError);
+      log.error("saveDoctorNotes error:", { err: updateError });
       return { error: "Failed to save notes. Please try again." };
     }
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("saveDoctorNotes error:", err);
+    log.error("saveDoctorNotes error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -923,13 +924,13 @@ export async function getDoctorTreatmentPlans() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("getDoctorTreatmentPlans error:", error);
+      log.error("getDoctorTreatmentPlans error:", { err: error });
       return { plans: [], error: "Failed to fetch treatment plans." };
     }
 
     return { plans: plans || [], error: null };
   } catch (err) {
-    console.error("getDoctorTreatmentPlans error:", err);
+    log.error("getDoctorTreatmentPlans error:", { err: err });
     return { plans: [], error: "Failed to fetch treatment plans." };
   }
 }
@@ -968,7 +969,7 @@ export async function getPatientTreatmentPlansV2() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("getPatientTreatmentPlansV2 error:", error);
+      log.error("getPatientTreatmentPlansV2 error:", { err: error });
       return {
         pending: [],
         active: [],
@@ -987,7 +988,7 @@ export async function getPatientTreatmentPlansV2() {
 
     return { pending, active, completed, error: null };
   } catch (err) {
-    console.error("getPatientTreatmentPlansV2 error:", err);
+    log.error("getPatientTreatmentPlansV2 error:", { err: err });
     return {
       pending: [],
       active: [],

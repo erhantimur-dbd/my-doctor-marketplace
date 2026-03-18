@@ -11,6 +11,7 @@ import {
 } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
+import { log } from "@/lib/utils/logger";
 
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -307,7 +308,7 @@ export async function processReferralReward(referredDoctorId: string) {
         .eq("id", referral.id);
     }
   } catch (err) {
-    console.error("[Referral] Failed to apply Stripe coupon:", err);
+    log.error("[Referral] Failed to apply Stripe coupon:", { err: err });
   }
 
   // Get referred doctor name for notification

@@ -11,6 +11,7 @@ import { sendEmail } from "@/lib/email/client";
 import { welcomeEmail } from "@/lib/email/templates";
 import { passwordSchema } from "@/lib/validators/password";
 import { safeError } from "@/lib/utils/safe-error";
+import { log } from "@/lib/utils/logger";
 
 /** Derive the app origin from incoming request headers (works on localhost,
  *  Vercel preview deploys, and production). Falls back to env var. */
@@ -148,13 +149,13 @@ export async function register(formData: FormData) {
           terms_version: "2026-03-17",
         })
         .eq("id", data.user.id)
-    ).catch((err) => console.error("[Auth] Terms acceptance recording error:", err));
+    ).catch((err) => log.error("[Auth] Terms acceptance recording error:", { err: err }));
   }
 
   // Send welcome email (non-blocking)
   const { subject, html } = welcomeEmail({ name: firstName || "there" });
   sendEmail({ to: email, subject, html }).catch((err) =>
-    console.error("[Auth] Welcome email error:", err)
+    log.error("[Auth] Welcome email error:", { err: err })
   );
 
   revalidatePath("/", "layout");
@@ -268,7 +269,7 @@ async function createDoctorAccount(formData: FormData): Promise<
       );
 
     if (profileError) {
-      console.error("Profile creation failed:", profileError);
+      log.error("Profile creation failed:", { err: profileError });
       return {
         error:
           "Account created but profile setup is still processing. Please wait a moment and log in.",
@@ -339,7 +340,7 @@ async function createDoctorAccount(formData: FormData): Promise<
     .single();
 
   if (doctorError) {
-    console.error("Doctor creation failed:", doctorError);
+    log.error("Doctor creation failed:", { err: doctorError });
     return { error: safeError(doctorError) };
   }
 
@@ -403,7 +404,7 @@ async function createDoctorAccount(formData: FormData): Promise<
       }
     } catch (orgErr) {
       // Non-blocking — doctor can still use the platform; org can be created later
-      console.error("[Auth] Auto-org creation failed:", orgErr);
+      log.error("[Auth] Auto-org creation failed:", { err: orgErr });
     }
   }
 
@@ -575,7 +576,7 @@ export async function registerTestingService(formData: FormData) {
         });
 
       if (profileError) {
-        console.error("Profile creation failed:", profileError);
+        log.error("Profile creation failed:", { err: profileError });
         return {
           error:
             "Account created but profile setup is still processing. Please wait a moment and log in.",
@@ -611,7 +612,7 @@ export async function registerTestingService(formData: FormData) {
       .single();
 
     if (doctorError) {
-      console.error("Testing service creation failed:", doctorError);
+      log.error("Testing service creation failed:", { err: doctorError });
       return { error: safeError(doctorError) };
     }
 
@@ -651,7 +652,7 @@ export async function registerTestingService(formData: FormData) {
             .eq("id", newDoctor.id);
         }
       } catch (orgErr) {
-        console.error("[Auth] Auto-org creation for testing service failed:", orgErr);
+        log.error("[Auth] Auto-org creation for testing service failed:", { err: orgErr });
       }
     }
   }

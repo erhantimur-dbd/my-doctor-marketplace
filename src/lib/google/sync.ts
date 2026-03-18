@@ -14,6 +14,7 @@ import {
   watchCalendar,
   type GoogleTokens,
 } from "./calendar";
+import { log } from "@/lib/utils/logger";
 
 const SYNC_DAYS_AHEAD = 30;
 
@@ -138,7 +139,7 @@ export async function importGoogleCalendarEvents(
         .insert(overrides);
 
       if (insertError) {
-        console.error("Failed to insert overrides:", insertError);
+        log.error("Failed to insert overrides:", { err: insertError });
         return {
           success: false,
           eventsProcessed: 0,
@@ -150,7 +151,7 @@ export async function importGoogleCalendarEvents(
     // Check for conflicts with existing bookings
     if (overrides.length > 0) {
       detectAndNotifyConflicts(doctorId, overrides, "Google").catch((err) =>
-        console.error("Conflict detection error:", err)
+        log.error("Conflict detection error:", { err: err })
       );
     }
 
@@ -162,7 +163,7 @@ export async function importGoogleCalendarEvents(
 
     return { success: true, eventsProcessed: events.length };
   } catch (err) {
-    console.error("Import sync error:", err);
+    log.error("Import sync error:", { err: err });
     return {
       success: false,
       eventsProcessed: 0,
@@ -288,7 +289,7 @@ export async function exportBookingToGoogleCalendar(
 
     return { success: true, eventId: event.id };
   } catch (err) {
-    console.error("Export booking to Google Calendar error:", err);
+    log.error("Export booking to Google Calendar error:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -354,7 +355,7 @@ export async function removeBookingFromGoogleCalendar(
 
     return { success: true };
   } catch (err) {
-    console.error("Remove Google Calendar event error:", err);
+    log.error("Remove Google Calendar event error:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -421,7 +422,7 @@ export async function setupCalendarWebhook(
 
     return { success: true };
   } catch (err) {
-    console.error("Setup webhook error:", err);
+    log.error("Setup webhook error:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -458,9 +459,7 @@ export async function syncAllConnectedDoctors(): Promise<{
       synced++;
     } else {
       errors++;
-      console.error(
-        `Sync failed for doctor ${conn.doctor_id}: ${result.error}`
-      );
+      log.error("Sync failed for doctor", { doctorId: conn.doctor_id, error: result.error });
     }
   }
 

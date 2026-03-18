@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { log } from "@/lib/utils/logger";
 
 export async function validateCoupon(code: string, planId: string) {
   if (!code || code.trim().length < 3) {
@@ -100,7 +101,7 @@ export async function recordCouponRedemption(
     });
 
   if (insertError) {
-    console.error("[Coupon] Failed to record redemption:", insertError);
+    log.error("[Coupon] Failed to record redemption:", { err: insertError });
     return;
   }
 

@@ -22,6 +22,7 @@ import { exportBookingToMicrosoftCalendar } from "@/lib/microsoft/sync";
 import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
+import { log } from "@/lib/utils/logger";
 
 // ─── helpers ───────────────────────────────────────────────────
 
@@ -196,7 +197,7 @@ export async function createFollowUpInvitation(
       .single();
 
     if (insertError || !invitation) {
-      console.error("Follow-up invitation insert error:", insertError);
+      log.error("Follow-up invitation insert error:", { err: insertError });
       return { error: "Failed to create invitation. Please try again." };
     }
 
@@ -237,7 +238,7 @@ export async function createFollowUpInvitation(
       });
 
       sendEmail({ to: patient.email, subject, html }).catch((err) =>
-        console.error("Follow-up invitation email error:", err)
+        log.error("Follow-up invitation email error:", { err: err })
       );
 
       // In-app notification
@@ -249,14 +250,14 @@ export async function createFollowUpInvitation(
         channels: ["in_app"],
         metadata: { invitation_id: invitation.id, token },
       }).catch((err) =>
-        console.error("Follow-up notification error:", err)
+        log.error("Follow-up notification error:", { err: err })
       );
     }
 
     revalidatePath("/", "layout");
     return { success: true, invitation_id: invitation.id };
   } catch (err) {
-    console.error("createFollowUpInvitation error:", err);
+    log.error("createFollowUpInvitation error:", { err: err });
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -307,7 +308,7 @@ export async function getFollowUpInvitationByToken(token: string) {
 
     return { invitation, error: null };
   } catch (err) {
-    console.error("getFollowUpInvitationByToken error:", err);
+    log.error("getFollowUpInvitationByToken error:", { err: err });
     return { invitation: null, error: "Failed to fetch invitation." };
   }
 }
@@ -391,7 +392,7 @@ export async function createInvitationCheckout(
       .single();
 
     if (bookingError || !booking) {
-      console.error("Invitation booking insert error:", bookingError);
+      log.error("Invitation booking insert error:", { err: bookingError });
       return { error: "Failed to create booking. Please try again." };
     }
 
@@ -440,7 +441,7 @@ export async function createInvitationCheckout(
 
     return { url: session.url };
   } catch (err) {
-    console.error("createInvitationCheckout error:", err);
+    log.error("createInvitationCheckout error:", { err: err });
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -512,7 +513,7 @@ export async function bookFollowUpSession(
       .single();
 
     if (bookingError || !booking) {
-      console.error("Follow-up session booking error:", bookingError);
+      log.error("Follow-up session booking error:", { err: bookingError });
       return { error: "Failed to book session. Please try again." };
     }
 
@@ -540,19 +541,19 @@ export async function bookFollowUpSession(
           .update({ video_room_url: room.url, daily_room_name: room.name })
           .eq("id", booking.id);
       } catch (err) {
-        console.error("Daily.co room creation error:", err);
+        log.error("Daily.co room creation error:", { err: err });
       }
     }
 
     // Export to connected calendars (non-blocking)
     exportBookingToGoogleCalendar(booking.id).catch((err) =>
-      console.error("Google Calendar export error:", err)
+      log.error("Google Calendar export error:", { err: err })
     );
     exportBookingToMicrosoftCalendar(booking.id).catch((err) =>
-      console.error("Microsoft Calendar export error:", err)
+      log.error("Microsoft Calendar export error:", { err: err })
     );
     exportBookingToCalDAV(booking.id).catch((err) =>
-      console.error("CalDAV export error:", err)
+      log.error("CalDAV export error:", { err: err })
     );
 
     // Send confirmation email (non-blocking)
@@ -593,14 +594,14 @@ export async function bookFollowUpSession(
       });
 
       sendEmail({ to: patient.email, subject, html }).catch((err) =>
-        console.error("Confirmation email error:", err)
+        log.error("Confirmation email error:", { err: err })
       );
     }
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("bookFollowUpSession error:", err);
+    log.error("bookFollowUpSession error:", { err: err });
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -647,12 +648,12 @@ export async function cancelFollowUpInvitation(
       message: `Dr. ${doctorName} has cancelled the follow-up invitation for ${invitation.service_name}.`,
       channels: ["in_app"],
       metadata: { invitation_id: invitationId },
-    }).catch((err) => console.error("Cancellation notification error:", err));
+    }).catch((err) => log.error("Cancellation notification error:", { err: err }));
 
     revalidatePath("/", "layout");
     return { success: true };
   } catch (err) {
-    console.error("cancelFollowUpInvitation error:", err);
+    log.error("cancelFollowUpInvitation error:", { err: err });
     return { error: "An unexpected error occurred." };
   }
 }
@@ -686,7 +687,7 @@ export async function getPatientTreatmentPlans() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("getPatientTreatmentPlans error:", error);
+      log.error("getPatientTreatmentPlans error:", { err: error });
       return { active: [], completed: [], error: "Failed to fetch treatment plans." };
     }
 
@@ -699,7 +700,7 @@ export async function getPatientTreatmentPlans() {
 
     return { active, completed, error: null };
   } catch (err) {
-    console.error("getPatientTreatmentPlans error:", err);
+    log.error("getPatientTreatmentPlans error:", { err: err });
     return { active: [], completed: [], error: "Failed to fetch treatment plans." };
   }
 }

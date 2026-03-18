@@ -1,6 +1,8 @@
 // WhatsApp Cloud API client — lightweight fetch-based (no npm dependency)
 // Falls back to console logging when WHATSAPP_ACCESS_TOKEN is not set
 
+import { log } from "@/lib/utils/logger";
+
 const GRAPH_API_VERSION = "v21.0";
 
 interface SendTemplateParams {
@@ -113,7 +115,7 @@ export async function sendWhatsAppTemplate({
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("[WhatsApp] API error:", data);
+      log.error("[WhatsApp] API error:", { err: data });
       return {
         success: false,
         error: data?.error?.message || `HTTP ${response.status}`,
@@ -123,7 +125,7 @@ export async function sendWhatsAppTemplate({
     const messageId = data?.messages?.[0]?.id;
     return { success: true, messageId };
   } catch (err) {
-    console.error("[WhatsApp] Send failed:", err);
+    log.error("[WhatsApp] Send failed:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
@@ -173,7 +175,7 @@ export async function sendWhatsAppText({
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("[WhatsApp] API error:", data);
+      log.error("[WhatsApp] API error:", { err: data });
       return {
         success: false,
         error: data?.error?.message || `HTTP ${response.status}`,
@@ -183,7 +185,7 @@ export async function sendWhatsAppText({
     const messageId = data?.messages?.[0]?.id;
     return { success: true, messageId };
   } catch (err) {
-    console.error("[WhatsApp] Send failed:", err);
+    log.error("[WhatsApp] Send failed:", { err: err });
     return {
       success: false,
       error: err instanceof Error ? err.message : "Unknown error",
