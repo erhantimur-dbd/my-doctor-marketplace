@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,7 +33,7 @@ export async function savePushSubscription(data: PushSubscriptionData) {
       { onConflict: "user_id,endpoint" }
     );
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }
 
@@ -53,7 +54,7 @@ export async function removePushSubscription(endpoint: string) {
     .eq("user_id", user.id)
     .eq("endpoint", endpoint);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }
 

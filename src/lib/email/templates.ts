@@ -1673,3 +1673,59 @@ export function rescheduleResponseEmail({
 
   return { subject, html };
 }
+
+// ---------------------------------------------------------------------------
+// Organization Invitation Email
+// ---------------------------------------------------------------------------
+
+interface OrganizationInvitationParams {
+  inviteeName: string;
+  organizationName: string;
+  inviterName: string;
+  role: string;
+  acceptUrl: string;
+}
+
+export function organizationInvitationEmail({
+  inviteeName,
+  organizationName,
+  inviterName,
+  role,
+  acceptUrl,
+}: OrganizationInvitationParams): { subject: string; html: string } {
+  const subject = `You've been invited to join ${organizationName}`;
+
+  const roleLabel =
+    role === "admin" ? "Admin" : role === "staff" ? "Staff" : "Doctor";
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">You're Invited!</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${inviteeName}, <strong>${inviterName}</strong> has invited you to join <strong>${organizationName}</strong> on ${BRAND_NAME} as a <strong>${roleLabel}</strong>.
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 6px; margin-bottom: 24px;">
+      <tr>
+        <td style="padding: 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${infoRow("Organization", organizationName)}
+            ${infoRow("Your Role", roleLabel)}
+            ${infoRow("Invited By", inviterName)}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Accepting this invitation will link your account to ${organizationName}. You'll be able to share schedules, view practice-wide bookings, and collaborate with your team.
+    </p>
+
+    ${button("Accept Invitation", acceptUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you weren't expecting this invitation, you can safely ignore this email.
+    </p>
+  `);
+
+  return { subject, html };
+}

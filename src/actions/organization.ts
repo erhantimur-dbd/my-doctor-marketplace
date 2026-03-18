@@ -1,8 +1,10 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import {
   createOrganizationSchema,
   updateOrganizationSchema,
@@ -11,6 +13,8 @@ import {
   updateMemberRoleSchema,
   transferOwnershipSchema,
 } from "@/lib/validators/organization";
+import { sendEmail } from "@/lib/email/client";
+import { organizationInvitationEmail } from "@/lib/email/templates";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -201,7 +205,7 @@ export async function updateOrganization(formData: FormData) {
     .update(parsed.data)
     .eq("id", org.id);
 
-  if (updateError) return { error: updateError.message };
+  if (updateError) return { error: safeError(updateError) };
 
   revalidatePath("/doctor-dashboard/organization");
   return { error: null };
@@ -236,7 +240,7 @@ export async function inviteMember(formData: FormData) {
   const adminSupabase = createAdminClient();
   const { data: inviteeProfile } = await adminSupabase
     .from("profiles")
-    .select("id")
+    .select("id, first_name, last_name, email")
     .eq("email", parsed.data.email)
     .single();
 
@@ -277,6 +281,41 @@ export async function inviteMember(formData: FormData) {
       invited_at: new Date().toISOString(),
     });
   }
+
+  // Send invitation email
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "";
+  const proto = h.get("x-forwarded-proto") || "https";
+  const origin = host
+    ? `${proto}://${host}`
+    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // Get inviter's name
+  const { data: inviterProfile } = await adminSupabase
+    .from("profiles")
+    .select("first_name, last_name")
+    .eq("id", membership!.user_id)
+    .single();
+
+  const inviterName = inviterProfile
+    ? `${inviterProfile.first_name} ${inviterProfile.last_name}`
+    : "Your colleague";
+  const inviteeName = inviteeProfile.first_name || "there";
+  const acceptUrl = `${origin}/en/doctor-dashboard/organization`;
+
+  const { subject, html } = organizationInvitationEmail({
+    inviteeName,
+    organizationName: org.name,
+    inviterName,
+    role: parsed.data.role,
+    acceptUrl,
+  });
+
+  sendEmail({
+    to: inviteeProfile.email,
+    subject,
+    html,
+  }).catch((err) => console.error("Invitation email error:", err));
 
   revalidatePath("/doctor-dashboard/organization/members");
   return { error: null };

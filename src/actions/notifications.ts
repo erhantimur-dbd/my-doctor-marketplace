@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -24,7 +25,7 @@ export async function getNotifications(options?: {
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (error) return { error: error.message, notifications: [] };
+  if (error) return { error: safeError(error), notifications: [] };
   return { notifications: data || [] };
 }
 
@@ -60,7 +61,7 @@ export async function markAsRead(notificationId: string) {
     .eq("id", notificationId)
     .eq("user_id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return {};
 }
 
@@ -78,7 +79,7 @@ export async function markAllAsRead(dashboardPath: string) {
     .eq("user_id", user.id)
     .eq("read", false);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   revalidatePath(dashboardPath);
   return {};

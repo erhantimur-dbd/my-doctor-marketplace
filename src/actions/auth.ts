@@ -9,6 +9,8 @@ import { headers } from "next/headers";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email/client";
 import { welcomeEmail } from "@/lib/email/templates";
+import { passwordSchema } from "@/lib/validators/password";
+import { safeError } from "@/lib/utils/safe-error";
 
 /** Derive the app origin from incoming request headers (works on localhost,
  *  Vercel preview deploys, and production). Falls back to env var. */
@@ -47,7 +49,7 @@ export async function login(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   // Block unverified users — sign them out and prompt to verify
@@ -102,6 +104,12 @@ export async function register(formData: FormData) {
   const lastName = formData.get("last_name") as string;
   const locale = (formData.get("locale") as string) || "en";
 
+  // Server-side password strength validation
+  const pwResult = passwordSchema.safeParse(password);
+  if (!pwResult.success) {
+    return { error: pwResult.error.issues[0]?.message || "Password too weak." };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -116,7 +124,7 @@ export async function register(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   // Supabase returns a fake user with empty identities for duplicate emails
@@ -126,6 +134,21 @@ export async function register(formData: FormData) {
       error:
         "An account with this email already exists. Please sign in instead.",
     };
+  }
+
+  // Record terms/privacy acceptance (non-blocking)
+  if (data.user) {
+    const adminSupabase = createAdminClient();
+    Promise.resolve(
+      adminSupabase
+        .from("profiles")
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+          privacy_accepted_at: new Date().toISOString(),
+          terms_version: "2026-03-17",
+        })
+        .eq("id", data.user.id)
+    ).catch((err) => console.error("[Auth] Terms acceptance recording error:", err));
   }
 
   // Send welcome email (non-blocking)
@@ -170,6 +193,12 @@ async function createDoctorAccount(formData: FormData): Promise<
   const colleagueEmail = (formData.get("colleague_email") as string)?.trim().toLowerCase() || "";
   const hasTestingAddon = formData.get("has_testing_addon") === "true";
 
+  // Server-side password strength validation
+  const pwResult = passwordSchema.safeParse(password);
+  if (!pwResult.success) {
+    return { error: pwResult.error.issues[0]?.message || "Password too weak." };
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -184,7 +213,7 @@ async function createDoctorAccount(formData: FormData): Promise<
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   if (!data.user) {
@@ -311,7 +340,7 @@ async function createDoctorAccount(formData: FormData): Promise<
 
   if (doctorError) {
     console.error("Doctor creation failed:", doctorError);
-    return { error: doctorError.message };
+    return { error: safeError(doctorError) };
   }
 
   // Process referral code if provided (link this doctor as a referred signup)
@@ -503,7 +532,7 @@ export async function registerTestingService(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   // Supabase returns a fake user with empty identities for duplicate emails
@@ -583,7 +612,7 @@ export async function registerTestingService(formData: FormData) {
 
     if (doctorError) {
       console.error("Testing service creation failed:", doctorError);
-      return { error: doctorError.message };
+      return { error: safeError(doctorError) };
     }
 
     // Auto-create organization + owner membership for testing service
@@ -650,7 +679,7 @@ export async function resendVerificationEmail(email: string, locale: string = "e
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   return { success: true };
@@ -675,7 +704,7 @@ export async function forgotPassword(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   return { success: true };
@@ -691,7 +720,7 @@ export async function resetPassword(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   revalidatePath("/", "layout");
@@ -717,7 +746,7 @@ export async function signInWithGoogle(locale: string = "en") {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   if (!data.url) {
@@ -739,7 +768,7 @@ export async function signInWithApple(locale: string = "en") {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   if (!data.url) {
@@ -761,7 +790,7 @@ export async function signInWithFacebook(locale: string = "en") {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   if (!data.url) {
@@ -784,7 +813,7 @@ export async function signInWithAzure(locale: string = "en") {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   if (!data.url) {
@@ -806,7 +835,7 @@ export async function signInWithTwitter(locale: string = "en") {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: safeError(error) };
   }
 
   if (!data.url) {

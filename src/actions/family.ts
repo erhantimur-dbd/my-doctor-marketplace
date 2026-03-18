@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod/v4";
@@ -52,7 +53,7 @@ export async function addDependent(input: DependentInput) {
       ...parsed.data,
     });
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }
 
@@ -78,7 +79,7 @@ export async function updateDependent(
     .eq("id", dependentId)
     .eq("parent_id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }
 
@@ -98,6 +99,6 @@ export async function removeDependent(dependentId: string) {
     .eq("id", dependentId)
     .eq("parent_id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }

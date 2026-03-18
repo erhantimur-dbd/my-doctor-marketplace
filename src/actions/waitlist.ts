@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { z } from "zod/v4";
 import { createClient } from "@/lib/supabase/server";
@@ -131,7 +132,7 @@ export async function getAdminWaitlistDoctors(filters?: {
   if (filters?.status) query = query.eq("status", filters.status);
 
   const { data, error } = await query;
-  if (error) return { error: error.message, data: [] };
+  if (error) return { error: safeError(error), data: [] };
   return { error: null, data: data || [] };
 }
 
@@ -150,7 +151,7 @@ export async function getAdminLaunchNotifications(filters?: {
   if (filters?.region) query = query.eq("region", filters.region);
 
   const { data, error } = await query;
-  if (error) return { error: error.message, data: [] };
+  if (error) return { error: safeError(error), data: [] };
   return { error: null, data: data || [] };
 }
 
@@ -167,7 +168,7 @@ export async function updateDoctorWaitlistStatus(
     .update({ status })
     .eq("id", id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   revalidatePath("/admin/waitlist");
   return { error: null };
 }

@@ -249,6 +249,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         deposit_value: isDeposit ? resolvedDepositValue : null,
         service_id: serviceId,
         service_name: serviceName,
+        organization_id: doctor.organization_id || null,
       })
       .select("id, booking_number")
       .single();

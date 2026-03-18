@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -127,7 +128,7 @@ export async function sendReferralInvitation(formData: FormData) {
     if (insertError.code === "23505") {
       return { error: "This email already has a pending invitation" };
     }
-    return { error: insertError.message };
+    return { error: safeError(insertError) };
   }
 
   // Send invitation email

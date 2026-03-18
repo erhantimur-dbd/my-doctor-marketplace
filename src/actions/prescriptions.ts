@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod/v4";
@@ -68,7 +69,7 @@ export async function createPrescription(input: PrescriptionInput) {
     .select("id")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true, id: data.id };
 }
 
@@ -92,7 +93,7 @@ export async function updatePrescription(
     .eq("id", prescriptionId)
     .eq("doctor_id", doctorId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }
 
@@ -113,7 +114,7 @@ export async function cancelPrescription(prescriptionId: string) {
     .eq("id", prescriptionId)
     .eq("doctor_id", doctorId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }
 

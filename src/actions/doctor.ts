@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -146,7 +147,7 @@ export async function updateDoctorProfile(formData: FormData) {
     .update(updates)
     .eq("id", doctor.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   revalidatePath("/doctor-dashboard/profile");
   return { success: true };
@@ -178,12 +179,12 @@ export async function updateAvailabilitySchedule(formData: FormData) {
       .update(data)
       .eq("id", id)
       .eq("doctor_id", doctor.id);
-    if (error) return { error: error.message };
+    if (error) return { error: safeError(error) };
   } else {
     const { error } = await supabase
       .from("availability_schedules")
       .insert(data);
-    if (error) return { error: error.message };
+    if (error) return { error: safeError(error) };
   }
 
   revalidatePath("/doctor-dashboard/calendar");
@@ -200,7 +201,7 @@ export async function deleteAvailabilitySchedule(scheduleId: string) {
     .eq("id", scheduleId)
     .eq("doctor_id", doctor.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   revalidatePath("/doctor-dashboard/calendar");
   return { success: true };
@@ -223,7 +224,7 @@ export async function addAvailabilityOverride(formData: FormData) {
     end_time: isBlocked ? null : endTime,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   revalidatePath("/doctor-dashboard/calendar");
   return { success: true };
@@ -252,7 +253,7 @@ export async function updateBookingStatus(
     .eq("id", bookingId)
     .eq("doctor_id", doctor.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   revalidatePath("/doctor-dashboard/bookings");
   return { success: true };
@@ -313,7 +314,7 @@ export async function getDoctorReminderPreferences(): Promise<{
     .eq("doctor_id", doctor.id)
     .order("minutes_before", { ascending: false });
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { data: data as ReminderPreference[] };
 }
 
@@ -329,7 +330,7 @@ export async function saveDoctorReminderPreferences(
     .delete()
     .eq("doctor_id", doctor.id);
 
-  if (deleteError) return { error: deleteError.message };
+  if (deleteError) return { error: safeError(deleteError) };
 
   if (prefs.length > 0) {
     const rows = prefs.map((p) => ({
@@ -343,7 +344,7 @@ export async function saveDoctorReminderPreferences(
       .from("doctor_reminder_preferences")
       .insert(rows);
 
-    if (insertError) return { error: insertError.message };
+    if (insertError) return { error: safeError(insertError) };
   }
 
   revalidatePath("/doctor-dashboard/settings");

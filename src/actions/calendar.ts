@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -94,7 +95,7 @@ export async function disconnectCalendar(): Promise<{ success: boolean; error?: 
     .delete()
     .eq("id", connection.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
   return { success: true };
 }
 
@@ -115,7 +116,7 @@ export async function toggleCalendarSync(enabled: boolean): Promise<{ success: b
     .eq("doctor_id", doctorId)
     .eq("provider", "google");
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
 
   if (enabled) {
     importGoogleCalendarEvents(doctorId).catch(console.error);
@@ -157,7 +158,7 @@ export async function getCalendarList(): Promise<{ calendars: { id: string; summ
     const cals = await listGoogleCalendars(access_token);
     return { calendars: cals.map((c) => ({ ...c, primary: c.primary ?? false })) };
   } catch (err) {
-    return { calendars: [], error: err instanceof Error ? err.message : "Failed to list calendars" };
+    return { calendars: [], error: safeError(err) };
   }
 }
 
@@ -172,7 +173,7 @@ export async function selectCalendar(calendarId: string): Promise<{ success: boo
     .eq("doctor_id", doctorId)
     .eq("provider", "google");
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
 
   importGoogleCalendarEvents(doctorId).catch(console.error);
   setupGoogleWebhook(doctorId).catch(console.error);
@@ -243,7 +244,7 @@ export async function disconnectMicrosoftCalendar(): Promise<{ success: boolean;
     .delete()
     .eq("id", connection.id);
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
   return { success: true };
 }
 
@@ -264,7 +265,7 @@ export async function toggleMicrosoftCalendarSync(enabled: boolean): Promise<{ s
     .eq("doctor_id", doctorId)
     .eq("provider", "microsoft");
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
 
   if (enabled) {
     importMicrosoftCalendarEvents(doctorId).catch(console.error);
@@ -309,7 +310,7 @@ export async function getMicrosoftCalendarList(): Promise<{ calendars: { id: str
     const cals = await listMicrosoftCalendars(access_token);
     return { calendars: cals.map((c) => ({ ...c, isDefault: c.isDefaultCalendar ?? false })) };
   } catch (err) {
-    return { calendars: [], error: err instanceof Error ? err.message : "Failed to list calendars" };
+    return { calendars: [], error: safeError(err) };
   }
 }
 
@@ -324,7 +325,7 @@ export async function selectMicrosoftCalendar(calendarId: string): Promise<{ suc
     .eq("doctor_id", doctorId)
     .eq("provider", "microsoft");
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
 
   importMicrosoftCalendarEvents(doctorId).catch(console.error);
   setupMicrosoftWebhook(doctorId).catch(console.error);
@@ -363,7 +364,7 @@ export async function generateIcsFeedToken(): Promise<{ url: string; error?: str
     .update({ ics_feed_token: token })
     .eq("id", doctorId);
 
-  if (error) return { url: "", error: error.message };
+  if (error) return { url: "", error: safeError(error) };
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   return { url: `${baseUrl}/api/calendar/feed/${token}` };
@@ -379,7 +380,7 @@ export async function revokeIcsFeedToken(): Promise<{ success: boolean; error?: 
     .update({ ics_feed_token: null })
     .eq("id", doctorId);
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
   return { success: true };
 }
 
@@ -446,7 +447,7 @@ export async function connectCalDAV(
       { onConflict: "doctor_id,provider" }
     );
 
-  if (error) return { success: false, calendars: [], error: error.message };
+  if (error) return { success: false, calendars: [], error: safeError(error) };
 
   if (testResult.calendars[0]?.href) {
     importCalDAVEvents(doctorId).catch(console.error);
@@ -473,7 +474,7 @@ export async function disconnectCalDAV(): Promise<{ success: boolean; error?: st
     .eq("doctor_id", doctorId)
     .eq("provider", "caldav");
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
   return { success: true };
 }
 
@@ -494,7 +495,7 @@ export async function toggleCalDAVSync(enabled: boolean): Promise<{ success: boo
     .eq("doctor_id", doctorId)
     .eq("provider", "caldav");
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
 
   if (enabled) {
     importCalDAVEvents(doctorId).catch(console.error);
@@ -514,7 +515,7 @@ export async function selectCalDAVCalendar(calendarHref: string): Promise<{ succ
     .eq("doctor_id", doctorId)
     .eq("provider", "caldav");
 
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: safeError(error) };
 
   importCalDAVEvents(doctorId).catch(console.error);
 

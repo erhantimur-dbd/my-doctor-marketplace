@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,7 +33,7 @@ export async function updateProfile(formData: FormData) {
     .update(updates)
     .eq("id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   revalidatePath("/dashboard/settings");
   return { success: true };
@@ -61,7 +62,7 @@ export async function changePassword(formData: FormData) {
     password: newPassword,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   return { success: true };
 }

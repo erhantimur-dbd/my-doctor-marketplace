@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -236,7 +237,7 @@ export async function cancelRecurringSeries(recurringGroupId: string) {
     .in("status", ["confirmed", "approved", "pending_payment", "pending_approval"])
     .gte("appointment_date", today);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   return { success: true };
 }

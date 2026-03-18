@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { safeError } from "@/lib/utils/safe-error";
 import { subscriptionUpgradeInviteEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
@@ -87,7 +88,7 @@ export async function getApprovalChecklist(doctorId: string) {
     .eq("doctor_id", doctorId)
     .maybeSingle();
 
-  if (error) return { error: error.message, data: null };
+  if (error) return { error: safeError(error), data: null };
   return { data };
 }
 
@@ -119,7 +120,7 @@ export async function saveApprovalChecklist(
       { onConflict: "doctor_id" }
     );
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "approval_checklist_updated", "doctor", doctorId, {
     gmc_verified: values.gmc_verified,
@@ -166,7 +167,7 @@ export async function updateDoctorVerification(
     .update(updateData)
     .eq("id", doctorId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, `doctor_verification_${status}`, "doctor", doctorId);
 
@@ -221,7 +222,7 @@ export async function toggleDoctorActive(doctorId: string, isActive: boolean) {
     .update({ is_active: isActive })
     .eq("id", doctorId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, isActive ? "doctor_activated" : "doctor_deactivated", "doctor", doctorId);
 
@@ -252,7 +253,7 @@ export async function toggleDoctorFeatured(
     .update(updateData)
     .eq("id", doctorId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, isFeatured ? "doctor_featured" : "doctor_unfeatured", "doctor", doctorId);
 
@@ -269,7 +270,7 @@ export async function approveReview(reviewId: string) {
     .update({ is_visible: true })
     .eq("id", reviewId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "review_approved", "review", reviewId);
 
@@ -286,7 +287,7 @@ export async function hideReview(reviewId: string) {
     .update({ is_visible: false })
     .eq("id", reviewId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "review_hidden", "review", reviewId);
 
@@ -307,7 +308,7 @@ export async function updatePlatformSetting(key: string, value: string) {
     .from("platform_settings")
     .upsert({ key, value, updated_at: new Date().toISOString() });
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "setting_updated", "platform_setting", key, { value });
 
@@ -327,7 +328,7 @@ export async function updateAdminProfile(firstName: string, lastName: string) {
     })
     .eq("id", user.id);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "profile_updated", "profile", user.id, {
     first_name: firstName.trim(),
@@ -404,7 +405,7 @@ export async function adminResetPatientPassword(patientId: string) {
     { redirectTo: `${appUrl}/en/reset-password` }
   );
 
-  if (resetError) return { error: resetError.message };
+  if (resetError) return { error: safeError(resetError) };
 
   await logAdminAction(
     supabase,
@@ -484,7 +485,7 @@ export async function createCoupon(data: {
   try {
     stripeCoupon = await stripe.coupons.create(stripeCouponParams as any);
   } catch (err: any) {
-    return { error: `Stripe error: ${err.message}` };
+    return { error: safeError(err) };
   }
 
   // Insert into DB
@@ -506,7 +507,7 @@ export async function createCoupon(data: {
     created_by: user.id,
   });
 
-  if (insertError) return { error: insertError.message };
+  if (insertError) return { error: safeError(insertError) };
 
   await logAdminAction(supabase, user.id, "coupon_created", "coupon", code, {
     name: data.name,
@@ -527,7 +528,7 @@ export async function toggleCouponActive(couponId: string, isActive: boolean) {
     .update({ is_active: isActive })
     .eq("id", couponId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(
     supabase,
@@ -569,7 +570,7 @@ export async function deleteCoupon(couponId: string) {
     .update({ is_active: false })
     .eq("id", couponId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "coupon_deleted", "coupon", couponId, {
     code: coupon.code,
@@ -614,7 +615,7 @@ export async function adminRefundBooking(
       refund_application_fee: true,
     } as any);
   } catch (err: any) {
-    return { error: `Stripe refund error: ${err.message}` };
+    return { error: safeError(err) };
   }
 
   const { error: updateError } = await supabase
@@ -626,7 +627,7 @@ export async function adminRefundBooking(
     })
     .eq("id", bookingId);
 
-  if (updateError) return { error: updateError.message };
+  if (updateError) return { error: safeError(updateError) };
 
   await logAdminAction(supabase, user.id, "booking_refunded", "booking", bookingId, {
     amount_cents: refundAmount,
@@ -678,7 +679,7 @@ export async function adminUpdateBookingStatus(
     .update(updateData)
     .eq("id", bookingId);
 
-  if (updateError) return { error: updateError.message };
+  if (updateError) return { error: safeError(updateError) };
 
   await logAdminAction(supabase, user.id, `booking_status_${newStatus}`, "booking", bookingId, {
     from: booking.status,
@@ -708,9 +709,9 @@ export async function adminTogglePatientSuspension(
       patientId,
       { ban_duration: suspend ? "876000h" : "none" }
     );
-    if (banError) return { error: banError.message };
+    if (banError) return { error: safeError(banError) };
   } catch (err: any) {
-    return { error: `Failed to update user: ${err.message}` };
+    return { error: safeError(err) };
   }
 
   await logAdminAction(
@@ -758,7 +759,7 @@ export async function adminUpdateDoctorProfile(
     .update(updateData)
     .eq("id", doctorId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "doctor_profile_updated", "doctor", doctorId, {
     fields: Object.keys(updateData),
@@ -791,7 +792,7 @@ export async function adminBulkModerateReviews(
     .update({ is_visible: isVisible })
     .in("id", reviewIds);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   // Log each action
   for (const id of reviewIds) {
@@ -845,7 +846,7 @@ export async function adminSendEmail(
   try {
     await sendEmail({ to: recipient.email, subject: emailSubject, html });
   } catch (err: any) {
-    return { error: `Failed to send email: ${err.message}` };
+    return { error: safeError(err) };
   }
 
   await logAdminAction(supabase, user.id, "admin_email_sent", "user", userId, {
@@ -955,7 +956,7 @@ export async function adminOverrideLicenseStatus(
     .from("licenses")
     .update(updateData)
     .eq("id", licenseId);
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, `license_status_${newStatus}`, "license", licenseId, {
     from: license.status,
@@ -996,7 +997,7 @@ export async function adminChangeLicenseTier(
       updated_at: new Date().toISOString(),
     })
     .eq("id", licenseId);
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "license_tier_changed", "license", licenseId, {
     from: license.tier,
@@ -1034,7 +1035,7 @@ export async function adminAdjustLicenseSeats(
       updated_at: new Date().toISOString(),
     })
     .eq("id", licenseId);
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "license_seats_adjusted", "license", licenseId, {
     old_max: license.max_seats,
@@ -1073,7 +1074,7 @@ export async function adminExtendLicensePeriod(
       updated_at: new Date().toISOString(),
     })
     .eq("id", licenseId);
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "license_period_extended", "license", licenseId, {
     old_end: license.current_period_end,
@@ -1145,7 +1146,7 @@ export async function adminCreateLicense(data: {
     .insert(insertData)
     .select("id")
     .single();
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   await logAdminAction(supabase, user.id, "license_created", "license", newLicense.id, {
     organization_id: data.organization_id,
@@ -1244,7 +1245,7 @@ export async function adminGrantDoctorSubscription(data: {
       .from("licenses")
       .update(updateData)
       .eq("id", existing.id);
-    if (updateError) return { error: updateError.message };
+    if (updateError) return { error: safeError(updateError) };
     licenseId = existing.id;
   } else {
     // Create new license
@@ -1268,7 +1269,7 @@ export async function adminGrantDoctorSubscription(data: {
       .insert(insertData)
       .select("id")
       .single();
-    if (licenseError) return { error: licenseError.message };
+    if (licenseError) return { error: safeError(licenseError) };
     licenseId = newLicense.id;
   }
 
@@ -1322,7 +1323,7 @@ export async function adminSearchPatients(query: string) {
     .or(`email.ilike.${q},first_name.ilike.${q},last_name.ilike.${q},phone.ilike.${q}`)
     .limit(10);
 
-  if (error) return { error: error.message, data: [] };
+  if (error) return { error: safeError(error), data: [] };
   return { data: data || [] };
 }
 
@@ -1364,7 +1365,7 @@ export async function adminCreatePatient(input: {
     });
 
   if (authCreateError || !authData.user) {
-    return { error: authCreateError?.message || "Failed to create user." };
+    return { error: safeError(authCreateError) || "Failed to create user." };
   }
 
   // Wait for handle_new_user trigger to create profile
@@ -1446,7 +1447,7 @@ export async function adminSearchDoctors(query: string) {
     .eq("verification_status", "verified")
     .eq("is_active", true);
 
-  if (error) return { error: error.message, data: [] };
+  if (error) return { error: safeError(error), data: [] };
 
   // Client-side filter by name/email since we need to search across joined profile
   const filtered = (data || []).filter((d: any) => {
@@ -1602,6 +1603,7 @@ export async function adminCreateBookingOnBehalf(input: {
       total_amount_cents: totalAmountCents,
       service_id: input.service_id || null,
       service_name: serviceName,
+      organization_id: doctor.organization_id || null,
       created_by_admin_id: user.id,
       payment_link_expires_at: paymentLinkExpiresAt,
     })
@@ -1946,7 +1948,7 @@ export async function adminCancelBooking(
       } as any);
     } catch (err: any) {
       console.error("Admin cancel refund error:", err);
-      return { error: `Stripe refund failed: ${err.message}` };
+      return { error: safeError(err) };
     }
   }
 

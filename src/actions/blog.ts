@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -125,7 +126,7 @@ export async function createBlogPost(input: BlogPostInput) {
     .select("id, slug")
     .single();
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { post: data };
 }
 
@@ -170,7 +171,7 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
     .update(updateData)
     .eq("id", postId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }
 
@@ -197,6 +198,6 @@ export async function deleteBlogPost(postId: string) {
     .delete()
     .eq("id", postId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
   return { success: true };
 }

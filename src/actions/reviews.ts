@@ -1,4 +1,5 @@
 "use server";
+import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -85,7 +86,7 @@ export async function submitReview(formData: FormData) {
     comment: comment || null,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   // Send review notification email to the doctor (non-blocking)
   const admin = createAdminClient();
@@ -167,7 +168,7 @@ export async function respondToReview(formData: FormData) {
     })
     .eq("id", reviewId);
 
-  if (error) return { error: error.message };
+  if (error) return { error: safeError(error) };
 
   revalidatePath("/doctor-dashboard/reviews");
   return { success: true };
@@ -195,7 +196,7 @@ export async function toggleFavorite(doctorId: string) {
       .delete()
       .eq("patient_id", user.id)
       .eq("doctor_id", doctorId);
-    if (error) return { error: error.message };
+    if (error) return { error: safeError(error) };
     revalidatePath("/dashboard/favorites");
     return { favorited: false };
   } else {
@@ -203,7 +204,7 @@ export async function toggleFavorite(doctorId: string) {
       patient_id: user.id,
       doctor_id: doctorId,
     });
-    if (error) return { error: error.message };
+    if (error) return { error: safeError(error) };
     revalidatePath("/dashboard/favorites");
     return { favorited: true };
   }
