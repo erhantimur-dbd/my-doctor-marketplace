@@ -68,7 +68,7 @@ export async function changePassword(formData: FormData) {
 }
 
 // ---------------------------------------------------------------------------
-// GDPR Data Export
+// GDPR Data Export (Article 20 — Right to Data Portability)
 // ---------------------------------------------------------------------------
 export async function exportPatientData() {
   const supabase = await createClient();
@@ -86,45 +86,64 @@ export async function exportPatientData() {
     treatmentPlans,
     medicalProfile,
     referrals,
+    conversations,
+    messages,
+    familyDependents,
+    prescriptions,
+    pushSubscriptions,
+    cookieConsent,
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("bookings").select("*").eq("patient_id", user.id),
     supabase.from("reviews").select("*").eq("patient_id", user.id),
     supabase.from("favorites").select("*").eq("patient_id", user.id),
-    supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .limit(100),
+    supabase.from("notifications").select("*").eq("user_id", user.id),
     supabase.from("treatment_plans").select("*").eq("patient_id", user.id),
     supabase
       .from("medical_profiles")
       .select("*")
       .eq("patient_id", user.id)
-      .single(),
+      .maybeSingle(),
     supabase
       .from("patient_referrals")
       .select("*")
       .eq("referrer_id", user.id),
+    supabase.from("conversations").select("*").eq("patient_id", user.id),
+    supabase.from("direct_messages").select("*").eq("sender_id", user.id),
+    supabase.from("family_dependents").select("*").eq("patient_id", user.id),
+    supabase.from("prescriptions").select("*").eq("patient_id", user.id),
+    supabase.from("push_subscriptions").select("*").eq("user_id", user.id),
+    supabase
+      .from("cookie_consents")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
 
   return {
     data: {
       exported_at: new Date().toISOString(),
+      format_version: "1.0",
       profile: profile.data,
+      medical_profile: medicalProfile.data || null,
       bookings: bookings.data || [],
       reviews: reviews.data || [],
       favorites: favorites.data || [],
-      notifications: notifications.data || [],
       treatment_plans: treatmentPlans.data || [],
-      medical_profile: medicalProfile.data || null,
+      prescriptions: prescriptions.data || [],
+      conversations: conversations.data || [],
+      messages_sent: messages.data || [],
+      family_dependents: familyDependents.data || [],
       referrals: referrals.data || [],
+      notifications: notifications.data || [],
+      push_subscriptions: pushSubscriptions.data || [],
+      cookie_consent: cookieConsent.data || null,
     },
   };
 }
 
 // ---------------------------------------------------------------------------
-// Account Deletion
+// Account Deletion (Article 17 — Right to Erasure)
 // ---------------------------------------------------------------------------
 export async function requestAccountDeletion() {
   const supabase = await createClient();
@@ -133,7 +152,51 @@ export async function requestAccountDeletion() {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
+  // Check for active bookings that would block deletion
+  const { data: activeBookings } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("patient_id", user.id)
+    .in("status", ["confirmed", "approved", "pending_payment", "pending_approval"])
+    .limit(1);
+
+  if (activeBookings && activeBookings.length > 0) {
+    return {
+      error:
+        "You have active bookings. Please cancel them before deleting your account.",
+    };
+  }
+
   const adminClient = createAdminClient();
+
+  // Clean up related data before auth user deletion
+  // (Some tables have ON DELETE CASCADE, but we handle non-cascading ones explicitly)
+  await Promise.allSettled([
+    // Anonymize reviews (keep content for doctor, remove patient identity)
+    adminClient
+      .from("reviews")
+      .update({ patient_id: null })
+      .eq("patient_id", user.id),
+    // Remove push subscriptions
+    adminClient
+      .from("push_subscriptions")
+      .delete()
+      .eq("user_id", user.id),
+    // Remove cookie consent
+    adminClient
+      .from("cookie_consents")
+      .delete()
+      .eq("user_id", user.id),
+    // Soft-delete bookings (keep for doctor records, anonymize patient)
+    adminClient
+      .from("bookings")
+      .update({ patient_notes: null })
+      .eq("patient_id", user.id)
+      .in("status", ["completed", "cancelled_patient", "cancelled_doctor", "no_show"]),
+  ]);
+
+  // Delete auth user — this cascades to profiles, which cascades to
+  // favorites, medical_profiles, notifications, conversations, etc.
   const { error } = await adminClient.auth.admin.deleteUser(user.id);
 
   if (error)

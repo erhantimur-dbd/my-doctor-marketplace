@@ -502,13 +502,51 @@ export async function POST(request: NextRequest) {
 
     case "account.updated": {
       const account = event.data.object as Stripe.Account;
+      const updateData: Record<string, unknown> = {
+        stripe_onboarding_complete: account.details_submitted,
+        stripe_payouts_enabled: account.payouts_enabled,
+      };
+
+      // Detect restricted/disabled accounts
+      if (
+        account.requirements?.disabled_reason ||
+        account.requirements?.currently_due?.length
+      ) {
+        updateData.stripe_requires_action = true;
+      } else {
+        updateData.stripe_requires_action = false;
+      }
+
+      await supabase
+        .from("doctors")
+        .update(updateData)
+        .eq("stripe_account_id", account.id);
+
+      // If payouts are disabled, log for admin visibility
+      if (!account.payouts_enabled) {
+        console.warn(
+          `[Stripe] Doctor account ${account.id} payouts disabled. Reason: ${account.requirements?.disabled_reason || "unknown"}`
+        );
+      }
+      break;
+    }
+
+    case "account.application.deauthorized": {
+      // Doctor disconnected their Stripe account
+      const account = event.data.object as unknown as { id: string };
       await supabase
         .from("doctors")
         .update({
-          stripe_onboarding_complete: account.details_submitted,
-          stripe_payouts_enabled: account.payouts_enabled,
+          stripe_account_id: null,
+          stripe_onboarding_complete: false,
+          stripe_payouts_enabled: false,
+          is_active: false, // Hide from search — can't accept payments
         })
         .eq("stripe_account_id", account.id);
+
+      console.warn(
+        `[Stripe] Doctor deauthorized Connect account ${account.id}. Doctor deactivated.`
+      );
       break;
     }
   }
