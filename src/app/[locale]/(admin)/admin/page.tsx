@@ -17,6 +17,7 @@ import {
   Crown,
   TrendingUp,
   Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
@@ -47,6 +48,7 @@ export default async function AdminDashboard() {
     { count: pendingVerifications },
     { count: activeSubscriptions },
     { data: recentBookings },
+    { count: stripeIssueCount },
   ] = await Promise.all([
     supabase.from("doctors").select("*", { count: "exact", head: true }),
     supabase
@@ -77,6 +79,11 @@ export default async function AdminDashboard() {
       )
       .order("created_at", { ascending: false })
       .limit(10),
+    supabase
+      .from("doctors")
+      .select("*", { count: "exact", head: true })
+      .or("stripe_requires_action.eq.true,stripe_payouts_enabled.eq.false")
+      .eq("is_active", true),
   ]);
 
   const totalRevenue = (revenueBookings || []).reduce(
@@ -314,6 +321,26 @@ export default async function AdminDashboard() {
                   {activeSubscriptions || 0}
                 </p>
                 <p className="text-xs text-muted-foreground">Recurring revenue</p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/doctors?filter=stripe_issues" className="block">
+          <Card className={`transition-shadow hover:shadow-md ${(stripeIssueCount || 0) > 0 ? "border-red-200 bg-red-50/50" : ""}`}>
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className={`rounded-full p-3 ${(stripeIssueCount || 0) > 0 ? "bg-red-100" : "bg-gray-50"}`}>
+                <AlertTriangle className={`h-5 w-5 ${(stripeIssueCount || 0) > 0 ? "text-red-600" : "text-gray-400"}`} />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Stripe Issues
+                </p>
+                <p className="text-2xl font-bold">
+                  {stripeIssueCount || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Doctors with payment issues
+                </p>
               </div>
             </CardContent>
           </Card>

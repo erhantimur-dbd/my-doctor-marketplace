@@ -21,7 +21,10 @@ export function useSessionTimeout(timeoutMs: number) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     await supabase.auth.signOut();
-    window.location.href = "/en/login?reason=session_expired";
+    // Detect current locale from URL path instead of hardcoding /en/
+    const pathLocale = window.location.pathname.match(/^\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/);
+    const locale = pathLocale ? pathLocale[1] : "en";
+    window.location.href = `/${locale}/login?reason=session_expired`;
   }, []);
 
   const resetTimer = useCallback(() => {
