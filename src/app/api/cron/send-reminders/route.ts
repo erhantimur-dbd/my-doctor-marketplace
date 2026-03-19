@@ -8,6 +8,8 @@ import {
   buildAppointmentReminderComponents,
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
+import { sendSms } from "@/lib/sms/client";
+import { appointmentReminderSms } from "@/lib/sms/templates";
 
 // Default reminders used when a doctor hasn't configured their own
 const DEFAULT_REMINDERS = [
@@ -43,7 +45,7 @@ export async function GET(request: NextRequest) {
       end_time,
       consultation_type,
       video_room_url,
-      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
+      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
       doctor:doctors!inner(
         id,
         clinic_name,
@@ -97,6 +99,7 @@ export async function GET(request: NextRequest) {
   let emailsSent = 0;
   let inAppSent = 0;
   let whatsappSent = 0;
+  let smsSent = 0;
 
   for (const booking of bookings) {
     // Calculate minutes until appointment
@@ -209,6 +212,25 @@ export async function GET(request: NextRequest) {
         });
 
         if (result.success) whatsappSent++;
+      } else if (pref.channel === "sms" && patient?.phone && doctorProfile) {
+        // Only send if patient has opted in to SMS notifications
+        if (!patient.notification_sms) continue;
+
+        const dateFormatted = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+        });
+
+        const body = appointmentReminderSms({
+          patientName: patient.first_name || "there",
+          doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+          date: dateFormatted,
+          time: booking.start_time?.slice(0, 5),
+          minutesBefore: pref.minutes_before,
+        });
+
+        const result = await sendSms({ to: patient.phone, body });
+        if (result.success) smsSent++;
       }
 
       // Record that this reminder was sent
@@ -227,5 +249,6 @@ export async function GET(request: NextRequest) {
     emails_sent: emailsSent,
     in_app_sent: inAppSent,
     whatsapp_sent: whatsappSent,
+    sms_sent: smsSent,
   });
 }

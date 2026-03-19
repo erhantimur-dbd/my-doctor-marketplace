@@ -14,6 +14,8 @@ import {
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
 import { formatCurrency } from "@/lib/utils/currency";
+import { sendSms as sendSmsMessage } from "@/lib/sms/client";
+import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -286,7 +288,7 @@ export async function POST(request: NextRequest) {
             commission_cents,
             deposit_type,
             deposit_value,
-            patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
+            patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
             doctor:doctors!inner(
               id,
               clinic_name,
@@ -417,6 +419,27 @@ export async function POST(request: NextRequest) {
                 }),
               }).catch((err) =>
                 console.error("WhatsApp confirmation error:", err)
+              );
+            }
+
+            // Send SMS booking confirmation if opted in
+            if (patient.notification_sms && patient.phone) {
+              const dateFormatted2 = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "short",
+              });
+
+              sendSmsMessage({
+                to: patient.phone,
+                body: bookingConfirmationSmsTemplate({
+                  patientName: patient.first_name || "there",
+                  doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+                  date: dateFormatted2,
+                  time: booking.start_time?.slice(0, 5),
+                  bookingNumber: booking.booking_number,
+                }),
+              }).catch((err) =>
+                console.error("SMS confirmation error:", err)
               );
             }
           }

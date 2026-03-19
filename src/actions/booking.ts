@@ -26,6 +26,8 @@ import {
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
 import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
+import { sendSms } from "@/lib/sms/client";
+import { bookingCancellationSms } from "@/lib/sms/templates";
 
 import {
   getBookingFeeCents,
@@ -336,7 +338,7 @@ export async function cancelBooking(input: CancelBookingInput) {
       .select(
         `
         *,
-        patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
+        patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
         doctor:doctors!inner(
           slug,
           cancellation_policy,
@@ -493,6 +495,27 @@ export async function cancelBooking(input: CancelBookingInput) {
           }),
         }).catch((err) =>
           log.error("WhatsApp cancellation error:", { err: err })
+        );
+      }
+
+      // Send SMS cancellation if opted in
+      if (patient.notification_sms && patient.phone) {
+        const dateFormatted = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+        });
+
+        sendSms({
+          to: patient.phone,
+          body: bookingCancellationSms({
+            patientName: patient.first_name || "there",
+            doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+            date: dateFormatted,
+            bookingNumber: booking.booking_number,
+            refundPercent,
+          }),
+        }).catch((err) =>
+          console.error("SMS cancellation error:", err)
         );
       }
     }
