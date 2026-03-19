@@ -28,6 +28,11 @@ import { headers } from "next/headers";
 
 import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
 import { log } from "@/lib/utils/logger";
+import {
+  creditWallet,
+  getAllWalletBalances,
+  getWalletTransactions,
+} from "@/lib/wallet";
 
 // Admin email allowlist — mirrors middleware check for defense-in-depth
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
@@ -2139,6 +2144,55 @@ export async function adminGetCancelPreview(bookingId: string) {
         ? `Based on the ${policy} policy, the patient will receive a ${refundPercent}% refund (${booking.currency.toUpperCase()} ${(refundAmountCents / 100).toFixed(2)}).`
         : `Based on the ${policy} policy, no refund is applicable.`,
   };
+}
+
+// ===================== Admin Wallet Management =====================
+
+export async function adminGetPatientWallet(patientId: string) {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError };
+
+  const [balances, transactions] = await Promise.all([
+    getAllWalletBalances(patientId),
+    getWalletTransactions(patientId, 50),
+  ]);
+
+  return { balances, transactions };
+}
+
+export async function adminCreditWallet(
+  patientId: string,
+  currency: string,
+  amountCents: number,
+  description: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  if (amountCents <= 0) return { error: "Amount must be positive" };
+  if (!description) return { error: "Description is required for manual credits" };
+
+  try {
+    const result = await creditWallet({
+      patientId,
+      currency: currency.toUpperCase(),
+      amountCents,
+      sourceType: "admin_manual",
+      description,
+    });
+
+    await logAdminAction(supabase, user.id, "wallet_credit_manual", "profile", patientId, {
+      amount_cents: amountCents,
+      currency,
+      description,
+      new_balance: result.balance_cents,
+    });
+
+    revalidatePath(`/admin/patients/${patientId}`);
+    return { success: true, balance_cents: result.balance_cents };
+  } catch (err: any) {
+    return { error: err.message || "Failed to credit wallet" };
+  }
 }
 
 // ===================== CSV Export Actions =====================

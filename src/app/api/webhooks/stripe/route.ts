@@ -16,6 +16,7 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
+import { debitWallet } from "@/lib/wallet";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -273,6 +274,7 @@ export async function POST(request: NextRequest) {
           .select(`
             id,
             booking_number,
+            patient_id,
             doctor_id,
             appointment_date,
             start_time,
@@ -309,6 +311,26 @@ export async function POST(request: NextRequest) {
             amount_cents: platformFeeTotal,
             currency: booking.currency,
           });
+
+          // Debit wallet if credit was applied to this booking
+          const walletCreditStr = session.metadata?.wallet_credit_cents;
+          if (walletCreditStr && parseInt(walletCreditStr, 10) > 0) {
+            const walletCreditCents = parseInt(walletCreditStr, 10);
+            try {
+              await debitWallet({
+                patientId: booking.patient_id,
+                currency: booking.currency,
+                amountCents: walletCreditCents,
+                sourceType: "refund",
+                targetBookingId: bookingId,
+                description: `Wallet credit applied to booking ${booking.booking_number}`,
+              });
+            } catch (err) {
+              console.error("Wallet debit error (non-fatal):", err);
+              // Non-fatal: booking is confirmed, just wallet debit failed
+              // Admin can reconcile manually
+            }
+          }
 
           // Export confirmed booking to doctor's connected calendars (non-blocking)
           exportBookingToGoogleCalendar(bookingId).catch((err) =>

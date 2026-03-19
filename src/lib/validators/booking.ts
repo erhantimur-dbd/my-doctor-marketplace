@@ -19,6 +19,7 @@ export const createBookingSchema = z.object({
 export const cancelBookingSchema = z.object({
   booking_id: z.string().regex(uuidFormat, "Invalid booking ID format"),
   reason: z.string().max(500).nullish(),
+  refund_destination: z.enum(["bank", "wallet"]).default("bank"),
 });
 
 export const doctorServiceSchema = z.object({

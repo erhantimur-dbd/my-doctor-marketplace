@@ -27,6 +27,7 @@ import {
   Tag,
   ScrollText,
   Building2,
+  Wallet,
 } from "lucide-react";
 
 export interface SidebarLink {
@@ -204,6 +205,7 @@ export const patientSidebarLinks: SidebarLink[] = [
     icon: ClipboardList,
     label: "Treatment Plans",
   },
+  { href: "/dashboard/wallet", icon: Wallet, label: "Wallet" },
   { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },
   { href: "/dashboard/invoices", icon: Receipt, label: "Invoices" },
   { href: "/dashboard/favorites", icon: Heart, label: "Saved Doctors" },
