@@ -2195,6 +2195,54 @@ export async function adminCreditWallet(
   }
 }
 
+export async function adminBulkCreditWallet(
+  patientIds: string[],
+  currency: string,
+  amountCents: number,
+  description: string,
+  expiresAt?: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  if (amountCents <= 0) return { error: "Amount must be positive" };
+  if (!description) return { error: "Description is required" };
+  if (patientIds.length === 0) return { error: "No patients selected" };
+  if (patientIds.length > 500) return { error: "Maximum 500 patients per batch" };
+
+  let credited = 0;
+  let failed = 0;
+
+  for (const patientId of patientIds) {
+    try {
+      await creditWallet({
+        patientId,
+        currency: currency.toUpperCase(),
+        amountCents,
+        sourceType: "promotion",
+        description,
+        expiresAt: expiresAt || undefined,
+      });
+      credited++;
+    } catch {
+      failed++;
+    }
+  }
+
+  await logAdminAction(supabase, user.id, "wallet_bulk_credit", "promotion", "bulk", {
+    patient_count: patientIds.length,
+    credited,
+    failed,
+    amount_cents: amountCents,
+    currency,
+    description,
+    expires_at: expiresAt || null,
+  });
+
+  revalidatePath("/admin/patients");
+  return { success: true, credited, failed };
+}
+
 // ===================== CSV Export Actions =====================
 
 export async function exportRevenueCSV() {

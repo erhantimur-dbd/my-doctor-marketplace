@@ -13,7 +13,10 @@ export type WalletSourceType =
   | "cancel_rebook"
   | "referral"
   | "promotion"
-  | "admin_manual";
+  | "admin_manual"
+  | "top_up"
+  | "gift_card"
+  | "loyalty";
 
 interface CreditParams {
   patientId: string;
@@ -22,6 +25,7 @@ interface CreditParams {
   sourceType: WalletSourceType;
   sourceBookingId?: string;
   description?: string;
+  expiresAt?: string; // ISO timestamp — for promotional credits
 }
 
 interface DebitParams {
@@ -106,6 +110,7 @@ export async function creditWallet({
   sourceType,
   sourceBookingId,
   description,
+  expiresAt,
 }: CreditParams): Promise<{ balance_cents: number; transactionId: string }> {
   if (amountCents <= 0) throw new Error("Credit amount must be positive");
 
@@ -152,11 +157,56 @@ export async function creditWallet({
       source_type: sourceType,
       source_booking_id: sourceBookingId || null,
       description: description || null,
+      expires_at: expiresAt || null,
     })
     .select("id")
     .single();
 
   return { balance_cents: newBalance, transactionId: txn!.id };
+}
+
+/**
+ * Get the effective wallet balance, excluding expired promotional credits.
+ * For most cases, use getWalletBalance() which returns the raw balance.
+ * This function checks for expired credits and adjusts accordingly.
+ */
+export async function getEffectiveWalletBalance(
+  patientId: string,
+  currency: string
+): Promise<{ balance_cents: number; expired_cents: number }> {
+  const cur = currency.toUpperCase();
+  const supabase = createAdminClient();
+
+  // Get raw balance
+  const { data: wallet } = await supabase
+    .from("patient_wallet")
+    .select("balance_cents")
+    .eq("patient_id", patientId)
+    .eq("currency", cur)
+    .maybeSingle();
+
+  if (!wallet || wallet.balance_cents === 0) {
+    return { balance_cents: 0, expired_cents: 0 };
+  }
+
+  // Sum expired credits that haven't been deducted yet
+  const { data: expiredCredits } = await supabase
+    .from("wallet_transactions")
+    .select("amount_cents")
+    .eq("patient_id", patientId)
+    .eq("currency", cur)
+    .eq("type", "credit")
+    .lt("expires_at", new Date().toISOString())
+    .not("expires_at", "is", null);
+
+  const expiredCents = (expiredCredits || []).reduce(
+    (sum, t) => sum + t.amount_cents, 0
+  );
+
+  // Effective balance = raw balance minus expired (but floor at 0)
+  const effectiveBalance = Math.max(0, wallet.balance_cents - expiredCents);
+
+  return { balance_cents: effectiveBalance, expired_cents: expiredCents };
 }
 
 /**

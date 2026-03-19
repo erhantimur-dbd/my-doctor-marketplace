@@ -16,8 +16,15 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
-import { debitWallet } from "@/lib/wallet";
+import { creditWallet, debitWallet } from "@/lib/wallet";
 import Stripe from "stripe";
+
+// Loyalty cashback tiers
+const LOYALTY_TIERS = [
+  { min: 15, percent: 5, name: "Gold" },
+  { min: 5, percent: 3, name: "Silver" },
+  { min: 0, percent: 2, name: "Bronze" },
+];
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -63,6 +70,68 @@ export async function POST(request: NextRequest) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // ── Wallet Top-Up ──
+      if (session.metadata?.type === "wallet_top_up") {
+        const patientId = session.metadata.patient_id;
+        const amountCents = parseInt(session.metadata.amount_cents || "0", 10);
+        const cur = session.metadata.currency || "GBP";
+
+        if (patientId && amountCents > 0) {
+          await creditWallet({
+            patientId,
+            currency: cur,
+            amountCents,
+            sourceType: "top_up",
+            description: "Wallet top-up via Stripe",
+          });
+        }
+        break;
+      }
+
+      // ── Gift Card Purchase ──
+      if (session.metadata?.type === "gift_card_purchase") {
+        const giftCardId = session.metadata.gift_card_id;
+        if (giftCardId) {
+          // Update gift card with payment intent
+          await supabase
+            .from("gift_cards")
+            .update({
+              stripe_payment_intent_id: session.payment_intent as string,
+            })
+            .eq("id", giftCardId);
+
+          // Send gift card email to recipient
+          const { data: gc } = await supabase
+            .from("gift_cards")
+            .select("*")
+            .eq("id", giftCardId)
+            .single();
+
+          if (gc && gc.recipient_email) {
+            try {
+              const { giftCardEmail: giftCardEmailTemplate } = await import("@/lib/email/templates");
+              const { subject, html } = giftCardEmailTemplate({
+                recipientName: gc.recipient_name || "Friend",
+                senderName: gc.purchased_email || "Someone",
+                amount: `${gc.currency} ${(gc.amount_cents / 100).toFixed(2)}`,
+                code: gc.code,
+                message: gc.message || null,
+                expiresAt: gc.expires_at
+                  ? new Date(gc.expires_at).toLocaleDateString("en-GB", {
+                      day: "numeric", month: "long", year: "numeric",
+                    })
+                  : null,
+              });
+              await sendEmail({ to: gc.recipient_email, subject, html });
+            } catch (err) {
+              console.error("Gift card email error:", err);
+            }
+          }
+        }
+        break;
+      }
+
       const bookingId = session.metadata?.booking_id;
       const invitationId = session.metadata?.invitation_id;
 
@@ -464,6 +533,66 @@ export async function POST(request: NextRequest) {
                 console.error("SMS confirmation error:", err)
               );
             }
+          }
+
+          // ── P0: Referral credit — reward referrer on first booking ──
+          try {
+            const { data: referral } = await supabase
+              .from("patient_referrals")
+              .select("id, referrer_id, credit_amount_cents, currency")
+              .eq("referred_id", booking.patient_id)
+              .eq("status", "booked")
+              .maybeSingle();
+
+            if (referral && referral.referrer_id) {
+              const creditAmount = referral.credit_amount_cents || 1000; // default £10
+              const creditCurrency = referral.currency || booking.currency;
+
+              await creditWallet({
+                patientId: referral.referrer_id,
+                currency: creditCurrency,
+                amountCents: creditAmount,
+                sourceType: "referral",
+                sourceBookingId: bookingId,
+                description: `Referral reward — your friend completed their first booking`,
+              });
+
+              await supabase
+                .from("patient_referrals")
+                .update({ status: "credited", credit_amount_cents: creditAmount })
+                .eq("id", referral.id);
+            }
+          } catch (err) {
+            console.error("Referral credit error (non-fatal):", err);
+          }
+
+          // ── P5: Loyalty cashback — credit % of booking value ──
+          try {
+            const { count: completedCount } = await supabase
+              .from("bookings")
+              .select("*", { count: "exact", head: true })
+              .eq("patient_id", booking.patient_id)
+              .in("status", ["confirmed", "approved", "completed"]);
+
+            const tier = LOYALTY_TIERS.find((t) => (completedCount || 0) >= t.min);
+            if (tier && booking.consultation_fee_cents > 0) {
+              const cashbackCents = Math.round(
+                booking.consultation_fee_cents * (tier.percent / 100)
+              );
+
+              if (cashbackCents > 0) {
+                await creditWallet({
+                  patientId: booking.patient_id,
+                  currency: booking.currency,
+                  amountCents: cashbackCents,
+                  sourceType: "loyalty",
+                  sourceBookingId: bookingId,
+                  description: `${tier.name} tier ${tier.percent}% cashback`,
+                });
+              }
+            }
+          } catch (err) {
+            console.error("Loyalty cashback error (non-fatal):", err);
           }
         }
       }

@@ -8,6 +8,7 @@ import { sendEmail } from "@/lib/email/client";
 import { invoiceEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
+import { getWalletBalance, debitWallet } from "@/lib/wallet";
 import { log } from "@/lib/utils/logger";
 
 // ─── helpers ───────────────────────────────────────────────────
@@ -283,6 +284,32 @@ export async function createInvoiceCheckout(
     const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
     const doctorName = `${profile.first_name} ${profile.last_name}`;
 
+    // Check wallet balance — apply credit if available
+    const { balance_cents: walletBalance } = await getWalletBalance(user.id, invoice.currency);
+    const walletCredit = Math.min(walletBalance, invoice.total_cents);
+    const remainingCharge = invoice.total_cents - walletCredit;
+
+    // If wallet covers the full invoice, pay immediately
+    if (remainingCharge === 0 && walletCredit > 0) {
+      await debitWallet({
+        patientId: user.id,
+        currency: invoice.currency,
+        amountCents: walletCredit,
+        sourceType: "refund",
+        description: `Invoice ${invoice.invoice_number} paid from wallet`,
+      });
+
+      await supabase
+        .from("invoices")
+        .update({
+          status: "paid",
+          paid_at: new Date().toISOString(),
+        })
+        .eq("id", invoiceId);
+
+      return { url: `${origin}/${locale}/dashboard/invoices?paid=${invoice.id}&wallet=true` };
+    }
+
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       line_items: [
@@ -293,13 +320,13 @@ export async function createInvoiceCheckout(
               name: `Invoice ${invoice.invoice_number}`,
               description: `Payment to Dr. ${doctorName}`,
             },
-            unit_amount: invoice.total_cents,
+            unit_amount: remainingCharge,
           },
           quantity: 1,
         },
       ],
       payment_intent_data: {
-        application_fee_amount: invoice.platform_fee_cents,
+        application_fee_amount: Math.min(invoice.platform_fee_cents, remainingCharge),
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
@@ -308,6 +335,7 @@ export async function createInvoiceCheckout(
         invoice_id: invoice.id,
         invoice_number: invoice.invoice_number,
         type: "invoice_payment",
+        ...(walletCredit > 0 ? { wallet_credit_cents: String(walletCredit) } : {}),
       },
       success_url: `${origin}/${locale}/dashboard/invoices?paid=${invoice.id}`,
       cancel_url: `${origin}/${locale}/dashboard/invoices`,

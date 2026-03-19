@@ -1812,3 +1812,63 @@ export function organizationInvitationEmail({
 
   return { subject, html };
 }
+
+// ---------------------------------------------------------------------------
+// Gift Card Email
+// ---------------------------------------------------------------------------
+
+interface GiftCardEmailParams {
+  recipientName: string;
+  senderName: string;
+  amount: string;
+  code: string;
+  message: string | null;
+  expiresAt: string | null;
+}
+
+export function giftCardEmail({
+  recipientName,
+  senderName,
+  amount,
+  code,
+  message,
+  expiresAt,
+}: GiftCardEmailParams): { subject: string; html: string } {
+  const subject = `You've received a MyDoctors360 Gift Card!`;
+
+  const messageBlock = message
+    ? `
+    <div style="background-color: #f0f9ff; border-left: 4px solid ${BRAND_COLOR}; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 14px; color: #1e40af; line-height: 1.5; font-style: italic;">
+        &ldquo;${message}&rdquo;
+      </p>
+      <p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">&mdash; ${senderName}</p>
+    </div>`
+    : "";
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">You've Received a Gift Card!</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${recipientName}, ${senderName} has sent you a <strong>${amount}</strong> gift card for healthcare appointments on MyDoctors360.
+    </p>
+
+    ${messageBlock}
+
+    <div style="background-color: #f9fafb; border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px;">
+      <p style="margin: 0 0 8px; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Your Gift Card Code</p>
+      <p style="margin: 0; font-size: 28px; font-weight: 700; color: ${BRAND_COLOR}; letter-spacing: 3px; font-family: monospace;">
+        ${code}
+      </p>
+      <p style="margin: 8px 0 0; font-size: 14px; font-weight: 600; color: #111827;">Value: ${amount}</p>
+      ${expiresAt ? `<p style="margin: 4px 0 0; font-size: 12px; color: #6b7280;">Valid until ${expiresAt}</p>` : ""}
+    </div>
+
+    ${button("Redeem Gift Card")}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      To redeem, log in to your MyDoctors360 account, go to your Wallet page, and enter the code above. The balance will be added instantly and can be used for any appointment.
+    </p>
+  `);
+
+  return { subject, html };
+}

@@ -6,8 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Wallet, ArrowUpCircle, ArrowDownCircle, Info } from "lucide-react";
+import { Wallet, ArrowUpCircle, ArrowDownCircle, Info, Trophy, Gift, Star } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { WalletActions } from "./wallet-actions";
+
+// Loyalty tiers (matching webhook logic)
+const LOYALTY_TIERS = [
+  { min: 15, percent: 5, name: "Gold", color: "text-yellow-600 bg-yellow-50", icon: "🥇" },
+  { min: 5, percent: 3, name: "Silver", color: "text-gray-600 bg-gray-50", icon: "🥈" },
+  { min: 0, percent: 2, name: "Bronze", color: "text-amber-700 bg-amber-50", icon: "🥉" },
+];
 
 export default async function WalletPage() {
   const supabase = await createClient();
@@ -19,6 +27,17 @@ export default async function WalletPage() {
     getWalletTransactions(user.id, 50),
   ]);
 
+  // Get completed booking count for loyalty tier
+  const { count: completedBookings } = await supabase
+    .from("bookings")
+    .select("*", { count: "exact", head: true })
+    .eq("patient_id", user.id)
+    .in("status", ["confirmed", "approved", "completed"]);
+
+  const bookingCount = completedBookings || 0;
+  const currentTier = LOYALTY_TIERS.find((t) => bookingCount >= t.min) || LOYALTY_TIERS[2];
+  const nextTier = LOYALTY_TIERS.find((t) => t.min > bookingCount && t.min <= currentTier.min + 20);
+
   const totalBalances = balances.filter((b) => b.balance_cents > 0);
 
   const sourceLabels: Record<string, string> = {
@@ -27,16 +46,19 @@ export default async function WalletPage() {
     referral: "Referral Reward",
     promotion: "Promotion",
     admin_manual: "Account Credit",
+    top_up: "Wallet Top-Up",
+    gift_card: "Gift Card",
+    loyalty: "Loyalty Cashback",
   };
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Wallet</h1>
 
-      {/* Balance Cards */}
-      {totalBalances.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {totalBalances.map((b) => (
+      {/* Balance + Loyalty Row */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {totalBalances.length > 0 ? (
+          totalBalances.map((b) => (
             <Card key={b.currency}>
               <CardContent className="flex items-center gap-4 p-6">
                 <div className="rounded-full bg-green-50 p-3">
@@ -50,16 +72,41 @@ export default async function WalletPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      ) : (
+          ))
+        ) : (
+          <Card>
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-gray-50 p-3">
+                <Wallet className="h-6 w-6 text-gray-400" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Balance</p>
+                <p className="text-2xl font-bold text-gray-400">—</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loyalty Tier Card */}
         <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            <Wallet className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
-            <p>No wallet balance yet.</p>
+          <CardContent className="flex items-center gap-4 p-6">
+            <div className={`rounded-full p-3 ${currentTier.color}`}>
+              <Trophy className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Loyalty Tier</p>
+              <p className="text-lg font-bold">{currentTier.icon} {currentTier.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {currentTier.percent}% cashback on bookings
+                {nextTier && ` • ${nextTier.min - bookingCount} more to ${nextTier.name}`}
+              </p>
+            </div>
           </CardContent>
         </Card>
-      )}
+      </div>
+
+      {/* Top-Up + Gift Card Actions */}
+      <WalletActions />
 
       {/* Info Banner */}
       <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -67,7 +114,8 @@ export default async function WalletPage() {
         <div className="text-sm text-blue-800">
           <p className="font-medium">How wallet credits work</p>
           <p className="mt-1">
-            When you cancel a booking, you can choose to receive your refund as an instant wallet credit instead of waiting 3-5 days for a bank refund. Wallet credits are automatically applied to your next booking.
+            Wallet credits are automatically applied to your next booking, invoice, or treatment plan payment.
+            You earn credits from: cancellation refunds (instant), loyalty cashback ({currentTier.percent}%), referral rewards, and gift cards.
           </p>
         </div>
       </div>
