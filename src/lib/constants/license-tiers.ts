@@ -127,9 +127,9 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     priceMonthlyPence: 19900, // £199
     perUser: false,
     defaultSeats: 1,
-    maxSeats: 1,
+    maxSeats: 4, // can add up to 3 extra seats
     includedSeats: 1,
-    extraSeatPricePence: 0,
+    extraSeatPricePence: 29900, // £299 per extra seat
     commitmentMonths: 12,
     features: [
       "1 doctor profile",
@@ -138,6 +138,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
       "Email reminders",
       "Video consultations",
       "SMS & WhatsApp reminders",
+      "Add extra seats (£299/seat)",
     ],
     excludedFeatures: [
       "Advanced analytics",
@@ -173,14 +174,14 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     priceMonthlyPence: 149500, // £1,495
     perUser: false,
     defaultSeats: 5,
-    maxSeats: 15,
+    maxSeats: 15, // 5 included + up to 10 extras = 15 total
     includedSeats: 5,
     extraSeatPricePence: 29900, // £299 per extra seat
     commitmentMonths: 12,
     features: [
       "Multi-location clinic",
       "5 doctor profiles included",
-      "Add up to 15 doctors with add-ons",
+      "Add up to 10 extra seats (15 total)",
       "3 hours of dedicated onboarding",
       "Custom branding on your profile",
       "Centralized clinic dashboard",

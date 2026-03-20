@@ -313,11 +313,21 @@ export async function addExtraSeats(formData: FormData) {
   const tierConfig = getLicenseTier(license.tier);
   if (!tierConfig) return { error: "Invalid license tier" };
 
+  // Check if this tier supports extra seats
+  if (tierConfig.extraSeatPricePence <= 0 || tierConfig.isFreeTier) {
+    return { error: "Extra seats are not available on this plan. Please upgrade." };
+  }
+
   const newExtraCount = license.extra_seat_count + parsed.data.count;
   const newMaxSeats = license.max_seats + parsed.data.count;
 
-  if (newMaxSeats > tierConfig.maxSeats + 50) {
-    return { error: "Exceeds maximum allowed seats for this tier. Consider upgrading." };
+  // Enforce tier cap (e.g. Starter max 4, Professional max 4, Clinic max 15)
+  if (newMaxSeats > tierConfig.maxSeats) {
+    const availableToAdd = tierConfig.maxSeats - license.max_seats;
+    if (availableToAdd <= 0) {
+      return { error: `You've reached the maximum of ${tierConfig.maxSeats} seats for the ${tierConfig.name} plan. Consider upgrading.` };
+    }
+    return { error: `You can add up to ${availableToAdd} more seat(s) on the ${tierConfig.name} plan (max ${tierConfig.maxSeats}).` };
   }
 
   // Update license seats in DB

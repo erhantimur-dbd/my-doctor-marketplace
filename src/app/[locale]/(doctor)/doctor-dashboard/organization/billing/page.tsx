@@ -251,39 +251,48 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {/* Extra Seats (only for existing license) */}
-      {license && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Add Extra Seats</CardTitle>
-            <CardDescription>
-              Need more seats beyond your plan? Each extra seat is €29/month.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-3">
-              <div>
-                <Input
-                  type="number"
-                  min="1"
-                  max="50"
-                  value={extraSeats}
-                  onChange={(e) => setExtraSeats(e.target.value)}
-                  className="w-24"
-                />
+      {/* Extra Seats (only for tiers that support it) */}
+      {license && (() => {
+        const tierConfig = LICENSE_TIERS.find((t) => t.id === license.tier);
+        const canAddSeats = tierConfig && tierConfig.extraSeatPricePence > 0 && !tierConfig.isFreeTier;
+        const availableToAdd = tierConfig ? tierConfig.maxSeats - license.max_seats : 0;
+
+        if (!canAddSeats || availableToAdd <= 0) return null;
+
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Add Extra Seats</CardTitle>
+              <CardDescription>
+                Need more seats? Each extra seat is {formatPrice(tierConfig!.extraSeatPricePence, "GBP")}/month.
+                You can add up to {availableToAdd} more seat{availableToAdd !== 1 ? "s" : ""} ({license.max_seats}/{tierConfig!.maxSeats} used).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-end gap-3">
+                <div>
+                  <Input
+                    type="number"
+                    min="1"
+                    max={availableToAdd}
+                    value={extraSeats}
+                    onChange={(e) => setExtraSeats(e.target.value)}
+                    className="w-24"
+                  />
+                </div>
+                <Button onClick={handleAddSeatsPreview} disabled={isPending || previewLoading}>
+                  {previewLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="mr-2 h-4 w-4" />
+                  )}
+                  Add Seats
+                </Button>
               </div>
-              <Button onClick={handleAddSeatsPreview} disabled={isPending || previewLoading}>
-                {previewLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="mr-2 h-4 w-4" />
-                )}
-                Add Seats
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Coupon Code (only when no license) */}
       {!license && (
