@@ -127,9 +127,9 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     priceMonthlyPence: 19900, // £199
     perUser: false,
     defaultSeats: 1,
-    maxSeats: 4, // can add up to 3 extra seats
+    maxSeats: 1, // single seat only — upgrade to Professional for more
     includedSeats: 1,
-    extraSeatPricePence: 29900, // £299 per extra seat
+    extraSeatPricePence: 0, // no add-on seats — must upgrade
     commitmentMonths: 12,
     features: [
       "1 doctor profile",
@@ -138,7 +138,6 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
       "Email reminders",
       "Video consultations",
       "SMS & WhatsApp reminders",
-      "Add extra seats (£299/seat)",
     ],
     excludedFeatures: [
       "Advanced analytics",
