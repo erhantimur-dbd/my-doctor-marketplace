@@ -282,3 +282,50 @@ export function getPaidTiers(): LicenseTierConfig[] {
 export function getCheckoutTiers(): LicenseTierConfig[] {
   return LICENSE_TIERS.filter((t) => !t.isCustomPricing);
 }
+
+/**
+ * Get or create a reusable Stripe price for extra seats.
+ *
+ * Uses STRIPE_PRICE_EXTRA_SEAT env var if set (recommended for production).
+ * Otherwise creates a price on-the-fly and caches the ID for the session.
+ */
+let _cachedSeatPriceId: string | null = null;
+
+export async function getOrCreateExtraSeatPriceId(): Promise<string> {
+  // 1. Use env var if configured (recommended)
+  if (process.env.STRIPE_PRICE_EXTRA_SEAT) {
+    return process.env.STRIPE_PRICE_EXTRA_SEAT;
+  }
+
+  // 2. Return cached value if we already created one this session
+  if (_cachedSeatPriceId) return _cachedSeatPriceId;
+
+  // 3. Search for existing price in Stripe
+  const { getStripe } = await import("@/lib/stripe/client");
+  const stripe = getStripe();
+
+  const existingPrices = await stripe.prices.search({
+    query: 'metadata["type"]:"extra_seat" active:"true"',
+    limit: 1,
+  });
+
+  if (existingPrices.data.length > 0) {
+    _cachedSeatPriceId = existingPrices.data[0].id;
+    return _cachedSeatPriceId;
+  }
+
+  // 4. Create one if none exists
+  const price = await stripe.prices.create({
+    currency: "gbp",
+    unit_amount: EXTRA_SEAT_PRICE_PENCE,
+    recurring: { interval: "month" },
+    product_data: {
+      name: "Extra Doctor Seat",
+      metadata: { type: "extra_seat" },
+    },
+    metadata: { type: "extra_seat" },
+  });
+
+  _cachedSeatPriceId = price.id;
+  return _cachedSeatPriceId;
+}

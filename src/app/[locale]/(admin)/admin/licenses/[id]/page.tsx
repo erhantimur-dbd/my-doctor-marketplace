@@ -242,6 +242,7 @@ export default async function AdminLicenseDetailPage({
               extraSeatCount={license.extra_seat_count}
               usedSeats={license.used_seats}
               currentPeriodEnd={license.current_period_end}
+              hasStripeSubscription={!!license.stripe_subscription_id}
             />
           </CardContent>
         </Card>

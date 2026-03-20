@@ -1027,7 +1027,7 @@ export async function adminAdjustLicenseSeats(
 
   const { data: license } = await supabase
     .from("licenses")
-    .select("id, max_seats, extra_seat_count, used_seats")
+    .select("id, max_seats, extra_seat_count, used_seats, stripe_subscription_id")
     .eq("id", licenseId)
     .single();
   if (!license) return { error: "License not found" };
@@ -1035,6 +1035,7 @@ export async function adminAdjustLicenseSeats(
     return { error: `Cannot reduce below current usage (${license.used_seats} seats in use)` };
   }
 
+  // Update DB
   const { error } = await supabase
     .from("licenses")
     .update({
@@ -1045,16 +1046,60 @@ export async function adminAdjustLicenseSeats(
     .eq("id", licenseId);
   if (error) return { error: safeError(error) };
 
+  // Sync to Stripe — prorate immediately
+  let stripeSynced = false;
+  if (license.stripe_subscription_id) {
+    try {
+      const { getOrCreateExtraSeatPriceId } = await import("@/lib/constants/license-tiers");
+      const seatPriceId = await getOrCreateExtraSeatPriceId();
+      const subscription = await getStripe().subscriptions.retrieve(license.stripe_subscription_id);
+
+      const existingItem = subscription.items.data.find(
+        (item) => item.price.metadata?.type === "extra_seat"
+      );
+
+      if (existingItem && extraSeatCount > 0) {
+        // Update quantity on existing line item
+        await getStripe().subscriptionItems.update(existingItem.id, {
+          quantity: extraSeatCount,
+          proration_behavior: "create_prorations",
+        });
+        stripeSynced = true;
+      } else if (extraSeatCount > 0) {
+        // Add new line item
+        await getStripe().subscriptions.update(license.stripe_subscription_id, {
+          items: [
+            ...subscription.items.data.map((item) => ({ id: item.id })),
+            { price: seatPriceId, quantity: extraSeatCount },
+          ],
+          proration_behavior: "create_prorations",
+        });
+        stripeSynced = true;
+      } else if (existingItem && extraSeatCount === 0) {
+        // Remove extra seat line item entirely
+        await getStripe().subscriptionItems.del(existingItem.id, {
+          proration_behavior: "create_prorations",
+        });
+        stripeSynced = true;
+      }
+    } catch (err: any) {
+      console.error("[Admin] Stripe seat sync failed:", err);
+      // DB is already updated — log the Stripe failure for manual follow-up
+    }
+  }
+
   await logAdminAction(supabase, user.id, "license_seats_adjusted", "license", licenseId, {
     old_max: license.max_seats,
     new_max: maxSeats,
     old_extra: license.extra_seat_count,
     new_extra: extraSeatCount,
+    stripe_synced: stripeSynced,
+    had_stripe_sub: !!license.stripe_subscription_id,
   });
 
   revalidatePath(`/admin/licenses/${licenseId}`);
   revalidatePath("/admin/licenses");
-  return { success: true };
+  return { success: true, stripeSynced };
 }
 
 export async function adminExtendLicensePeriod(

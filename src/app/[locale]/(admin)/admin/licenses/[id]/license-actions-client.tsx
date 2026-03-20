@@ -23,6 +23,7 @@ interface LicenseActionsClientProps {
   extraSeatCount: number;
   usedSeats: number;
   currentPeriodEnd: string;
+  hasStripeSubscription: boolean;
 }
 
 const STATUSES = [
@@ -49,6 +50,7 @@ export function LicenseActionsClient({
   extraSeatCount,
   usedSeats,
   currentPeriodEnd,
+  hasStripeSubscription,
 }: LicenseActionsClientProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -231,9 +233,17 @@ export function LicenseActionsClient({
             />
           </div>
         </div>
+        {hasStripeSubscription && seatExtra !== extraSeatCount && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+            <strong>Billing impact:</strong>{" "}
+            {seatExtra > extraSeatCount
+              ? `Adding ${seatExtra - extraSeatCount} seat(s) will add £${((seatExtra - extraSeatCount) * 299).toFixed(0)}/mo to this doctor's Stripe subscription (prorated immediately).`
+              : `Removing ${extraSeatCount - seatExtra} seat(s) will reduce billing by £${((extraSeatCount - seatExtra) * 299).toFixed(0)}/mo (prorated credit applied).`}
+          </div>
+        )}
         <Button size="sm" onClick={handleSeatsAdjust} disabled={isPending}>
           {isPending && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-          Save Seats
+          {hasStripeSubscription ? "Save Seats & Update Billing" : "Save Seats"}
         </Button>
       </div>
 

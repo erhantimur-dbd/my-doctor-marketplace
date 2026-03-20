@@ -30,10 +30,19 @@ import {
 } from "lucide-react";
 import { LICENSE_TIERS, AVAILABLE_MODULES, formatPrice } from "@/lib/constants/license-tiers";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   getOrganizationLicense,
   createLicenseCheckout,
   manageLicenseBilling,
   addExtraSeats,
+  previewSeatCost,
   toggleModule,
 } from "@/actions/license";
 
@@ -47,6 +56,9 @@ export default function BillingPage() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [couponCode, setCouponCode] = useState("");
+  const [seatPreview, setSeatPreview] = useState<any>(null);
+  const [seatPreviewOpen, setSeatPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -92,20 +104,37 @@ export default function BillingPage() {
     });
   }
 
-  async function handleAddSeats() {
+  async function handleAddSeatsPreview() {
+    const count = parseInt(extraSeats, 10);
+    if (isNaN(count) || count < 1) return;
+    setPreviewLoading(true);
+    setSeatPreviewOpen(true);
+    const result = await previewSeatCost(count);
+    if (result.error) {
+      setErrorMsg(result.error as string);
+      setSeatPreviewOpen(false);
+    } else {
+      setSeatPreview(result);
+    }
+    setPreviewLoading(false);
+  }
+
+  async function handleConfirmAddSeats() {
     const count = parseInt(extraSeats, 10);
     if (isNaN(count) || count < 1) return;
     const formData = new FormData();
     formData.set("count", String(count));
     startTransition(async () => {
       const result = await addExtraSeats(formData);
+      setSeatPreviewOpen(false);
+      setSeatPreview(null);
       if (result.error) {
         setErrorMsg(result.error);
         setTimeout(() => setErrorMsg(""), 4000);
       } else {
         await loadData();
-        setSuccessMsg(`Added ${count} seat(s)`);
-        setTimeout(() => setSuccessMsg(""), 3000);
+        setSuccessMsg(`Added ${count} seat(s) — billing updated`);
+        setTimeout(() => setSuccessMsg(""), 4000);
       }
     });
   }
@@ -243,8 +272,8 @@ export default function BillingPage() {
                   className="w-24"
                 />
               </div>
-              <Button onClick={handleAddSeats} disabled={isPending}>
-                {isPending ? (
+              <Button onClick={handleAddSeatsPreview} disabled={isPending || previewLoading}>
+                {previewLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Plus className="mr-2 h-4 w-4" />
@@ -440,6 +469,78 @@ export default function BillingPage() {
           })}
         </div>
       )}
+      {/* Seat Cost Confirmation Dialog */}
+      <Dialog open={seatPreviewOpen} onOpenChange={setSeatPreviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add {seatPreview?.extraSeatsRequested || 0} Extra Seat{(seatPreview?.extraSeatsRequested || 0) > 1 ? "s" : ""}</DialogTitle>
+            <DialogDescription>
+              Review the billing impact before confirming.
+            </DialogDescription>
+          </DialogHeader>
+
+          {previewLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : seatPreview ? (
+            <div className="space-y-3">
+              <div className="divide-y rounded-lg border">
+                <div className="flex items-center justify-between p-3">
+                  <span className="text-sm text-muted-foreground">Current plan</span>
+                  <span className="text-sm font-medium">{seatPreview.currentPlanName} ({seatPreview.currentSeats} seats)</span>
+                </div>
+                <div className="flex items-center justify-between p-3">
+                  <span className="text-sm text-muted-foreground">Current monthly</span>
+                  <span className="text-sm font-medium">{formatPrice(seatPreview.currentMonthlyPence, "GBP")}</span>
+                </div>
+                <div className="flex items-center justify-between bg-blue-50 p-3">
+                  <span className="text-sm text-blue-700">
+                    + {seatPreview.extraSeatsRequested} seat{seatPreview.extraSeatsRequested > 1 ? "s" : ""} × {formatPrice(seatPreview.seatPricePence, "GBP")}/mo
+                  </span>
+                  <span className="text-sm font-semibold text-blue-700">
+                    {formatPrice(seatPreview.extraCostPence, "GBP")}/mo
+                  </span>
+                </div>
+                <div className="flex items-center justify-between bg-muted/50 p-3">
+                  <span className="text-sm font-semibold">New monthly total</span>
+                  <span className="text-base font-bold">
+                    {formatPrice(seatPreview.newMonthlyPence, "GBP")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <strong>Prorated charge today:</strong> {formatPrice(seatPreview.proratedPence, "GBP")}{" "}
+                ({seatPreview.remainingDays} days remaining until {new Date(seatPreview.nextBillingDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })})
+              </div>
+            </div>
+          ) : null}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSeatPreviewOpen(false);
+                setSeatPreview(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmAddSeats}
+              disabled={isPending || !seatPreview}
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CreditCard className="mr-2 h-4 w-4" />
+              )}
+              Confirm &amp; Pay
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

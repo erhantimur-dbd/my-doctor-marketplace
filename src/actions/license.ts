@@ -10,7 +10,7 @@ import {
   toggleModuleSchema,
   upgradeTierSchema,
 } from "@/lib/validators/license";
-import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_PENCE, convertPrice, BASE_CURRENCY } from "@/lib/constants/license-tiers";
+import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_PENCE, convertPrice, BASE_CURRENCY, getOrCreateExtraSeatPriceId } from "@/lib/constants/license-tiers";
 import type { LicenseTier } from "@/types";
 import { log } from "@/lib/utils/logger";
 
@@ -233,6 +233,64 @@ export async function manageLicenseBilling() {
   return { url: portalSession.url };
 }
 
+/**
+ * Preview the cost impact of adding extra seats — read-only, no mutations.
+ * Used by the billing UI to show a confirmation dialog before committing.
+ */
+export async function previewSeatCost(count: number) {
+  const { error: authError, supabase, org } = await requireOrgOwner();
+  if (authError || !supabase || !org) return { error: authError };
+
+  if (!count || count < 1 || count > 50) return { error: "Invalid seat count" };
+
+  const { data: license } = await supabase
+    .from("licenses")
+    .select("*")
+    .eq("organization_id", org.id)
+    .in("status", ["active", "trialing", "past_due"])
+    .limit(1)
+    .maybeSingle();
+
+  if (!license) return { error: "No active license found" };
+
+  const tierConfig = getLicenseTier(license.tier);
+  if (!tierConfig) return { error: "Invalid license tier" };
+
+  // Calculate costs
+  const currentPlanPence = tierConfig.perUser
+    ? tierConfig.priceMonthlyPence * license.max_seats
+    : tierConfig.priceMonthlyPence;
+  const existingExtraPence = license.extra_seat_count * EXTRA_SEAT_PRICE_PENCE;
+  const currentMonthlyPence = currentPlanPence + existingExtraPence;
+
+  const newExtraPence = count * EXTRA_SEAT_PRICE_PENCE;
+  const newMonthlyPence = currentMonthlyPence + newExtraPence;
+
+  // Calculate prorated amount for remaining days
+  const now = new Date();
+  const periodEnd = new Date(license.current_period_end);
+  const periodStart = new Date(license.current_period_start);
+  const totalDays = Math.max(1, (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24));
+  const remainingDays = Math.max(0, (periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const proratedPence = Math.round((newExtraPence * remainingDays) / totalDays);
+
+  return {
+    currentPlanName: tierConfig.name,
+    currentSeats: license.max_seats,
+    existingExtraSeats: license.extra_seat_count,
+    extraSeatsRequested: count,
+    newTotalSeats: license.max_seats + count,
+    seatPricePence: EXTRA_SEAT_PRICE_PENCE,
+    currentMonthlyPence,
+    extraCostPence: newExtraPence,
+    newMonthlyPence,
+    proratedPence,
+    remainingDays: Math.round(remainingDays),
+    nextBillingDate: periodEnd.toISOString().split("T")[0],
+    currency: "GBP",
+  };
+}
+
 export async function addExtraSeats(formData: FormData) {
   const { error: authError, supabase, org } = await requireOrgOwner();
   if (authError || !supabase || !org) return { error: authError };
@@ -255,46 +313,53 @@ export async function addExtraSeats(formData: FormData) {
   const tierConfig = getLicenseTier(license.tier);
   if (!tierConfig) return { error: "Invalid license tier" };
 
-  const newTotal = license.used_seats + parsed.data.count;
+  const newExtraCount = license.extra_seat_count + parsed.data.count;
   const newMaxSeats = license.max_seats + parsed.data.count;
 
-  if (newTotal > tierConfig.maxSeats + 50) {
+  if (newMaxSeats > tierConfig.maxSeats + 50) {
     return { error: "Exceeds maximum allowed seats for this tier. Consider upgrading." };
   }
 
-  // Update license seats
+  // Update license seats in DB
   const adminSupabase = createAdminClient();
   await adminSupabase
     .from("licenses")
     .update({
       max_seats: newMaxSeats,
-      extra_seat_count: license.extra_seat_count + parsed.data.count,
+      extra_seat_count: newExtraCount,
     })
     .eq("id", license.id);
 
-  // If Stripe subscription exists, add/update seat line item
+  // Sync to Stripe — use reusable price, update quantity on existing item
   if (license.stripe_subscription_id) {
     try {
       const stripe = getStripe();
+      const seatPriceId = await getOrCreateExtraSeatPriceId();
       const subscription = await stripe.subscriptions.retrieve(license.stripe_subscription_id);
 
-      // Create a price for extra seats
-      const currency = "gbp";
-      const seatPrice = await stripe.prices.create({
-        currency,
-        unit_amount: EXTRA_SEAT_PRICE_PENCE,
-        recurring: { interval: "month" },
-        product_data: { name: "Extra Doctor Seat" },
-      });
+      // Find existing extra-seat subscription item
+      const existingItem = subscription.items.data.find(
+        (item) => item.price.metadata?.type === "extra_seat"
+      );
 
-      await stripe.subscriptions.update(license.stripe_subscription_id, {
-        items: [
-          ...subscription.items.data.map((item) => ({ id: item.id })),
-          { price: seatPrice.id, quantity: parsed.data.count },
-        ],
-      });
+      if (existingItem) {
+        // Update quantity on existing line item
+        await stripe.subscriptionItems.update(existingItem.id, {
+          quantity: newExtraCount,
+          proration_behavior: "create_prorations",
+        });
+      } else {
+        // Add new line item for extra seats
+        await stripe.subscriptions.update(license.stripe_subscription_id, {
+          items: [
+            ...subscription.items.data.map((item) => ({ id: item.id })),
+            { price: seatPriceId, quantity: parsed.data.count },
+          ],
+          proration_behavior: "create_prorations",
+        });
+      }
     } catch (err) {
-      log.error("[License] Failed to update Stripe subscription for extra seats:", { err: err });
+      log.error("[License] Failed to update Stripe subscription for extra seats:", { err });
     }
   }
 
