@@ -723,6 +723,190 @@ export async function POST(request: NextRequest) {
       );
       break;
     }
+
+    // ── Reschedule Balance Payment Succeeded ──────────────────────────────
+    case "payment_intent.succeeded": {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+
+      // Only handle reschedule balance payments
+      if (paymentIntent.metadata?.type !== "reschedule_balance") break;
+
+      const newBookingId = paymentIntent.metadata.new_booking_id;
+      const originalBookingId = paymentIntent.metadata.original_booking_id;
+
+      if (!newBookingId || !originalBookingId) {
+        console.error("[Stripe] reschedule_balance PI missing booking IDs", paymentIntent.id);
+        break;
+      }
+
+      // 1. Confirm the new (rescheduled) booking
+      await supabase
+        .from("bookings")
+        .update({
+          status: "confirmed",
+          reschedule_payment_status: "paid",
+          stripe_payment_intent_id: paymentIntent.id,
+          paid_at: new Date().toISOString(),
+        })
+        .eq("id", newBookingId);
+
+      // 2. Cancel the original booking (superseded by the rescheduled one)
+      await supabase
+        .from("bookings")
+        .update({ status: "cancelled_doctor" })
+        .eq("id", originalBookingId);
+
+      // 3. Fetch new booking for email + calendar exports
+      const { data: rescheduleBooking } = await supabase
+        .from("bookings")
+        .select(`
+          id,
+          booking_number,
+          patient_id,
+          doctor_id,
+          appointment_date,
+          start_time,
+          end_time,
+          consultation_type,
+          consultation_fee_cents,
+          platform_fee_cents,
+          total_amount_cents,
+          reschedule_price_diff_cents,
+          currency,
+          patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
+          doctor:doctors!inner(
+            id,
+            clinic_name,
+            address,
+            profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+          )
+        `)
+        .eq("id", newBookingId)
+        .single();
+
+      if (rescheduleBooking) {
+        // Record platform fee on the balance paid
+        const diffCents = (rescheduleBooking as any).reschedule_price_diff_cents || 0;
+        if (diffCents > 0) {
+          await supabase.from("platform_fees").insert({
+            booking_id: newBookingId,
+            doctor_id: rescheduleBooking.doctor_id,
+            fee_type: "commission",
+            amount_cents: Math.round(diffCents * 0.15),
+            currency: rescheduleBooking.currency,
+          });
+        }
+
+        // Export to connected calendars (non-blocking)
+        exportBookingToGoogleCalendar(newBookingId).catch((err) =>
+          console.error("Google Calendar export error (reschedule):", err)
+        );
+        exportBookingToMicrosoftCalendar(newBookingId).catch((err) =>
+          console.error("Microsoft Calendar export error (reschedule):", err)
+        );
+        exportBookingToCalDAV(newBookingId).catch((err) =>
+          console.error("CalDAV export error (reschedule):", err)
+        );
+
+        // Send booking confirmation email
+        const rPatient: any = Array.isArray(rescheduleBooking.patient)
+          ? rescheduleBooking.patient[0]
+          : rescheduleBooking.patient;
+        const rDoctor: any = Array.isArray(rescheduleBooking.doctor)
+          ? rescheduleBooking.doctor[0]
+          : rescheduleBooking.doctor;
+        const rDoctorProfile: any = rDoctor?.profile
+          ? Array.isArray(rDoctor.profile) ? rDoctor.profile[0] : rDoctor.profile
+          : null;
+
+        if (rPatient?.email && rDoctorProfile) {
+          const consultationLabel =
+            rescheduleBooking.consultation_type === "video"
+              ? "Video Consultation"
+              : rescheduleBooking.consultation_type === "phone"
+              ? "Phone Consultation"
+              : "In-Person Consultation";
+
+          const { subject, html } = bookingConfirmationEmail({
+            patientName: rPatient.first_name || "Patient",
+            doctorName: `${rDoctorProfile.first_name} ${rDoctorProfile.last_name}`,
+            date: rescheduleBooking.appointment_date,
+            time: rescheduleBooking.start_time,
+            consultationType: consultationLabel,
+            bookingNumber: rescheduleBooking.booking_number,
+            amount: rescheduleBooking.total_amount_cents / 100,
+            currency: rescheduleBooking.currency.toUpperCase(),
+            clinicName: rDoctor.clinic_name,
+            address: rDoctor.address,
+          });
+
+          sendEmail({ to: rPatient.email, subject, html }).catch((err) =>
+            console.error("Confirmation email error (reschedule balance):", err)
+          );
+
+          // WhatsApp notification
+          if (rPatient.notification_whatsapp && rPatient.phone) {
+            const dateFormatted = new Date(rescheduleBooking.appointment_date).toLocaleDateString(
+              "en-GB",
+              { weekday: "short", day: "numeric", month: "short" }
+            );
+
+            sendWhatsAppTemplate({
+              to: rPatient.phone,
+              templateName: TEMPLATE_BOOKING_CONFIRMATION,
+              languageCode: mapLocaleToWhatsApp(rPatient.preferred_locale),
+              components: buildBookingConfirmationComponents({
+                patientName: rPatient.first_name || "there",
+                bookingNumber: rescheduleBooking.booking_number,
+                date: dateFormatted,
+                time: rescheduleBooking.start_time,
+                doctorName: `${rDoctorProfile.first_name} ${rDoctorProfile.last_name}`,
+                amount: formatCurrency(rescheduleBooking.total_amount_cents, rescheduleBooking.currency),
+              }),
+            }).catch((err) =>
+              console.error("WhatsApp confirmation error (reschedule balance):", err)
+            );
+          }
+        }
+      }
+      break;
+    }
+
+    // ── Reschedule Balance Payment Failed / Expired ───────────────────────
+    case "payment_intent.payment_failed":
+    case "payment_intent.canceled": {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+
+      if (paymentIntent.metadata?.type !== "reschedule_balance") break;
+
+      const newBookingId = paymentIntent.metadata.new_booking_id;
+      const originalBookingId = paymentIntent.metadata.original_booking_id;
+
+      if (!newBookingId || !originalBookingId) break;
+
+      // Mark the pending rescheduled booking as expired (only if still pending)
+      await supabase
+        .from("bookings")
+        .update({
+          reschedule_payment_status: "expired",
+          status: "cancelled_doctor",
+        })
+        .eq("id", newBookingId)
+        .eq("status", "pending_reschedule_payment");
+
+      // Restore the original booking to confirmed (only if it hasn't been changed)
+      await supabase
+        .from("bookings")
+        .update({ status: "confirmed" })
+        .eq("id", originalBookingId)
+        .eq("status", "confirmed"); // No-op if already confirmed — but keep original active
+
+      console.warn(
+        `[Stripe] Reschedule balance payment ${event.type === "payment_intent.canceled" ? "expired" : "failed"} ` +
+        `for new booking ${newBookingId}. Original booking ${originalBookingId} remains active.`
+      );
+      break;
+    }
   }
 
   return NextResponse.json({ received: true });

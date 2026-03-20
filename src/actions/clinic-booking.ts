@@ -337,7 +337,7 @@ export async function adminRescheduleBooking(formData: FormData) {
 
     // Build a hosted payment URL (we route to our own payment page)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    paymentLinkUrl = `${appUrl}/en/patient-dashboard/bookings/${newBooking.id}/pay-balance`;
+    paymentLinkUrl = `${appUrl}/en/dashboard/bookings/${newBooking.id}/pay-balance`;
   } catch (err) {
     log.error("Failed to create reschedule payment intent:", { err });
     // Clean up the new booking if payment intent fails
