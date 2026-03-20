@@ -29,6 +29,26 @@ export default async function DoctorDashboard() {
 
   // Check license status (org-based)
   const license = await getDoctorLicense(supabase, doctor.id);
+
+  // Clinic onboarding redirect: if owner of a clinic-tier org with incomplete onboarding
+  if (license?.tier === "clinic" || license?.tier === "enterprise") {
+    const { data: membership } = await supabase
+      .from("organization_members")
+      .select("role, organization:organizations(onboarding_completed_at, id)")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .single();
+
+    const org: any = membership
+      ? Array.isArray(membership.organization)
+        ? membership.organization[0]
+        : membership.organization
+      : null;
+
+    if (membership?.role === "owner" && org && !org.onboarding_completed_at) {
+      redirect("/en/doctor-dashboard/clinic-onboarding");
+    }
+  }
   const isFreeTier = !license;
 
   const { data: profile } = await supabase

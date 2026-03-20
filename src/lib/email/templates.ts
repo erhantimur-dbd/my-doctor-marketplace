@@ -1826,6 +1826,160 @@ interface GiftCardEmailParams {
   expiresAt: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// Clinic Invitation (token-based — supports new + existing users)
+// ---------------------------------------------------------------------------
+
+interface ClinicInvitationEmailParams {
+  recipientEmail: string;
+  clinicName: string;
+  inviterName: string;
+  role: "doctor" | "admin" | "staff" | "owner";
+  inviteUrl: string;
+  expiryDays: number;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  doctor: "Doctor",
+  admin: "Clinic Administrator",
+  staff: "Staff Member",
+  owner: "Owner",
+};
+
+export function clinicInvitationEmail({
+  recipientEmail,
+  clinicName,
+  inviterName,
+  role,
+  inviteUrl,
+  expiryDays,
+}: ClinicInvitationEmailParams): { subject: string; html: string } {
+  const subject = `You've been invited to join ${clinicName} on MyDoctors360`;
+  const roleLabel = ROLE_LABELS[role] || role;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">You're Invited to Join ${clinicName}</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      <strong>${inviterName}</strong> has invited you to join <strong>${clinicName}</strong> as a <strong>${roleLabel}</strong> on MyDoctors360.
+    </p>
+
+    <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 24px;">
+      <p style="margin: 0 0 4px; font-size: 14px; font-weight: 600; color: #15803d;">Your Invitation Details</p>
+      <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.6;">
+        Clinic: <strong>${clinicName}</strong><br/>
+        Role: <strong>${roleLabel}</strong><br/>
+        Invited to: <strong>${recipientEmail}</strong><br/>
+        Expires in: <strong>${expiryDays} days</strong>
+      </p>
+    </div>
+
+    ${button("Accept Invitation", inviteUrl)}
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      By accepting this invitation, you'll be able to:
+    </p>
+    <ul style="margin: 0 0 24px; padding-left: 20px; font-size: 14px; color: #374151; line-height: 1.8;">
+      ${role === "doctor" ? `
+      <li>Manage your appointments and calendar</li>
+      <li>Access your patient list and messages</li>
+      <li>Work across the clinic&rsquo;s locations</li>
+      <li>Maintain your individual public profile</li>
+      ` : `
+      <li>Access the clinic&rsquo;s centralized dashboard</li>
+      <li>View and manage appointments across all doctors</li>
+      <li>Manage clinic locations and team members</li>
+      <li>Access team analytics and reports</li>
+      `}
+    </ul>
+
+    <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      Don&rsquo;t have a MyDoctors360 account yet? No problem &mdash; you can create one when you click the button above.
+    </p>
+    <p style="margin: 0; font-size: 12px; color: #9ca3af; line-height: 1.6; word-break: break-all;">
+      Or copy this link: ${inviteUrl}
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
+// Reschedule payment request (admin rescheduled to higher-fee slot)
+// ---------------------------------------------------------------------------
+
+interface ReschedulePaymentEmailParams {
+  patientName: string;
+  clinicName: string;
+  originalDate: string;
+  originalTime: string;
+  originalDoctorName: string;
+  newDate: string;
+  newTime: string;
+  newDoctorName: string;
+  diffAmount: string;
+  currency: string;
+  paymentUrl: string;
+  expiryHours: number;
+  bookingNumber: string;
+}
+
+export function reschedulePaymentEmail({
+  patientName,
+  clinicName,
+  originalDate,
+  originalTime,
+  originalDoctorName,
+  newDate,
+  newTime,
+  newDoctorName,
+  diffAmount,
+  currency,
+  paymentUrl,
+  expiryHours,
+  bookingNumber,
+}: ReschedulePaymentEmailParams): { subject: string; html: string } {
+  const subject = `Action Required: Payment needed for rescheduled appointment — ${bookingNumber}`;
+
+  const doctorChanged = originalDoctorName !== newDoctorName;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Your Appointment Has Been Rescheduled</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, ${clinicName} has rescheduled your appointment. A small additional payment is required to confirm the new slot.
+    </p>
+
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+      <tr style="background-color: #fef2f2;">
+        <td style="padding: 12px; font-size: 13px; color: #991b1b; font-weight: 600; border-bottom: 1px solid #fecaca; width: 50%;">Original Appointment</td>
+        <td style="padding: 12px; font-size: 13px; color: #15803d; font-weight: 600; border-bottom: 1px solid #d1fae5; width: 50%;">New Appointment</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; font-size: 14px; color: #374151; border-right: 1px solid #e5e7eb; vertical-align: top;">
+          ${originalDate}<br/>${originalTime}<br/>${originalDoctorName}
+        </td>
+        <td style="padding: 12px; font-size: 14px; color: #374151; vertical-align: top;">
+          ${newDate}<br/>${newTime}<br/>${newDoctorName}
+          ${doctorChanged ? `<br/><span style="font-size: 12px; color: #6b7280;">(Different doctor)</span>` : ""}
+        </td>
+      </tr>
+    </table>
+
+    <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 24px;">
+      <p style="margin: 0 0 4px; font-size: 14px; font-weight: 600; color: #92400e;">Additional Payment Required</p>
+      <p style="margin: 0; font-size: 24px; font-weight: 700; color: #92400e;">${diffAmount} ${currency}</p>
+      <p style="margin: 4px 0 0; font-size: 12px; color: #b45309;">This link expires in ${expiryHours} hours. If not paid, your original booking will be reinstated.</p>
+    </div>
+
+    ${button("Pay Now & Confirm New Appointment", paymentUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you do not wish to keep the rescheduled appointment, you can cancel using your patient dashboard and a full refund will be processed according to the clinic's cancellation policy.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
 export function giftCardEmail({
   recipientName,
   senderName,

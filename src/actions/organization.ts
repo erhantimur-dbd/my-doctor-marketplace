@@ -76,6 +76,7 @@ export async function createOrganization(formData: FormData) {
     website: (formData.get("website") as string) || undefined,
     timezone: (formData.get("timezone") as string) || undefined,
     base_currency: (formData.get("base_currency") as string) || undefined,
+    owner_role: ((formData.get("owner_role") as string) || "doctor") as "doctor" | "admin",
   };
 
   const parsed = createOrganizationSchema.safeParse(raw);
@@ -106,6 +107,7 @@ export async function createOrganization(formData: FormData) {
       website: parsed.data.website || null,
       timezone: parsed.data.timezone || "Europe/London",
       base_currency: parsed.data.base_currency || "EUR",
+      owner_role: (parsed.data as any).owner_role || "doctor",
     })
     .select("id")
     .single();

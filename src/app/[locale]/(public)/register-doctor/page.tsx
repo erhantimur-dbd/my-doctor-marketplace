@@ -118,6 +118,12 @@ export default function RegisterDoctorPage() {
       setSelectedTier(tier as LicenseTier);
     }
 
+    // Clinic starter: store owner_role in sessionStorage for use during org creation
+    const ownerRole = searchParams.get("owner_role");
+    if (ownerRole === "doctor" || ownerRole === "admin") {
+      sessionStorage.setItem("clinic_owner_role", ownerRole);
+    }
+
     const checkoutStatus = searchParams.get("checkout");
     if (checkoutStatus === "cancelled") {
       setError("Checkout was cancelled. You can try again or choose a different plan.");

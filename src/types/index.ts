@@ -18,6 +18,11 @@ export interface Organization {
   name: string;
   slug: string;
   logo_url: string | null;
+  cover_image_url: string | null;
+  description: string | null;
+  specialties: string[];
+  seo_title: string | null;
+  seo_description: string | null;
   website: string | null;
   phone: string | null;
   email: string | null;
@@ -30,9 +35,61 @@ export interface Organization {
   timezone: string;
   base_currency: string;
   stripe_customer_id: string | null;
+  owner_role: "doctor" | "admin";
+  onboarding_completed_at: string | null;
+  onboarding_step: number;
   metadata: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+}
+
+// ─── Clinic Location Types ────────────────────────────────
+
+export interface ClinicLocation {
+  id: string;
+  organization_id: string;
+  name: string;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  country_code: string;
+  postal_code: string | null;
+  phone: string | null;
+  email: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_primary: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DoctorLocationAssignment {
+  id: string;
+  doctor_id: string;
+  clinic_location_id: string;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export type ClinicInvitationStatus = "pending" | "accepted" | "expired" | "revoked";
+export type ClinicInvitationRole = "owner" | "admin" | "doctor" | "staff";
+
+export interface ClinicInvitation {
+  id: string;
+  organization_id: string;
+  email: string;
+  role: ClinicInvitationRole;
+  invited_by: string;
+  token: string;
+  expires_at: string;
+  status: ClinicInvitationStatus;
+  location_ids: string[];
+  accepted_by: string | null;
+  accepted_at: string | null;
+  created_at: string;
 }
 
 export interface OrganizationMember {
@@ -253,6 +310,14 @@ export interface Booking {
   invitation_id: string | null;
   cancelled_at: string | null;
   cancellation_reason: string | null;
+  organization_id: string | null;
+  clinic_location_id: string | null;
+  rescheduled_from_booking_id: string | null;
+  reschedule_price_diff_cents: number;
+  reschedule_payment_intent_id: string | null;
+  reschedule_payment_status: "not_required" | "pending" | "paid" | "refunded" | "expired" | null;
+  rescheduled_by: string | null;
+  rescheduled_at: string | null;
   created_at: string;
   updated_at: string;
 }

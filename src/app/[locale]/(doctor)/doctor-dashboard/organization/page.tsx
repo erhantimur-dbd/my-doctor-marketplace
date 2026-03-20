@@ -21,6 +21,8 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
+  MapPin,
+  CalendarDays,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import {
@@ -348,6 +350,39 @@ export default function OrganizationPage() {
             </CardContent>
           </Link>
         </Card>
+        {/* Clinic-tier extras */}
+        {license?.tier === "clinic" || license?.tier === "enterprise" ? (
+          <>
+            <Card className="cursor-pointer transition-colors hover:bg-accent/50">
+              <Link href="/doctor-dashboard/organization/locations">
+                <CardContent className="flex items-center gap-3 p-5">
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">Locations</p>
+                    <p className="text-sm text-muted-foreground">
+                      Manage clinic branches
+                    </p>
+                  </div>
+                </CardContent>
+              </Link>
+            </Card>
+            {isOwnerOrAdmin && (
+              <Card className="cursor-pointer transition-colors hover:bg-accent/50">
+                <Link href="/doctor-dashboard/organization/bookings">
+                  <CardContent className="flex items-center gap-3 p-5">
+                    <CalendarDays className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">All Appointments</p>
+                      <p className="text-sm text-muted-foreground">
+                        Manage clinic bookings
+                      </p>
+                    </div>
+                  </CardContent>
+                </Link>
+              </Card>
+            )}
+          </>
+        ) : null}
       </div>
     </div>
   );

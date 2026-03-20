@@ -22,6 +22,7 @@ import {
   Crown,
 } from "lucide-react";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
+import { ClinicGetStartedButton } from "@/components/shared/clinic-get-started-button";
 import {
   LICENSE_TIERS,
   AVAILABLE_MODULES,
@@ -284,6 +285,8 @@ export default function PricingPage() {
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
+                    ) : tier.id === "clinic" ? (
+                      <ClinicGetStartedButton locale={locale} tier={tier.id} />
                     ) : (
                       <Button
                         className="w-full rounded-full"
