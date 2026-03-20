@@ -22,8 +22,10 @@ export async function getOrgBookings(filters?: {
     .select(
       `id, booking_number, appointment_date, start_time, end_time, status,
        consultation_type, total_amount_cents, platform_fee_cents, currency,
+       doctor_id, paid_at, stripe_payment_intent_id,
        patient:profiles!bookings_patient_id_fkey(first_name, last_name),
        doctor:doctors!inner(
+         id,
          profile:profiles!doctors_profile_id_fkey(first_name, last_name)
        )`
     )
