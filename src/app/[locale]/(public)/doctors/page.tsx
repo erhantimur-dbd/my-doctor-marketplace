@@ -250,6 +250,22 @@ export default async function DoctorsPage({
             </div>
           )}
 
+          {/* Specialist suggestion banner */}
+          {result.specialistSuggestion && result.specialistSuggestion !== "general-practice" && (
+            <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
+              <span className="text-blue-800">
+                Looking for a specialist? Try searching for a{" "}
+                <a
+                  href={`/en/doctors?specialty=${result.specialistSuggestion}${sp.placeLat ? `&placeLat=${sp.placeLat}&placeLng=${sp.placeLng}&placeName=${sp.placeName || ""}&radius=100` : ""}`}
+                  className="font-semibold underline hover:text-blue-900"
+                >
+                  {result.specialistSuggestion.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                </a>
+                {" "}instead.
+              </span>
+            </div>
+          )}
+
           {/* Smart expansion suggestions for AI searches with few results */}
           <SearchExpansionBanner
             suggestions={expansionSuggestions}

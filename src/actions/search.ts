@@ -12,26 +12,96 @@ import {
 } from "@/lib/constants/launch-regions";
 import { log } from "@/lib/utils/logger";
 
-// Common symptom/keyword → specialty slug mapping for free-text search
-const KEYWORD_SPECIALTY_MAP: Record<string, string> = {
-  headache: "neurology", migraine: "neurology", dizzy: "neurology", seizure: "neurology",
-  skin: "dermatology", rash: "dermatology", acne: "dermatology", eczema: "dermatology",
-  heart: "cardiology", chest: "cardiology", palpitations: "cardiology",
-  bone: "orthopedics", joint: "orthopedics", knee: "orthopedics", back: "orthopedics", fracture: "orthopedics",
-  eye: "ophthalmology", vision: "ophthalmology", sight: "ophthalmology",
-  ear: "ent", nose: "ent", throat: "ent", hearing: "ent", sinus: "ent",
-  stomach: "gastroenterology", digestive: "gastroenterology", gut: "gastroenterology", ibs: "gastroenterology",
-  diabetes: "endocrinology", thyroid: "endocrinology", hormone: "endocrinology",
-  lung: "pulmonology", breathing: "pulmonology", asthma: "pulmonology", cough: "pulmonology",
-  cancer: "oncology", tumor: "oncology", lump: "oncology",
-  child: "pediatrics", baby: "pediatrics", infant: "pediatrics",
-  teeth: "dentistry", dental: "dentistry", tooth: "dentistry",
-  anxiety: "psychology", depression: "psychology", mental: "psychiatry", stress: "psychology",
-  pregnancy: "gynecology", period: "gynecology", fertility: "gynecology",
-  urine: "urology", bladder: "urology", kidney: "nephrology",
-  allergy: "allergy", allergic: "allergy", hayfever: "allergy",
-  weight: "nutrition", diet: "nutrition", obesity: "nutrition",
-  physiotherapy: "physiotherapy", physio: "physiotherapy", rehab: "physiotherapy",
+// Common symptom/keyword → [primary GP, specialist] mapping for free-text search.
+// GP is always included as the first port of call; specialist is shown as an option.
+const KEYWORD_SPECIALTY_MAP: Record<string, { primary: string; specialist: string }> = {
+  // General symptoms → GP first, specialist secondary
+  headache: { primary: "general-practice", specialist: "neurology" },
+  migraine: { primary: "general-practice", specialist: "neurology" },
+  dizzy: { primary: "general-practice", specialist: "neurology" },
+  seizure: { primary: "general-practice", specialist: "neurology" },
+  sick: { primary: "general-practice", specialist: "gastroenterology" },
+  nausea: { primary: "general-practice", specialist: "gastroenterology" },
+  tired: { primary: "general-practice", specialist: "endocrinology" },
+  fatigue: { primary: "general-practice", specialist: "endocrinology" },
+  fever: { primary: "general-practice", specialist: "general-practice" },
+  pain: { primary: "general-practice", specialist: "general-practice" },
+  // Skin
+  skin: { primary: "general-practice", specialist: "dermatology" },
+  rash: { primary: "general-practice", specialist: "dermatology" },
+  acne: { primary: "dermatology", specialist: "dermatology" },
+  eczema: { primary: "dermatology", specialist: "dermatology" },
+  // Heart
+  heart: { primary: "general-practice", specialist: "cardiology" },
+  chest: { primary: "general-practice", specialist: "cardiology" },
+  palpitations: { primary: "general-practice", specialist: "cardiology" },
+  // Musculoskeletal
+  bone: { primary: "general-practice", specialist: "orthopedics" },
+  joint: { primary: "general-practice", specialist: "orthopedics" },
+  knee: { primary: "general-practice", specialist: "orthopedics" },
+  back: { primary: "general-practice", specialist: "orthopedics" },
+  fracture: { primary: "general-practice", specialist: "orthopedics" },
+  // Eye
+  eye: { primary: "general-practice", specialist: "ophthalmology" },
+  vision: { primary: "general-practice", specialist: "ophthalmology" },
+  sight: { primary: "general-practice", specialist: "ophthalmology" },
+  // Ear/Nose/Throat
+  ear: { primary: "general-practice", specialist: "ent" },
+  nose: { primary: "general-practice", specialist: "ent" },
+  throat: { primary: "general-practice", specialist: "ent" },
+  hearing: { primary: "general-practice", specialist: "ent" },
+  sinus: { primary: "general-practice", specialist: "ent" },
+  // Digestive
+  stomach: { primary: "general-practice", specialist: "gastroenterology" },
+  digestive: { primary: "general-practice", specialist: "gastroenterology" },
+  gut: { primary: "general-practice", specialist: "gastroenterology" },
+  ibs: { primary: "gastroenterology", specialist: "gastroenterology" },
+  // Endocrine
+  diabetes: { primary: "general-practice", specialist: "endocrinology" },
+  thyroid: { primary: "general-practice", specialist: "endocrinology" },
+  hormone: { primary: "general-practice", specialist: "endocrinology" },
+  // Respiratory
+  lung: { primary: "general-practice", specialist: "pulmonology" },
+  breathing: { primary: "general-practice", specialist: "pulmonology" },
+  asthma: { primary: "general-practice", specialist: "pulmonology" },
+  cough: { primary: "general-practice", specialist: "pulmonology" },
+  // Oncology
+  cancer: { primary: "general-practice", specialist: "oncology" },
+  tumor: { primary: "general-practice", specialist: "oncology" },
+  lump: { primary: "general-practice", specialist: "oncology" },
+  // Pediatrics
+  child: { primary: "pediatrics", specialist: "pediatrics" },
+  baby: { primary: "pediatrics", specialist: "pediatrics" },
+  infant: { primary: "pediatrics", specialist: "pediatrics" },
+  // Dental
+  teeth: { primary: "dentistry", specialist: "dentistry" },
+  dental: { primary: "dentistry", specialist: "dentistry" },
+  tooth: { primary: "dentistry", specialist: "dentistry" },
+  // Mental health
+  anxiety: { primary: "general-practice", specialist: "psychology" },
+  depression: { primary: "general-practice", specialist: "psychology" },
+  mental: { primary: "general-practice", specialist: "psychiatry" },
+  stress: { primary: "general-practice", specialist: "psychology" },
+  // Women's health
+  pregnancy: { primary: "gynecology", specialist: "gynecology" },
+  period: { primary: "general-practice", specialist: "gynecology" },
+  fertility: { primary: "gynecology", specialist: "gynecology" },
+  // Urinary
+  urine: { primary: "general-practice", specialist: "urology" },
+  bladder: { primary: "general-practice", specialist: "urology" },
+  kidney: { primary: "general-practice", specialist: "nephrology" },
+  // Allergy
+  allergy: { primary: "general-practice", specialist: "allergy" },
+  allergic: { primary: "general-practice", specialist: "allergy" },
+  hayfever: { primary: "general-practice", specialist: "allergy" },
+  // Lifestyle
+  weight: { primary: "general-practice", specialist: "nutrition" },
+  diet: { primary: "nutrition", specialist: "nutrition" },
+  obesity: { primary: "general-practice", specialist: "nutrition" },
+  // Physio
+  physiotherapy: { primary: "physiotherapy", specialist: "physiotherapy" },
+  physio: { primary: "physiotherapy", specialist: "physiotherapy" },
+  rehab: { primary: "physiotherapy", specialist: "physiotherapy" },
 };
 
 export interface SearchFilters {
@@ -297,6 +367,7 @@ export async function searchDoctors(filters: SearchFilters) {
   // Free-text query: match against specialty names, keywords, doctor names, and bio
   let textFilterApplied = false;
   let matchedSpecialtySlug: string | null = null;
+  let specialistSuggestion: string | null = null;
 
   if (filters.query && !filters.specialty) {
     const term = filters.query.trim().toLowerCase();
@@ -331,38 +402,50 @@ export async function searchDoctors(filters: SearchFilters) {
       }
     }
 
-    // 2. Keyword-to-specialty mapping (for natural language queries)
+    // 2. Keyword-to-specialty mapping (GP + specialist for natural language queries)
     if (!textFilterApplied) {
       const words = term.split(/\s+/);
-      let keywordSpecSlug: string | null = null;
+      let keywordMatch: { primary: string; specialist: string } | null = null;
       for (const word of words) {
         if (KEYWORD_SPECIALTY_MAP[word]) {
-          keywordSpecSlug = KEYWORD_SPECIALTY_MAP[word];
+          keywordMatch = KEYWORD_SPECIALTY_MAP[word];
           break;
         }
       }
 
-      if (keywordSpecSlug) {
-        const { data: specRow } = await supabase
-          .from("specialties")
-          .select("id")
-          .eq("slug", keywordSpecSlug)
-          .single();
+      if (keywordMatch) {
+        // Collect doctor IDs for BOTH primary and specialist specialties
+        const slugsToMatch = new Set([keywordMatch.primary, keywordMatch.specialist]);
+        const allDoctorIds = new Set<string>();
 
-        if (specRow) {
-          const { data: matchRows } = await supabase
-            .from("doctor_specialties")
-            .select("doctor_id")
-            .eq("specialty_id", specRow.id);
+        for (const slug of slugsToMatch) {
+          const { data: specRow } = await supabase
+            .from("specialties")
+            .select("id")
+            .eq("slug", slug)
+            .single();
 
-          const ids = (matchRows || []).map(
-            (r: { doctor_id: string }) => r.doctor_id
-          );
-          if (ids.length > 0) {
-            query = query.in("id", ids);
-            textFilterApplied = true;
-            matchedSpecialtySlug = keywordSpecSlug;
+          if (specRow) {
+            const { data: matchRows } = await supabase
+              .from("doctor_specialties")
+              .select("doctor_id")
+              .eq("specialty_id", specRow.id);
+
+            for (const r of matchRows || []) {
+              allDoctorIds.add(r.doctor_id);
+            }
           }
+        }
+
+        if (allDoctorIds.size > 0) {
+          query = query.in("id", [...allDoctorIds]);
+          textFilterApplied = true;
+          matchedSpecialtySlug = keywordMatch.primary;
+        }
+
+        // Track specialist for the suggestion banner
+        if (keywordMatch.specialist !== keywordMatch.primary) {
+          specialistSuggestion = keywordMatch.specialist;
         }
       }
     }
@@ -606,7 +689,7 @@ export async function searchDoctors(filters: SearchFilters) {
       matchScores[s.doctorId] = { score: s.matchScore, reasons: s.matchReasons };
     }
 
-    return { doctors: sorted, total: resultCount || 0, page, perPage, matchScores, fallbackApplied };
+    return { doctors: sorted, total: resultCount || 0, page, perPage, matchScores, fallbackApplied, specialistSuggestion };
   }
 
   // When proximity search is active, sort by distance (nearest first) by default
@@ -630,7 +713,7 @@ export async function searchDoctors(filters: SearchFilters) {
     }
   }
 
-  return { doctors: finalDoctors, total: resultCount || 0, page, perPage, matchScores: undefined, distances, outsideLaunchRegion, searchCountryCode, fallbackApplied };
+  return { doctors: finalDoctors, total: resultCount || 0, page, perPage, matchScores: undefined, distances, outsideLaunchRegion, searchCountryCode, fallbackApplied, specialistSuggestion };
 }
 
 export async function getSpecialties() {
