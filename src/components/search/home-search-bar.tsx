@@ -30,9 +30,12 @@ import {
   Video,
   Sparkles,
   Mic,
+  Clock,
+  X,
 } from "lucide-react";
 import { cn, formatSpecialtyName } from "@/lib/utils";
 import { useGeolocation } from "@/hooks/use-geolocation";
+import { useRecentSearches } from "@/hooks/use-recent-searches";
 import { findNearestLocation } from "@/lib/utils/geo";
 import { searchSuggestions } from "@/actions/search";
 import type { DoctorSuggestion } from "@/actions/search";
@@ -167,6 +170,7 @@ export function HomeSearchBar({
   const selectedCountryCode = locations.find(l => l.slug === location)?.country_code ?? null;
 
   const geo = useGeolocation("auto");
+  const { searches: recentSearches, addSearch, removeOne: removeRecentSearch, clearAll: clearRecentSearches } = useRecentSearches();
 
   // Voice search (mobile only)
   const speech = useSpeechRecognition({
@@ -438,9 +442,21 @@ export function HomeSearchBar({
       params.set("location", location);
     }
     if (consultationType !== "all") params.set("consultationType", consultationType);
+
+    // Track this search for "Recent Searches"
+    if (query.trim()) {
+      addSearch({
+        query: query.trim(),
+        specialty: params.get("specialty") || undefined,
+        location: placeData?.name || (location && location !== "all" ? location : undefined),
+        placeLat: placeData?.lat,
+        placeLng: placeData?.lng,
+      });
+    }
+
     const qs = params.toString();
     router.push(`/doctors${qs ? `?${qs}` : ""}`);
-  }, [query, location, consultationType, router, specialties, placeData]);
+  }, [query, location, consultationType, router, specialties, placeData, addSearch]);
 
   const navigateToSpecialty = useCallback(
     (slug: string) => {
@@ -529,6 +545,16 @@ export function HomeSearchBar({
           params.set("location", result.data.location);
         }
         params.set("aiParsed", "true");
+
+        // Track this search for "Recent Searches"
+        addSearch({
+          query: query.trim(),
+          specialty: result.data.specialty || undefined,
+          location: placeData?.name || (location && location !== "all" ? location : undefined),
+          placeLat: placeData?.lat,
+          placeLng: placeData?.lng,
+        });
+
         router.push(`/doctors?${params.toString()}`);
       } else {
         // Fallback to regular search
@@ -539,7 +565,7 @@ export function HomeSearchBar({
     } finally {
       setAiLoading(false);
     }
-  }, [query, locale, location, placeData, router, handleSearch]);
+  }, [query, locale, location, placeData, router, handleSearch, addSearch]);
 
   // Smart search: AI-powered by default, instant for exact specialty matches
   const handleSmartSearch = useCallback(() => {
@@ -601,6 +627,7 @@ export function HomeSearchBar({
   const hasSuggestions =
     showSuggestions &&
     (displaySpecialties.length > 0 ||
+      recentSearches.length > 0 ||
       symptomMatches.length > 0 ||
       testMatches.length > 0 ||
       doctorResults.length > 0 ||
@@ -692,6 +719,86 @@ export function HomeSearchBar({
 
     return (
       <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border bg-background shadow-lg">
+        {/* Recent Searches group — shown above specialties when not actively searching */}
+        {!isSearchMode && recentSearches.length > 0 && (
+          <div className="p-1">
+            <div className="flex items-center justify-between px-3 py-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
+                {t("suggestions_recent")}
+              </span>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  clearRecentSearches();
+                }}
+              >
+                {t("suggestions_clear_recent")}
+              </button>
+            </div>
+            {recentSearches.map((s) => (
+              <div
+                key={s.timestamp}
+                className="group flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent/50"
+              >
+                <button
+                  type="button"
+                  className="flex flex-1 items-center gap-2 text-left"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setQuery(s.query);
+                    if (s.placeLat != null && s.placeLng != null && s.location) {
+                      setPlaceData({ lat: s.placeLat, lng: s.placeLng, name: s.location });
+                      setLocation("");
+                    } else if (s.location) {
+                      setLocation(s.location);
+                    }
+                    setShowSuggestions(false);
+                    // Navigate to search results
+                    const params = new URLSearchParams();
+                    if (s.specialty) {
+                      params.set("specialty", s.specialty);
+                    } else {
+                      params.set("query", s.query);
+                    }
+                    if (s.placeLat != null && s.placeLng != null) {
+                      params.set("placeLat", s.placeLat.toFixed(6));
+                      params.set("placeLng", s.placeLng.toFixed(6));
+                      params.set("placeName", s.location || "");
+                      params.set("radius", "25");
+                    } else if (s.location) {
+                      params.set("location", s.location);
+                    }
+                    router.push(`/doctors?${params.toString()}`);
+                  }}
+                >
+                  <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{s.query}</span>
+                  {s.location && (
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                      {s.location.length > 25 ? s.location.slice(0, 25) + "…" : s.location}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    removeRecentSearch(s.timestamp);
+                  }}
+                  aria-label="Remove"
+                >
+                  <X className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                </button>
+              </div>
+            ))}
+            <div className="mx-2 border-t" />
+          </div>
+        )}
+
         {/* Specialties group (popular or filtered) */}
         {displaySpecialties.length > 0 && (
           <div className="p-1">

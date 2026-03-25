@@ -108,6 +108,8 @@
     "suggestions_specialties": "Uzmanliklar",
     "suggestions_doctors": "Doktorlar",
     "suggestions_searching": "Araniyor...",
+    "suggestions_recent": "Son Aramalar",
+    "suggestions_clear_recent": "Temizle",
     "suggestions_popular": "Popüler",
     "suggestions_symptoms": "Symptoms",
     "suggestions_tests": "Medical Tests",

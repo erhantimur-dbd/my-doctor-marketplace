@@ -108,6 +108,8 @@
     "suggestions_specialties": "Fachgebiete",
     "suggestions_doctors": "Arzte",
     "suggestions_searching": "Suche...",
+    "suggestions_recent": "Letzte Suchen",
+    "suggestions_clear_recent": "Löschen",
     "suggestions_popular": "Beliebt",
     "suggestions_symptoms": "Symptoms",
     "suggestions_tests": "Medical Tests",

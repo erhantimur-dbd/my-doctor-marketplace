@@ -112,6 +112,8 @@
     "suggestions_tests": "Medical Tests",
     "suggestions_see_gp": "Not sure? See a General Practitioner",
     "suggestions_goes_to": "→ {specialty}",
+    "suggestions_recent": "Recent Searches",
+    "suggestions_clear_recent": "Clear",
     "suggestions_popular": "Popular",
     "same_day_title": "Same-Day Appointments Available",
     "same_day_subtitle": "{count, plural, one {# doctor is} other {# doctors are}} available for appointments today",
