@@ -12,6 +12,28 @@ import {
 } from "@/lib/constants/launch-regions";
 import { log } from "@/lib/utils/logger";
 
+// Common symptom/keyword → specialty slug mapping for free-text search
+const KEYWORD_SPECIALTY_MAP: Record<string, string> = {
+  headache: "neurology", migraine: "neurology", dizzy: "neurology", seizure: "neurology",
+  skin: "dermatology", rash: "dermatology", acne: "dermatology", eczema: "dermatology",
+  heart: "cardiology", chest: "cardiology", palpitations: "cardiology",
+  bone: "orthopedics", joint: "orthopedics", knee: "orthopedics", back: "orthopedics", fracture: "orthopedics",
+  eye: "ophthalmology", vision: "ophthalmology", sight: "ophthalmology",
+  ear: "ent", nose: "ent", throat: "ent", hearing: "ent", sinus: "ent",
+  stomach: "gastroenterology", digestive: "gastroenterology", gut: "gastroenterology", ibs: "gastroenterology",
+  diabetes: "endocrinology", thyroid: "endocrinology", hormone: "endocrinology",
+  lung: "pulmonology", breathing: "pulmonology", asthma: "pulmonology", cough: "pulmonology",
+  cancer: "oncology", tumor: "oncology", lump: "oncology",
+  child: "pediatrics", baby: "pediatrics", infant: "pediatrics",
+  teeth: "dentistry", dental: "dentistry", tooth: "dentistry",
+  anxiety: "psychology", depression: "psychology", mental: "psychiatry", stress: "psychology",
+  pregnancy: "gynecology", period: "gynecology", fertility: "gynecology",
+  urine: "urology", bladder: "urology", kidney: "nephrology",
+  allergy: "allergy", allergic: "allergy", hayfever: "allergy",
+  weight: "nutrition", diet: "nutrition", obesity: "nutrition",
+  physiotherapy: "physiotherapy", physio: "physiotherapy", rehab: "physiotherapy",
+};
+
 export interface SearchFilters {
   specialty?: string;
   location?: string;
@@ -33,7 +55,7 @@ export interface SearchFilters {
   placeLat?: number;
   /** Proximity search: longitude of a selected place */
   placeLng?: number;
-  /** Proximity search: radius in km (default 10) */
+  /** Proximity search: radius in km (default 25) */
   radius?: number;
 }
 
@@ -148,7 +170,7 @@ export async function searchDoctors(filters: SearchFilters) {
     filters.placeLng != null &&
     !filters.location
   ) {
-    const radius = filters.radius || 10;
+    const radius = filters.radius || 25;
     const { data: ordered, error: rpcError } = await supabase.rpc(
       "sort_doctors_by_distance",
       { p_lat: filters.placeLat, p_lng: filters.placeLng }
@@ -272,11 +294,14 @@ export async function searchDoctors(filters: SearchFilters) {
     );
   }
 
-  // Free-text query: match against specialty names, doctor names, and bio
+  // Free-text query: match against specialty names, keywords, doctor names, and bio
+  let textFilterApplied = false;
+  let matchedSpecialtySlug: string | null = null;
+
   if (filters.query && !filters.specialty) {
     const term = filters.query.trim().toLowerCase();
 
-    // Check if the query matches a specialty name (slug or display name)
+    // 1. Exact specialty name match
     const { data: matchingSpecs } = await supabase
       .from("specialties")
       .select("id, slug, name_key")
@@ -291,7 +316,6 @@ export async function searchDoctors(filters: SearchFilters) {
     });
 
     if (matchedSpec) {
-      // Resolve to specialty filter for exact matches
       const { data: matchRows } = await supabase
         .from("doctor_specialties")
         .select("doctor_id")
@@ -300,17 +324,58 @@ export async function searchDoctors(filters: SearchFilters) {
       const ids = (matchRows || []).map(
         (r: { doctor_id: string }) => r.doctor_id
       );
-      if (ids.length === 0) {
-        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      if (ids.length > 0) {
+        query = query.in("id", ids);
+        textFilterApplied = true;
+        matchedSpecialtySlug = matchedSpec.slug;
       }
-      query = query.in("id", ids);
-    } else {
-      // Fallback: search in bio text
-      query = query.ilike("bio", `%${filters.query}%`);
     }
+
+    // 2. Keyword-to-specialty mapping (for natural language queries)
+    if (!textFilterApplied) {
+      const words = term.split(/\s+/);
+      let keywordSpecSlug: string | null = null;
+      for (const word of words) {
+        if (KEYWORD_SPECIALTY_MAP[word]) {
+          keywordSpecSlug = KEYWORD_SPECIALTY_MAP[word];
+          break;
+        }
+      }
+
+      if (keywordSpecSlug) {
+        const { data: specRow } = await supabase
+          .from("specialties")
+          .select("id")
+          .eq("slug", keywordSpecSlug)
+          .single();
+
+        if (specRow) {
+          const { data: matchRows } = await supabase
+            .from("doctor_specialties")
+            .select("doctor_id")
+            .eq("specialty_id", specRow.id);
+
+          const ids = (matchRows || []).map(
+            (r: { doctor_id: string }) => r.doctor_id
+          );
+          if (ids.length > 0) {
+            query = query.in("id", ids);
+            textFilterApplied = true;
+            matchedSpecialtySlug = keywordSpecSlug;
+          }
+        }
+      }
+    }
+
+    // 3. Bio + name search as last resort (but don't use for symptom-like phrases)
+    if (!textFilterApplied && term.split(/\s+/).length <= 3) {
+      query = query.ilike("bio", `%${filters.query}%`);
+      textFilterApplied = true;
+    }
+    // For longer phrases (likely symptoms), skip bio search — rely on proximity/fallback
   } else if (filters.query && filters.specialty) {
-    // If both query and specialty are set, still search bio
-    query = query.ilike("bio", `%${filters.query}%`);
+    // If both query and specialty are set, the specialty filter handles it
+    // Don't also search bio — it would eliminate valid specialty matches
   }
   if (filters.wheelchairAccessible) {
     query = query.eq("is_wheelchair_accessible", true);
@@ -406,8 +471,106 @@ export async function searchDoctors(filters: SearchFilters) {
     return { doctors: [], total: 0, page, perPage, matchScores: undefined };
   }
 
+  // ── Zero-result fallback chain ─────────────────────────────────
+  // If the full filter pipeline returned 0 results, progressively relax
+  // filters to ensure the user always sees something useful.
+  let fallbackApplied: string | null = null;
+  let fallbackData = data;
+  let fallbackCount = count;
+
+  if ((!data || data.length === 0) && (filters.query || filters.specialty || textFilterApplied || matchedSpecialtySlug)) {
+    // Fallback 1: Drop text/specialty filter, keep location/proximity
+    const hasLocationFilter = !!(filters.placeLat || filters.location);
+    if (hasLocationFilter) {
+      let fbQuery = supabase
+        .from("doctors")
+        .select(
+          `*,
+           profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+           location:locations(city, country_code, slug, latitude, longitude),
+           specialties:doctor_specialties(specialty:specialties(id, name_key, slug), is_primary),
+           photos:doctor_photos(storage_path, alt_text, is_primary)`,
+          { count: "exact" }
+        )
+        .eq("verification_status", "verified")
+        .eq("is_active", true);
+
+      // Re-apply license filter
+      if (licensedIds && licensedIds.length > 0) {
+        fbQuery = fbQuery.in("id", licensedIds);
+      }
+
+      // Re-apply proximity if available
+      if (proximityDistances && proximityDistances.size > 0) {
+        fbQuery = fbQuery.in("id", [...proximityDistances.keys()]);
+      } else if (filters.location && !isCountryFilter) {
+        // Expand to country level
+        const { data: locRow } = await supabase
+          .from("locations")
+          .select("country_code")
+          .eq("slug", filters.location)
+          .single();
+        if (locRow) {
+          fbQuery = fbQuery.eq("location.country_code", locRow.country_code);
+        }
+      }
+
+      fbQuery = fbQuery
+        .order("is_featured", { ascending: false })
+        .order("avg_rating", { ascending: false })
+        .range(0, perPage - 1);
+
+      const fbResult = await fbQuery;
+      if (fbResult.data && fbResult.data.length > 0) {
+        fallbackData = fbResult.data;
+        fallbackCount = fbResult.count;
+        fallbackApplied = matchedSpecialtySlug
+          ? `No ${matchedSpecialtySlug.replace(/-/g, " ")} specialists found nearby. Showing all nearby doctors.`
+          : "No exact matches found. Showing nearby doctors instead.";
+      }
+    }
+
+    // Fallback 2: If still 0 and had proximity, expand to country
+    if (!fallbackData || fallbackData.length === 0) {
+      if (filters.placeLat != null) {
+        let fbQuery2 = supabase
+          .from("doctors")
+          .select(
+            `*,
+             profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+             location:locations!inner(city, country_code, slug, latitude, longitude),
+             specialties:doctor_specialties(specialty:specialties(id, name_key, slug), is_primary),
+             photos:doctor_photos(storage_path, alt_text, is_primary)`,
+            { count: "exact" }
+          )
+          .eq("verification_status", "verified")
+          .eq("is_active", true)
+          .eq("location.country_code", "GB"); // Default to GB for now
+
+        if (licensedIds && licensedIds.length > 0) {
+          fbQuery2 = fbQuery2.in("id", licensedIds);
+        }
+
+        fbQuery2 = fbQuery2
+          .order("is_featured", { ascending: false })
+          .order("avg_rating", { ascending: false })
+          .range(0, perPage - 1);
+
+        const fbResult2 = await fbQuery2;
+        if (fbResult2.data && fbResult2.data.length > 0) {
+          fallbackData = fbResult2.data;
+          fallbackCount = fbResult2.count;
+          fallbackApplied = "No doctors found in your area. Showing doctors across the country.";
+        }
+      }
+    }
+  }
+
+  const resultData = fallbackData || data;
+  const resultCount = fallbackCount ?? count;
+
   // Smart Match: compute match scores when best_match sort is active
-  if (filters.sort === "best_match" && data && data.length > 0) {
+  if (filters.sort === "best_match" && resultData && resultData.length > 0) {
     const context: MatchContext = {
       preferredSpecialty: filters.specialty,
       preferredLanguage: filters.language,
@@ -415,7 +578,7 @@ export async function searchDoctors(filters: SearchFilters) {
       consultationType: filters.consultationType,
     };
 
-    const doctorInputs: DoctorMatchInput[] = data.map((d: Record<string, unknown>) => ({
+    const doctorInputs: DoctorMatchInput[] = resultData.map((d: Record<string, unknown>) => ({
       id: d.id as string,
       avg_rating: d.avg_rating as number | null,
       total_reviews: d.total_reviews as number,
@@ -431,7 +594,7 @@ export async function searchDoctors(filters: SearchFilters) {
     const scoreMap = new Map(scored.map((s) => [s.doctorId, s]));
 
     // Sort doctors by match score
-    const sorted = [...data].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+    const sorted = [...resultData].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
       const scoreA = scoreMap.get(a.id as string)?.matchScore ?? 0;
       const scoreB = scoreMap.get(b.id as string)?.matchScore ?? 0;
       return scoreB - scoreA;
@@ -443,11 +606,11 @@ export async function searchDoctors(filters: SearchFilters) {
       matchScores[s.doctorId] = { score: s.matchScore, reasons: s.matchReasons };
     }
 
-    return { doctors: sorted, total: count || 0, page, perPage, matchScores };
+    return { doctors: sorted, total: resultCount || 0, page, perPage, matchScores, fallbackApplied };
   }
 
   // When proximity search is active, sort by distance (nearest first) by default
-  let finalDoctors = data || [];
+  let finalDoctors = resultData || [];
   if (proximityDistances && proximityDistances.size > 0 && filters.sort !== "rating" && filters.sort !== "price_asc" && filters.sort !== "price_desc") {
     finalDoctors = [...finalDoctors].sort(
       (a: Record<string, unknown>, b: Record<string, unknown>) =>
@@ -467,7 +630,7 @@ export async function searchDoctors(filters: SearchFilters) {
     }
   }
 
-  return { doctors: finalDoctors, total: count || 0, page, perPage, matchScores: undefined, distances, outsideLaunchRegion, searchCountryCode };
+  return { doctors: finalDoctors, total: resultCount || 0, page, perPage, matchScores: undefined, distances, outsideLaunchRegion, searchCountryCode, fallbackApplied };
 }
 
 export async function getSpecialties() {

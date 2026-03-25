@@ -243,6 +243,13 @@ export default async function DoctorsPage({
             />
           )}
 
+          {/* Fallback applied banner */}
+          {result.fallbackApplied && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {result.fallbackApplied}
+            </div>
+          )}
+
           {/* Smart expansion suggestions for AI searches with few results */}
           <SearchExpansionBanner
             suggestions={expansionSuggestions}

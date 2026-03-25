@@ -433,7 +433,7 @@ export function HomeSearchBar({
       params.set("placeLat", placeData.lat.toFixed(6));
       params.set("placeLng", placeData.lng.toFixed(6));
       params.set("placeName", placeData.name);
-      params.set("radius", "10");
+      params.set("radius", "25");
     } else if (location && location !== "all") {
       params.set("location", location);
     }
@@ -486,7 +486,7 @@ export function HomeSearchBar({
           params.set("placeLat", placeData.lat.toFixed(6));
           params.set("placeLng", placeData.lng.toFixed(6));
           params.set("placeName", placeData.name);
-          params.set("radius", "10");
+          params.set("radius", "25");
         } else if (location && location !== "all") {
           params.set("location", location);
         }
@@ -522,7 +522,7 @@ export function HomeSearchBar({
           params.set("placeLat", placeData.lat.toFixed(6));
           params.set("placeLng", placeData.lng.toFixed(6));
           params.set("placeName", placeData.name);
-          params.set("radius", "10");
+          params.set("radius", "25");
         } else if (location && location !== "all") {
           params.set("location", location);
         } else if (result.data.location) {
