@@ -900,7 +900,7 @@ export function HomeSearchBar({
   };
 
   return (
-    <div className={cn("mx-auto", compact ? "max-w-full" : "max-w-3xl")} ref={wrapperRef}>
+    <div className={cn("mx-auto", compact ? "max-w-full" : "max-w-4xl")} ref={wrapperRef}>
       {/* Desktop layout */}
       <div className="relative hidden md:block">
         <div className={cn("flex items-center gap-0 rounded-full border bg-background", compact ? "shadow-lg ring-1 ring-white/20" : "shadow-lg transition-shadow hover:shadow-xl")}>
@@ -924,7 +924,7 @@ export function HomeSearchBar({
           <div className="h-8 w-px bg-border" />
 
           {/* Location — searchable combobox */}
-          <div className="w-56">
+          <div className="w-72">
             <LocationCombobox
               locations={locations}
               value={location}
