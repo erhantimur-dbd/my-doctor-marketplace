@@ -10,6 +10,8 @@ import { CookieConsentBanner } from "@/components/shared/cookie-consent-banner";
 import { AnalyticsScripts } from "@/components/shared/analytics-scripts";
 import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
 import { CommandPalette } from "@/components/shared/command-palette";
+import { NavigationProgress } from "@/components/shared/navigation-progress";
+import { organizationJsonLd } from "@/lib/seo/json-ld";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,6 +66,12 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <head>
+        {/* Organization JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
+        />
+
         {/* PWA */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0284c7" />
@@ -87,6 +95,7 @@ export default async function LocaleLayout({
               initialUser={initialUser}
               initialProfile={initialProfile}
             >
+              <NavigationProgress />
               {children}
               <Toaster position="top-right" />
               <CookieConsentBanner />
