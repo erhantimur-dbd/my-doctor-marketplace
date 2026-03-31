@@ -388,17 +388,21 @@ export default async function HowItWorksPage() {
                   href={`/blog/${post.slug}`}
                   className="group"
                 >
-                  <Card className="h-full overflow-hidden transition-shadow hover:shadow-md">
-                    {post.cover_image_url && (
-                      <div className="aspect-[16/9] overflow-hidden">
+                  <Card className="flex h-full flex-col overflow-hidden transition-shadow hover:shadow-md">
+                    <div className="aspect-[16/9] overflow-hidden bg-muted">
+                      {post.cover_image_url ? (
                         <img
                           src={post.cover_image_url}
                           alt={post.title}
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                      </div>
-                    )}
-                    <CardContent className="p-5">
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <BookOpen className="h-10 w-10 text-muted-foreground/30" />
+                        </div>
+                      )}
+                    </div>
+                    <CardContent className="flex flex-1 flex-col p-5">
                       {post.tags && post.tags.length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-1.5">
                           {post.tags.slice(0, 2).map((tag: string) => (
@@ -419,7 +423,7 @@ export default async function HowItWorksPage() {
                           {post.excerpt}
                         </p>
                       )}
-                      <div className="mt-3 flex items-center gap-1 text-sm font-medium text-primary">
+                      <div className="mt-auto flex items-center gap-1 pt-3 text-sm font-medium text-primary">
                         <BookOpen className="h-3.5 w-3.5" />
                         Read article
                       </div>
