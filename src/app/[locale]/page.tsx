@@ -143,75 +143,93 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="mx-auto mt-12 grid max-w-5xl gap-x-6 gap-y-8 md:grid-cols-2 md:gap-y-0">
+          <div className="mx-auto mt-12 grid max-w-6xl gap-x-5 gap-y-8 md:grid-cols-3 md:gap-y-0">
             {[
               {
                 quote:
-                  "As a childminder, I simply don\u2019t have time to sit in waiting rooms. I found a GP on MyDoctors360, booked a same-day appointment, and was seen within the hour. The whole process took minutes \u2014 I was back with the children before lunch.",
+                  "As a childminder, I simply don\u2019t have time to sit in waiting rooms. I booked a same-day GP appointment and was seen within the hour. I was back with the children before lunch.",
                 name: "Mary T.",
                 location: "Islington, London",
                 offset: "md:mt-0",
-                rotate: "md:-rotate-2",
+                rotate: "md:-rotate-[1.5deg]",
                 desktopOnly: false,
               },
               {
                 quote:
-                  "My GP said I\u2019d be waiting weeks for an ultrasound scan. I decided to go private through MyDoctors360 and had an appointment booked within days. The relief of knowing everything was fine made it absolutely worth it.",
+                  "My GP said I\u2019d be waiting weeks for an ultrasound. I went private through MyDoctors360, had it booked within days, and the relief of knowing everything was fine was worth every penny.",
                 name: "Colin A.",
                 location: "Surrey",
-                offset: "md:mt-16",
-                rotate: "md:rotate-[1.5deg]",
+                offset: "md:mt-6",
+                rotate: "md:rotate-[1deg]",
                 desktopOnly: false,
               },
               {
                 quote:
-                  "I needed a full blood panel done but the earliest NHS appointment was over a month away. Through MyDoctors360 I found a clinic nearby, had my bloods taken the next morning, and results were back within 48 hours. Couldn\u2019t believe how simple it was.",
+                  "Needed a full blood panel but the NHS wait was over a month. Found a clinic nearby, had bloods taken the next morning, results back in 48 hours. Incredibly simple.",
                 name: "Priya S.",
                 location: "Birmingham",
-                offset: "md:-mt-14",
+                offset: "md:-mt-2",
                 rotate: "md:rotate-[1.8deg]",
                 desktopOnly: true,
               },
               {
                 quote:
-                  "I\u2019d been putting off seeing a dentist for years out of sheer dread. MyDoctors360 let me read real patient reviews, find someone highly rated for nervous patients, and book online without a phone call. Best dental experience I\u2019ve ever had.",
+                  "I\u2019d been putting off seeing a dentist for years out of sheer dread. MyDoctors360 let me find someone highly rated for nervous patients and book without a phone call. Best dental experience ever.",
                 name: "James R.",
                 location: "Edinburgh",
+                offset: "md:mt-4",
+                rotate: "md:rotate-[1.5deg]",
+                desktopOnly: true,
+              },
+              {
+                quote:
+                  "My daughter needed a paediatric referral and the waiting list was months long. We found a specialist on here, got seen within a week, and had a clear plan of action straight away.",
+                name: "Sarah L.",
+                location: "Bristol",
                 offset: "md:-mt-4",
-                rotate: "md:-rotate-[1.5deg]",
+                rotate: "md:-rotate-[1.2deg]",
+                desktopOnly: true,
+              },
+              {
+                quote:
+                  "Moved to the UK recently and had no idea how to register with a GP. MyDoctors360 made it easy to see a doctor privately while I sorted out the paperwork. Lifesaver.",
+                name: "Amir K.",
+                location: "Manchester",
+                offset: "md:mt-8",
+                rotate: "md:-rotate-[1.8deg]",
                 desktopOnly: true,
               },
             ].map((testimonial) => (
               <div
                 key={testimonial.name}
-                className={`${testimonial.desktopOnly ? "hidden md:flex" : "flex"} flex-col items-center transition-transform hover:z-10 hover:scale-[1.02] ${testimonial.offset} ${testimonial.rotate}`}
+                className={`${testimonial.desktopOnly ? "hidden md:flex" : "flex"} relative flex-col items-center transition-transform duration-200 hover:z-10 hover:scale-[1.03] ${testimonial.offset} ${testimonial.rotate}`}
               >
                 {/* Speech bubble */}
-                <div className="relative w-full rounded-2xl border bg-background p-6 shadow-sm hover:shadow-lg">
-                  <Quote className="mb-3 h-6 w-6 text-primary/30" />
+                <div className="relative w-full rounded-xl border bg-background p-4 shadow-sm hover:shadow-lg">
+                  <Quote className="mb-2 h-5 w-5 text-primary/25" />
 
                   {/* 5 stars */}
-                  <div className="mb-4 flex gap-0.5">
+                  <div className="mb-2.5 flex gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
                       <Star
                         key={i}
-                        className="h-5 w-5 fill-yellow-400 text-yellow-400"
+                        className="h-4 w-4 fill-yellow-400 text-yellow-400"
                       />
                     ))}
                   </div>
 
-                  <p className="text-sm leading-relaxed text-foreground/90 italic">
+                  <p className="text-[13px] leading-relaxed text-foreground/90 italic">
                     &ldquo;{testimonial.quote}&rdquo;
                   </p>
 
                   {/* Speech bubble tail */}
-                  <div className="absolute -bottom-3 left-10 h-6 w-6 rotate-45 border-b border-r bg-background" />
+                  <div className="absolute -bottom-2.5 left-8 h-5 w-5 rotate-45 border-b border-r bg-background" />
                 </div>
 
                 {/* Name & location */}
-                <div className="mt-5 text-center">
-                  <p className="font-semibold">{testimonial.name}</p>
-                  <p className="text-sm text-muted-foreground">
+                <div className="mt-4 text-center">
+                  <p className="text-sm font-semibold">{testimonial.name}</p>
+                  <p className="text-xs text-muted-foreground">
                     {testimonial.location}
                   </p>
                 </div>
