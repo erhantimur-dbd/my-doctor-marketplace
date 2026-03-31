@@ -599,6 +599,30 @@ export async function cancelBooking(input: CancelBookingInput) {
       }
     }
 
+    // Notify doctor about cancellation (non-blocking)
+    if (patient && doctorProfile) {
+      const { data: doctorRecord } = await supabase
+        .from("doctors")
+        .select("profile_id")
+        .eq("id", booking.doctor_id)
+        .single();
+
+      if (doctorRecord) {
+        const dateStr = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
+          day: "numeric", month: "short",
+        });
+
+        createNotification({
+          userId: doctorRecord.profile_id,
+          type: "booking_cancelled",
+          title: "Booking Cancelled",
+          message: `${patient.first_name} ${patient.last_name} cancelled their appointment on ${dateStr} at ${booking.start_time?.slice(0, 5)}.`,
+          channels: ["in_app"],
+          metadata: { booking_id: booking.id },
+        }).catch((err) => log.error("Cancellation notification (doctor):", { err }));
+      }
+    }
+
     // Notify waitlisted patients that a slot opened up (non-blocking)
     if (doctorProfile) {
       notifyAvailabilitySubscribers(

@@ -12,6 +12,16 @@ import {
   CreditCard,
   AlertCircle,
   CheckCheck,
+  MessageSquare,
+  ClipboardList,
+  Receipt,
+  Clock,
+  UserPlus,
+  Gift,
+  CalendarCheck,
+  CalendarX,
+  FileText,
+  XCircle,
 } from "lucide-react";
 import { markAsRead, markAllAsRead } from "@/actions/notifications";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -37,13 +47,41 @@ function timeAgo(dateString: string): string {
 }
 
 const typeIcons: Record<string, typeof Bell> = {
-  booking_reminder: Calendar,
-  booking_confirmed: CheckCircle,
-  booking_cancelled: AlertCircle,
+  // Bookings
+  booking_reminder: Clock,
+  booking_confirmed: CalendarCheck,
+  booking_cancelled: CalendarX,
+  new_booking: Calendar,
+  // Reviews
   review_posted: Star,
   review_received: Star,
+  // Payments & invoices
   payment_received: CreditCard,
+  invoice_received: Receipt,
+  invoice_overdue: AlertCircle,
+  // Doctor lifecycle
   doctor_verified: CheckCircle,
+  doctor_rejected: XCircle,
+  subscription_upgrade_invite: CreditCard,
+  // Messages
+  new_message: MessageSquare,
+  // Treatment plans & follow-ups
+  treatment_plan: ClipboardList,
+  treatment_plan_accepted: ClipboardList,
+  treatment_plan_cancelled: ClipboardList,
+  treatment_reminder: ClipboardList,
+  follow_up_invitation: FileText,
+  follow_up_cancelled: FileText,
+  // Scheduling
+  reschedule_request: Calendar,
+  reschedule_approved: CalendarCheck,
+  reschedule_rejected: CalendarX,
+  calendar_conflict: AlertCircle,
+  visit_summary: FileText,
+  // Referrals & alerts
+  referral_signup: UserPlus,
+  referral_reward: Gift,
+  availability_alert: Bell,
 };
 
 export function NotificationInbox({

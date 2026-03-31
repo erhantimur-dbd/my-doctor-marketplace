@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/email/client";
 import { reviewReceivedEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
+import { createNotification } from "@/lib/notifications";
 import { shouldAutoApprove } from "@/lib/reviews/auto-approve";
 
 /** Fetch a single highlighted 5-star review (most recent with a comment) */
@@ -132,6 +133,24 @@ export async function submitReview(formData: FormData) {
         log.error("[Reviews] Review notification email error:", { err: err })
       );
     }
+  }
+
+  // In-app notification to doctor
+  const { data: doctorForNotif } = await admin
+    .from("doctors")
+    .select("profile_id")
+    .eq("id", booking.doctor_id)
+    .single();
+
+  if (doctorForNotif) {
+    createNotification({
+      userId: doctorForNotif.profile_id,
+      type: "review_received",
+      title: "New Review",
+      message: `You received a ${rating}-star review.`,
+      channels: ["in_app"],
+      metadata: { doctor_id: booking.doctor_id, rating },
+    }).catch((err) => log.error("[Reviews] Review notification error:", { err }));
   }
 
   revalidatePath("/dashboard/reviews");

@@ -17,6 +17,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
 import { creditWallet, debitWallet } from "@/lib/wallet";
+import { createNotification } from "@/lib/notifications";
 import Stripe from "stripe";
 
 // Loyalty cashback tiers
@@ -532,6 +533,42 @@ export async function POST(request: NextRequest) {
               }).catch((err) =>
                 console.error("SMS confirmation error:", err)
               );
+            }
+          }
+
+          // ── In-app notifications: booking confirmed ──
+          if (patient && doctorProfile) {
+            const doctorName = `${doctorProfile.first_name} ${doctorProfile.last_name}`;
+            const dateStr = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
+              day: "numeric", month: "short",
+            });
+
+            // Notify patient
+            createNotification({
+              userId: booking.patient_id,
+              type: "booking_confirmed",
+              title: "Booking Confirmed",
+              message: `Your appointment with Dr. ${doctorName} on ${dateStr} at ${booking.start_time?.slice(0, 5)} is confirmed.`,
+              channels: ["in_app"],
+              metadata: { booking_id: bookingId },
+            }).catch((err) => console.error("Booking confirmed notification (patient):", err));
+
+            // Notify doctor of new booking
+            const { data: doctorUser } = await supabase
+              .from("doctors")
+              .select("profile_id")
+              .eq("id", booking.doctor_id)
+              .single();
+
+            if (doctorUser) {
+              createNotification({
+                userId: doctorUser.profile_id,
+                type: "new_booking",
+                title: "New Booking",
+                message: `${patient.first_name} ${patient.last_name} booked an appointment on ${dateStr} at ${booking.start_time?.slice(0, 5)}.`,
+                channels: ["in_app"],
+                metadata: { booking_id: bookingId },
+              }).catch((err) => console.error("New booking notification (doctor):", err));
             }
           }
 
