@@ -50,6 +50,7 @@ import {
   deleteDoctorService,
 } from "@/actions/doctor-services";
 import { PriceBookEditor } from "@/components/doctor/price-book-editor";
+import { PracticePhotosManager } from "@/components/doctor/practice-photos-manager";
 import type { Education, Certification, Doctor, DoctorService } from "@/types";
 
 function createSupabase() {
@@ -65,6 +66,7 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [isVerified, setIsVerified] = useState(false);
+  const [photos, setPhotos] = useState<{ id: string; storage_path: string; alt_text: string | null; display_order: number; is_primary: boolean }[]>([]);
 
   // Form state
   const [title, setTitle] = useState("Dr.");
@@ -212,6 +214,15 @@ export default function ProfilePage() {
       .order("display_order", { ascending: true });
 
     if (svcData) setServices(svcData as DoctorService[]);
+
+    // Load practice photos
+    const { data: photoData } = await supabase
+      .from("doctor_photos")
+      .select("id, storage_path, alt_text, display_order, is_primary")
+      .eq("doctor_id", data.id)
+      .order("display_order", { ascending: true });
+
+    if (photoData) setPhotos(photoData);
 
     setLoading(false);
   }
@@ -536,6 +547,14 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Practice Photos */}
+      {doctor && (
+        <PracticePhotosManager
+          doctorId={doctor.id}
+          initialPhotos={photos}
+        />
+      )}
 
       {/* Education */}
       <Card>
