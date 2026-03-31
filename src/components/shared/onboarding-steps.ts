@@ -14,7 +14,7 @@ export interface OnboardingStep {
  */
 export const patientDashboardSteps: OnboardingStep[] = [
   {
-    targetSelector: '[data-tour="patient-settings"]',
+    targetSelector: '[data-tour="patient-overview"]',
     title: "Your Dashboard Overview",
     description:
       "Track your bookings, spending, and saved doctors at a glance. These stats update automatically as you use the platform.",
@@ -28,18 +28,18 @@ export const patientDashboardSteps: OnboardingStep[] = [
     position: "bottom",
   },
   {
-    targetSelector: '[data-tour="patient-find-doctor"]',
+    targetSelector: '[data-tour="patient-quick-actions"]',
     title: "Quick Actions",
     description:
       "Find a doctor, manage bookings, view treatment plans, or update your settings — all just one click away.",
-    position: "bottom",
+    position: "top",
   },
   {
-    targetSelector: '[data-tour="patient-messages"]',
+    targetSelector: '[data-tour="patient-activity"]',
     title: "Recent Activity",
     description:
       "Stay up to date with booking confirmations, messages from doctors, and other important notifications.",
-    position: "bottom",
+    position: "top",
   },
 ];
 

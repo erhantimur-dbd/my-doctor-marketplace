@@ -173,7 +173,7 @@ export default async function PatientDashboard() {
       </h1>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="patient-settings">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="patient-overview">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-full bg-blue-50 p-3">
@@ -315,7 +315,7 @@ export default async function PatientDashboard() {
       </Card>
 
       {/* Quick Actions */}
-      <div data-tour="patient-find-doctor">
+      <div data-tour="patient-quick-actions">
         <h2 className="mb-3 text-lg font-semibold">Quick Actions</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => (
@@ -339,7 +339,7 @@ export default async function PatientDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <Card data-tour="patient-messages">
+      <Card data-tour="patient-activity">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Recent Activity</CardTitle>
           <Button variant="ghost" size="sm" asChild>

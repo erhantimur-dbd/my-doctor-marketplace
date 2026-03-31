@@ -40,7 +40,6 @@ export function OnboardingTour({ tourId, steps }: OnboardingTourProps) {
     const target = document.querySelector(step.targetSelector);
 
     if (!target) {
-      // Target not found — position center-screen as fallback
       setTooltipStyle({
         position: "fixed",
         top: "50%",
@@ -52,49 +51,66 @@ export function OnboardingTour({ tourId, steps }: OnboardingTourProps) {
       return;
     }
 
-    const rect = target.getBoundingClientRect();
-    const tooltipEl = tooltipRef.current;
-    const tooltipWidth = tooltipEl?.offsetWidth || 320;
-    const tooltipHeight = tooltipEl?.offsetHeight || 160;
-    const gap = 12;
+    // Scroll target into view first, then position tooltip after scroll settles
+    const targetRect = target.getBoundingClientRect();
+    const isInView =
+      targetRect.top >= 0 &&
+      targetRect.bottom <= window.innerHeight;
 
-    let top = 0;
-    let left = 0;
-
-    switch (step.position) {
-      case "bottom":
-        top = rect.bottom + gap;
-        left = rect.left + rect.width / 2 - tooltipWidth / 2;
-        break;
-      case "top":
-        top = rect.top - tooltipHeight - gap;
-        left = rect.left + rect.width / 2 - tooltipWidth / 2;
-        break;
-      case "right":
-        top = rect.top + rect.height / 2 - tooltipHeight / 2;
-        left = rect.right + gap;
-        break;
-      case "left":
-        top = rect.top + rect.height / 2 - tooltipHeight / 2;
-        left = rect.left - tooltipWidth - gap;
-        break;
+    if (!isInView) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Wait for smooth scroll to finish before positioning
+      setTimeout(() => calculatePosition(target, step.position), 400);
+      return;
     }
 
-    // Clamp within viewport
-    left = Math.max(8, Math.min(left, window.innerWidth - tooltipWidth - 8));
-    top = Math.max(8, Math.min(top, window.innerHeight - tooltipHeight - 8));
-
-    // Scroll target into view if needed
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-
-    setTooltipStyle({
-      position: "fixed",
-      top: `${top}px`,
-      left: `${left}px`,
-      zIndex: 10001,
-      opacity: 1,
-    });
+    calculatePosition(target, step.position);
   }, [isActive, isCompleted, currentStep, steps]);
+
+  const calculatePosition = useCallback(
+    (target: Element, position: OnboardingStep["position"]) => {
+      const rect = target.getBoundingClientRect();
+      const tooltipEl = tooltipRef.current;
+      const tooltipWidth = tooltipEl?.offsetWidth || 320;
+      const tooltipHeight = tooltipEl?.offsetHeight || 160;
+      const gap = 12;
+
+      let top = 0;
+      let left = 0;
+
+      switch (position) {
+        case "bottom":
+          top = rect.bottom + gap;
+          left = rect.left + rect.width / 2 - tooltipWidth / 2;
+          break;
+        case "top":
+          top = rect.top - tooltipHeight - gap;
+          left = rect.left + rect.width / 2 - tooltipWidth / 2;
+          break;
+        case "right":
+          top = rect.top + rect.height / 2 - tooltipHeight / 2;
+          left = rect.right + gap;
+          break;
+        case "left":
+          top = rect.top + rect.height / 2 - tooltipHeight / 2;
+          left = rect.left - tooltipWidth - gap;
+          break;
+      }
+
+      // Clamp within viewport
+      left = Math.max(8, Math.min(left, window.innerWidth - tooltipWidth - 8));
+      top = Math.max(8, Math.min(top, window.innerHeight - tooltipHeight - 8));
+
+      setTooltipStyle({
+        position: "fixed",
+        top: `${top}px`,
+        left: `${left}px`,
+        zIndex: 10001,
+        opacity: 1,
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!mounted || !isActive || isCompleted) return;
