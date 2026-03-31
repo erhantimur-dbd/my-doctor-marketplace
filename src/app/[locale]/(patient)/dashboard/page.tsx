@@ -12,7 +12,6 @@ import { Link } from "@/i18n/navigation";
 import {
   Calendar,
   Clock,
-  Heart,
   Search,
   ClipboardList,
   Settings,
@@ -82,33 +81,10 @@ export default async function PatientDashboard() {
   // Fetch profile, KPI counts, spending, favorites, upcoming bookings, and notifications in parallel
   const [
     { data: profile },
-    { count: totalBookings },
-    { count: upcomingCount },
-    { count: treatmentPlanCount },
-    { count: savedDoctors },
     { data: upcomingBookings },
     { data: notifications },
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
-    supabase
-      .from("bookings")
-      .select("*", { count: "exact", head: true })
-      .eq("patient_id", user.id)
-      .in("status", ["confirmed", "approved", "completed"]),
-    supabase
-      .from("bookings")
-      .select("*", { count: "exact", head: true })
-      .eq("patient_id", user.id)
-      .in("status", ["confirmed", "approved"])
-      .gte("start_time", new Date().toISOString()),
-    supabase
-      .from("treatment_plans")
-      .select("*", { count: "exact", head: true })
-      .eq("patient_id", user.id),
-    supabase
-      .from("favorites")
-      .select("*", { count: "exact", head: true })
-      .eq("patient_id", user.id),
     supabase
       .from("bookings")
       .select(
@@ -172,54 +148,27 @@ export default async function PatientDashboard() {
         Welcome back, {profile?.first_name}
       </h1>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" data-tour="patient-overview">
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-blue-50 p-3">
-              <Calendar className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Bookings</p>
-              <p className="text-2xl font-bold">{totalBookings ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-green-50 p-3">
-              <Clock className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Upcoming Appointments
-              </p>
-              <p className="text-2xl font-bold">{upcomingCount ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-purple-50 p-3">
-              <ClipboardList className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Treatment Plans</p>
-              <p className="text-2xl font-bold">{treatmentPlanCount ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-red-50 p-3">
-              <Heart className="h-5 w-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Saved Doctors</p>
-              <p className="text-2xl font-bold">{savedDoctors ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Quick Actions */}
+      <div data-tour="patient-quick-actions">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {quickActions.map((action) => (
+            <Link key={action.href} href={action.href}>
+              <Card className="h-full transition-shadow hover:shadow-md">
+                <CardContent className="flex items-start gap-4 p-5">
+                  <div className={`rounded-full p-2.5 ${action.color}`}>
+                    <action.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{action.label}</p>
+                    <p className="mt-0.5 text-sm text-muted-foreground">
+                      {action.description}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
 
       {/* Upcoming Appointments */}
@@ -313,30 +262,6 @@ export default async function PatientDashboard() {
           )}
         </CardContent>
       </Card>
-
-      {/* Quick Actions */}
-      <div data-tour="patient-quick-actions">
-        <h2 className="mb-3 text-lg font-semibold">Quick Actions</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action) => (
-            <Link key={action.href} href={action.href}>
-              <Card className="h-full transition-shadow hover:shadow-md">
-                <CardContent className="flex items-start gap-4 p-5">
-                  <div className={`rounded-full p-2.5 ${action.color}`}>
-                    <action.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-medium">{action.label}</p>
-                    <p className="mt-0.5 text-sm text-muted-foreground">
-                      {action.description}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      </div>
 
       {/* Recent Activity */}
       <Card data-tour="patient-activity">

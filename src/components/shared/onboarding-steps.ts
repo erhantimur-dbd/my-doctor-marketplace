@@ -14,10 +14,10 @@ export interface OnboardingStep {
  */
 export const patientDashboardSteps: OnboardingStep[] = [
   {
-    targetSelector: '[data-tour="patient-overview"]',
-    title: "Your Dashboard Overview",
+    targetSelector: '[data-tour="patient-quick-actions"]',
+    title: "Quick Actions",
     description:
-      "Track your bookings, spending, and saved doctors at a glance. These stats update automatically as you use the platform.",
+      "Find a doctor, manage bookings, view treatment plans, or update your settings — all just one click away.",
     position: "bottom",
   },
   {
@@ -26,13 +26,6 @@ export const patientDashboardSteps: OnboardingStep[] = [
     description:
       "Your next scheduled appointments appear here. Join video calls, view details, or manage your bookings easily.",
     position: "bottom",
-  },
-  {
-    targetSelector: '[data-tour="patient-quick-actions"]',
-    title: "Quick Actions",
-    description:
-      "Find a doctor, manage bookings, view treatment plans, or update your settings — all just one click away.",
-    position: "top",
   },
   {
     targetSelector: '[data-tour="patient-activity"]',
