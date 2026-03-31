@@ -26,6 +26,7 @@
     "success": "Erfolg"
   },
   "nav": {
+    "home": "Startseite",
     "find_doctor": "Arzt finden",
     "specialties": "Fachgebiete",
     "how_it_works": "So funktioniert's",

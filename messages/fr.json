@@ -26,6 +26,7 @@
     "success": "Succes"
   },
   "nav": {
+    "home": "Accueil",
     "find_doctor": "Trouver un Medecin",
     "specialties": "Specialites",
     "how_it_works": "Comment ca marche",

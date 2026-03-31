@@ -35,6 +35,7 @@ import {
   LayoutDashboard,
   UserCircle,
   BookOpen,
+  Home,
 } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { useState } from "react";
@@ -72,6 +73,7 @@ export function Header() {
     pathname.startsWith("/invitation");
 
   const navLinks = [
+    { href: "/", label: t("home"), icon: Home, iconBg: "bg-sky-50", iconColor: "text-sky-600" },
     { href: "/doctors", label: t("find_doctor"), icon: Search, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
     { href: "/specialties", label: t("specialties"), icon: Stethoscope, iconBg: "bg-teal-50", iconColor: "text-teal-600" },
     { href: "/how-it-works", label: t("how_it_works"), icon: HelpCircle, iconBg: "bg-amber-50", iconColor: "text-amber-600" },

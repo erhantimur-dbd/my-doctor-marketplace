@@ -26,6 +26,7 @@
     "success": "Basarili"
   },
   "nav": {
+    "home": "Ana Sayfa",
     "find_doctor": "Doktor Bul",
     "specialties": "Uzmanliklar",
     "how_it_works": "Nasil Calisir",
