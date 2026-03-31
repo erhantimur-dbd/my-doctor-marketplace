@@ -16,14 +16,12 @@ import {
   Search,
   ClipboardList,
   Settings,
-  TrendingUp,
   CreditCard,
   ArrowRight,
   Bell,
   Video,
   MapPin,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils/currency";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { patientDashboardSteps } from "@/components/shared/onboarding-steps";
 
@@ -86,7 +84,7 @@ export default async function PatientDashboard() {
     { data: profile },
     { count: totalBookings },
     { count: upcomingCount },
-    { data: paidBookings },
+    { count: treatmentPlanCount },
     { count: savedDoctors },
     { data: upcomingBookings },
     { data: notifications },
@@ -104,11 +102,9 @@ export default async function PatientDashboard() {
       .in("status", ["confirmed", "approved"])
       .gte("start_time", new Date().toISOString()),
     supabase
-      .from("bookings")
-      .select("total_amount_cents, currency")
-      .eq("patient_id", user.id)
-      .in("status", ["confirmed", "approved", "completed"])
-      .gt("total_amount_cents", 0),
+      .from("treatment_plans")
+      .select("*", { count: "exact", head: true })
+      .eq("patient_id", user.id),
     supabase
       .from("favorites")
       .select("*", { count: "exact", head: true })
@@ -136,20 +132,6 @@ export default async function PatientDashboard() {
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
-
-  const totalSpent = (paidBookings || []).reduce(
-    (sum, b: any) => sum + b.total_amount_cents,
-    0
-  );
-  // Determine the primary currency (most frequent)
-  const currencyCounts: Record<string, number> = {};
-  (paidBookings || []).forEach((b: any) => {
-    const cur = (b.currency || "EUR").toUpperCase();
-    currencyCounts[cur] = (currencyCounts[cur] || 0) + 1;
-  });
-  const primaryCurrency =
-    Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ||
-    "EUR";
 
   const quickActions = [
     {
@@ -219,13 +201,11 @@ export default async function PatientDashboard() {
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-full bg-purple-50 p-3">
-              <TrendingUp className="h-5 w-5 text-purple-600" />
+              <ClipboardList className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Total Spent</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(totalSpent, primaryCurrency)}
-              </p>
+              <p className="text-sm text-muted-foreground">Treatment Plans</p>
+              <p className="text-2xl font-bold">{treatmentPlanCount ?? 0}</p>
             </div>
           </CardContent>
         </Card>

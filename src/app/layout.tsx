@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { organizationJsonLd } from "@/lib/seo/json-ld";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,10 +16,20 @@ export const metadata: Metadata = {
   },
 };
 
+const orgJsonLd = organizationJsonLd();
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return children;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+      />
+      {children}
+    </>
+  );
 }

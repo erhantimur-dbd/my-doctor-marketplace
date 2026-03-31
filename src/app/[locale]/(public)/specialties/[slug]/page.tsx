@@ -61,16 +61,18 @@ interface PageParams {
 export async function generateMetadata({
   params,
 }: PageParams): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const meta = getSpecialtyMeta(slug);
   if (!meta) return { title: "Specialty Not Found" };
 
   const name = formatSpecialtyName(meta.nameKey);
+  const seoMeta = (await import("@/lib/seo/metadata")).generateMetadata;
 
-  return {
+  return seoMeta({
     title: `${name} Doctors — Find & Book Online`,
-    description: meta.description,
-  };
+    description: meta.description || `Browse verified ${name} specialists and book appointments online at MyDoctors360.`,
+    path: `/${locale}/specialties/${slug}`,
+  });
 }
 
 /* ── Page Component ─────────────────────────────────────── */

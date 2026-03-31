@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { shouldAutoApprove } from "@/lib/reviews/auto-approve";
 
 interface SubmitReviewInput {
   bookingId: string;
@@ -59,7 +60,14 @@ export async function submitReview(
     return { error: "You have already reviewed this booking." };
   }
 
-  // Insert review
+  // Auto-approval pipeline: check rating, keywords, and content
+  const { autoApproved } = await shouldAutoApprove(
+    input.rating,
+    input.title,
+    input.comment
+  );
+
+  // Insert review — auto-approved reviews are immediately visible
   const { error: insertError } = await supabase.from("reviews").insert({
     booking_id: input.bookingId,
     doctor_id: input.doctorId,
@@ -67,7 +75,7 @@ export async function submitReview(
     rating: input.rating,
     title: input.title,
     comment: input.comment,
-    is_visible: true,
+    is_visible: autoApproved,
   });
 
   if (insertError) {

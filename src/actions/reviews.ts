@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/email/client";
 import { reviewReceivedEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
+import { shouldAutoApprove } from "@/lib/reviews/auto-approve";
 
 /** Fetch a single highlighted 5-star review (most recent with a comment) */
 export async function getFeaturedReview(doctorId: string) {
@@ -78,6 +79,13 @@ export async function submitReview(formData: FormData) {
 
   if (existing) return { error: "Already reviewed this appointment" };
 
+  // Auto-approval pipeline: check rating, keywords, and content
+  const { autoApproved } = await shouldAutoApprove(
+    rating,
+    title || null,
+    comment || null
+  );
+
   const { error } = await supabase.from("reviews").insert({
     booking_id: bookingId,
     patient_id: user.id,
@@ -85,6 +93,7 @@ export async function submitReview(formData: FormData) {
     rating,
     title: title || null,
     comment: comment || null,
+    is_visible: autoApproved,
   });
 
   if (error) return { error: safeError(error) };

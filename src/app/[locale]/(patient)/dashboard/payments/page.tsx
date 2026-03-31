@@ -79,12 +79,12 @@ export default async function PaymentsPage({
 
   // Compute KPI values
   const totalPayments = payments?.length ?? 0;
-  const totalSpent = (payments || []).reduce(
+  const totalAmountCents = (payments || []).reduce(
     (sum, b: any) => sum + b.total_amount_cents,
     0
   );
   const avgPayment =
-    totalPayments > 0 ? Math.round(totalSpent / totalPayments) : 0;
+    totalPayments > 0 ? Math.round(totalAmountCents / totalPayments) : 0;
 
   // Primary currency
   const currencyCounts: Record<string, number> = {};
@@ -104,7 +104,7 @@ export default async function PaymentsPage({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="flex items-center gap-4 p-6">
             <div className="rounded-full bg-blue-50 p-3">
@@ -113,19 +113,6 @@ export default async function PaymentsPage({
             <div>
               <p className="text-sm text-muted-foreground">Total Payments</p>
               <p className="text-2xl font-bold">{totalPayments}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-6">
-            <div className="rounded-full bg-green-50 p-3">
-              <CreditCard className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Total Spent</p>
-              <p className="text-2xl font-bold">
-                {formatCurrency(totalSpent, primaryCurrency)}
-              </p>
             </div>
           </CardContent>
         </Card>

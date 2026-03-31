@@ -32,6 +32,8 @@ import { FavoriteButton } from "@/components/doctors/favorite-button";
 import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 import { TrackDoctorView } from "@/components/doctors/track-doctor-view";
 import { PhotoGallery } from "@/components/doctors/photo-gallery";
+import { generateMetadata as seoMetadata } from "@/lib/seo/metadata";
+import { doctorJsonLd } from "@/lib/seo/json-ld";
 import type { Metadata } from "next";
 
 interface DoctorPageProps {
@@ -41,24 +43,37 @@ interface DoctorPageProps {
 export async function generateMetadata({
   params,
 }: DoctorPageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const adminDb = createAdminClient();
 
   const { data: doctorData } = await adminDb
     .from("doctors")
-    .select("*, profile:profiles!doctors_profile_id_fkey(first_name, last_name)")
+    .select(
+      `*, profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+       location:locations(city, country_code),
+       specialties:doctor_specialties(specialty:specialties(name_key), is_primary)`
+    )
     .eq("slug", slug)
     .single();
 
   if (!doctorData) return { title: "Doctor Not Found" };
 
   const doctor: any = doctorData;
-  return {
-    title: `${doctor.title || "Dr."} ${doctor.profile.first_name} ${doctor.profile.last_name}`,
-    description:
-      doctor.meta_description ||
-      `Book an appointment with ${doctor.title || "Dr."} ${doctor.profile.first_name} ${doctor.profile.last_name}`,
-  };
+  const fullName = `${doctor.title || "Dr."} ${doctor.profile.first_name} ${doctor.profile.last_name}`;
+  const primarySpec = doctor.specialties?.find((s: any) => s.is_primary)?.specialty;
+  const specName = primarySpec ? formatSpecialtyName(primarySpec.name_key) : undefined;
+  const locationStr = doctor.location ? `${doctor.location.city}, ${doctor.location.country_code}` : "";
+
+  const description =
+    doctor.meta_description ||
+    `Book an appointment with ${fullName}${specName ? `, ${specName}` : ""}${locationStr ? ` in ${locationStr}` : ""}. Verified specialist on MyDoctors360.`;
+
+  return seoMetadata({
+    title: fullName,
+    description,
+    path: `/${locale}/doctors/${slug}`,
+    image: doctor.profile.avatar_url || undefined,
+  });
 }
 
 export default async function DoctorProfilePage({ params }: DoctorPageProps) {
@@ -146,8 +161,24 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
 
   const fullName = `${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
 
+  const jsonLd = doctorJsonLd({
+    name: fullName,
+    specialty: primarySpecialty ? formatSpecialtyName(primarySpecialty.name_key) : undefined,
+    image: doctor.profile.avatar_url || undefined,
+    rating: doctor.avg_rating ? Number(doctor.avg_rating) : undefined,
+    reviewCount: doctor.total_reviews || undefined,
+    address: doctor.location
+      ? { city: doctor.location.city, country: doctor.location.country_code }
+      : undefined,
+    url: `${process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com"}/${locale}/doctors/${slug}`,
+  });
+
   return (
     <div className="relative min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Decorative specialty icons across page background */}
       <HeroSpecialtyIcons />
 
