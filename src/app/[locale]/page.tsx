@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   Clock,
   MessageSquare,
+  Quote,
 } from "lucide-react";
 import { SpecialtyMarquee } from "@/components/shared/specialty-marquee";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
@@ -127,6 +128,96 @@ export default async function HomePage() {
               label: ts(s.key),
             }))}
           />
+        </div>
+      </section>
+
+      {/* Patient Testimonials */}
+      <section className="bg-muted/30 px-4 py-16 md:py-24">
+        <div className="container mx-auto">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold md:text-3xl">
+              What Our Patients Say
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              Real stories from patients who took control of their healthcare
+            </p>
+          </div>
+
+          <div className="mx-auto mt-12 grid max-w-5xl gap-x-6 gap-y-8 md:grid-cols-2 md:gap-y-0">
+            {[
+              {
+                quote:
+                  "As a childminder, I simply don\u2019t have time to sit in waiting rooms. I found a GP on MyDoctors360, booked a same-day appointment, and was seen within the hour. The whole process took minutes \u2014 I was back with the children before lunch.",
+                name: "Mary T.",
+                location: "Islington, London",
+                offset: "md:mt-0",
+                rotate: "md:-rotate-2",
+                desktopOnly: false,
+              },
+              {
+                quote:
+                  "My GP said I\u2019d be waiting weeks for an ultrasound scan. I decided to go private through MyDoctors360 and had an appointment booked within days. The relief of knowing everything was fine made it absolutely worth it.",
+                name: "Colin A.",
+                location: "Surrey",
+                offset: "md:mt-16",
+                rotate: "md:rotate-[1.5deg]",
+                desktopOnly: false,
+              },
+              {
+                quote:
+                  "I needed a full blood panel done but the earliest NHS appointment was over a month away. Through MyDoctors360 I found a clinic nearby, had my bloods taken the next morning, and results were back within 48 hours. Couldn\u2019t believe how simple it was.",
+                name: "Priya S.",
+                location: "Birmingham",
+                offset: "md:-mt-14",
+                rotate: "md:rotate-[1.8deg]",
+                desktopOnly: true,
+              },
+              {
+                quote:
+                  "I\u2019d been putting off seeing a dentist for years out of sheer dread. MyDoctors360 let me read real patient reviews, find someone highly rated for nervous patients, and book online without a phone call. Best dental experience I\u2019ve ever had.",
+                name: "James R.",
+                location: "Edinburgh",
+                offset: "md:-mt-4",
+                rotate: "md:-rotate-[1.5deg]",
+                desktopOnly: true,
+              },
+            ].map((testimonial) => (
+              <div
+                key={testimonial.name}
+                className={`${testimonial.desktopOnly ? "hidden md:flex" : "flex"} flex-col items-center transition-transform hover:z-10 hover:scale-[1.02] ${testimonial.offset} ${testimonial.rotate}`}
+              >
+                {/* Speech bubble */}
+                <div className="relative w-full rounded-2xl border bg-background p-6 shadow-sm hover:shadow-lg">
+                  <Quote className="mb-3 h-6 w-6 text-primary/30" />
+
+                  {/* 5 stars */}
+                  <div className="mb-4 flex gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className="h-5 w-5 fill-yellow-400 text-yellow-400"
+                      />
+                    ))}
+                  </div>
+
+                  <p className="text-sm leading-relaxed text-foreground/90 italic">
+                    &ldquo;{testimonial.quote}&rdquo;
+                  </p>
+
+                  {/* Speech bubble tail */}
+                  <div className="absolute -bottom-3 left-10 h-6 w-6 rotate-45 border-b border-r bg-background" />
+                </div>
+
+                {/* Name & location */}
+                <div className="mt-5 text-center">
+                  <p className="font-semibold">{testimonial.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {testimonial.location}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
