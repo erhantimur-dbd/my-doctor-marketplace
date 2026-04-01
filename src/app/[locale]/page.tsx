@@ -102,6 +102,10 @@ export default async function HomePage() {
               <span>{t("video_consultations")}</span>
             </div>
             <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
+              <Clock className="h-4 w-4 fill-orange-300 text-orange-300 drop-shadow-sm" />
+              <span>{t("same_day")}</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 drop-shadow-sm" />
               <span>{t("trusted_by")}</span>
             </div>
