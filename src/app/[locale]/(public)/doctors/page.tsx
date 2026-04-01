@@ -5,6 +5,7 @@ import {
   getMultiDayAvailabilityBatch,
   getSearchExpansionSuggestions,
 } from "@/actions/search";
+import { getLiveDoctorAvailability } from "@/actions/live-availability";
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
@@ -82,12 +83,12 @@ export default async function DoctorsPage({
   >[0]["doctor"][];
   const matchScores = result.matchScores;
 
-  // Fetch multi-day availability for all returned doctors (single batch RPC)
+  // Fetch multi-day availability + live status for all returned doctors
   const doctorIds = typedDoctors.map((d) => d.id);
-  const availability = await getMultiDayAvailabilityBatch(
-    doctorIds,
-    sp.consultationType
-  );
+  const [availability, liveStatus] = await Promise.all([
+    getMultiDayAvailabilityBatch(doctorIds, sp.consultationType),
+    getLiveDoctorAvailability(doctorIds),
+  ]);
 
   const distances = result.distances;
 
@@ -272,6 +273,17 @@ export default async function DoctorsPage({
             resultCount={result.total}
           />
 
+          {/* Live availability legend */}
+          {result.doctors.length > 0 && Object.values(liveStatus).some(Boolean) && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+              </span>
+              Available within the next hour
+            </div>
+          )}
+
           {result.doctors.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted-foreground/20 py-20 text-center">
               <div className="mb-3 rounded-full bg-muted p-4">
@@ -295,21 +307,32 @@ export default async function DoctorsPage({
                   centerLocation={centerLocation}
                   matchScores={matchScores}
                   distances={distances}
+                  liveAvailability={liveStatus}
                 />
               </div>
 
               {/* Mobile / tablet: stacked cards (no map) */}
               <div className="space-y-4 lg:hidden">
                 {typedDoctors.map((doctor) => (
-                  <DoctorCard
-                    key={doctor.id}
-                    doctor={doctor}
-                    locale={locale}
-                    availability={availability[doctor.id] || null}
-                    matchScore={matchScores?.[doctor.id]?.score}
-                    matchReasons={matchScores?.[doctor.id]?.reasons}
-                    distanceKm={distances?.[doctor.id]}
-                  />
+                  <div key={doctor.id} className="relative">
+                    {liveStatus[doctor.id] && (
+                      <div className="absolute -top-2 left-4 z-10 flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-md animate-badge-pulse">
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+                        </span>
+                        Available Now
+                      </div>
+                    )}
+                    <DoctorCard
+                      doctor={doctor}
+                      locale={locale}
+                      availability={availability[doctor.id] || null}
+                      matchScore={matchScores?.[doctor.id]?.score}
+                      matchReasons={matchScores?.[doctor.id]?.reasons}
+                      distanceKm={distances?.[doctor.id]}
+                    />
+                  </div>
                 ))}
               </div>
             </>
