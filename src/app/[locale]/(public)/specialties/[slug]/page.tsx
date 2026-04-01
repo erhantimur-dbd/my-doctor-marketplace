@@ -5,7 +5,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DoctorCard } from "@/components/doctors/doctor-card";
+import { DoctorGridLive } from "@/components/doctors/doctor-grid-live";
 import { getSpecialtyBySlug, getMultiDayAvailabilityBatch } from "@/actions/search";
+import { getLiveDoctorAvailability } from "@/actions/live-availability";
 import { getSpecialtyMeta, SPECIALTIES } from "@/lib/constants/specialties";
 import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
 import { formatSpecialtyName } from "@/lib/utils";
@@ -95,10 +97,12 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
     typeof DoctorCard
   >[0]["doctor"][];
 
-  // Fetch next availability for featured doctors
+  // Fetch next availability + live status for featured doctors
   const doctorIds = typedDoctors.map((d) => d.id);
-  const availability =
-    doctorIds.length > 0 ? await getMultiDayAvailabilityBatch(doctorIds) : {};
+  const [availability, liveStatus] = await Promise.all([
+    doctorIds.length > 0 ? getMultiDayAvailabilityBatch(doctorIds) : {},
+    doctorIds.length > 0 ? getLiveDoctorAvailability(doctorIds) : {},
+  ]);
 
   // Format price from cents
   const formatPrice = (cents: number) =>
@@ -205,17 +209,12 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
           </div>
 
           {typedDoctors.length > 0 ? (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {typedDoctors.map((doctor) => (
-                <DoctorCard
-                  key={doctor.id}
-                  doctor={doctor}
-                  locale={locale}
-                  availability={availability[doctor.id] || null}
-                  compact
-                />
-              ))}
-            </div>
+            <DoctorGridLive
+              doctors={typedDoctors}
+              locale={locale}
+              availability={availability}
+              initialLive={liveStatus}
+            />
           ) : (
             <Card>
               <CardContent className="flex flex-col items-center gap-4 py-12 text-center">

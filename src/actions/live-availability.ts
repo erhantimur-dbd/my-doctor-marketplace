@@ -50,3 +50,44 @@ export async function getLiveAvailabilityCounts(): Promise<
   }
   return counts;
 }
+
+/**
+ * Returns a set of doctor IDs that have available slots in the next 1 hour.
+ * Used for the "Available Now" indicator on doctor cards.
+ */
+export async function getLiveDoctorAvailability(
+  doctorIds: string[]
+): Promise<Record<string, boolean>> {
+  if (doctorIds.length === 0) return {};
+
+  const supabase = createAdminClient();
+  const now = new Date();
+  const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+
+  const jsDay = now.getDay();
+  const dbDay = jsDay === 0 ? 6 : jsDay - 1;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const currentTime = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const oneHourTime = `${pad(oneHourLater.getHours())}:${pad(oneHourLater.getMinutes())}:${pad(oneHourLater.getSeconds())}`;
+  const todayStr = now.toISOString().slice(0, 10);
+
+  const { data, error } = await supabase.rpc("get_live_doctor_availability", {
+    p_doctor_ids: doctorIds,
+    p_day_of_week: dbDay,
+    p_current_time: currentTime,
+    p_one_hour_time: oneHourTime,
+    p_today: todayStr,
+  });
+
+  if (error || !data) {
+    console.error("Live doctor availability query failed:", error?.message);
+    return {};
+  }
+
+  const result: Record<string, boolean> = {};
+  for (const row of data as { doctor_id: string }[]) {
+    result[row.doctor_id] = true;
+  }
+  return result;
+}
