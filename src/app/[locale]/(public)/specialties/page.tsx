@@ -1,48 +1,11 @@
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Stethoscope,
-  Heart,
-  Sparkles,
-  Brain,
-  Eye,
-  Smile,
-  Baby,
-  Activity,
-  Wind,
-  Shield,
-  Apple,
-  Droplets,
-  Ear,
-  Flower,
-  Scan,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
-import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
-
-const iconMap: Record<string, React.ElementType> = {
-  Stethoscope,
-  Heart,
-  Sparkles,
-  Brain,
-  Eye,
-  Smile,
-  Baby,
-  Activity,
-  Wind,
-  Shield,
-  Apple,
-  Droplets,
-  Ear,
-  Flower,
-  Scan,
-  Bone: Activity,
-  HeartHandshake: Heart,
-};
+import { getLiveAvailabilityCounts } from "@/actions/live-availability";
+import { SpecialtiesGridLive } from "@/components/shared/specialties-grid-live";
 
 const allSpecialties = [
   { slug: "general-practice", icon: "Stethoscope", key: "general_practice", desc: "Primary care, check-ups, and general health concerns" },
@@ -71,8 +34,11 @@ const allSpecialties = [
   { slug: "nephrology", icon: "Droplets", key: "nephrology", desc: "Kidney health and renal diseases" },
 ];
 
-export default function SpecialtiesPage() {
-  const t = useTranslations("specialty");
+export default async function SpecialtiesPage() {
+  const [t, liveCounts] = await Promise.all([
+    getTranslations("specialty"),
+    getLiveAvailabilityCounts(),
+  ]);
 
   return (
     <>
@@ -95,29 +61,15 @@ export default function SpecialtiesPage() {
       {/* Specialties Grid */}
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {allSpecialties.map((spec) => {
-              const Icon = iconMap[spec.icon] || Stethoscope;
-              const c = getSpecialtyColor(spec.slug);
-              return (
-                <Link key={spec.slug} href={`/specialties/${spec.slug}`}>
-                  <Card className={`group h-full cursor-pointer transition-all ${c.border} hover:shadow-md`}>
-                    <CardContent className="flex items-start gap-4 p-5">
-                      <div className={`shrink-0 rounded-xl ${c.bg} p-3 transition-colors ${c.hoverBg}`}>
-                        <Icon className={`h-6 w-6 ${c.text}`} />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-semibold">{t(spec.key)}</h3>
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                          {spec.desc}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              );
-            })}
-          </div>
+          <SpecialtiesGridLive
+            specialties={allSpecialties.map((s) => ({
+              slug: s.slug,
+              icon: s.icon,
+              label: t(s.key),
+              desc: s.desc,
+            }))}
+            initialCounts={liveCounts}
+          />
         </div>
       </section>
 
