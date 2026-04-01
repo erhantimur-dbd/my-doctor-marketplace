@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/dynamic-header";
 import { Footer } from "@/components/layout/footer";
 import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { getSpecialties, getLocations } from "@/actions/search";
+import { getLiveAvailabilityCounts } from "@/actions/live-availability";
 import {
   Calendar,
   Video,
@@ -57,9 +58,10 @@ export default async function HomePage() {
   const t = await getTranslations("home");
   const ts = await getTranslations("specialty");
 
-  const [specialties, locations] = await Promise.all([
+  const [specialties, locations, liveCounts] = await Promise.all([
     getSpecialties(),
     getLocations(),
+    getLiveAvailabilityCounts(),
   ]);
 
   return (
@@ -127,6 +129,7 @@ export default async function HomePage() {
               icon: s.icon,
               label: ts(s.key),
             }))}
+            initialCounts={liveCounts}
           />
         </div>
       </section>

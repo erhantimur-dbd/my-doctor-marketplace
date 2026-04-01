@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useState } from "react";
+import { getLiveAvailabilityCounts } from "@/actions/live-availability";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
@@ -50,9 +51,27 @@ export interface SpecialtyItem {
 
 interface SpecialtyMarqueeProps {
   specialties: SpecialtyItem[];
+  initialCounts?: Record<string, number>;
 }
 
-export function SpecialtyMarquee({ specialties }: SpecialtyMarqueeProps) {
+export function SpecialtyMarquee({ specialties, initialCounts = {} }: SpecialtyMarqueeProps) {
+  // Live availability counts — start with server-fetched data, poll every 60s
+  const [counts, setCounts] = useState<Record<string, number>>(initialCounts);
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const fresh = await getLiveAvailabilityCounts();
+        if (!cancelled) setCounts(fresh);
+      } catch {
+        // silent — badges just stay stale
+      }
+    };
+    const interval = setInterval(poll, 60_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
   // Duplicate list to create seamless loop
   const items = [...specialties, ...specialties];
 
@@ -146,6 +165,7 @@ export function SpecialtyMarquee({ specialties }: SpecialtyMarqueeProps) {
         {items.map((spec, i) => {
           const Icon = iconMap[spec.icon] || Stethoscope;
           const c = getSpecialtyColor(spec.slug);
+          const available = counts[spec.slug] ?? 0;
           return (
             <Link
               key={`${spec.slug}-${i}`}
@@ -153,8 +173,14 @@ export function SpecialtyMarquee({ specialties }: SpecialtyMarqueeProps) {
               className="shrink-0"
             >
               <Card
-                className={`group h-[8.5rem] w-[8.5rem] cursor-pointer overflow-hidden transition-all ${c.border} hover:shadow-md !py-0 !gap-0`}
+                className={`group relative h-[8.5rem] w-[8.5rem] cursor-pointer overflow-visible transition-all ${c.border} hover:shadow-md !py-0 !gap-0`}
               >
+                {/* Live availability badge */}
+                {available > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 z-20 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-background animate-badge-pulse">
+                    {available > 99 ? "99+" : available}
+                  </span>
+                )}
                 <CardContent className="flex h-full flex-col items-center justify-center gap-2 px-3 py-3 text-center">
                   <div
                     className={`rounded-full ${c.bg} p-3 transition-colors ${c.hoverBg}`}

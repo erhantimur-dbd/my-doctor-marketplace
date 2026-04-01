@@ -125,6 +125,15 @@
   }
 }
 
+/* Live availability badge pulse */
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+.animate-badge-pulse {
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
 /* Hide scrollbar for marquee / carousel elements */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
