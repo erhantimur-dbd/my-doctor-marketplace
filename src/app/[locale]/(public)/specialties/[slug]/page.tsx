@@ -190,7 +190,7 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
       </section>
 
       {/* Featured Doctors */}
-      <section className="px-4 py-12 md:py-20">
+      <section className="overflow-hidden px-4 py-12 md:py-20">
         <div className="container mx-auto">
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-2xl font-bold md:text-3xl">

@@ -275,7 +275,7 @@ export default async function DoctorsPage({
 
           {/* Live availability legend */}
           {result.doctors.length > 0 && Object.values(liveStatus).some(Boolean) && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
@@ -312,18 +312,9 @@ export default async function DoctorsPage({
               </div>
 
               {/* Mobile / tablet: stacked cards (no map) */}
-              <div className="space-y-4 lg:hidden">
+              <div className="space-y-5 lg:hidden">
                 {typedDoctors.map((doctor) => (
-                  <div key={doctor.id} className="relative">
-                    {liveStatus[doctor.id] && (
-                      <div className="absolute -top-2 left-4 z-10 flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-md animate-badge-pulse">
-                        <span className="relative flex h-2 w-2">
-                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-                        </span>
-                        Available Now
-                      </div>
-                    )}
+                  <div key={doctor.id}>
                     <DoctorCard
                       doctor={doctor}
                       locale={locale}
@@ -331,6 +322,7 @@ export default async function DoctorsPage({
                       matchScore={matchScores?.[doctor.id]?.score}
                       matchReasons={matchScores?.[doctor.id]?.reasons}
                       distanceKm={distances?.[doctor.id]}
+                      liveAvailable={!!liveStatus[doctor.id]}
                     />
                   </div>
                 ))}

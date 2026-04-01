@@ -73,10 +73,12 @@ interface DoctorCardProps {
   compact?: boolean;
   /** Distance from searched place in km (shown as badge when proximity search is active) */
   distanceKm?: number;
+  /** Show "Available Now" live badge inside the card */
+  liveAvailable?: boolean;
 }
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
-  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact, distanceKm }, ref) {
+  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact, distanceKm, liveAvailable }, ref) {
     const router = useRouter();
     const { currency: displayCurrency, convert } = useCurrency();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -154,12 +156,23 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
           )}
 
           <div className={cn("p-5", doctor.is_featured && "pt-4")}>
-            {/* Featured label */}
-            {doctor.is_featured && (
-              <div className="mb-3">
-                <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                  ★ Featured
-                </span>
+            {/* Top row: Featured label + Available Now badge */}
+            {(doctor.is_featured || liveAvailable) && (
+              <div className="mb-3 flex items-center justify-between">
+                {doctor.is_featured ? (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    ★ Featured
+                  </span>
+                ) : <span />}
+                {liveAvailable && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm animate-badge-pulse">
+                    <span className="relative flex h-2 w-2">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
+                    </span>
+                    Available Now
+                  </span>
+                )}
               </div>
             )}
 

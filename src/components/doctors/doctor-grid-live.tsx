@@ -57,21 +57,13 @@ export function DoctorGridLive({
       )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {doctors.map((doctor) => (
-          <div key={doctor.id} className="relative">
-            {liveMap[doctor.id] && (
-              <div className="absolute -top-2 left-4 z-10 flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-md animate-badge-pulse">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-                </span>
-                Available Now
-              </div>
-            )}
+          <div key={doctor.id} className="min-w-0">
             <DoctorCard
               doctor={doctor}
               locale={locale}
               availability={availability[doctor.id] || null}
               compact
+              liveAvailable={!!liveMap[doctor.id]}
             />
           </div>
         ))}
