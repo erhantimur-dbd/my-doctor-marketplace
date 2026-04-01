@@ -89,9 +89,10 @@ export function DoctorResultsWithMap({
           lat,
           lng,
           isLocal,
+          liveAvailable: !!liveAvailability[d.id],
         };
       });
-  }, [doctors, centerLocation]);
+  }, [doctors, centerLocation, liveAvailability]);
 
   const handleClickDoctor = useCallback((id: string) => {
     const el = cardRefs.current.get(id);
@@ -162,6 +163,7 @@ export function DoctorResultsWithMap({
                 locale={locale}
                 availability={availability}
                 centerLocation={centerLocation}
+                liveAvailability={liveAvailability}
               />
             </div>
           </div>

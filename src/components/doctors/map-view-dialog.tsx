@@ -38,6 +38,7 @@ interface MapViewDialogProps {
   locale: string;
   availability?: Record<string, DoctorMultiDayAvailability>;
   centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
+  liveAvailability?: Record<string, boolean>;
 }
 
 function MapViewDialog({
@@ -47,6 +48,7 @@ function MapViewDialog({
   locale,
   availability,
   centerLocation,
+  liveAvailability = {},
 }: MapViewDialogProps) {
   const t = useTranslations("search");
   const [hoveredDoctorId, setHoveredDoctorId] = useState<string | null>(null);
@@ -90,9 +92,10 @@ function MapViewDialog({
           lat,
           lng,
           isLocal,
+          liveAvailable: !!liveAvailability[d.id],
         };
       });
-  }, [doctors, centerLocation]);
+  }, [doctors, centerLocation, liveAvailability]);
 
   const handleClickDoctor = useCallback((id: string) => {
     const el = cardRefs.current.get(id);
@@ -178,6 +181,7 @@ interface MapViewButtonProps {
   locale: string;
   availability?: Record<string, DoctorMultiDayAvailability>;
   centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
+  liveAvailability?: Record<string, boolean>;
 }
 
 export function MapViewButton({
@@ -185,6 +189,7 @@ export function MapViewButton({
   locale,
   availability,
   centerLocation,
+  liveAvailability,
 }: MapViewButtonProps) {
   const t = useTranslations("search");
   const [open, setOpen] = useState(false);
@@ -219,6 +224,7 @@ export function MapViewButton({
         locale={locale}
         availability={availability}
         centerLocation={centerLocation}
+        liveAvailability={liveAvailability}
       />
     </>
   );

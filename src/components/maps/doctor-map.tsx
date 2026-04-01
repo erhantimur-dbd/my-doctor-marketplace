@@ -19,6 +19,8 @@ export interface MapDoctor {
   lng: number;
   /** Whether the doctor is in the same country as the selected location filter */
   isLocal: boolean;
+  /** Whether the doctor has available slots in the next hour */
+  liveAvailable?: boolean;
 }
 
 interface DoctorMapProps {
@@ -113,15 +115,16 @@ function PinMarker({
   onClick: (id: string) => void;
 }) {
   const isLocal = doctor.isLocal;
+  const isLive = doctor.liveAvailable;
 
   // Distant doctors: smaller, muted gray pin; local: standard blue; hovered: orange
   const size = isHovered ? 36 : isLocal ? 28 : 20;
   const height = Math.round(size * 1.4);
-  const fill = isHovered ? "#f97316" : isLocal ? "#4285F4" : "#9ca3af";
-  const stroke = isHovered ? "#ea580c" : isLocal ? "#2563eb" : "#6b7280";
+  const fill = isHovered ? "#f97316" : isLive ? "#ef4444" : isLocal ? "#4285F4" : "#9ca3af";
+  const stroke = isHovered ? "#ea580c" : isLive ? "#dc2626" : isLocal ? "#2563eb" : "#6b7280";
 
-  // z-index: hovered > local > distant
-  const zIndex = isHovered ? 1000 : isLocal ? 1 : 0;
+  // z-index: hovered > live > local > distant
+  const zIndex = isHovered ? 1000 : isLive ? 2 : isLocal ? 1 : 0;
 
   return (
     <AdvancedMarker
@@ -132,7 +135,7 @@ function PinMarker({
         onMouseEnter={() => onHover(doctor.id)}
         onMouseLeave={() => onHover(null)}
         onClick={() => onClick(doctor.id)}
-        style={{ cursor: "pointer", transform: "translate(-50%, -100%)" }}
+        style={{ cursor: "pointer", transform: "translate(-50%, -100%)", position: "relative" }}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -157,6 +160,13 @@ function PinMarker({
           />
           <circle cx="12" cy="12" r="5" fill="#fff" />
         </svg>
+        {/* Red notification dot for live-available doctors */}
+        {isLive && (
+          <span className="absolute -top-0.5 -right-1 flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 ring-1 ring-white" />
+          </span>
+        )}
       </div>
     </AdvancedMarker>
   );
@@ -283,6 +293,34 @@ export function DoctorMap({
                 <p className="font-semibold">{infoDoctor.name}</p>
                 {infoDoctor.specialty && (
                   <p className="text-xs text-gray-500">{infoDoctor.specialty}</p>
+                )}
+                {infoDoctor.liveAvailable && (
+                  <p
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      marginTop: 4,
+                      padding: "2px 8px",
+                      borderRadius: 9999,
+                      backgroundColor: "#ef4444",
+                      color: "#fff",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      lineHeight: "16px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 5,
+                        height: 5,
+                        borderRadius: "50%",
+                        backgroundColor: "#fff",
+                        display: "inline-block",
+                      }}
+                    />
+                    Available Now
+                  </p>
                 )}
               </div>
             </InfoWindow>
