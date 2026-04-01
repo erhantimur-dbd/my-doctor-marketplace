@@ -68,6 +68,8 @@ export function SpecialtyMarquee({ specialties, initialCounts = {} }: SpecialtyM
         // silent — badges just stay stale
       }
     };
+    // Fetch immediately on mount, then every 60s
+    poll();
     const interval = setInterval(poll, 60_000);
     return () => { cancelled = true; clearInterval(interval); };
   }, []);
@@ -145,16 +147,30 @@ export function SpecialtyMarquee({ specialties, initialCounts = {} }: SpecialtyM
     }
   }, []);
 
+  const hasAnyAvailable = Object.values(counts).some((c) => c > 0);
+
   return (
-    <div className="relative mt-8 overflow-hidden rounded-lg">
-      {/* Fade edges */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background to-transparent md:w-12" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent md:w-12" />
+    <div className="mt-8">
+      {/* Legend key */}
+      {hasAnyAvailable && (
+        <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+          </span>
+          Available within the next hour
+        </div>
+      )}
+
+      <div className="relative rounded-lg">
+        {/* Fade edges */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background to-transparent md:w-12" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-background to-transparent md:w-12" />
 
       {/* Scrollable + auto-scrolling track */}
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scrollbar-none"
+        className="flex gap-4 overflow-x-auto pt-2 scrollbar-none"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" }}
         onTouchStart={pauseAutoScroll}
         onTouchMove={pauseAutoScroll}
@@ -195,6 +211,7 @@ export function SpecialtyMarquee({ specialties, initialCounts = {} }: SpecialtyM
             </Link>
           );
         })}
+      </div>
       </div>
     </div>
   );
