@@ -98,9 +98,9 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
                 </Avatar>
 
                 {/* Info */}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 overflow-hidden">
                   <div className="flex items-center gap-1.5">
-                    <h4 className="text-sm font-semibold truncate">
+                    <h4 className="text-sm font-semibold truncate" style={{ maxWidth: '100%', display: 'block' }}>
                       {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
                     </h4>
                     {doctor.verification_status === "verified" && (

@@ -34,7 +34,6 @@ import {
   Shield,
   LayoutDashboard,
   UserCircle,
-  BookOpen,
   Home,
 } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
@@ -77,7 +76,6 @@ export function Header() {
     { href: "/doctors", label: t("find_doctor"), icon: Search, iconBg: "bg-blue-50", iconColor: "text-blue-600" },
     { href: "/specialties", label: t("specialties"), icon: Stethoscope, iconBg: "bg-teal-50", iconColor: "text-teal-600" },
     { href: "/how-it-works", label: t("how_it_works"), icon: HelpCircle, iconBg: "bg-amber-50", iconColor: "text-amber-600" },
-    { href: "/blog", label: "Blog", icon: BookOpen, iconBg: "bg-purple-50", iconColor: "text-purple-600" },
     // Hide "For Doctors" when a patient is logged in to keep focus on patient experience
     ...(!isPatient ? [{ href: "/pricing", label: t("for_doctors"), icon: Briefcase, iconBg: "bg-emerald-50", iconColor: "text-emerald-600" }] : []),
   ];

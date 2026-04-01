@@ -210,10 +210,10 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     </Avatar>
 
                     {/* Info */}
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 overflow-hidden">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <h3 className="truncate font-semibold group-hover:text-primary">
+                        <div className="min-w-0 flex-1 overflow-hidden">
+                          <h3 className="truncate font-semibold group-hover:text-primary" style={{ maxWidth: '100%', display: 'block' }}>
                             {doctor.title} {doctor.profile.first_name}{" "}
                             {doctor.profile.last_name}
                           </h3>
