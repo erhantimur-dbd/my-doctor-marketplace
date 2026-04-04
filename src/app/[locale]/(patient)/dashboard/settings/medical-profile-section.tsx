@@ -16,10 +16,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { HeartPulse, Loader2, X, ShieldCheck, Pill, ChevronDown } from "lucide-react";
+import { HeartPulse, Loader2, X, ShieldCheck, Pill, ChevronDown, AlertTriangle, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { updateMedicalProfile } from "./actions";
-import { searchMedications } from "@/actions/medications";
+import { searchMedications, searchAllergies, searchChronicConditions } from "@/actions/medications";
 
 interface MedicalProfileData {
   blood_type: string | null;
@@ -34,14 +34,6 @@ interface MedicalProfileData {
 
 interface MedicalProfileSectionProps {
   medicalProfile: MedicalProfileData | null;
-}
-
-interface MedicationSuggestion {
-  id: number;
-  name: string;
-  generic_name: string | null;
-  category: string;
-  form: string | null;
 }
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
@@ -80,78 +72,32 @@ const COUNTRY_CODES = [
   { code: "+52", country: "MX", flag: "🇲🇽", label: "Mexico" },
 ];
 
-function TagInput({
+/* ── Reusable Autocomplete Tag Input ── */
+
+interface AutocompleteSuggestion {
+  id: number;
+  name: string;
+  category: string;
+  generic_name?: string | null;
+}
+
+function AutocompleteTagInput({
   label,
   placeholder,
   tags,
   onTagsChange,
+  searchFn,
+  icon,
 }: {
   label: string;
   placeholder: string;
   tags: string[];
   onTagsChange: (tags: string[]) => void;
+  searchFn: (query: string) => Promise<AutocompleteSuggestion[]>;
+  icon?: React.ReactNode;
 }) {
   const [inputValue, setInputValue] = useState("");
-
-  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const value = inputValue.trim();
-      if (value && !tags.includes(value)) {
-        onTagsChange([...tags, value]);
-      }
-      setInputValue("");
-    }
-  }
-
-  function removeTag(index: number) {
-    onTagsChange(tags.filter((_, i) => i !== index));
-  }
-
-  return (
-    <div className="space-y-2">
-      <Label>{label}</Label>
-      <Input
-        value={inputValue}
-        onChange={(e) => setInputValue(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="mt-1.5"
-      />
-      <p className="text-xs text-muted-foreground">
-        Press Enter to add
-      </p>
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {tags.map((tag, index) => (
-            <Badge key={index} variant="secondary" className="gap-1 pr-1">
-              {tag}
-              <button
-                type="button"
-                onClick={() => removeTag(index)}
-                className="ml-0.5 rounded-full p-0.5 hover:bg-muted-foreground/20"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Medication Autocomplete Tag Input ── */
-
-function MedicationTagInput({
-  tags,
-  onTagsChange,
-}: {
-  tags: string[];
-  onTagsChange: (tags: string[]) => void;
-}) {
-  const [inputValue, setInputValue] = useState("");
-  const [suggestions, setSuggestions] = useState<MedicationSuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<AutocompleteSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -168,7 +114,7 @@ function MedicationTagInput({
 
     setIsLoading(true);
     try {
-      const results = await searchMedications(query);
+      const results = await searchFn(query);
       setSuggestions(results);
       setShowDropdown(results.length > 0);
       setHighlightedIndex(-1);
@@ -178,7 +124,7 @@ function MedicationTagInput({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [searchFn]);
 
   useEffect(() => {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -206,7 +152,7 @@ function MedicationTagInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  function addMedication(name: string) {
+  function addItem(name: string) {
     const trimmed = name.trim();
     if (trimmed && !tags.includes(trimmed)) {
       onTagsChange([...tags, trimmed]);
@@ -231,9 +177,9 @@ function MedicationTagInput({
     } else if (e.key === "Enter") {
       e.preventDefault();
       if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
-        addMedication(suggestions[highlightedIndex].name);
+        addItem(suggestions[highlightedIndex].name);
       } else if (inputValue.trim()) {
-        addMedication(inputValue);
+        addItem(inputValue);
       }
     } else if (e.key === "Escape") {
       setShowDropdown(false);
@@ -247,8 +193,8 @@ function MedicationTagInput({
   return (
     <div className="space-y-2">
       <Label className="flex items-center gap-1.5">
-        <Pill className="h-3.5 w-3.5" />
-        Current Medications
+        {icon}
+        {label}
       </Label>
       <div className="relative">
         <Input
@@ -259,7 +205,7 @@ function MedicationTagInput({
           onFocus={() => {
             if (suggestions.length > 0) setShowDropdown(true);
           }}
-          placeholder="Start typing a medication name..."
+          placeholder={placeholder}
           className="mt-1.5"
           autoComplete="off"
         />
@@ -273,11 +219,11 @@ function MedicationTagInput({
             ref={dropdownRef}
             className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-lg border bg-popover shadow-lg"
           >
-            {suggestions.map((med, index) => (
+            {suggestions.map((item, index) => (
               <button
-                key={med.id}
+                key={item.id}
                 type="button"
-                onClick={() => addMedication(med.name)}
+                onClick={() => addItem(item.name)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center justify-between ${
                   index === highlightedIndex
@@ -286,15 +232,15 @@ function MedicationTagInput({
                 }`}
               >
                 <div>
-                  <span className="font-medium">{med.name}</span>
-                  {med.generic_name && med.generic_name !== med.name && (
+                  <span className="font-medium">{item.name}</span>
+                  {item.generic_name && item.generic_name !== item.name && (
                     <span className="text-muted-foreground ml-1.5 text-xs">
-                      ({med.generic_name})
+                      ({item.generic_name})
                     </span>
                   )}
                 </div>
                 <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0 ml-2">
-                  {med.category}
+                  {item.category}
                 </span>
               </button>
             ))}
@@ -308,7 +254,7 @@ function MedicationTagInput({
         <div className="flex flex-wrap gap-1.5">
           {tags.map((tag, index) => (
             <Badge key={index} variant="secondary" className="gap-1 pr-1">
-              <Pill className="h-3 w-3" />
+              {icon}
               {tag}
               <button
                 type="button"
@@ -543,23 +489,31 @@ export function MedicalProfileSection({
           </Select>
         </div>
 
-        <TagInput
+        <AutocompleteTagInput
           label="Allergies"
           placeholder="e.g., Penicillin, Peanuts"
           tags={allergies}
           onTagsChange={setAllergies}
+          searchFn={searchAllergies}
+          icon={<AlertTriangle className="h-3.5 w-3.5" />}
         />
 
-        <TagInput
+        <AutocompleteTagInput
           label="Chronic Conditions"
           placeholder="e.g., Diabetes, Hypertension"
           tags={chronicConditions}
           onTagsChange={setChronicConditions}
+          searchFn={searchChronicConditions}
+          icon={<Activity className="h-3.5 w-3.5" />}
         />
 
-        <MedicationTagInput
+        <AutocompleteTagInput
+          label="Current Medications"
+          placeholder="Start typing a medication name..."
           tags={currentMedications}
           onTagsChange={setCurrentMedications}
+          searchFn={searchMedications as (query: string) => Promise<AutocompleteSuggestion[]>}
+          icon={<Pill className="h-3.5 w-3.5" />}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
