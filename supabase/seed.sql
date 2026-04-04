@@ -894,6 +894,28 @@ UPDATE public.doctors SET clinic_latitude = 51.45557900, clinic_longitude = -2.6
 ALTER TABLE public.bookings ENABLE TRIGGER trg_generate_booking_number;
 
 -- ============================================================================
+-- DOCTOR PROFILE PHOTOS
+-- Using randomuser.me free portrait photos for realistic seed data
+-- ============================================================================
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/men/32.jpg'   WHERE id = 'd0000000-0000-0000-0000-000000000001';  -- Dr. Hans Mueller
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/44.jpg' WHERE id = 'd0000000-0000-0000-0000-000000000002';  -- Dr. Ayşe Yılmaz
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/men/75.jpg'   WHERE id = 'd0000000-0000-0000-0000-000000000003';  -- Dr. James Thompson
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/68.jpg' WHERE id = 'd0000000-0000-0000-0000-000000000004';  -- Dr. Marie Dubois
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/85.jpg' WHERE id = 'd0000000-0000-0000-0000-000000000005';  -- Dr. Lisa van Berg
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/men/91.jpg'   WHERE id = 'd0000000-0000-0000-0000-000000000006';  -- Dr. Kenji Tanaka
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/63.jpg' WHERE id = 'd0000000-0000-0000-0000-000000000007';  -- Dr. Rachel Patel
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/men/52.jpg'   WHERE id = 'd0000000-0000-0000-0000-000000000008';  -- Dr. William Hughes
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/90.jpg' WHERE id = 'd0000000-0000-0000-0000-000000000009';  -- Dr. Fiona Campbell
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/men/22.jpg'   WHERE id = 'd0000000-0000-0000-0000-00000000000a';  -- Dr. Oliver Wright
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/47.jpg' WHERE id = 'd0000000-0000-0000-0000-00000000000b';  -- Dr. Priya Sharma
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/men/36.jpg'   WHERE id = 'd0000000-0000-0000-0000-00000000000c';  -- Dr. David Evans
+
+-- Patient profile photos
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/33.jpg' WHERE id = 'c0000000-0000-0000-0000-000000000001';  -- Sarah Johnson
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/men/81.jpg'   WHERE id = 'c0000000-0000-0000-0000-000000000002';  -- Michael Chen
+UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/17.jpg' WHERE id = 'c0000000-0000-0000-0000-000000000003';  -- Emma Wilson
+
+-- ============================================================================
 -- SUMMARY:
 -- 27 locations | 24 specialties | 5 platform settings
 -- 3 patients:  sarah.johnson@example.com, michael.chen@example.com, emma.wilson@example.com

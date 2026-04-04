@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
         hostname: "www.paypalobjects.com",
         pathname: "/webstatic/**",
       },
+      {
+        protocol: "https",
+        hostname: "randomuser.me",
+        pathname: "/api/portraits/**",
+      },
     ],
   },
   async headers() {
