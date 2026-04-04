@@ -107,22 +107,21 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
                     {doctor.verification_status === "verified" && (
                       <Shield className="h-3.5 w-3.5 shrink-0 text-green-600" />
                     )}
+                    {liveAvailable && (
+                      <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm animate-badge-pulse shrink-0">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+                        </span>
+                        Available Now
+                      </span>
+                    )}
                   </div>
 
                   {primarySpecialty && (
                     <p className="text-xs text-muted-foreground truncate">
                       {formatSpecialtyName(primarySpecialty.name_key)}
                     </p>
-                  )}
-
-                  {liveAvailable && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm animate-badge-pulse mt-0.5 w-fit">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-                      </span>
-                      Available Now
-                    </span>
                   )}
 
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
