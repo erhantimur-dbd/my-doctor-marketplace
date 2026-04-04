@@ -8,13 +8,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MapPin, Maximize2, X } from "lucide-react";
+import { MapPin, Maximize2, X, Monitor, UserRound } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CompactDoctorCard } from "./compact-doctor-card";
 import { DoctorCard } from "./doctor-card";
 import type { MapDoctor } from "@/components/maps/doctor-map";
 import type { DoctorMultiDayAvailability } from "@/actions/search";
-import { formatSpecialtyName } from "@/lib/utils";
+import { cn, formatSpecialtyName } from "@/lib/utils";
 
 // Dynamic import — Google Maps requires window
 const DoctorMap = dynamic(
@@ -52,11 +52,20 @@ function MapViewDialog({
 }: MapViewDialogProps) {
   const t = useTranslations("search");
   const [hoveredDoctorId, setHoveredDoctorId] = useState<string | null>(null);
+  const [consultationFilter, setConsultationFilter] = useState<"all" | "in_person" | "video">("all");
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Filter doctors by consultation type
+  const filteredDoctors = useMemo(() => {
+    if (consultationFilter === "all") return doctors;
+    return doctors.filter((d) =>
+      d.consultation_types?.includes(consultationFilter)
+    );
+  }, [doctors, consultationFilter]);
 
   // Build map-friendly data from doctors with coordinates
   const mapDoctors: MapDoctor[] = useMemo(() => {
-    return doctors
+    return filteredDoctors
       .filter((d) => {
         const doc: any = d;
         const loc: any = Array.isArray(d.location) ? d.location[0] : d.location;
@@ -95,7 +104,7 @@ function MapViewDialog({
           liveAvailable: !!liveAvailability[d.id],
         };
       });
-  }, [doctors, centerLocation, liveAvailability]);
+  }, [filteredDoctors, centerLocation, liveAvailability]);
 
   const handleClickDoctor = useCallback((id: string) => {
     const el = cardRefs.current.get(id);
@@ -128,13 +137,52 @@ function MapViewDialog({
         <div className="flex h-full min-h-0 overflow-hidden">
           {/* Left panel: scrollable card list */}
           <div className="w-[32%] min-h-0 border-r overflow-y-auto">
-            <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                {t("doctors_on_map", { count: mapDoctors.length })}
-              </p>
+            <div className="sticky top-0 z-10 bg-background border-b px-4 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t("doctors_on_map", { count: filteredDoctors.length })}
+                </p>
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden text-[11px] font-medium">
+                  <button
+                    onClick={() => setConsultationFilter("all")}
+                    className={cn(
+                      "px-2.5 py-1.5 transition-colors",
+                      consultationFilter === "all"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {t("all_types")}
+                  </button>
+                  <button
+                    onClick={() => setConsultationFilter("in_person")}
+                    className={cn(
+                      "px-2.5 py-1.5 border-l border-gray-200 transition-colors flex items-center gap-1",
+                      consultationFilter === "in_person"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <UserRound className="h-3 w-3" />
+                    {t("in_person")}
+                  </button>
+                  <button
+                    onClick={() => setConsultationFilter("video")}
+                    className={cn(
+                      "px-2.5 py-1.5 border-l border-gray-200 transition-colors flex items-center gap-1",
+                      consultationFilter === "video"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <Monitor className="h-3 w-3" />
+                    {t("video_call")}
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="p-3 space-y-3">
-              {doctors.map((doctor) => (
+              {filteredDoctors.map((doctor) => (
                 <CompactDoctorCard
                   key={doctor.id}
                   ref={setCardRef(doctor.id)}
