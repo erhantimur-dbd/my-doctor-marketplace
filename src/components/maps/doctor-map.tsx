@@ -160,13 +160,6 @@ function PinMarker({
           />
           <circle cx="12" cy="12" r="5" fill="#fff" />
         </svg>
-        {/* Red notification dot for live-available doctors */}
-        {isLive && (
-          <span className="absolute -top-0.5 -right-1 flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500 ring-1 ring-white" />
-          </span>
-        )}
       </div>
     </AdvancedMarker>
   );

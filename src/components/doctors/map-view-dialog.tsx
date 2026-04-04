@@ -145,6 +145,7 @@ function MapViewDialog({
                   availability={
                     availability ? availability[doctor.id] || null : undefined
                   }
+                  liveAvailable={!!liveAvailability[doctor.id]}
                 />
               ))}
             </div>
