@@ -75,11 +75,20 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
         <Link href={`/doctors/${doctor.slug}`}>
           <Card
             className={cn(
-              "transition-all hover:border-primary/50 hover:shadow-md",
-              isHighlighted && "border-primary ring-2 ring-primary/20 shadow-md"
+              "transition-all hover:border-primary/50 hover:shadow-md overflow-hidden",
+              isHighlighted && "border-primary ring-2 ring-primary/20 shadow-md",
+              doctor.is_featured && "ring-1 ring-amber-200/60 dark:ring-amber-700/40"
             )}
           >
+            {doctor.is_featured && (
+              <div className="h-0.5 bg-gradient-to-r from-amber-400 via-amber-300 to-orange-400" />
+            )}
             <CardContent className="p-3">
+              {doctor.is_featured && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 mb-1">
+                  ★ Featured
+                </span>
+              )}
               <div className="flex gap-3">
                 {/* Avatar */}
                 <Avatar className={cn("h-10 w-10 shrink-0", isTestingService && "rounded-lg")}>
@@ -105,10 +114,13 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
                       {doctor.title} {doctor.profile.first_name} {doctor.profile.last_name}
                     </h4>
                     {doctor.verification_status === "verified" && (
-                      <Shield className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                      <span className="inline-flex items-center gap-0.5 shrink-0 text-green-600">
+                        <Shield className="h-3.5 w-3.5" />
+                        <span className="text-[10px] font-medium">Verified</span>
+                      </span>
                     )}
                     {liveAvailable && (
-                      <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm animate-badge-pulse shrink-0">
+                      <span className="ml-auto mr-1 inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm animate-badge-pulse shrink-0">
                         <span className="relative flex h-1.5 w-1.5">
                           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
