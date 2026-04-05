@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { setMfaSession } from "./actions";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -123,7 +123,6 @@ export function VerifyMfaForm({
 }) {
   const t = useTranslations("twoFactor");
   const router = useRouter();
-  const supabase = createClient();
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -177,13 +176,10 @@ export function VerifyMfaForm({
       return;
     }
 
-    // Update the Supabase client session with AAL2 tokens so middleware sees the upgrade
+    // Update session cookies server-side (avoids client NavigatorLock hang)
     const verifyData = await verifyRes.json();
     if (verifyData.access_token && verifyData.refresh_token) {
-      await supabase.auth.setSession({
-        access_token: verifyData.access_token,
-        refresh_token: verifyData.refresh_token,
-      });
+      await setMfaSession(verifyData.access_token, verifyData.refresh_token);
     }
 
     // Redirect based on role
@@ -194,7 +190,7 @@ export function VerifyMfaForm({
     } else {
       router.replace(`/${locale}/dashboard`);
     }
-  }, [factorId, accessToken, code, verifying, supabase, router, locale, userRole, t]);
+  }, [factorId, accessToken, code, verifying, router, locale, userRole, t]);
 
   return (
     <Card>
