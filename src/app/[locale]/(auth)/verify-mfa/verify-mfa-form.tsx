@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { completeMfaLogin } from "./actions";
 import {
@@ -175,15 +175,31 @@ export function VerifyMfaForm({
     }
 
     // Set session cookies + redirect server-side in one action
-    // This ensures cookies are committed before the redirect happens
     const verifyData = await verifyRes.json();
     if (verifyData.access_token && verifyData.refresh_token) {
-      await completeMfaLogin(
-        verifyData.access_token,
-        verifyData.refresh_token,
-        locale,
-        userRole
-      );
+      try {
+        await completeMfaLogin(
+          verifyData.access_token,
+          verifyData.refresh_token,
+          locale,
+          userRole
+        );
+      } catch {
+        // redirect() throws NEXT_REDIRECT which is expected
+        // If we reach here with a real error, redirect manually
+        const target =
+          userRole === "doctor"
+            ? `/${locale}/doctor-dashboard`
+            : userRole === "admin"
+              ? `/${locale}/admin`
+              : `/${locale}/dashboard`;
+        window.location.href = target;
+        return;
+      }
+    } else {
+      setError(t("error_invalid_code"));
+      setCode("");
+      setVerifying(false);
     }
   }, [factorId, accessToken, code, verifying, locale, userRole, t]);
 
