@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -15,19 +16,70 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Shield, Download, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { Shield, Download, Trash2, Loader2, AlertTriangle, Cookie } from "lucide-react";
 import { toast } from "sonner";
 import {
   exportPatientData,
   requestAccountDeletion,
 } from "@/actions/patient";
+import { saveCookieConsent } from "@/actions/consent";
 
 export function DataPrivacySection() {
   const [isExporting, startExportTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
+  const [isSavingCookies, startCookieTransition] = useTransition();
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cookieAnalytics, setCookieAnalytics] = useState(false);
+  const [cookieMarketing, setCookieMarketing] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("cookie_consent");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setCookieAnalytics(!!parsed.analytics);
+        setCookieMarketing(!!parsed.marketing);
+      }
+    } catch {
+      // localStorage unavailable or invalid JSON
+    }
+  }, []);
+
+  function handleSaveCookiePreferences() {
+    startCookieTransition(async () => {
+      const consent = {
+        analytics: cookieAnalytics,
+        marketing: cookieMarketing,
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        localStorage.setItem("cookie_consent", JSON.stringify(consent));
+      } catch {
+        // localStorage write failed
+      }
+
+      const result = await saveCookieConsent({
+        analytics: cookieAnalytics,
+        marketing: cookieMarketing,
+      });
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("cookie-consent-updated", {
+          detail: consent,
+        })
+      );
+
+      toast.success("Cookie preferences saved successfully.");
+    });
+  }
 
   function handleExport() {
     startExportTransition(async () => {
@@ -96,6 +148,89 @@ export function DataPrivacySection() {
           Under GDPR, you have the right to access and delete your personal
           data. Use the options below to manage your data.
         </p>
+
+        {/* Cookie Preferences */}
+        <div className="rounded-lg border p-4 space-y-4">
+          <div className="space-y-1">
+            <h4 className="text-sm font-medium flex items-center gap-2">
+              <Cookie className="h-4 w-4" />
+              Cookie Preferences
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Manage which cookies you allow. Necessary cookies cannot be
+              disabled.
+            </p>
+          </div>
+
+          {/* Necessary */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label className="text-sm font-medium">Necessary</Label>
+              <p className="text-xs text-muted-foreground">
+                Required for authentication and basic functionality
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Shield className="h-3.5 w-3.5 text-green-600" />
+              <span className="text-xs font-medium text-green-600">
+                Always on
+              </span>
+            </div>
+          </div>
+
+          {/* Analytics */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label
+                htmlFor="settings-analytics-toggle"
+                className="text-sm font-medium"
+              >
+                Analytics
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Help us understand how visitors use the site
+              </p>
+            </div>
+            <Switch
+              id="settings-analytics-toggle"
+              checked={cookieAnalytics}
+              onCheckedChange={setCookieAnalytics}
+            />
+          </div>
+
+          {/* Marketing */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <Label
+                htmlFor="settings-marketing-toggle"
+                className="text-sm font-medium"
+              >
+                Marketing
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Used for relevant advertisements and campaigns
+              </p>
+            </div>
+            <Switch
+              id="settings-marketing-toggle"
+              checked={cookieMarketing}
+              onCheckedChange={setCookieMarketing}
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              onClick={handleSaveCookiePreferences}
+              disabled={isSavingCookies}
+            >
+              {isSavingCookies ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              {isSavingCookies ? "Saving..." : "Save Preferences"}
+            </Button>
+          </div>
+        </div>
 
         {/* Export Data */}
         <div className="flex items-start justify-between gap-4 rounded-lg border p-4">

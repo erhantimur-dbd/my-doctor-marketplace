@@ -105,36 +105,91 @@ export default function PrivacyPolicyPage() {
             <li><strong>Withdraw consent</strong> — for medical data sharing at any time.</li>
           </ul>
 
-          <h2>9. Cookies</h2>
+          <h2>9. Data Subject Access Requests (DSAR)</h2>
+          <h3>How to Submit a DSAR</h3>
+          <p>
+            To exercise any of the rights listed above, email us at{" "}
+            <strong>privacy@mydoctors360.com</strong> with the subject line
+            &ldquo;Data Subject Access Request&rdquo;.
+          </p>
+
+          <h3>What to Include</h3>
+          <ul>
+            <li>Your full name.</li>
+            <li>The email address associated with your {COMPANY} account.</li>
+            <li>
+              A description of your request (e.g., access, deletion, rectification,
+              data portability).
+            </li>
+          </ul>
+
+          <h3>Identity Verification</h3>
+          <p>
+            To protect your personal data, we may ask you to provide proof of identity
+            before processing your request. This is a security measure and does not
+            affect your rights.
+          </p>
+
+          <h3>Response Time</h3>
+          <p>
+            We will respond to your verified request within <strong>30 calendar days</strong>,
+            as required by UK GDPR Article 12. In complex cases or where we receive a
+            high volume of requests, we may extend this period by a further 60 days. If
+            an extension is necessary, we will inform you within the initial 30-day period
+            and explain the reason for the delay.
+          </p>
+
+          <h3>Self-Service Options</h3>
+          <p>
+            You can also manage your data directly from your account. Go to{" "}
+            <strong>Dashboard &gt; Settings &gt; Data &amp; Privacy</strong> to export
+            your data or delete your account without submitting a formal request.
+          </p>
+
+          <h3>Cost</h3>
+          <p>
+            DSAR requests are provided free of charge. We reserve the right to charge a
+            reasonable fee for requests that are manifestly unfounded or excessive, or to
+            refuse to act on such requests, in accordance with UK GDPR Article 12(5).
+          </p>
+
+          <h3>Complaints</h3>
+          <p>
+            If you are unsatisfied with our response to your DSAR, you have the right to
+            lodge a complaint with the Information Commissioner&apos;s Office (ICO) at{" "}
+            <strong>ico.org.uk</strong>.
+          </p>
+
+          <h2>10. Cookies</h2>
           <p>
             We use essential cookies for authentication and optional analytics cookies (subject to your consent).
             See our cookie consent banner for granular control.
           </p>
 
-          <h2>10. Security</h2>
+          <h2>11. Security</h2>
           <p>
             We protect your data with HTTPS/TLS encryption in transit, row-level security policies in our
             database, multi-factor authentication options, and regular security audits.
           </p>
 
-          <h2>11. International Transfers</h2>
+          <h2>12. International Transfers</h2>
           <p>
             Your data is primarily stored in the EU/UK. Where transfers outside the UK are necessary
             (e.g., for email delivery), we ensure adequate safeguards are in place under UK GDPR.
           </p>
 
-          <h2>12. Children</h2>
+          <h2>13. Children</h2>
           <p>
             Our services are not directed to individuals under 16. We do not knowingly collect data from children.
           </p>
 
-          <h2>13. Changes to This Policy</h2>
+          <h2>14. Changes to This Policy</h2>
           <p>
             We may update this policy periodically. Significant changes will be notified via email or in-app notification.
             Continued use after changes constitutes acceptance.
           </p>
 
-          <h2>14. Contact &amp; Complaints</h2>
+          <h2>15. Contact &amp; Complaints</h2>
           <p>
             For privacy queries: <strong>privacy@mydoctors360.com</strong>
           </p>

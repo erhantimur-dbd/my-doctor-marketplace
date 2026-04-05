@@ -1,6 +1,7 @@
 // Email templates as pure functions returning { subject, html }
 // No external React Email dependency needed - uses inline CSS for compatibility
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
 const BRAND_COLOR = "#0284c7";
 const BRAND_COLOR_END = "#0d9488"; // teal-600 — gradient end
 const BRAND_NAME = "MyDoctors360";
@@ -61,7 +62,12 @@ function baseLayout(content: string): string {
           <tr>
             <td style="padding: 24px 32px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; font-size: 12px; color: #6b7280; line-height: 1.6;">
-                This email was sent by ${BRAND_NAME}. If you have questions, please contact our support team.
+                This email was sent by MyDoctors360. If you have questions, please contact our support team.
+              </p>
+              <p style="margin: 8px 0 0; font-size: 12px; color: #9ca3af;">
+                <a href="${APP_URL}/en/dashboard/settings" style="color: #6b7280; text-decoration: underline;">Manage email preferences</a>
+                &nbsp;&middot;&nbsp;
+                <a href="${APP_URL}/en/privacy" style="color: #6b7280; text-decoration: underline;">Privacy Policy</a>
               </p>
               <p style="margin: 8px 0 0; font-size: 12px; color: #9ca3af;">
                 &copy; ${new Date().getFullYear()} ${BRAND_NAME}. All rights reserved.
