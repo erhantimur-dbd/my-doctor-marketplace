@@ -63,16 +63,27 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
   const [disableError, setDisableError] = useState("");
 
   const checkMfaStatus = useCallback(async () => {
-    const { data: factors } = await supabase.auth.mfa.listFactors();
-    const verifiedTotps = factors?.totp?.filter((f) => f.status === "verified") ?? [];
-    if (verifiedTotps.length > 0) {
-      setMfaState("enabled");
-      setFactorId(verifiedTotps[0].id);
-    } else {
+    try {
+      const { data: factors, error } = await supabase.auth.mfa.listFactors();
+      if (error) {
+        console.error("MFA listFactors error:", error);
+        setMfaState("disabled");
+        return;
+      }
+      const verifiedTotps = factors?.totp?.filter((f) => f.status === "verified") ?? [];
+      if (verifiedTotps.length > 0) {
+        setMfaState("enabled");
+        setFactorId(verifiedTotps[0].id);
+      } else {
+        setMfaState("disabled");
+        setFactorId(null);
+      }
+    } catch (err) {
+      console.error("MFA check failed:", err);
       setMfaState("disabled");
-      setFactorId(null);
     }
-  }, [supabase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     checkMfaStatus();
@@ -115,25 +126,36 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
     setEnrolling(true);
     setEnrollError("");
 
-    const { data: challenge, error: challengeError } =
-      await supabase.auth.mfa.challenge({ factorId: enrollData.factorId });
+    try {
+      const { data: challenge, error: challengeError } =
+        await supabase.auth.mfa.challenge({ factorId: enrollData.factorId });
 
-    if (challengeError || !challenge) {
-      setEnrollError(t("error_invalid_code"));
-      setEnrolling(false);
-      return;
-    }
+      if (challengeError || !challenge) {
+        setEnrollError(t("error_invalid_code"));
+        setEnrolling(false);
+        return;
+      }
 
-    const { error: verifyError } = await supabase.auth.mfa.verify({
-      factorId: enrollData.factorId,
-      challengeId: challenge.id,
-      code: enrollCode,
-    });
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: enrollData.factorId,
+        challengeId: challenge.id,
+        code: enrollCode,
+      });
 
-    if (verifyError) {
-      setEnrollError(t("error_invalid_code"));
-      setEnrolling(false);
-      return;
+      if (verifyError) {
+        setEnrollError(t("error_invalid_code"));
+        setEnrolling(false);
+        return;
+      }
+    } catch {
+      // mfa.verify() may throw during session refresh — check if it actually succeeded
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const verified = factors?.totp?.some((f) => f.id === enrollData.factorId && f.status === "verified");
+      if (!verified) {
+        setEnrollError(t("error_invalid_code"));
+        setEnrolling(false);
+        return;
+      }
     }
 
     setEnrolling(false);
@@ -141,7 +163,7 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
     setEnrollData(null);
     setEnrollCode("");
     toast.success(t("success_enabled"));
-    await checkMfaStatus();
+    checkMfaStatus();
   }
 
   // ── Disable Flow ──
