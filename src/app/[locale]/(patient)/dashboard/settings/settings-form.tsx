@@ -76,11 +76,6 @@ interface SettingsFormProps {
 export function SettingsForm({ profile, userEmail, medicalProfile }: SettingsFormProps) {
   return (
     <div className="space-y-6">
-      <AvatarUpload
-        avatarUrl={profile.avatar_url}
-        firstName={profile.first_name}
-        lastName={profile.last_name}
-      />
       <PersonalInfoSection profile={profile} userEmail={userEmail} />
       <MedicalProfileSection medicalProfile={medicalProfile} />
       <PreferencesSection profile={profile} />
@@ -143,20 +138,16 @@ function PersonalInfoSection({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input
-            id="email"
-            type="email"
-            value={userEmail}
-            disabled
-            className="mt-1.5 bg-muted"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Email cannot be changed here.
-          </p>
-        </div>
+        {/* Profile Photo */}
+        <AvatarUpload
+          avatarUrl={profile.avatar_url}
+          firstName={profile.first_name}
+          lastName={profile.last_name}
+        />
 
+        <Separator />
+
+        {/* Name fields first */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first-name">First Name</Label>
@@ -176,6 +167,21 @@ function PersonalInfoSection({
               className="mt-1.5 bg-muted"
             />
           </div>
+        </div>
+
+        {/* Email below name */}
+        <div>
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={userEmail}
+            disabled
+            className="mt-1.5 bg-muted"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Email cannot be changed here.
+          </p>
         </div>
         <p className="text-xs text-muted-foreground">
           Name is set during registration and cannot be changed.

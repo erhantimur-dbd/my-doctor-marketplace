@@ -4,7 +4,6 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Camera, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { uploadAvatar } from "./actions";
@@ -67,50 +66,48 @@ export function AvatarUpload({
   }
 
   return (
-    <Card>
-      <CardContent className="flex items-center gap-6 p-6">
-        <div className="relative">
-          <Avatar className="h-20 w-20">
-            {displayUrl ? (
-              <AvatarImage src={displayUrl} alt={`${firstName} ${lastName}`} />
-            ) : null}
-            <AvatarFallback className="bg-muted text-xl font-semibold text-muted-foreground">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          {isPending && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
-              <Loader2 className="h-6 w-6 animate-spin text-white" />
-            </div>
-          )}
-        </div>
+    <div className="flex items-center gap-6">
+      <div className="relative">
+        <Avatar className="h-20 w-20">
+          {displayUrl ? (
+            <AvatarImage src={displayUrl} alt={`${firstName} ${lastName}`} />
+          ) : null}
+          <AvatarFallback className="bg-muted text-xl font-semibold text-muted-foreground">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        {isPending && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+            <Loader2 className="h-6 w-6 animate-spin text-white" />
+          </div>
+        )}
+      </div>
 
-        <div className="flex-1">
-          <h3 className="font-medium">
-            {firstName} {lastName}
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Upload a profile photo. JPEG, PNG or WebP, max 5MB.
-          </p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-2"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isPending}
-          >
-            <Camera className="mr-2 h-4 w-4" />
-            {avatarUrl ? "Change Photo" : "Upload Photo"}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      <div className="flex-1">
+        <h3 className="font-medium">
+          {firstName} {lastName}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Upload a profile photo. JPEG, PNG or WebP, max 5MB.
+        </p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          className="mt-2"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isPending}
+        >
+          <Camera className="mr-2 h-4 w-4" />
+          {avatarUrl ? "Change Photo" : "Upload Photo"}
+        </Button>
+      </div>
+    </div>
   );
 }
