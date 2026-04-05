@@ -126,31 +126,44 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
     setEnrolling(true);
     setEnrollError("");
 
+    const { data: challenge, error: challengeError } =
+      await supabase.auth.mfa.challenge({ factorId: enrollData.factorId });
+
+    if (challengeError || !challenge) {
+      setEnrollError(t("error_invalid_code"));
+      setEnrolling(false);
+      return;
+    }
+
+    // mfa.verify() can hang because the Supabase client internally tries to
+    // save the upgraded AAL2 session (NavigatorLock + cookie writes). Race it
+    // with a timeout, then check the factor status directly.
+    let verifyError: Error | null = null;
     try {
-      const { data: challenge, error: challengeError } =
-        await supabase.auth.mfa.challenge({ factorId: enrollData.factorId });
-
-      if (challengeError || !challenge) {
-        setEnrollError(t("error_invalid_code"));
-        setEnrolling(false);
-        return;
-      }
-
-      const { error: verifyError } = await supabase.auth.mfa.verify({
-        factorId: enrollData.factorId,
-        challengeId: challenge.id,
-        code: enrollCode,
-      });
-
-      if (verifyError) {
-        setEnrollError(t("error_invalid_code"));
-        setEnrolling(false);
-        return;
+      const result = await Promise.race([
+        supabase.auth.mfa.verify({
+          factorId: enrollData.factorId,
+          challengeId: challenge.id,
+          code: enrollCode,
+        }),
+        new Promise<{ error: { message: string } }>((resolve) =>
+          setTimeout(() => resolve({ error: { message: "__timeout__" } }), 8000)
+        ),
+      ]);
+      if (result.error && result.error.message !== "__timeout__") {
+        verifyError = result.error as unknown as Error;
       }
     } catch {
-      // mfa.verify() may throw during session refresh — check if it actually succeeded
+      // Swallow — we'll check factor status below
+    }
+
+    // If verify returned a real error (not timeout), check if it actually failed
+    if (verifyError) {
+      // Double-check: the factor may have been verified despite the error
       const { data: factors } = await supabase.auth.mfa.listFactors();
-      const verified = factors?.totp?.some((f) => f.id === enrollData.factorId && f.status === "verified");
+      const verified = factors?.totp?.some(
+        (f) => f.id === enrollData.factorId && f.status === "verified"
+      );
       if (!verified) {
         setEnrollError(t("error_invalid_code"));
         setEnrolling(false);
@@ -158,12 +171,24 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
       }
     }
 
+    // If we got here via timeout, confirm the factor was actually verified
+    const { data: factors } = await supabase.auth.mfa.listFactors();
+    const verified = factors?.totp?.some(
+      (f) => f.id === enrollData.factorId && f.status === "verified"
+    );
+    if (!verified) {
+      setEnrollError(t("error_invalid_code"));
+      setEnrolling(false);
+      return;
+    }
+
     setEnrolling(false);
     setEnrollDialogOpen(false);
     setEnrollData(null);
     setEnrollCode("");
     toast.success(t("success_enabled"));
-    checkMfaStatus();
+    setMfaState("enabled");
+    setFactorId(enrollData.factorId);
   }
 
   // ── Disable Flow ──
@@ -183,16 +208,25 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
       return;
     }
 
-    const { error: verifyError } = await supabase.auth.mfa.verify({
-      factorId,
-      challengeId: challenge.id,
-      code: disableCode,
-    });
-
-    if (verifyError) {
-      setDisableError(t("error_invalid_code"));
-      setDisabling(false);
-      return;
+    // Race verify with timeout — same session-hang issue as enrollment
+    try {
+      const result = await Promise.race([
+        supabase.auth.mfa.verify({
+          factorId,
+          challengeId: challenge.id,
+          code: disableCode,
+        }),
+        new Promise<{ error: { message: string } }>((resolve) =>
+          setTimeout(() => resolve({ error: { message: "__timeout__" } }), 8000)
+        ),
+      ]);
+      if (result.error && result.error.message !== "__timeout__") {
+        setDisableError(t("error_invalid_code"));
+        setDisabling(false);
+        return;
+      }
+    } catch {
+      // Swallow — proceed to unenroll
     }
 
     // Now unenroll
