@@ -48,17 +48,17 @@ function OtpInput({
   autoFocus?: boolean;
 }) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = value.padEnd(6, "").split("").slice(0, 6);
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] || "");
 
   function handleChange(index: number, char: string) {
     const sanitized = char.replace(/\D/g, "");
     if (!sanitized) return;
     const newDigits = [...digits];
     newDigits[index] = sanitized[0];
-    const newValue = newDigits.join("").replace(/ /g, "");
+    const newValue = newDigits.join("");
     onChange(newValue);
     if (index < 5) inputRefs.current[index + 1]?.focus();
-    if (newValue.replace(/ /g, "").length === 6 && onComplete) {
+    if (newValue.length === 6 && onComplete) {
       setTimeout(onComplete, 50);
     }
   }
@@ -67,12 +67,12 @@ function OtpInput({
     if (e.key === "Backspace") {
       e.preventDefault();
       const newDigits = [...digits];
-      if (digits[index] && digits[index] !== " ") {
-        newDigits[index] = " ";
-        onChange(newDigits.join("").trimEnd());
+      if (digits[index]) {
+        newDigits[index] = "";
+        onChange(newDigits.join(""));
       } else if (index > 0) {
-        newDigits[index - 1] = " ";
-        onChange(newDigits.join("").trimEnd());
+        newDigits[index - 1] = "";
+        onChange(newDigits.join(""));
         inputRefs.current[index - 1]?.focus();
       }
     } else if (e.key === "Enter" && value.length === 6 && onComplete) {
@@ -104,7 +104,7 @@ function OtpInput({
           type="text"
           inputMode="numeric"
           maxLength={1}
-          value={digit === " " ? "" : digit}
+          value={digit}
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
           onPaste={i === 0 ? handlePaste : undefined}
