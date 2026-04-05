@@ -567,35 +567,42 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // ── P0: Referral credit — reward referrer on first booking ──
+          // ── P0: Referral points — reward both referrer and referred on first booking ──
           try {
             const { data: referral } = await supabase
               .from("patient_referrals")
-              .select("id, referrer_id, credit_amount_cents, currency")
+              .select("id, referrer_id")
               .eq("referred_id", booking.patient_id)
               .eq("status", "booked")
               .maybeSingle();
 
             if (referral && referral.referrer_id) {
-              const creditAmount = referral.credit_amount_cents || 1000; // default £10
-              const creditCurrency = referral.currency || booking.currency;
+              const { earnBonusPoints } = await import("@/lib/points");
+              const REFERRAL_POINTS = 1000;
 
-              await creditWallet({
-                patientId: referral.referrer_id,
-                currency: creditCurrency,
-                amountCents: creditAmount,
-                sourceType: "referral",
-                sourceBookingId: bookingId,
-                description: `Referral reward — your friend completed their first booking`,
-              });
+              // Award referrer
+              await earnBonusPoints(
+                referral.referrer_id,
+                REFERRAL_POINTS,
+                "referral",
+                "Referral reward — your friend completed their first booking"
+              );
+
+              // Award referred friend
+              await earnBonusPoints(
+                booking.patient_id,
+                REFERRAL_POINTS,
+                "referral",
+                "Welcome bonus — you signed up through a referral"
+              );
 
               await supabase
                 .from("patient_referrals")
-                .update({ status: "credited", credit_amount_cents: creditAmount })
+                .update({ status: "credited" })
                 .eq("id", referral.id);
             }
           } catch (err) {
-            console.error("Referral credit error (non-fatal):", err);
+            console.error("Referral points error (non-fatal):", err);
           }
 
           // ── P5: Loyalty points — earn points based on booking value ──

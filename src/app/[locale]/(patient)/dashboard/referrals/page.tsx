@@ -1,13 +1,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Gift, Users, CalendarCheck, Coins, UserPlus } from "lucide-react";
-import { getOrCreateReferralCode, getPatientReferrals } from "@/actions/patient";
-import { CopyReferralLink } from "./copy-referral-link";
-import { headers } from "next/headers";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Gift,
+  Users,
+  Star,
+  Share2,
+  CheckCircle2,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { getOrCreateReferralCode } from "@/actions/patient";
+import { ReferralShareClient } from "./referral-share-client";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Referrals",
+  title: "Referrals | MyDoctors360",
 };
 
 function statusBadge(status: string) {
@@ -32,7 +47,7 @@ function statusBadge(status: string) {
       );
     case "credited":
       return (
-        <Badge variant="default" className="bg-green-600">
+        <Badge className="bg-green-600 hover:bg-green-700 text-white">
           Credited
         </Badge>
       );
@@ -42,145 +57,183 @@ function statusBadge(status: string) {
 }
 
 export default async function ReferralsPage() {
-  const [codeResult, referralsResult] = await Promise.all([
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  // Fetch referral code, referrals, and points in parallel
+  const [codeResult, referralsResponse, pointsResponse] = await Promise.all([
     getOrCreateReferralCode(),
-    getPatientReferrals(),
+    supabase
+      .from("patient_referrals")
+      .select("id, referred_email, status, credit_amount_cents, currency, created_at")
+      .eq("referrer_id", user.id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("points_transactions")
+      .select("points")
+      .eq("user_id", user.id)
+      .eq("source", "referral"),
   ]);
 
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = host.startsWith("localhost") ? "http" : "https";
-  const origin = `${protocol}://${host}`;
+  const referrals = referralsResponse.data ?? [];
+  const pointsRows = pointsResponse.data ?? [];
 
-  const referralLink = codeResult.code
-    ? `${origin}/register?ref=${codeResult.code}`
-    : "";
+  const totalReferrals = referrals.length;
+  const completedBookings = referrals.filter(
+    (r) => r.status === "booked" || r.status === "credited"
+  ).length;
+  const totalPoints = pointsRows.reduce((sum, row) => sum + (row.points ?? 0), 0);
 
-  const { referrals, stats } = referralsResult;
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+  const referralCode = codeResult.code ?? "";
+  const referralLink = referralCode ? `${APP_URL}/register?ref=${referralCode}` : "";
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Referrals</h1>
+    <div className="space-y-8">
+      {/* Hero / Header */}
+      <div className="text-center space-y-3 py-6">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+          <Gift className="h-8 w-8 text-primary" />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          Invite Friends, Earn 1,000 Points
+        </h1>
+        <p className="mx-auto max-w-xl text-muted-foreground">
+          Share your referral link with friends and family. When they sign up and
+          complete their first appointment, you both earn 1,000 reward points!
+        </p>
+      </div>
 
-      {/* Referral Code Card */}
+      {/* Referral Link Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Gift className="h-4 w-4" />
-            Your Referral Code
+          <CardTitle className="flex items-center gap-2">
+            <Share2 className="h-5 w-5" />
+            Your Referral Link
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Share your referral link with friends and family. When they sign up
-            and book their first appointment, you both earn credits!
-          </p>
-
+        <CardContent className="space-y-5">
           {codeResult.error ? (
             <p className="text-sm text-destructive">{codeResult.error}</p>
           ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 rounded-lg border bg-muted/50 p-3">
-                <code className="flex-1 text-sm font-mono font-semibold">
-                  {codeResult.code}
-                </code>
-              </div>
-              <div className="flex items-center gap-3 rounded-lg border p-3">
-                <p className="flex-1 truncate text-sm text-muted-foreground">
+            <>
+              <div className="rounded-lg border bg-muted/50 p-4">
+                <p className="break-all font-mono text-sm font-semibold select-all">
                   {referralLink}
                 </p>
-                <CopyReferralLink link={referralLink} />
               </div>
-            </div>
+              <ReferralShareClient
+                referralCode={referralCode}
+                referralLink={referralLink}
+              />
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Stats Row */}
+      <div className="grid gap-4 sm:grid-cols-3">
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Users className="h-5 w-5 text-primary" />
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100">
+              <Users className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-xs text-muted-foreground">Total Referrals</p>
+              <p className="text-3xl font-bold">{totalReferrals}</p>
+              <p className="text-sm text-muted-foreground">Friends Referred</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-              <UserPlus className="h-5 w-5 text-blue-600" />
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.signedUp}</p>
-              <p className="text-xs text-muted-foreground">Signed Up</p>
+              <p className="text-3xl font-bold">{completedBookings}</p>
+              <p className="text-sm text-muted-foreground">Completed Bookings</p>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-              <CalendarCheck className="h-5 w-5 text-purple-600" />
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100">
+              <Star className="h-6 w-6 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.booked}</p>
-              <p className="text-xs text-muted-foreground">Booked</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-              <Coins className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">
-                {(stats.totalCredits / 100).toFixed(2)}
-              </p>
-              <p className="text-xs text-muted-foreground">Credits Earned</p>
+              <p className="text-3xl font-bold">{totalPoints.toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">Points Earned</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Referral History */}
+      {/* How It Works */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Referral History</CardTitle>
+          <CardTitle>How It Works</CardTitle>
         </CardHeader>
         <CardContent>
-          {referrals.length === 0 ? (
-            <div className="flex flex-col items-center py-10 text-center">
-              <Gift className="h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-4 text-lg font-medium">No referrals yet</h3>
-              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                Share your referral link with friends to start earning credits.
-                You&apos;ll see your referral activity here.
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">
+                1
+              </div>
+              <h3 className="font-semibold">Share Your Unique Link</h3>
+              <p className="text-sm text-muted-foreground">
+                Send your personal referral link to friends, family, or colleagues
+                via any channel.
               </p>
             </div>
-          ) : (
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">
+                2
+              </div>
+              <h3 className="font-semibold">Friend Signs Up &amp; Books</h3>
+              <p className="text-sm text-muted-foreground">
+                Your friend creates an account using your link and books their
+                first doctor appointment.
+              </p>
+            </div>
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold text-lg">
+                3
+              </div>
+              <h3 className="font-semibold">You Both Earn 1,000 Points</h3>
+              <p className="text-sm text-muted-foreground">
+                Once the appointment is completed, both you and your friend
+                receive 1,000 reward points.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Referral History */}
+      {referrals.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Referral History</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground">
-                      Email
-                    </th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="pb-2 pr-4 font-medium text-muted-foreground">
-                      Credits
-                    </th>
-                    <th className="pb-2 font-medium text-muted-foreground">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Friend&apos;s Email</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {referrals.map(
                     (referral: {
                       id: string;
@@ -190,30 +243,26 @@ export default async function ReferralsPage() {
                       currency: string;
                       created_at: string;
                     }) => (
-                      <tr key={referral.id}>
-                        <td className="py-3 pr-4">
+                      <TableRow key={referral.id}>
+                        <TableCell>
                           {referral.referred_email || "--"}
-                        </td>
-                        <td className="py-3 pr-4">
-                          {statusBadge(referral.status)}
-                        </td>
-                        <td className="py-3 pr-4">
-                          {referral.credit_amount_cents > 0
-                            ? `${(referral.credit_amount_cents / 100).toFixed(2)} ${referral.currency}`
-                            : "--"}
-                        </td>
-                        <td className="py-3 text-muted-foreground">
+                        </TableCell>
+                        <TableCell>{statusBadge(referral.status)}</TableCell>
+                        <TableCell>
+                          {referral.status === "credited" ? "1,000" : "--"}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
                           {new Date(referral.created_at).toLocaleDateString()}
-                        </td>
-                      </tr>
+                        </TableCell>
+                      </TableRow>
                     )
                   )}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

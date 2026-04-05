@@ -435,3 +435,71 @@ export async function markReferredRewarded(referralId: string) {
     .update({ referred_rewarded: true })
     .eq("id", referralId);
 }
+
+// ---------------------------------------------------------------------------
+// Patient Referral: Send email invitation
+// ---------------------------------------------------------------------------
+
+export async function sendPatientReferralInvite(email: string) {
+  const emailLower = email?.trim().toLowerCase();
+  if (!emailLower) return { error: "Email is required" };
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(emailLower)) return { error: "Please enter a valid email address" };
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Get user's name for the invite email
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("first_name, last_name")
+    .eq("id", user.id)
+    .single();
+
+  const referrerName = profile
+    ? `${profile.first_name} ${profile.last_name}`
+    : "A friend";
+
+  // Get or create referral code
+  const { data: existing } = await supabase
+    .from("patient_referrals")
+    .select("referral_code")
+    .eq("referrer_id", user.id)
+    .limit(1)
+    .single();
+
+  if (!existing?.referral_code) return { error: "Failed to get referral code" };
+
+  // Check if already invited this email
+  const { data: alreadyInvited } = await supabase
+    .from("patient_referrals")
+    .select("id")
+    .eq("referrer_id", user.id)
+    .eq("referred_email", emailLower)
+    .maybeSingle();
+
+  if (alreadyInvited) return { error: "You've already invited this person" };
+
+  // Create a new referral record for this invite
+  await supabase.from("patient_referrals").insert({
+    referrer_id: user.id,
+    referral_code: existing.referral_code,
+    referred_email: emailLower,
+    status: "pending",
+  });
+
+  // Send invitation email
+  const { patientReferralInviteEmail } = await import("@/lib/email/templates");
+  const referralLink = `${APP_URL}/en/register?ref=${existing.referral_code}`;
+  const { subject, html } = patientReferralInviteEmail({
+    referrerName,
+    referralLink,
+  });
+
+  await sendEmail({ to: emailLower, subject, html });
+
+  revalidatePath("/dashboard/referrals");
+  return { success: true };
+}

@@ -2032,3 +2032,46 @@ export function giftCardEmail({
 
   return { subject, html };
 }
+
+// ---------------------------------------------------------------------------
+// Patient Referral Invite Email
+// ---------------------------------------------------------------------------
+
+export function patientReferralInviteEmail({
+  referrerName,
+  referralLink,
+}: {
+  referrerName: string;
+  referralLink: string;
+}): { subject: string; html: string } {
+  const subject = `${referrerName} invited you to join MyDoctors360 — earn 1,000 reward points!`;
+
+  const content = `
+    <h2 style="margin: 0 0 16px; font-size: 22px; color: #111827;">
+      You've Been Invited!
+    </h2>
+    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+      <strong>${referrerName}</strong> thinks you'd love MyDoctors360 — the smart way to book private healthcare appointments across the UK and Europe.
+    </p>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Sign up using the link below and you'll both earn <strong>1,000 reward points</strong> when you complete your first appointment. Points can be redeemed for discounts on future bookings!
+    </p>
+    ${button("Join MyDoctors360", referralLink)}
+    <div style="margin: 24px 0; padding: 16px; background-color: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+      <p style="margin: 0; font-size: 14px; color: #15803d; font-weight: 600;">
+        What you get with MyDoctors360:
+      </p>
+      <ul style="margin: 8px 0 0; padding-left: 20px; font-size: 14px; color: #166534; line-height: 1.8;">
+        <li>Find private doctors by specialty, location, or language</li>
+        <li>Book in-person or video consultations online</li>
+        <li>Transparent pricing with no hidden fees</li>
+        <li>Earn loyalty points on every booking</li>
+      </ul>
+    </div>
+    <p style="margin: 0; font-size: 13px; color: #6b7280;">
+      If you weren't expecting this invitation, you can safely ignore this email.
+    </p>
+  `;
+
+  return { subject, html: baseLayout(content) };
+}

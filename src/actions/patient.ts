@@ -282,7 +282,10 @@ export async function getOrCreateReferralCode() {
   if (existing) return { code: existing.referral_code, error: null };
 
   // Generate new code
-  const code = `REF-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+  // Friendly 4-char alphanumeric code (A-Z, 0-9 excluding confusing chars)
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I,O,0,1
+  const bytes = crypto.randomBytes(4);
+  const code = `MYDOC-${Array.from(bytes).map((b) => chars[b % chars.length]).join("")}`;
 
   const { error } = await supabase.from("patient_referrals").insert({
     referrer_id: user.id,
