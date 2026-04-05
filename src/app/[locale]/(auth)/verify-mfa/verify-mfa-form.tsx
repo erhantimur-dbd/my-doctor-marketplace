@@ -2,8 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { setMfaSession } from "./actions";
-import { useRouter } from "next/navigation";
+import { completeMfaLogin } from "./actions";
 import {
   Card,
   CardContent,
@@ -122,7 +121,6 @@ export function VerifyMfaForm({
   userRole?: string;
 }) {
   const t = useTranslations("twoFactor");
-  const router = useRouter();
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -176,21 +174,18 @@ export function VerifyMfaForm({
       return;
     }
 
-    // Update session cookies server-side (avoids client NavigatorLock hang)
+    // Set session cookies + redirect server-side in one action
+    // This ensures cookies are committed before the redirect happens
     const verifyData = await verifyRes.json();
     if (verifyData.access_token && verifyData.refresh_token) {
-      await setMfaSession(verifyData.access_token, verifyData.refresh_token);
+      await completeMfaLogin(
+        verifyData.access_token,
+        verifyData.refresh_token,
+        locale,
+        userRole
+      );
     }
-
-    // Redirect based on role
-    if (userRole === "doctor") {
-      router.replace(`/${locale}/doctor-dashboard`);
-    } else if (userRole === "admin") {
-      router.replace(`/${locale}/admin`);
-    } else {
-      router.replace(`/${locale}/dashboard`);
-    }
-  }, [factorId, accessToken, code, verifying, router, locale, userRole, t]);
+  }, [factorId, accessToken, code, verifying, locale, userRole, t]);
 
   return (
     <Card>
