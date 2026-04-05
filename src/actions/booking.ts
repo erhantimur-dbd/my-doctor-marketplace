@@ -31,7 +31,6 @@ import { bookingCancellationSms } from "@/lib/sms/templates";
 import { creditWallet, debitWallet, getWalletBalance } from "@/lib/wallet";
 
 import {
-  getBookingFeeCents,
   calculateDepositCents,
   getCommissionCents,
   formatCurrency,
@@ -149,6 +148,19 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
+    // Validate dependent ownership if booking for a family member
+    if (parsed.data.dependent_id) {
+      const { data: dep } = await supabase
+        .from("dependents")
+        .select("id")
+        .eq("id", parsed.data.dependent_id)
+        .eq("parent_id", user.id)
+        .single();
+      if (!dep) {
+        return { error: "Invalid dependent selected." };
+      }
+    }
+
     // Calculate fees — service-aware pricing
     let consultationFeeCents: number;
     let serviceName: string | null = null;
@@ -184,9 +196,9 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
           : doctor.consultation_fee_cents;
     }
 
-    const platformFeeCents = getBookingFeeCents(doctor.base_currency);
+    const platformFeeCents = 0;
     const commissionCents = getCommissionCents(consultationFeeCents);
-    const totalAmountCents = consultationFeeCents + platformFeeCents;
+    const totalAmountCents = consultationFeeCents;
 
     // Resolve deposit config: service override → doctor default → none
     // Video consultations are ALWAYS full payment; deposit only applies to in-person
@@ -216,17 +228,17 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       : null;
 
     // The amount Stripe will charge the patient:
-    // Full: consultation_fee + booking_fee
-    // Deposit: deposit_amount + booking_fee
+    // Full: consultation_fee
+    // Deposit: deposit_amount
     const stripeChargeCents = isDeposit
-      ? depositAmountCents + platformFeeCents
+      ? depositAmountCents
       : totalAmountCents;
 
-    // Application fee = booking fee (from patient) + 15% commission (from doctor's share)
+    // Application fee = 15% commission from doctor's share
     // In deposit mode the commission is still on the full consultation fee,
     // but it's capped at the Stripe charge so Stripe doesn't reject it.
     const applicationFeeCents = Math.min(
-      platformFeeCents + commissionCents,
+      commissionCents,
       stripeChargeCents
     );
 
@@ -254,6 +266,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         deposit_value: isDeposit ? resolvedDepositValue : null,
         service_id: serviceId,
         service_name: serviceName,
+        dependent_id: parsed.data.dependent_id || null,
+        dependent_name: parsed.data.dependent_name || null,
         organization_id: doctor.organization_id || null,
       })
       .select("id, booking_number")
@@ -447,10 +461,10 @@ export async function cancelBooking(input: CancelBookingInput) {
     }
 
     // Process refund — either to wallet (instant) or bank (3-5 days via Stripe)
-    // For deposit bookings, refund is based on what was actually charged (deposit + booking fee)
+    // For deposit bookings, refund is based on what was actually charged (deposit only)
     const stripeChargedAmount =
       booking.payment_mode === "deposit" && booking.deposit_amount_cents != null
-        ? booking.deposit_amount_cents + booking.platform_fee_cents
+        ? booking.deposit_amount_cents
         : booking.total_amount_cents;
 
     let walletCreditCents = 0;
@@ -715,7 +729,7 @@ export async function cancelAndRebook(input: {
     }
 
     const stripeCharged = oldBooking.payment_mode === "deposit" && oldBooking.deposit_amount_cents != null
-      ? oldBooking.deposit_amount_cents + oldBooking.platform_fee_cents
+      ? oldBooking.deposit_amount_cents
       : oldBooking.total_amount_cents;
     const refundAmount = Math.round((stripeCharged * refundPercent) / 100);
 

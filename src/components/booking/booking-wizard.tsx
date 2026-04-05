@@ -26,7 +26,7 @@ import {
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { RecurringOption, type RecurringConfig } from "@/components/booking/recurring-option";
 import { createBookingAndCheckout } from "@/actions/booking";
-import { formatCurrency, getBookingFeeCents, calculateDepositCents } from "@/lib/utils/currency";
+import { formatCurrency, calculateDepositCents } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import { formatSlotTime } from "@/lib/utils/availability";
 import { toast } from "sonner";
@@ -40,6 +40,7 @@ import {
   MapPin,
   Stethoscope,
   User,
+  Users,
   Video,
 } from "lucide-react";
 
@@ -51,6 +52,14 @@ interface ServiceOption {
   consultation_type: string;
   deposit_type?: string | null;
   deposit_value?: number | null;
+}
+
+interface Dependent {
+  id: string;
+  first_name: string;
+  last_name: string;
+  date_of_birth: string | null;
+  relationship: string;
 }
 
 interface BookingWizardProps {
@@ -87,6 +96,7 @@ interface BookingWizardProps {
     }[];
   };
   services?: ServiceOption[];
+  dependents?: Dependent[];
 }
 
 type ConsultationType = "in_person" | "video";
@@ -99,7 +109,7 @@ interface SlotSelection {
 
 const FOLLOWUP_SERVICE_ID = "__followup__";
 
-export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
+export function BookingWizard({ doctor, services = [], dependents = [] }: BookingWizardProps) {
   const searchParams = useSearchParams();
   const initialDate = searchParams.get("date"); // e.g. "2026-03-05" from availability chip
   const initialType = searchParams.get("type") as ConsultationType | null; // e.g. "in_person" or "video"
@@ -113,7 +123,17 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
       ? initialType
       : null;
 
-  const [step, setStep] = useState(validInitialType ? 2 : 1);
+  const hasDependents = dependents.length > 0;
+
+  type StepId = "patient" | "type" | "schedule" | "review" | "payment";
+  const steps: StepId[] = hasDependents
+    ? ["patient", "type", "schedule", "review", "payment"]
+    : ["type", "schedule", "review", "payment"];
+
+  const [stepIndex, setStepIndex] = useState(
+    validInitialType && !hasDependents ? 1 : 0
+  );
+  const currentStep = steps[stepIndex];
   const [consultationType, setConsultationType] =
     useState<ConsultationType | null>(validInitialType);
   const [slotSelection, setSlotSelection] = useState<SlotSelection | null>(
@@ -131,7 +151,13 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
   // Recurring appointment state
   const [recurringConfig, setRecurringConfig] = useState<RecurringConfig | null>(null);
 
-  const totalSteps = 4;
+  // Patient selection state (for dependent booking)
+  const [selectedPatient, setSelectedPatient] = useState<"self" | string>("self");
+  const selectedDependent = selectedPatient !== "self"
+    ? dependents.find((d) => d.id === selectedPatient) ?? null
+    : null;
+
+  const totalSteps = steps.length;
   const fullName = `${doctor.title || "Dr."} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
 
   const primarySpecialty =
@@ -172,8 +198,7 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
       ? doctor.video_consultation_fee_cents
       : doctor.consultation_fee_cents;
 
-  const platformFeeCents = getBookingFeeCents(doctor.base_currency);
-  const totalAmountCents = consultationFeeCents + platformFeeCents;
+  const totalAmountCents = consultationFeeCents;
 
   // Resolve deposit config: service override → doctor default → none
   // Only for in-person appointments
@@ -206,7 +231,7 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
     ? consultationFeeCents - depositAmountCents
     : null;
   const chargeNowCents = isDepositMode
-    ? depositAmountCents + platformFeeCents
+    ? depositAmountCents
     : totalAmountCents;
 
   // Deposit label for display
@@ -220,28 +245,27 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
     : undefined;
 
   function canProceed(): boolean {
-    if (step === 1) {
+    if (currentStep === "patient") return true; // default is "self", always valid
+    if (currentStep === "type") {
       if (!consultationType) return false;
-      // Must answer first-visit question
       if (isFirstVisit === null) return false;
-      // If returning patient, must select a service
       if (isFirstVisit === false && !selectedService) return false;
       return true;
     }
-    if (step === 2) return slotSelection !== null;
-    if (step === 3) return true;
+    if (currentStep === "schedule") return slotSelection !== null;
+    if (currentStep === "review") return true;
     return false;
   }
 
   function handleNext() {
-    if (step < totalSteps && canProceed()) {
-      setStep(step + 1);
+    if (stepIndex < totalSteps - 1 && canProceed()) {
+      setStepIndex(stepIndex + 1);
     }
   }
 
   function handleBack() {
-    if (step > 1) {
-      setStep(step - 1);
+    if (stepIndex > 0) {
+      setStepIndex(stepIndex - 1);
     }
   }
 
@@ -285,6 +309,10 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
           ? selectedService.id
           : undefined,
         duration_minutes: selectedService?.duration_minutes || undefined,
+        dependent_id: selectedDependent?.id || undefined,
+        dependent_name: selectedDependent
+          ? `${selectedDependent.first_name} ${selectedDependent.last_name}`
+          : undefined,
       });
 
       if (result.error) {
@@ -320,19 +348,20 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
           {/* Active progress line */}
           <div
             className="absolute left-0 top-4 h-0.5 bg-primary transition-all duration-300"
-            style={{ width: `${((Math.min(step, totalSteps) - 1) / (totalSteps - 1)) * 100}%` }}
+            style={{ width: `${(stepIndex / (totalSteps - 1)) * 100}%` }}
           />
 
           {[
-            { num: 1, label: "Type", icon: Stethoscope },
-            { num: 2, label: "Schedule", icon: Calendar },
-            { num: 3, label: "Review", icon: User },
-            { num: 4, label: "Payment", icon: CreditCard },
-          ].map(({ num, label, icon: Icon }) => (
-            <div key={num} className="relative flex flex-col items-center">
+            ...(hasDependents ? [{ id: "patient" as StepId, label: "Patient", icon: Users }] : []),
+            { id: "type" as StepId, label: "Type", icon: Stethoscope },
+            { id: "schedule" as StepId, label: "Schedule", icon: Calendar },
+            { id: "review" as StepId, label: "Review", icon: User },
+            { id: "payment" as StepId, label: "Payment", icon: CreditCard },
+          ].map(({ id, label, icon: Icon }, idx) => (
+            <div key={id} className="relative flex flex-col items-center">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ring-4 ring-background transition-colors ${
-                  step >= num
+                  stepIndex >= idx
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground"
                 }`}
@@ -341,7 +370,7 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
               </div>
               <span
                 className={`mt-1.5 text-xs ${
-                  step >= num
+                  stepIndex >= idx
                     ? "font-medium text-primary"
                     : "text-muted-foreground"
                 }`}
@@ -353,8 +382,84 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
         </div>
       </div>
 
-      {/* Step 1: Consultation Type + Service Selection */}
-      {step === 1 && (
+      {/* Step: Who is this appointment for? (only if user has dependents) */}
+      {currentStep === "patient" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Who is this appointment for?
+            </CardTitle>
+            <CardDescription>
+              Select who will be attending this appointment
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RadioGroup
+              value={selectedPatient}
+              onValueChange={setSelectedPatient}
+              className="space-y-3"
+            >
+              {/* Self option */}
+              <Label
+                htmlFor="patient-self"
+                className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-accent ${
+                  selectedPatient === "self" ? "border-primary bg-primary/5" : ""
+                }`}
+              >
+                <RadioGroupItem value="self" id="patient-self" />
+                <div className="flex-1">
+                  <span className="font-medium">Myself</span>
+                  <p className="text-sm text-muted-foreground">
+                    Book this appointment for yourself
+                  </p>
+                </div>
+              </Label>
+
+              {/* Dependent options */}
+              {dependents.map((dep) => (
+                <Label
+                  key={dep.id}
+                  htmlFor={`patient-${dep.id}`}
+                  className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-accent ${
+                    selectedPatient === dep.id ? "border-primary bg-primary/5" : ""
+                  }`}
+                >
+                  <RadioGroupItem value={dep.id} id={`patient-${dep.id}`} />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">
+                        {dep.first_name} {dep.last_name}
+                      </span>
+                      <Badge variant="secondary" className="text-xs capitalize">
+                        {dep.relationship}
+                      </Badge>
+                    </div>
+                    {dep.date_of_birth && (
+                      <p className="text-sm text-muted-foreground">
+                        Born {new Date(dep.date_of_birth).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                    )}
+                  </div>
+                </Label>
+              ))}
+            </RadioGroup>
+          </CardContent>
+          <CardFooter className="justify-end">
+            <Button onClick={handleNext}>
+              Next
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </CardFooter>
+        </Card>
+      )}
+
+      {/* Step: Consultation Type + Service Selection */}
+      {currentStep === "type" && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -559,8 +664,8 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
         </Card>
       )}
 
-      {/* Step 2: Date and Time */}
-      {step === 2 && consultationType && (
+      {/* Step: Date and Time */}
+      {currentStep === "schedule" && consultationType && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -615,8 +720,8 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
         </Card>
       )}
 
-      {/* Step 3: Notes & Review */}
-      {step === 3 && consultationType && slotSelection && (
+      {/* Step: Notes & Review */}
+      {currentStep === "review" && consultationType && slotSelection && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -670,6 +775,27 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                 </div>
 
                 <Separator />
+
+                {/* Patient (if booking for dependent) */}
+                {selectedDependent && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Patient</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">
+                          {selectedDependent.first_name} {selectedDependent.last_name}
+                        </p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {selectedDependent.relationship}
+                        </p>
+                      </div>
+                    </div>
+                    <Separator />
+                  </>
+                )}
 
                 {/* Consultation Type */}
                 <div className="flex items-center justify-between">
@@ -776,14 +902,6 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Booking Fee
-                    </span>
-                    <span>
-                      {formatCurrency(platformFeeCents, doctor.base_currency)}
-                    </span>
-                  </div>
                   <Separator />
                   <div className="flex items-center justify-between font-semibold">
                     <span>{isDepositMode ? "Charge Now" : "Total"}</span>
@@ -837,8 +955,8 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
         </Card>
       )}
 
-      {/* Step 4: Payment */}
-      {step === 4 && consultationType && slotSelection && (
+      {/* Step: Payment */}
+      {currentStep === "payment" && consultationType && slotSelection && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -873,7 +991,7 @@ export function BookingWizard({ doctor, services = [] }: BookingWizardProps) {
                     </p>
                     {isDepositMode && (
                       <p className="text-xs text-amber-700 dark:text-amber-400">
-                        {depositLabel.toLowerCase()} + booking fee
+                        {depositLabel.toLowerCase()}
                       </p>
                     )}
                   </div>

@@ -152,12 +152,22 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
 
   const checkMfaStatus = useCallback(async () => {
     try {
+      // Race against timeout — getSession/listFactors can hang due to NavigatorLock
+      const timeout = <T,>(ms: number): Promise<T> =>
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms));
+
       // Cache the access token for later use in fetch-based MFA calls
-      const { data: sessionData } = await supabase.auth.getSession();
+      const { data: sessionData } = await Promise.race([
+        supabase.auth.getSession(),
+        timeout<never>(5000),
+      ]);
       if (sessionData.session?.access_token) {
         accessTokenRef.current = sessionData.session.access_token;
       }
-      const { data: factors, error } = await supabase.auth.mfa.listFactors();
+      const { data: factors, error } = await Promise.race([
+        supabase.auth.mfa.listFactors(),
+        timeout<never>(5000),
+      ]);
       if (error) {
         console.error("MFA listFactors error:", error);
         setMfaState("disabled");

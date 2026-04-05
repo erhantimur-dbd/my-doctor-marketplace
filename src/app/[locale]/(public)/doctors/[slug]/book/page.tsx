@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { BookingWizard } from "@/components/booking/booking-wizard";
+import { getDependents } from "@/actions/family";
 import { Link } from "@/i18n/navigation";
 import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
@@ -125,6 +126,9 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     .eq("is_active", true)
     .order("display_order", { ascending: true });
 
+  // Fetch patient's family dependents for "booking for" selection
+  const dependents = await getDependents();
+
   if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
     return (
       <div className="container mx-auto px-4 py-16">
@@ -171,7 +175,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
       </div>
 
       {/* Booking Wizard */}
-      <BookingWizard doctor={doctor} services={servicesData || []} />
+      <BookingWizard doctor={doctor} services={servicesData || []} dependents={dependents} />
     </div>
   );
 }

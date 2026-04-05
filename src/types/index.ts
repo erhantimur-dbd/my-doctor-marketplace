@@ -318,6 +318,8 @@ export interface Booking {
   reschedule_payment_status: "not_required" | "pending" | "paid" | "refunded" | "expired" | null;
   rescheduled_by: string | null;
   rescheduled_at: string | null;
+  dependent_id: string | null;
+  dependent_name: string | null;
   created_at: string;
   updated_at: string;
 }

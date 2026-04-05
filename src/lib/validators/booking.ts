@@ -14,6 +14,8 @@ export const createBookingSchema = z.object({
   patient_notes: z.string().max(1000).nullish(),
   service_id: z.string().regex(uuidFormat).nullish(),
   duration_minutes: z.number().int().min(15).max(60).nullish(),
+  dependent_id: z.string().regex(uuidFormat).nullish(),
+  dependent_name: z.string().max(200).nullish(),
 });
 
 export const cancelBookingSchema = z.object({
