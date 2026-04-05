@@ -174,28 +174,30 @@ export function VerifyMfaForm({
       return;
     }
 
-    // Set session cookies + redirect server-side in one action
+    // Set session cookies via server action, then navigate client-side
     const verifyData = await verifyRes.json();
     if (verifyData.access_token && verifyData.refresh_token) {
-      try {
-        await completeMfaLogin(
-          verifyData.access_token,
-          verifyData.refresh_token,
-          locale,
-          userRole
-        );
-      } catch {
-        // redirect() throws NEXT_REDIRECT which is expected
-        // If we reach here with a real error, redirect manually
-        const target =
-          userRole === "doctor"
-            ? `/${locale}/doctor-dashboard`
-            : userRole === "admin"
-              ? `/${locale}/admin`
-              : `/${locale}/dashboard`;
-        window.location.href = target;
-        return;
+      // Set cookies server-side (no redirect — we handle navigation here)
+      const { success } = await completeMfaLogin(
+        verifyData.access_token,
+        verifyData.refresh_token
+      );
+
+      // Navigate regardless — even if cookie-setting had issues,
+      // the middleware will handle re-auth
+      const target =
+        userRole === "doctor"
+          ? `/${locale}/doctor-dashboard`
+          : userRole === "admin"
+            ? `/${locale}/admin`
+            : `/${locale}/dashboard`;
+
+      if (!success) {
+        console.warn("MFA: setSession returned error, navigating anyway");
       }
+
+      // Use window.location for a full page load (ensures fresh cookies)
+      window.location.href = target;
     } else {
       setError(t("error_invalid_code"));
       setCode("");
