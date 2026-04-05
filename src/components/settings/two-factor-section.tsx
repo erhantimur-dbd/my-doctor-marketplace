@@ -126,57 +126,56 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
     setEnrolling(true);
     setEnrollError("");
 
-    const { data: challenge, error: challengeError } =
-      await supabase.auth.mfa.challenge({ factorId: enrollData.factorId });
+    // Use fetch directly to avoid the Supabase client's internal session save
+    // which hangs due to NavigatorLock contention with @supabase/ssr cookie storage.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
-    if (challengeError || !challenge) {
+    // Step 1: Create challenge via REST
+    const session = (await supabase.auth.getSession()).data.session;
+    if (!session) {
+      setEnrollError("Session expired. Please log in again.");
+      setEnrolling(false);
+      return;
+    }
+
+    const challengeRes = await fetch(
+      `${supabaseUrl}/auth/v1/factors/${enrollData.factorId}/challenge`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        },
+      }
+    );
+
+    if (!challengeRes.ok) {
       setEnrollError(t("error_invalid_code"));
       setEnrolling(false);
       return;
     }
 
-    // mfa.verify() can hang because the Supabase client internally tries to
-    // save the upgraded AAL2 session (NavigatorLock + cookie writes). Race it
-    // with a timeout, then check the factor status directly.
-    let verifyError: Error | null = null;
-    try {
-      const result = await Promise.race([
-        supabase.auth.mfa.verify({
-          factorId: enrollData.factorId,
-          challengeId: challenge.id,
+    const challengeData = await challengeRes.json();
+
+    // Step 2: Verify via REST
+    const verifyRes = await fetch(
+      `${supabaseUrl}/auth/v1/factors/${enrollData.factorId}/verify`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        },
+        body: JSON.stringify({
+          challenge_id: challengeData.id,
           code: enrollCode,
         }),
-        new Promise<{ error: { message: string } }>((resolve) =>
-          setTimeout(() => resolve({ error: { message: "__timeout__" } }), 8000)
-        ),
-      ]);
-      if (result.error && result.error.message !== "__timeout__") {
-        verifyError = result.error as unknown as Error;
       }
-    } catch {
-      // Swallow — we'll check factor status below
-    }
-
-    // If verify returned a real error (not timeout), check if it actually failed
-    if (verifyError) {
-      // Double-check: the factor may have been verified despite the error
-      const { data: factors } = await supabase.auth.mfa.listFactors();
-      const verified = factors?.totp?.some(
-        (f) => f.id === enrollData.factorId && f.status === "verified"
-      );
-      if (!verified) {
-        setEnrollError(t("error_invalid_code"));
-        setEnrolling(false);
-        return;
-      }
-    }
-
-    // If we got here via timeout, confirm the factor was actually verified
-    const { data: factors } = await supabase.auth.mfa.listFactors();
-    const verified = factors?.totp?.some(
-      (f) => f.id === enrollData.factorId && f.status === "verified"
     );
-    if (!verified) {
+
+    if (!verifyRes.ok) {
       setEnrollError(t("error_invalid_code"));
       setEnrolling(false);
       return;
@@ -198,44 +197,62 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
     setDisabling(true);
     setDisableError("");
 
-    // Verify code first to confirm identity
-    const { data: challenge, error: challengeError } =
-      await supabase.auth.mfa.challenge({ factorId });
+    // Use fetch directly to avoid NavigatorLock hang (same as enrollment)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const session = (await supabase.auth.getSession()).data.session;
+    if (!session) {
+      setDisableError("Session expired. Please log in again.");
+      setDisabling(false);
+      return;
+    }
 
-    if (challengeError || !challenge) {
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    };
+
+    // Verify code to confirm identity
+    const challengeRes = await fetch(
+      `${supabaseUrl}/auth/v1/factors/${factorId}/challenge`,
+      { method: "POST", headers }
+    );
+
+    if (!challengeRes.ok) {
       setDisableError(t("error_invalid_code"));
       setDisabling(false);
       return;
     }
 
-    // Race verify with timeout — same session-hang issue as enrollment
-    try {
-      const result = await Promise.race([
-        supabase.auth.mfa.verify({
-          factorId,
-          challengeId: challenge.id,
+    const challengeData = await challengeRes.json();
+
+    const verifyRes = await fetch(
+      `${supabaseUrl}/auth/v1/factors/${factorId}/verify`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          challenge_id: challengeData.id,
           code: disableCode,
         }),
-        new Promise<{ error: { message: string } }>((resolve) =>
-          setTimeout(() => resolve({ error: { message: "__timeout__" } }), 8000)
-        ),
-      ]);
-      if (result.error && result.error.message !== "__timeout__") {
-        setDisableError(t("error_invalid_code"));
-        setDisabling(false);
-        return;
       }
-    } catch {
-      // Swallow — proceed to unenroll
+    );
+
+    if (!verifyRes.ok) {
+      setDisableError(t("error_invalid_code"));
+      setDisabling(false);
+      return;
     }
 
     // Now unenroll
-    const { error: unenrollError } = await supabase.auth.mfa.unenroll({
-      factorId,
-    });
+    const unenrollRes = await fetch(
+      `${supabaseUrl}/auth/v1/factors/${factorId}`,
+      { method: "DELETE", headers }
+    );
 
-    if (unenrollError) {
-      setDisableError(unenrollError.message);
+    if (!unenrollRes.ok) {
+      const err = await unenrollRes.json().catch(() => ({ message: "Failed to disable" }));
+      setDisableError(err.message || "Failed to disable");
       setDisabling(false);
       return;
     }
@@ -244,7 +261,8 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
     setDisableDialogOpen(false);
     setDisableCode("");
     toast.success(t("success_disabled"));
-    await checkMfaStatus();
+    setMfaState("disabled");
+    setFactorId(null);
   }
 
   function copySecret() {
