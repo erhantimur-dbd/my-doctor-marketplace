@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Wallet, ArrowUpCircle, ArrowDownCircle, Info, Trophy, Gift, Star } from "lucide-react";
+import { Wallet, ArrowUpCircle, ArrowDownCircle, Info, Trophy, Gift, Star, ArrowRight } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { formatCurrency } from "@/lib/utils/currency";
 import { WalletActions } from "./wallet-actions";
 
@@ -100,6 +101,12 @@ export default async function WalletPage() {
                 {currentTier.percent}% cashback on bookings
                 {nextTier && ` • ${nextTier.min - bookingCount} more to ${nextTier.name}`}
               </p>
+              <Link
+                href="/rewards"
+                className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                Learn more <ArrowRight className="h-3 w-3" />
+              </Link>
             </div>
           </CardContent>
         </Card>
