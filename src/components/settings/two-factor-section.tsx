@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslations } from "next-intl";
 import {
@@ -39,6 +39,7 @@ interface EnrollData {
   factorId: string;
   qrCode: string;
   secret: string;
+  accessToken: string;
 }
 
 export function TwoFactorSection({ showRecommendation = false }: { showRecommendation?: boolean }) {
@@ -47,6 +48,7 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
 
   const [mfaState, setMfaState] = useState<MfaState>("loading");
   const [factorId, setFactorId] = useState<string | null>(null);
+  const accessTokenRef = useRef<string | null>(null);
 
   // Enrollment dialog
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
@@ -64,6 +66,11 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
 
   const checkMfaStatus = useCallback(async () => {
     try {
+      // Cache the access token for later use in fetch-based MFA calls
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.access_token) {
+        accessTokenRef.current = sessionData.session.access_token;
+      }
       const { data: factors, error } = await supabase.auth.mfa.listFactors();
       if (error) {
         console.error("MFA listFactors error:", error);
@@ -102,6 +109,14 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
       await supabase.auth.mfa.unenroll({ factorId: f.id });
     }
 
+    // Grab the access token now (before any lock contention)
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      toast.error("Session expired. Please log in again.");
+      return;
+    }
+
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: "totp",
       friendlyName: "MyDoctors360",
@@ -116,6 +131,7 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
       factorId: data.id,
       qrCode: data.totp.qr_code,
       secret: data.totp.secret,
+      accessToken,
     });
     setEnrollDialogOpen(true);
   }
@@ -128,26 +144,18 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
 
     // Use fetch directly to avoid the Supabase client's internal session save
     // which hangs due to NavigatorLock contention with @supabase/ssr cookie storage.
+    // The access token was captured during startEnrollment() before any lock issues.
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${enrollData.accessToken}`,
+      apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    };
 
     // Step 1: Create challenge via REST
-    const session = (await supabase.auth.getSession()).data.session;
-    if (!session) {
-      setEnrollError("Session expired. Please log in again.");
-      setEnrolling(false);
-      return;
-    }
-
     const challengeRes = await fetch(
       `${supabaseUrl}/auth/v1/factors/${enrollData.factorId}/challenge`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
-      }
+      { method: "POST", headers }
     );
 
     if (!challengeRes.ok) {
@@ -163,11 +171,7 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
       `${supabaseUrl}/auth/v1/factors/${enrollData.factorId}/verify`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        },
+        headers,
         body: JSON.stringify({
           challenge_id: challengeData.id,
           code: enrollCode,
@@ -199,8 +203,8 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
 
     // Use fetch directly to avoid NavigatorLock hang (same as enrollment)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const session = (await supabase.auth.getSession()).data.session;
-    if (!session) {
+    const token = accessTokenRef.current;
+    if (!token) {
       setDisableError("Session expired. Please log in again.");
       setDisabling(false);
       return;
@@ -208,7 +212,7 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
 
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${token}`,
       apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     };
 
