@@ -21,15 +21,17 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Pencil, Trash2, Loader2, Baby, Heart, UserCircle } from "lucide-react";
+import { Users, Plus, Pencil, Trash2, Loader2, Baby, Heart, UserCircle, HeartPulse } from "lucide-react";
 import { toast } from "sonner";
 import {
   getDependents,
   addDependent,
   updateDependent,
   removeDependent,
+  getDependentMedicalProfile,
   type DependentInput,
 } from "@/actions/family";
+import { DependentMedicalDialog } from "./dependent-medical-dialog";
 
 const RELATIONSHIP_LABELS: Record<string, string> = {
   child: "Child",
@@ -64,6 +66,12 @@ export default function FamilyPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  // Medical dialog state
+  const [medicalDialogOpen, setMedicalDialogOpen] = useState(false);
+  const [medicalDependentId, setMedicalDependentId] = useState<string | null>(null);
+  const [medicalDependentName, setMedicalDependentName] = useState("");
+  const [dependentsWithMedical, setDependentsWithMedical] = useState<Set<string>>(new Set());
+
   // Form state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -78,6 +86,15 @@ export default function FamilyPage() {
   async function loadDependents() {
     const data = await getDependents();
     setDependents(data);
+    // Check which dependents have medical profiles
+    const medicalSet = new Set<string>();
+    await Promise.all(
+      data.map(async (dep: Dependent) => {
+        const profile = await getDependentMedicalProfile(dep.id);
+        if (profile) medicalSet.add(dep.id);
+      })
+    );
+    setDependentsWithMedical(medicalSet);
     setLoading(false);
   }
 
@@ -88,6 +105,12 @@ export default function FamilyPage() {
     setRelationship("child");
     setNotes("");
     setEditingId(null);
+  }
+
+  function openMedicalDialog(dep: Dependent) {
+    setMedicalDependentId(dep.id);
+    setMedicalDependentName(`${dep.first_name} ${dep.last_name}`);
+    setMedicalDialogOpen(true);
   }
 
   function openAddDialog() {
@@ -300,6 +323,15 @@ export default function FamilyPage() {
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
+                        onClick={() => openMedicalDialog(dep)}
+                        title="Medical profile"
+                      >
+                        <HeartPulse className={`h-3.5 w-3.5 ${dependentsWithMedical.has(dep.id) ? "text-rose-500" : ""}`} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
                         onClick={() => openEditDialog(dep)}
                       >
                         <Pencil className="h-3.5 w-3.5" />
@@ -315,6 +347,14 @@ export default function FamilyPage() {
                       </Button>
                     </div>
                   </div>
+                  {dependentsWithMedical.has(dep.id) && (
+                    <div className="mt-2">
+                      <Badge variant="outline" className="text-[10px] gap-1 text-rose-600 border-rose-200 bg-rose-50">
+                        <HeartPulse className="h-3 w-3" />
+                        Medical info
+                      </Badge>
+                    </div>
+                  )}
                   {dep.date_of_birth && (
                     <p className="mt-3 text-xs text-muted-foreground">
                       Born: {new Date(dep.date_of_birth + "T00:00:00").toLocaleDateString("en-GB", {
@@ -334,6 +374,20 @@ export default function FamilyPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Medical Profile Dialog */}
+      {medicalDependentId && (
+        <DependentMedicalDialog
+          dependentId={medicalDependentId}
+          dependentName={medicalDependentName}
+          open={medicalDialogOpen}
+          onOpenChange={setMedicalDialogOpen}
+          onSaved={() => {
+            // Refresh to update badge
+            setDependentsWithMedical((prev) => new Set([...prev, medicalDependentId]));
+          }}
+        />
       )}
     </div>
   );

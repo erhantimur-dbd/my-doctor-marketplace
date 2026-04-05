@@ -102,3 +102,89 @@ export async function removeDependent(dependentId: string) {
   if (error) return { error: safeError(error) };
   return { success: true };
 }
+
+/**
+ * Get the medical profile for a dependent.
+ */
+export async function getDependentMedicalProfile(dependentId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Verify ownership
+  const { data: dep } = await supabase
+    .from("dependents")
+    .select("id")
+    .eq("id", dependentId)
+    .eq("parent_id", user.id)
+    .single();
+  if (!dep) return null;
+
+  const { data } = await supabase
+    .from("dependent_medical_profiles")
+    .select("*")
+    .eq("dependent_id", dependentId)
+    .single();
+
+  return data;
+}
+
+/**
+ * Create or update the medical profile for a dependent.
+ */
+export async function updateDependentMedicalProfile(
+  dependentId: string,
+  input: {
+    blood_type?: string | null;
+    allergies?: string[];
+    chronic_conditions?: string[];
+    current_medications?: string[];
+    emergency_contact_name?: string | null;
+    emergency_contact_phone?: string | null;
+    notes?: string | null;
+    sharing_consent?: boolean;
+  }
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" };
+
+  // Verify ownership
+  const { data: dep } = await supabase
+    .from("dependents")
+    .select("id")
+    .eq("id", dependentId)
+    .eq("parent_id", user.id)
+    .single();
+  if (!dep) return { error: "Dependent not found" };
+
+  const { error } = await supabase
+    .from("dependent_medical_profiles")
+    .upsert(
+      {
+        dependent_id: dependentId,
+        blood_type: input.blood_type || null,
+        allergies: input.allergies || [],
+        chronic_conditions: input.chronic_conditions || [],
+        current_medications: input.current_medications || [],
+        emergency_contact_name: input.emergency_contact_name || null,
+        emergency_contact_phone: input.emergency_contact_phone || null,
+        notes: input.notes || null,
+        sharing_consent: input.sharing_consent ?? false,
+        consent_given_at: input.sharing_consent
+          ? new Date().toISOString()
+          : null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "dependent_id" }
+    );
+
+  if (error) {
+    return { error: "Failed to update medical profile" };
+  }
+  return { success: true };
+}
