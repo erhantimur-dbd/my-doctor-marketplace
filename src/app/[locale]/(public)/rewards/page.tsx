@@ -15,7 +15,7 @@ import {
 export const metadata = {
   title: "Rewards Programme | MyDoctors360",
   description:
-    "Earn cashback on every booking with MyDoctors360 Rewards. Bronze, Silver, and Gold tiers with up to 5% cashback.",
+    "Earn loyalty points on every booking with MyDoctors360 Rewards. Bronze, Silver, and Gold tiers with up to 20 points per £1 spent. 100 points = £1 discount.",
 };
 
 export default function RewardsPage() {
@@ -25,8 +25,8 @@ export default function RewardsPage() {
       <div className="text-center">
         <h1 className="text-3xl font-bold">MyDoctors360 Rewards</h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          Earn rewards every time you book. The more you use MyDoctors360, the
-          more you save.
+          Earn loyalty points every time you book. The more you use MyDoctors360,
+          the more you save. Redeem 100 points for £1 off your next appointment.
         </p>
       </div>
 
@@ -46,10 +46,10 @@ export default function RewardsPage() {
             </div>
             <div className="text-center">
               <span className="text-3xl font-bold text-amber-800 dark:text-amber-400">
-                2%
+                10 pts/£1
               </span>
               <p className="text-sm text-muted-foreground">
-                cashback on every booking
+                earned on every booking
               </p>
             </div>
             <ul className="space-y-2 text-sm">
@@ -63,7 +63,7 @@ export default function RewardsPage() {
               </li>
             </ul>
             <p className="text-center text-xs text-muted-foreground">
-              0 bookings required
+              0 points to unlock
             </p>
           </CardContent>
         </Card>
@@ -82,10 +82,10 @@ export default function RewardsPage() {
             </div>
             <div className="text-center">
               <span className="text-3xl font-bold text-slate-700 dark:text-slate-300">
-                3%
+                15 pts/£1
               </span>
               <p className="text-sm text-muted-foreground">
-                cashback on every booking
+                earned on every booking
               </p>
             </div>
             <ul className="space-y-2 text-sm">
@@ -99,7 +99,7 @@ export default function RewardsPage() {
               </li>
             </ul>
             <p className="text-center text-xs text-muted-foreground">
-              5 bookings required
+              2,000 lifetime points to unlock
             </p>
           </CardContent>
         </Card>
@@ -121,10 +121,10 @@ export default function RewardsPage() {
             </div>
             <div className="text-center">
               <span className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">
-                5%
+                20 pts/£1
               </span>
               <p className="text-sm text-muted-foreground">
-                cashback on every booking
+                earned on every booking
               </p>
             </div>
             <ul className="space-y-2 text-sm">
@@ -142,7 +142,7 @@ export default function RewardsPage() {
               </li>
             </ul>
             <p className="text-center text-xs text-muted-foreground">
-              15 bookings required
+              6,000 lifetime points to unlock
             </p>
           </CardContent>
         </Card>
@@ -180,9 +180,9 @@ export default function RewardsPage() {
                 3
               </div>
               <div>
-                <h3 className="font-semibold">Earn cashback</h3>
+                <h3 className="font-semibold">Earn points</h3>
                 <p className="text-sm text-muted-foreground">
-                  Cashback is automatically credited to your wallet
+                  Points are automatically added to your balance based on your tier
                 </p>
               </div>
             </div>
@@ -191,9 +191,9 @@ export default function RewardsPage() {
                 4
               </div>
               <div>
-                <h3 className="font-semibold">Use your credits</h3>
+                <h3 className="font-semibold">Redeem for discounts</h3>
                 <p className="text-sm text-muted-foreground">
-                  Wallet balance is applied to your next booking
+                  Redeem 100 points = £1 discount on your next booking
                 </p>
               </div>
             </div>
@@ -209,10 +209,10 @@ export default function RewardsPage() {
             <div className="flex gap-4">
               <Trophy className="h-6 w-6 shrink-0 text-primary" />
               <div>
-                <h3 className="font-semibold">Booking cashback</h3>
+                <h3 className="font-semibold">Booking points</h3>
                 <p className="text-sm text-muted-foreground">
-                  Earn your tier&apos;s percentage back on every completed
-                  booking
+                  Earn 10-20 points per £1 spent on every completed booking,
+                  depending on your tier
                 </p>
               </div>
             </div>
@@ -221,7 +221,7 @@ export default function RewardsPage() {
               <div>
                 <h3 className="font-semibold">Refer a friend</h3>
                 <p className="text-sm text-muted-foreground">
-                  Both you and your friend receive wallet credit when they
+                  Both you and your friend receive bonus points when they
                   complete their first booking
                 </p>
               </div>
@@ -240,7 +240,7 @@ export default function RewardsPage() {
               <div>
                 <h3 className="font-semibold">Promotions</h3>
                 <p className="text-sm text-muted-foreground">
-                  Watch for seasonal promotions and bonus credit events
+                  Watch for seasonal promotions and bonus points events
                 </p>
               </div>
             </div>
@@ -254,25 +254,27 @@ export default function RewardsPage() {
           <h2 className="mb-6 text-2xl font-bold">Frequently Asked Questions</h2>
           <div className="space-y-6">
             <div>
-              <h3 className="font-semibold">When do I earn cashback?</h3>
+              <h3 className="font-semibold">When do I earn points?</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Cashback is credited to your wallet automatically when your
-                booking is confirmed and payment is processed.
+                Points are credited to your account automatically when your
+                booking is confirmed and payment is processed. The number of
+                points depends on your tier and the booking amount.
               </p>
             </div>
             <div>
               <h3 className="font-semibold">
-                How do I use my wallet credits?
+                How do I redeem my points?
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Credits are automatically applied to your next booking, invoice,
-                or treatment plan payment. No action needed.
+                You can redeem points at checkout for a discount on your next
+                booking, invoice, or treatment plan payment. 100 points = £1
+                discount.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold">Do my rewards expire?</h3>
+              <h3 className="font-semibold">Do my points expire?</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Wallet credits do not expire as long as your account is active.
+                Points do not expire as long as your account is active.
               </p>
             </div>
             <div>
@@ -280,7 +282,7 @@ export default function RewardsPage() {
                 Can I move between tiers?
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Yes! Your tier is based on your total completed bookings. Once
+                Yes! Your tier is based on your lifetime points earned. Once
                 you reach a new tier, you stay at that level.
               </p>
             </div>

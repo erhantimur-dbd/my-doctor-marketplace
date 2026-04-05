@@ -18,14 +18,9 @@ import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
 import { creditWallet, debitWallet } from "@/lib/wallet";
 import { createNotification } from "@/lib/notifications";
+import { earnPoints } from "@/lib/points";
 import Stripe from "stripe";
 
-// Loyalty cashback tiers
-const LOYALTY_TIERS = [
-  { min: 15, percent: 5, name: "Gold" },
-  { min: 5, percent: 3, name: "Silver" },
-  { min: 0, percent: 2, name: "Bronze" },
-];
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -372,7 +367,7 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (booking) {
-          // Record platform fee (booking fee + commission)
+          // Record platform fee (commission from doctor's share)
           const platformFeeTotal = booking.platform_fee_cents + (booking.commission_cents || 0);
           await supabase.from("platform_fees").insert({
             booking_id: bookingId,
@@ -494,7 +489,7 @@ export async function POST(request: NextRequest) {
 
               // For WhatsApp, show what was actually charged through Stripe
               const chargedAmount = isDeposit && booking.deposit_amount_cents != null
-                ? booking.deposit_amount_cents + booking.platform_fee_cents
+                ? booking.deposit_amount_cents
                 : booking.total_amount_cents;
 
               sendWhatsAppTemplate({
@@ -603,33 +598,17 @@ export async function POST(request: NextRequest) {
             console.error("Referral credit error (non-fatal):", err);
           }
 
-          // ── P5: Loyalty cashback — credit % of booking value ──
+          // ── P5: Loyalty points — earn points based on booking value ──
           try {
-            const { count: completedCount } = await supabase
-              .from("bookings")
-              .select("*", { count: "exact", head: true })
-              .eq("patient_id", booking.patient_id)
-              .in("status", ["confirmed", "approved", "completed"]);
-
-            const tier = LOYALTY_TIERS.find((t) => (completedCount || 0) >= t.min);
-            if (tier && booking.consultation_fee_cents > 0) {
-              const cashbackCents = Math.round(
-                booking.consultation_fee_cents * (tier.percent / 100)
-              );
-
-              if (cashbackCents > 0) {
-                await creditWallet({
-                  patientId: booking.patient_id,
-                  currency: booking.currency,
-                  amountCents: cashbackCents,
-                  sourceType: "loyalty",
-                  sourceBookingId: bookingId,
-                  description: `${tier.name} tier ${tier.percent}% cashback`,
-                });
-              }
+            if (booking.consultation_fee_cents > 0) {
+              await earnPoints({
+                patientId: booking.patient_id,
+                bookingId: bookingId,
+                amountCents: booking.consultation_fee_cents,
+              });
             }
           } catch (err) {
-            console.error("Loyalty cashback error (non-fatal):", err);
+            console.error("Loyalty points error (non-fatal):", err);
           }
         }
       }

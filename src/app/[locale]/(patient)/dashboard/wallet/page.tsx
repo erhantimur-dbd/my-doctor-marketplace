@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { getAllWalletBalances, getWalletTransactions } from "@/lib/wallet";
+import { getPointsBalance, getPointsTransactions } from "@/lib/points";
+import { getTierForPoints, getNextTier, getEffectiveRate, POINTS_REDEMPTION_RATE } from "@/lib/constants/loyalty-points";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,13 +12,6 @@ import { Wallet, ArrowUpCircle, ArrowDownCircle, Info, Trophy, Gift, Star, Arrow
 import { Link } from "@/i18n/navigation";
 import { formatCurrency } from "@/lib/utils/currency";
 import { WalletActions } from "./wallet-actions";
-
-// Loyalty tiers (matching webhook logic)
-const LOYALTY_TIERS = [
-  { min: 15, percent: 5, name: "Gold", color: "text-yellow-600 bg-yellow-50", icon: "🥇" },
-  { min: 5, percent: 3, name: "Silver", color: "text-gray-600 bg-gray-50", icon: "🥈" },
-  { min: 0, percent: 2, name: "Bronze", color: "text-amber-700 bg-amber-50", icon: "🥉" },
-];
 
 export default async function WalletPage() {
   const supabase = await createClient();
@@ -28,16 +23,12 @@ export default async function WalletPage() {
     getWalletTransactions(user.id, 50),
   ]);
 
-  // Get completed booking count for loyalty tier
-  const { count: completedBookings } = await supabase
-    .from("bookings")
-    .select("*", { count: "exact", head: true })
-    .eq("patient_id", user.id)
-    .in("status", ["confirmed", "approved", "completed"]);
-
-  const bookingCount = completedBookings || 0;
-  const currentTier = LOYALTY_TIERS.find((t) => bookingCount >= t.min) || LOYALTY_TIERS[2];
-  const nextTier = LOYALTY_TIERS.find((t) => t.min > bookingCount && t.min <= currentTier.min + 20);
+  // Get points balance for loyalty tier
+  const pointsBalance = await getPointsBalance(user.id);
+  const pointsTransactions = await getPointsTransactions(user.id, 20);
+  const currentTier = getTierForPoints(pointsBalance.lifetime_points);
+  const nextTier = getNextTier(pointsBalance.lifetime_points);
+  const effectiveRate = getEffectiveRate(pointsBalance.lifetime_points);
 
   const totalBalances = balances.filter((b) => b.balance_cents > 0);
 
@@ -88,18 +79,18 @@ export default async function WalletPage() {
           </Card>
         )}
 
-        {/* Loyalty Tier Card */}
-        <Card>
+        {/* Loyalty Points Card */}
+        <Card className="sm:col-span-2 lg:col-span-1">
           <CardContent className="flex items-center gap-4 p-6">
-            <div className={`rounded-full p-3 ${currentTier.color}`}>
-              <Trophy className="h-6 w-6" />
+            <div className={`rounded-full p-3 ${currentTier.bgColor}`}>
+              <Trophy className={`h-6 w-6 ${currentTier.color}`} />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Loyalty Tier</p>
-              <p className="text-lg font-bold">{currentTier.icon} {currentTier.name}</p>
+              <p className="text-sm text-muted-foreground">Loyalty Points</p>
+              <p className="text-2xl font-bold">{pointsBalance.available_points.toLocaleString()}</p>
               <p className="text-xs text-muted-foreground">
-                {currentTier.percent}% cashback on bookings
-                {nextTier && ` • ${nextTier.min - bookingCount} more to ${nextTier.name}`}
+                {currentTier.icon} {currentTier.name} · {effectiveRate} pts/£1
+                {nextTier && ` · ${(nextTier.minPoints - pointsBalance.lifetime_points).toLocaleString()} pts to ${nextTier.name}`}
               </p>
               <Link
                 href="/rewards"
@@ -122,10 +113,68 @@ export default async function WalletPage() {
           <p className="font-medium">How wallet credits work</p>
           <p className="mt-1">
             Wallet credits are automatically applied to your next booking, invoice, or treatment plan payment.
-            You earn credits from: cancellation refunds (instant), loyalty cashback ({currentTier.percent}%), referral rewards, and gift cards.
+            You earn credits from: cancellation refunds (instant), loyalty points (redeemable at {POINTS_REDEMPTION_RATE} pts = £1), referral rewards, and gift cards.
           </p>
         </div>
       </div>
+
+      {/* Points History */}
+      {pointsTransactions.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5" />
+              Points History
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="text-right">Points</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pointsTransactions.map((txn) => (
+                  <TableRow key={txn.id}>
+                    <TableCell className="text-sm">
+                      {new Date(txn.created_at).toLocaleDateString("en-GB", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      {txn.type === "earn" ? (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <ArrowUpCircle className="h-4 w-4" />
+                          <span className="text-sm font-medium">Earned</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <ArrowDownCircle className="h-4 w-4" />
+                          <span className="text-sm font-medium">Redeemed</span>
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
+                      {txn.description || "—"}
+                    </TableCell>
+                    <TableCell className={`text-right text-sm font-medium ${txn.type === "earn" ? "text-green-600" : "text-blue-600"}`}>
+                      {txn.type === "earn" ? "+" : "-"}{txn.points.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-right text-sm">
+                      {txn.balance_after.toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Transaction History */}
       <Card>
