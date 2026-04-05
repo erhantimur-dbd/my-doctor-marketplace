@@ -11,7 +11,6 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
@@ -32,6 +31,93 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
+
+/* ── Individual Digit OTP Input ── */
+
+function OtpInput({
+  value,
+  onChange,
+  onComplete,
+  disabled,
+  autoFocus = false,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  onComplete?: () => void;
+  disabled?: boolean;
+  autoFocus?: boolean;
+}) {
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const digits = value.padEnd(6, "").split("").slice(0, 6);
+
+  function handleChange(index: number, char: string) {
+    const sanitized = char.replace(/\D/g, "");
+    if (!sanitized) return;
+    const newDigits = [...digits];
+    newDigits[index] = sanitized[0];
+    const newValue = newDigits.join("").replace(/ /g, "");
+    onChange(newValue);
+    if (index < 5) inputRefs.current[index + 1]?.focus();
+    if (newValue.replace(/ /g, "").length === 6 && onComplete) {
+      setTimeout(onComplete, 50);
+    }
+  }
+
+  function handleKeyDown(index: number, e: React.KeyboardEvent) {
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      const newDigits = [...digits];
+      if (digits[index] && digits[index] !== " ") {
+        newDigits[index] = " ";
+        onChange(newDigits.join("").trimEnd());
+      } else if (index > 0) {
+        newDigits[index - 1] = " ";
+        onChange(newDigits.join("").trimEnd());
+        inputRefs.current[index - 1]?.focus();
+      }
+    } else if (e.key === "Enter" && value.length === 6 && onComplete) {
+      onComplete();
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasted) {
+      onChange(pasted);
+      const focusIndex = Math.min(pasted.length, 5);
+      inputRefs.current[focusIndex]?.focus();
+      if (pasted.length === 6 && onComplete) setTimeout(onComplete, 50);
+    }
+  }
+
+  return (
+    <div className="flex justify-center gap-2">
+      {digits.map((digit, i) => (
+        <input
+          key={i}
+          ref={(el) => { inputRefs.current[i] = el; }}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={digit === " " ? "" : digit}
+          onChange={(e) => handleChange(i, e.target.value)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          onPaste={i === 0 ? handlePaste : undefined}
+          onFocus={(e) => e.target.select()}
+          disabled={disabled}
+          autoFocus={autoFocus && i === 0}
+          className="h-12 w-10 rounded-lg border-2 border-input bg-background text-center text-xl font-mono font-semibold transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
+          aria-label={`Digit ${i + 1}`}
+        />
+      ))}
+    </div>
+  );
+}
 
 type MfaState = "loading" | "disabled" | "enabled";
 
@@ -415,25 +501,19 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
 
             {/* Code Input */}
             <div className="space-y-2">
-              <Label htmlFor="enroll-code">{t("enter_code")}</Label>
-              <Input
-                id="enroll-code"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                placeholder="000000"
+              <Label className="text-center block">{t("enter_code")}</Label>
+              <OtpInput
                 value={enrollCode}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                onChange={(val) => {
                   setEnrollCode(val);
                   setEnrollError("");
                 }}
-                className="text-center text-lg tracking-widest font-mono"
+                onComplete={verifyEnrollment}
+                disabled={enrolling}
                 autoFocus
               />
               {enrollError && (
-                <p className="text-sm text-destructive flex items-center gap-1">
+                <p className="text-sm text-destructive flex items-center gap-1 justify-center">
                   <AlertTriangle className="h-3 w-3" />
                   {enrollError}
                 </p>
@@ -465,25 +545,19 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label htmlFor="disable-code">{t("enter_code")}</Label>
-            <Input
-              id="disable-code"
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
-              placeholder="000000"
+            <Label className="text-center block">{t("enter_code")}</Label>
+            <OtpInput
               value={disableCode}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+              onChange={(val) => {
                 setDisableCode(val);
                 setDisableError("");
               }}
-              className="text-center text-lg tracking-widest font-mono"
+              onComplete={handleDisable}
+              disabled={disabling}
               autoFocus
             />
             {disableError && (
-              <p className="text-sm text-destructive flex items-center gap-1">
+              <p className="text-sm text-destructive flex items-center gap-1 justify-center">
                 <AlertTriangle className="h-3 w-3" />
                 {disableError}
               </p>
