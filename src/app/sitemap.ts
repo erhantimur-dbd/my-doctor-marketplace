@@ -1,11 +1,16 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { routing } from "@/i18n/routing";
+import { headers } from "next/headers";
 import type { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
 const { locales } = routing;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const headersList = await headers();
+  const host = headersList.get("host") || "";
+  const protocol = host.includes("localhost") ? "http" : "https";
+  const BASE_URL = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com");
+
   const supabase = createAdminClient();
 
   // High-priority pages (homepage, search)
