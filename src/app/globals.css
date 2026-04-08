@@ -168,3 +168,37 @@
     margin: 1.5cm;
   }
 }
+
+/* How It Works — icon animations & scrollbar hide */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes hiw-search {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15) rotate(-8deg); }
+}
+@keyframes hiw-calendar {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes hiw-bell {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(12deg); }
+  40% { transform: rotate(-12deg); }
+  60% { transform: rotate(6deg); }
+  80% { transform: rotate(-6deg); }
+}
+@keyframes hiw-stethoscope {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.1) rotate(5deg); }
+}
+
+.animate-hiw-search { animation: hiw-search 3s ease-in-out infinite; }
+.animate-hiw-calendar { animation: hiw-calendar 2.5s ease-in-out infinite; }
+.animate-hiw-bell { animation: hiw-bell 2s ease-in-out infinite; }
+.animate-hiw-stethoscope { animation: hiw-stethoscope 3s ease-in-out infinite; }

@@ -13,19 +13,15 @@ import {
   Shield,
   Star,
   ArrowRight,
-  Stethoscope,
-  Search,
-  Bell,
-  BarChart3,
   CreditCard,
   Globe,
-  CheckCircle2,
   Clock,
   MessageSquare,
   Quote,
 } from "lucide-react";
 import { SpecialtyMarquee } from "@/components/shared/specialty-marquee";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
+import { HowItWorksSection } from "@/components/home/how-it-works-section";
 
 const allSpecialties = [
   { slug: "general-practice", icon: "Stethoscope", key: "general_practice" },
@@ -243,96 +239,7 @@ export default async function HomePage() {
       </section>
 
       {/* How It Works — Enhanced */}
-      <section className="bg-muted/30 px-4 py-16 md:py-24">
-        <div className="container mx-auto">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold md:text-3xl">
-              {t("how_it_works_title")}
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              {t("how_it_works_subtitle")}
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              {
-                icon: Search,
-                title: t("step_1_title"),
-                desc: t("step_1_desc"),
-                features: [t("step_1_f1"), t("step_1_f2"), t("step_1_f3")],
-                step: "01",
-                iconBg: "bg-gradient-to-br from-blue-500 to-blue-600",
-                badge: "bg-blue-900 text-blue-50",
-                check: "text-blue-500",
-              },
-              {
-                icon: Calendar,
-                title: t("step_2_title"),
-                desc: t("step_2_desc"),
-                features: [t("step_2_f1"), t("step_2_f2"), t("step_2_f3")],
-                step: "02",
-                iconBg: "bg-gradient-to-br from-emerald-500 to-emerald-600",
-                badge: "bg-emerald-900 text-emerald-50",
-                check: "text-emerald-500",
-              },
-              {
-                icon: Bell,
-                title: t("step_3_title"),
-                desc: t("step_3_desc"),
-                features: [t("step_3_f1"), t("step_3_f2"), t("step_3_f3")],
-                step: "03",
-                iconBg: "bg-gradient-to-br from-amber-500 to-amber-600",
-                badge: "bg-amber-900 text-amber-50",
-                check: "text-amber-500",
-              },
-              {
-                icon: Stethoscope,
-                title: t("step_4_title"),
-                desc: t("step_4_desc"),
-                features: [t("step_4_f1"), t("step_4_f2"), t("step_4_f3")],
-                step: "04",
-                iconBg: "bg-gradient-to-br from-teal-500 to-teal-600",
-                badge: "bg-teal-900 text-teal-50",
-                check: "text-teal-500",
-              },
-            ].map((step) => (
-              <Card key={step.step} className="relative overflow-hidden border bg-background">
-                <CardContent className="p-6">
-                  <div className="relative mb-4 inline-block">
-                    <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${step.iconBg} text-white shadow-lg`}>
-                      <step.icon className="h-6 w-6" />
-                    </div>
-                    <span className={`absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full ${step.badge} text-[10px] font-bold`}>
-                      {step.step}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-semibold">{step.title}</h3>
-                  <p className="mt-1.5 text-sm text-muted-foreground">
-                    {step.desc}
-                  </p>
-                  <ul className="mt-4 space-y-2">
-                    {step.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className={`h-4 w-4 shrink-0 ${step.check}`} />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="mt-8 text-center">
-            <Button variant="ghost" asChild>
-              <Link href="/how-it-works" className="gap-1">
-                {t("learn_more")} <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      <HowItWorksSection />
 
       {/* Why Choose MyDoctors360 */}
       <section className="px-4 py-16 md:py-24">
