@@ -37,9 +37,14 @@ const COMING_SOON_HOSTS = [
 ];
 
 export async function middleware(request: NextRequest) {
-  // Gate coming-soon domains — block all production routes
+  // Gate coming-soon domains — block all production routes except SEO essentials
   const host = request.headers.get("host")?.replace(/:\d+$/, "") || "";
   if (COMING_SOON_HOSTS.includes(host)) {
+    const path = request.nextUrl.pathname;
+    // Allow sitemap and robots through for Google Search Console
+    if (path === "/sitemap.xml" || path === "/robots.txt") {
+      return NextResponse.next();
+    }
     return NextResponse.rewrite(new URL("/coming-soon/index.html", request.url));
   }
 
