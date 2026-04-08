@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,8 +12,6 @@ import {
   Stethoscope,
   CheckCircle2,
   ArrowRight,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 
 const steps = [
@@ -24,7 +22,7 @@ const steps = [
     iconBg: "bg-gradient-to-br from-blue-500 to-blue-600",
     badge: "bg-blue-900 text-blue-50",
     check: "text-blue-500",
-    progressColor: "bg-blue-500",
+    lineBg: "bg-blue-500",
     hoverDetail:
       "Use our AI symptom checker to find the right specialty, or filter by language, price, and reviews.",
     animClass: "animate-hiw-search",
@@ -36,7 +34,7 @@ const steps = [
     iconBg: "bg-gradient-to-br from-emerald-500 to-emerald-600",
     badge: "bg-emerald-900 text-emerald-50",
     check: "text-emerald-500",
-    progressColor: "bg-emerald-500",
+    lineBg: "bg-emerald-500",
     hoverDetail:
       "See real-time availability, pick your slot, and pay securely — all in under two minutes.",
     animClass: "animate-hiw-calendar",
@@ -48,7 +46,7 @@ const steps = [
     iconBg: "bg-gradient-to-br from-amber-500 to-amber-600",
     badge: "bg-amber-900 text-amber-50",
     check: "text-amber-500",
-    progressColor: "bg-amber-500",
+    lineBg: "bg-amber-500",
     hoverDetail:
       "Get a reminder 24 hours before via email, and again 1 hour before via SMS or WhatsApp.",
     animClass: "animate-hiw-bell",
@@ -60,7 +58,7 @@ const steps = [
     iconBg: "bg-gradient-to-br from-teal-500 to-teal-600",
     badge: "bg-teal-900 text-teal-50",
     check: "text-teal-500",
-    progressColor: "bg-teal-500",
+    lineBg: "bg-teal-500",
     hoverDetail:
       "Join a secure HD video call from any device, or visit the clinic in person. Follow-ups are one click away.",
     animClass: "animate-hiw-stethoscope",
@@ -69,18 +67,7 @@ const steps = [
 
 export function HowItWorksSection() {
   const t = useTranslations("home");
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [hoveredStep, setHoveredStep] = useState<string | null>(null);
-
-  const scrollCarousel = (direction: "left" | "right") => {
-    if (!scrollRef.current) return;
-    const cardWidth = scrollRef.current.firstElementChild?.clientWidth ?? 300;
-    const gap = 16;
-    scrollRef.current.scrollBy({
-      left: direction === "left" ? -(cardWidth + gap) : cardWidth + gap,
-      behavior: "smooth",
-    });
-  };
 
   const stepData = steps.map((s, i) => ({
     ...s,
@@ -111,7 +98,6 @@ export function HowItWorksSection() {
           <div className="flex items-center justify-between">
             {stepData.map((step, i) => (
               <div key={step.step} className="flex items-center">
-                {/* Step dot */}
                 <div className="flex flex-col items-center">
                   <div
                     className={`flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white shadow-md ${step.iconBg}`}
@@ -122,7 +108,6 @@ export function HowItWorksSection() {
                     {step.title}
                   </span>
                 </div>
-                {/* Connector line */}
                 {i < stepData.length - 1 && (
                   <div className="mx-1 flex-1">
                     <div className="relative h-0.5 w-full min-w-[80px] bg-border">
@@ -130,7 +115,6 @@ export function HowItWorksSection() {
                         className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-500"
                         style={{ width: "100%" }}
                       />
-                      {/* Arrow chevron */}
                       <ArrowRight className="absolute -right-1.5 -top-[7px] h-4 w-4 text-muted-foreground/60" />
                     </div>
                   </div>
@@ -140,46 +124,72 @@ export function HowItWorksSection() {
           </div>
         </div>
 
-        {/* ── Mobile carousel nav ── */}
-        <div className="mt-8 flex items-center justify-between lg:hidden">
-          <span className="text-xs font-medium text-muted-foreground">
-            Swipe to explore
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => scrollCarousel("left")}
-              className="flex h-8 w-8 items-center justify-center rounded-full border bg-background shadow-sm transition-colors hover:bg-muted"
-              aria-label="Previous step"
+        {/* ── Mobile: Vertical Timeline ── */}
+        <div className="mt-10 lg:hidden">
+          {stepData.map((step, i) => (
+            <Link
+              key={step.step}
+              href={`/how-it-works#${step.anchor}`}
+              className="group flex gap-4"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => scrollCarousel("right")}
-              className="flex h-8 w-8 items-center justify-center rounded-full border bg-background shadow-sm transition-colors hover:bg-muted"
-              aria-label="Next step"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
+              {/* Timeline track */}
+              <div className="flex flex-col items-center">
+                {/* Icon circle */}
+                <div
+                  className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${step.iconBg} text-white shadow-md`}
+                >
+                  <step.icon className={`h-5 w-5 ${step.animClass}`} />
+                  <span
+                    className={`absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full ${step.badge} text-[9px] font-bold`}
+                  >
+                    {step.step}
+                  </span>
+                </div>
+                {/* Connecting line */}
+                {i < stepData.length - 1 && (
+                  <div className={`my-1 w-0.5 flex-1 ${step.lineBg} opacity-30`} />
+                )}
+              </div>
+
+              {/* Content */}
+              <div className={`pb-6 ${i === stepData.length - 1 ? "pb-0" : ""}`}>
+                <h3 className="text-base font-semibold leading-tight">
+                  {step.title}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {step.desc}
+                </p>
+                <ul className="mt-2.5 space-y-1.5">
+                  {step.features.map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <CheckCircle2
+                        className={`h-3.5 w-3.5 shrink-0 ${step.check}`}
+                      />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Link>
+          ))}
         </div>
 
-        {/* ── Cards with connecting line ── */}
-        <div className="relative mt-4 lg:mt-10">
-          {/* Horizontal connector line (desktop) */}
-          <div className="absolute left-[calc(12.5%+28px)] right-[calc(12.5%+28px)] top-[52px] z-0 hidden lg:block">
+        {/* ── Desktop: Card Grid with connecting line ── */}
+        <div className="relative mt-10 hidden lg:block">
+          {/* Horizontal connector line */}
+          <div className="absolute left-[calc(12.5%+28px)] right-[calc(12.5%+28px)] top-[52px] z-0">
             <div className="h-px w-full border-t-2 border-dashed border-border" />
           </div>
 
-          {/* Cards — scrollable on mobile, grid on desktop */}
-          <div
-            ref={scrollRef}
-            className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 lg:grid lg:grid-cols-4 lg:gap-6 lg:overflow-visible lg:pb-0"
-          >
+          <div className="grid grid-cols-4 gap-6">
             {stepData.map((step) => (
               <Link
                 key={step.step}
                 href={`/how-it-works#${step.anchor}`}
-                className="group relative z-10 min-w-[280px] flex-shrink-0 snap-center lg:min-w-0"
+                className="group relative z-10"
                 onMouseEnter={() => setHoveredStep(step.step)}
                 onMouseLeave={() => setHoveredStep(null)}
               >
@@ -248,7 +258,6 @@ export function HowItWorksSection() {
           </Button>
         </div>
       </div>
-
     </section>
   );
 }
