@@ -14,11 +14,6 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  Star,
-  Quote,
-  Globe,
-  ShieldCheck,
-  Award,
 } from "lucide-react";
 
 const steps = [
@@ -70,13 +65,6 @@ const steps = [
       "Join a secure HD video call from any device, or visit the clinic in person. Follow-ups are one click away.",
     animClass: "animate-hiw-stethoscope",
   },
-];
-
-const stats = [
-  { icon: Award, value: "24+", label: "Specialties" },
-  { icon: Globe, value: "9", label: "Countries" },
-  { icon: ShieldCheck, value: "500+", label: "Verified Doctors" },
-  { icon: Star, value: "4.8", label: "Avg Rating" },
 ];
 
 export function HowItWorksSection() {
@@ -248,46 +236,6 @@ export function HowItWorksSection() {
                 </Card>
               </Link>
             ))}
-          </div>
-        </div>
-
-        {/* ── Stats Row ── */}
-        <div className="mx-auto mt-10 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
-          {stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="flex flex-col items-center rounded-xl border bg-background px-4 py-4 text-center shadow-sm"
-            >
-              <stat.icon className="mb-1.5 h-5 w-5 text-primary/70" />
-              <span className="text-xl font-bold">{stat.value}</span>
-              <span className="text-xs text-muted-foreground">
-                {stat.label}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Mini Testimonial ── */}
-        <div className="mx-auto mt-8 max-w-xl text-center">
-          <div className="inline-flex flex-col items-center rounded-xl bg-background border px-6 py-5 shadow-sm">
-            <Quote className="mb-2 h-5 w-5 text-primary/25" />
-            <p className="text-sm italic leading-relaxed text-foreground/80">
-              &ldquo;I found a neurologist and booked a video consultation in
-              under 3 minutes. No phone calls, no waiting.&rdquo;
-            </p>
-            <div className="mt-3 flex items-center gap-1.5">
-              <div className="flex gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400"
-                  />
-                ))}
-              </div>
-              <span className="text-xs font-medium text-muted-foreground">
-                &mdash; Sarah L., Bristol
-              </span>
-            </div>
           </div>
         </div>
 
