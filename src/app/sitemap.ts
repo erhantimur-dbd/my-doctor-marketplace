@@ -9,7 +9,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const headersList = await headers();
   const host = headersList.get("host") || "";
   const protocol = host.includes("localhost") ? "http" : "https";
-  const BASE_URL = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com");
+  const BASE_URL = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "https://www.mydoctors360.co.uk");
 
   const supabase = createAdminClient();
 
