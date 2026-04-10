@@ -23,33 +23,13 @@
   ],
   "rewrites": [
     {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "mydoctors360.com" }],
-      "destination": "/coming-soon/index.html"
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.mydoctors360.com" }],
-      "destination": "/coming-soon/index.html"
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "mydoctors360.co.uk" }],
-      "destination": "/coming-soon/index.html"
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.mydoctors360.co.uk" }],
-      "destination": "/coming-soon/index.html"
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "mydoctors360.eu" }],
-      "destination": "/coming-soon/index.html"
-    },
-    {
-      "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.mydoctors360.eu" }],
+      "source": "/((?!api/|_next/|coming-soon|sitemap\\.xml|robots\\.txt|favicon\\.ico|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|map)$|(?:en|de|tr|fr|it|es|pt|zh|ja)/(?:login|register|register-doctor|verify-email|verify-mfa|forgot-password|email-verified|callback|doctor-dashboard|pricing|how-it-works|contact|help-center|terms|privacy|cookie-policy)(?:/|$)).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "^(www\\.)?mydoctors360\\.(com|co\\.uk|eu)$"
+        }
+      ],
       "destination": "/coming-soon/index.html"
     }
   ]

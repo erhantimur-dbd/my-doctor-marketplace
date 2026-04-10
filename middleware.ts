@@ -36,16 +36,65 @@ const COMING_SOON_HOSTS = [
   "www.mydoctors360.eu",
 ];
 
+// Paths that bypass the coming-soon gate so doctors can sign up and build
+// their profiles ahead of public launch. Locale prefix is stripped before
+// matching, so each entry is checked against e.g. "/login" or
+// "/doctor-dashboard/profile".
+//
+// To allow a route, list it here as either an exact path (e.g. "/login") or
+// as a prefix that ends with "/" (e.g. "/doctor-dashboard/" matches all
+// sub-routes).
+const COMING_SOON_ALLOWED_PREFIXES = [
+  // Auth flow
+  "/login",
+  "/register",
+  "/verify-email",
+  "/verify-mfa",
+  "/forgot-password",
+  "/email-verified",
+  "/callback",
+  // Doctor onboarding
+  "/register-doctor",
+  "/doctor-dashboard",
+  "/doctor-dashboard/",
+  // Doctor-facing marketing
+  "/pricing",
+  "/how-it-works",
+  "/how-it-works/",
+  "/contact",
+  "/help-center",
+  "/help-center/",
+  // Legal pages linked from auth/registration flows
+  "/terms",
+  "/privacy",
+  "/cookie-policy",
+];
+
+// Root-level paths (no locale prefix) that bypass the gate.
+const COMING_SOON_ROOT_ALLOWED = new Set(["/sitemap.xml", "/robots.txt"]);
+
+function isAllowedOnComingSoon(pathname: string): boolean {
+  if (COMING_SOON_ROOT_ALLOWED.has(pathname)) return true;
+  // Strip the locale prefix so the allowlist stays locale-agnostic.
+  const withoutLocale = getPathnameWithoutLocale(pathname);
+  return COMING_SOON_ALLOWED_PREFIXES.some(
+    (entry) => withoutLocale === entry || withoutLocale.startsWith(entry + "/")
+  );
+}
+
 export async function middleware(request: NextRequest) {
-  // Gate coming-soon domains — block all production routes except SEO essentials
+  // Gate coming-soon domains — only doctor-onboarding routes pass through.
+  // NOTE: The authoritative gate lives in vercel.json (Vercel edge rewrites
+  // run before middleware). This block is a defence-in-depth backup in case
+  // the rewrite is misconfigured. Keep the two allowlists in sync.
   const host = request.headers.get("host")?.replace(/:\d+$/, "") || "";
   if (COMING_SOON_HOSTS.includes(host)) {
-    const path = request.nextUrl.pathname;
-    // Allow sitemap and robots through for Google Search Console
-    if (path === "/sitemap.xml" || path === "/robots.txt") {
-      return NextResponse.next();
+    if (!isAllowedOnComingSoon(request.nextUrl.pathname)) {
+      return NextResponse.rewrite(
+        new URL("/coming-soon/index.html", request.url)
+      );
     }
-    return NextResponse.rewrite(new URL("/coming-soon/index.html", request.url));
+    // Allowed path — fall through to normal middleware (intl + auth + RBAC).
   }
 
   // Run intl middleware first
