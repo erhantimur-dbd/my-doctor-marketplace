@@ -170,6 +170,28 @@ export default function RegisterDoctorPage() {
   const [inPersonDepositType, setInPersonDepositType] = useState<"none" | "percentage" | "flat">("none");
   const [inPersonDepositValue, setInPersonDepositValue] = useState<number | null>(null);
 
+  // Step 3 (UK only): Regulatory & Compliance sub-section.
+  // Shown when country === "GB". All fields are gated by the same check.
+  // These are collected at onboarding and verified by the admin before the
+  // doctor can be listed on mydoctors360.co.uk (see src/actions/admin.ts
+  // and supabase/migrations/00088_uk_regulatory_fields.sql).
+  type CqcStatus =
+    | ""
+    | "registered"
+    | "exempt_mpl"
+    | "exempt_employed"
+    | "not_applicable";
+  const [cqcStatus, setCqcStatus] = useState<CqcStatus>("");
+  const [cqcProviderId, setCqcProviderId] = useState("");
+  const [cqcLocationId, setCqcLocationId] = useState("");
+  const [mplDesignatedBody, setMplDesignatedBody] = useState("");
+  const [excludedProceduresAttestation, setExcludedProceduresAttestation] =
+    useState(false);
+  const [indemnityInsurer, setIndemnityInsurer] = useState("");
+  const [indemnityCoverGbp, setIndemnityCoverGbp] = useState<number | null>(null);
+  const [indemnityExpiry, setIndemnityExpiry] = useState("");
+  const [dbsCheckDate, setDbsCheckDate] = useState("");
+
   function nextStep() {
     setError("");
 
@@ -200,6 +222,51 @@ export default function RegisterDoctorPage() {
       if (consultationTypes.length === 0) {
         setError("Please select at least one consultation type");
         return;
+      }
+
+      // UK regulatory validation — only applies if the doctor is practising
+      // in the UK. We use the clinic `country` field as the practising
+      // country signal: if it's GB, the full UK compliance sub-section
+      // must be completed before moving to the next step.
+      if (country === "GB") {
+        if (!cqcStatus) {
+          setError("Please select your CQC status");
+          return;
+        }
+        if (cqcStatus === "registered" && !cqcProviderId.trim()) {
+          setError(
+            "Please enter your CQC Provider ID (format: 1-xxxxxxxxxx)"
+          );
+          return;
+        }
+        if (cqcStatus === "exempt_mpl" && !mplDesignatedBody.trim()) {
+          setError(
+            "Please enter your Medical Performers List designated body"
+          );
+          return;
+        }
+        if (!excludedProceduresAttestation) {
+          setError(
+            "You must confirm the Schedule 2 excluded procedures attestation"
+          );
+          return;
+        }
+        if (!indemnityInsurer.trim()) {
+          setError("Please enter your indemnity insurer");
+          return;
+        }
+        if (!indemnityCoverGbp || indemnityCoverGbp <= 0) {
+          setError("Please enter your indemnity cover amount in GBP");
+          return;
+        }
+        if (!indemnityExpiry) {
+          setError("Please enter your indemnity expiry date");
+          return;
+        }
+        if (new Date(indemnityExpiry) <= new Date()) {
+          setError("Your indemnity expiry date must be in the future");
+          return;
+        }
       }
     }
 
@@ -266,6 +333,30 @@ export default function RegisterDoctorPage() {
     if (city) formData.set("city", city);
     if (postalCode) formData.set("postal_code", postalCode);
     if (country) formData.set("country", country);
+
+    // UK regulatory fields — only sent when practising in the UK.
+    // Persisted to `doctors.practising_country` and related columns by
+    // createDoctorAccount in src/actions/auth.ts.
+    if (country === "GB") {
+      formData.set("practising_country", "GB");
+      if (cqcStatus) formData.set("cqc_status", cqcStatus);
+      if (cqcProviderId.trim())
+        formData.set("cqc_provider_id", cqcProviderId.trim());
+      if (cqcLocationId.trim())
+        formData.set("cqc_location_id", cqcLocationId.trim());
+      if (mplDesignatedBody.trim())
+        formData.set("mpl_designated_body", mplDesignatedBody.trim());
+      formData.set(
+        "excluded_procedures_attestation",
+        excludedProceduresAttestation ? "true" : "false"
+      );
+      if (indemnityInsurer.trim())
+        formData.set("indemnity_insurer", indemnityInsurer.trim());
+      if (indemnityCoverGbp)
+        formData.set("indemnity_cover_gbp", String(indemnityCoverGbp));
+      if (indemnityExpiry) formData.set("indemnity_expiry", indemnityExpiry);
+      if (dbsCheckDate) formData.set("dbs_check_date", dbsCheckDate);
+    }
 
     // Add-on
     formData.set("has_testing_addon", hasTestingAddon ? "true" : "false");
@@ -764,6 +855,193 @@ export default function RegisterDoctorPage() {
                   ))}
                 </div>
               </div>
+
+              {/* UK Regulatory & Compliance — shown only for GB-practising doctors */}
+              {country === "GB" && (
+                <>
+                  <Separator />
+                  <div className="space-y-4 rounded-lg border border-blue-200 bg-blue-50/40 p-4 dark:border-blue-900 dark:bg-blue-950/20">
+                    <div>
+                      <h3 className="text-sm font-semibold">UK Regulatory &amp; Compliance</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        These fields are required by the Care Quality Commission (CQC) framework and UK private healthcare regulations. Our team will verify them before your profile goes live on mydoctors360.co.uk.{" "}
+                        <Link
+                          href="/regulatory"
+                          className="text-primary hover:underline"
+                        >
+                          Learn more
+                        </Link>
+                        .
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>CQC Status *</Label>
+                      <Select
+                        value={cqcStatus}
+                        onValueChange={(v) => setCqcStatus(v as CqcStatus)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your CQC status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="registered">
+                            Registered in my own right as a CQC provider
+                          </SelectItem>
+                          <SelectItem value="exempt_mpl">
+                            Medical Performers List (MPL) exempt
+                          </SelectItem>
+                          <SelectItem value="exempt_employed">
+                            Employed by another CQC-registered provider
+                          </SelectItem>
+                          <SelectItem value="not_applicable">
+                            Not applicable (Wales / Scotland / Northern Ireland)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {cqcStatus === "registered" && (
+                      <div className="space-y-3">
+                        <div className="space-y-2">
+                          <Label>CQC Provider ID *</Label>
+                          <Input
+                            value={cqcProviderId}
+                            onChange={(e) => setCqcProviderId(e.target.value)}
+                            placeholder="e.g. 1-10716659568"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Your CQC provider ID from{" "}
+                            <a
+                              href="https://www.cqc.org.uk/search/services"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              cqc.org.uk/search/services
+                            </a>
+                            .
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>CQC Location ID (optional)</Label>
+                          <Input
+                            value={cqcLocationId}
+                            onChange={(e) => setCqcLocationId(e.target.value)}
+                            placeholder="e.g. 1-10716659569"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {cqcStatus === "exempt_mpl" && (
+                      <div className="space-y-2">
+                        <Label>Medical Performers List — Designated Body *</Label>
+                        <Input
+                          value={mplDesignatedBody}
+                          onChange={(e) => setMplDesignatedBody(e.target.value)}
+                          placeholder="e.g. NHS England South West, ICB name"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          The body responsible for your GMC revalidation.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+                      <Checkbox
+                        id="excluded-procedures-attestation"
+                        checked={excludedProceduresAttestation}
+                        onCheckedChange={(checked) =>
+                          setExcludedProceduresAttestation(checked === true)
+                        }
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <Label
+                          htmlFor="excluded-procedures-attestation"
+                          className="cursor-pointer text-sm font-medium leading-tight"
+                        >
+                          Schedule 2 paragraph 4 excluded procedures attestation *
+                        </Label>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          I confirm that I do <strong>not</strong> provide any of the following through the MyDoctors360 platform: anaesthesia or IV sedation, childbirth services, termination of pregnancy, cosmetic surgery, haemodialysis, endoscopy with lumen insertion, hyperbaric oxygen therapy, IV / intrathecal / epidural medicines, X-ray / MRI / proton therapy, or invasive cardiac physiology. I understand that if I do provide any of these, I need to be CQC-registered in my own right.
+                        </p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <h4 className="text-sm font-medium">
+                        Professional Indemnity Insurance
+                      </h4>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        All UK-practising doctors must hold current professional
+                        indemnity cover. You will be asked to upload the
+                        certificate after registration.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Insurer *</Label>
+                        <Input
+                          value={indemnityInsurer}
+                          onChange={(e) => setIndemnityInsurer(e.target.value)}
+                          placeholder="e.g. MDU, MPS, Hiscox"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Cover Amount (GBP) *</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            £
+                          </span>
+                          <Input
+                            type="number"
+                            min={0}
+                            step={1000}
+                            className="pl-8"
+                            value={indemnityCoverGbp ?? ""}
+                            onChange={(e) =>
+                              setIndemnityCoverGbp(
+                                parseInt(e.target.value) || null
+                              )
+                            }
+                            placeholder="6000000"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Indemnity Expiry Date *</Label>
+                      <Input
+                        type="date"
+                        value={indemnityExpiry}
+                        onChange={(e) => setIndemnityExpiry(e.target.value)}
+                      />
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <Label>DBS Check Issue Date (optional)</Label>
+                      <Input
+                        type="date"
+                        value={dbsCheckDate}
+                        onChange={(e) => setDbsCheckDate(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        If you hold a current Enhanced DBS check for working with
+                        vulnerable adults or children, enter the issue date here.
+                        You can upload the certificate after registration.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

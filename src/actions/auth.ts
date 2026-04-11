@@ -299,6 +299,70 @@ async function createDoctorAccount(formData: FormData): Promise<
   const postalCode = (formData.get("postal_code") as string)?.trim() || null;
   const countryCode = (formData.get("country") as string)?.trim() || null;
 
+  // UK regulatory fields (Workstream 2 of the UK CQC compliance plan).
+  // Only populated when the doctor is UK-practising (country === "GB").
+  // Persisted to the doctors table; admin verifies each before the doctor
+  // can be listed. See supabase/migrations/00088_uk_regulatory_fields.sql
+  // for the column reference and the approval gate in src/actions/admin.ts.
+  const practisingCountryRaw =
+    (formData.get("practising_country") as string)?.trim() || null;
+  // The wizard only sets practising_country=GB when country===GB. Keep
+  // them in lockstep so downstream gates are unambiguous.
+  const practisingCountry =
+    practisingCountryRaw === "GB" ? "GB" : null;
+  const isUkDoctor = practisingCountry === "GB";
+
+  const cqcStatusRaw =
+    (formData.get("cqc_status") as string)?.trim() || null;
+  const allowedCqcStatuses = [
+    "registered",
+    "exempt_mpl",
+    "exempt_employed",
+    "not_applicable",
+  ];
+  const cqcStatus =
+    isUkDoctor && cqcStatusRaw && allowedCqcStatuses.includes(cqcStatusRaw)
+      ? cqcStatusRaw
+      : null;
+
+  const cqcProviderId =
+    isUkDoctor
+      ? (formData.get("cqc_provider_id") as string)?.trim() || null
+      : null;
+  const cqcLocationId =
+    isUkDoctor
+      ? (formData.get("cqc_location_id") as string)?.trim() || null
+      : null;
+  const mplDesignatedBody =
+    isUkDoctor
+      ? (formData.get("mpl_designated_body") as string)?.trim() || null
+      : null;
+  const excludedProceduresAttestation =
+    isUkDoctor &&
+    formData.get("excluded_procedures_attestation") === "true";
+  const indemnityInsurer =
+    isUkDoctor
+      ? (formData.get("indemnity_insurer") as string)?.trim() || null
+      : null;
+  const indemnityCoverGbpRaw = isUkDoctor
+    ? (formData.get("indemnity_cover_gbp") as string) || null
+    : null;
+  const indemnityCoverGbp = indemnityCoverGbpRaw
+    ? Number.parseInt(indemnityCoverGbpRaw, 10) || null
+    : null;
+  const indemnityExpiryRaw = isUkDoctor
+    ? (formData.get("indemnity_expiry") as string) || null
+    : null;
+  const indemnityExpiry = indemnityExpiryRaw && /^\d{4}-\d{2}-\d{2}$/.test(indemnityExpiryRaw)
+    ? indemnityExpiryRaw
+    : null;
+  const dbsCheckDateRaw = isUkDoctor
+    ? (formData.get("dbs_check_date") as string) || null
+    : null;
+  const dbsCheckDate = dbsCheckDateRaw && /^\d{4}-\d{2}-\d{2}$/.test(dbsCheckDateRaw)
+    ? dbsCheckDateRaw
+    : null;
+
   // Resolve location_id from country code
   let locationId: string | null = null;
   if (countryCode) {
@@ -335,6 +399,24 @@ async function createDoctorAccount(formData: FormData): Promise<
       ...(city && { city }),
       ...(postalCode && { postal_code: postalCode }),
       ...(locationId && { location_id: locationId }),
+      // UK regulatory fields — only set when practising_country is GB.
+      // NULL / default otherwise so non-UK doctors are not forced through
+      // UK-specific checks.
+      ...(practisingCountry && { practising_country: practisingCountry }),
+      ...(cqcStatus && { cqc_status: cqcStatus }),
+      ...(cqcProviderId && { cqc_provider_id: cqcProviderId }),
+      ...(cqcLocationId && { cqc_location_id: cqcLocationId }),
+      ...(mplDesignatedBody && { mpl_designated_body: mplDesignatedBody }),
+      ...(isUkDoctor && cqcStatus === "exempt_mpl" && {
+        mpl_attestation_signed_at: new Date().toISOString(),
+      }),
+      ...(isUkDoctor && {
+        excluded_procedures_attestation: excludedProceduresAttestation,
+      }),
+      ...(indemnityInsurer && { indemnity_insurer: indemnityInsurer }),
+      ...(indemnityCoverGbp && { indemnity_cover_gbp: indemnityCoverGbp }),
+      ...(indemnityExpiry && { indemnity_expiry: indemnityExpiry }),
+      ...(dbsCheckDate && { dbs_check_date: dbsCheckDate }),
     })
     .select("id")
     .single();

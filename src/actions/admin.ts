@@ -106,12 +106,44 @@ export async function saveApprovalChecklist(
     gmc_verified: boolean;
     website_verified: boolean;
     notes?: string;
+    // UK-conditional fields (Workstream 2 of UK CQC compliance plan).
+    // Always accepted by the server action so the client can sync state
+    // even for non-UK doctors; the gate in updateDoctorVerification only
+    // enforces them when the doctor is UK-practising.
+    cqc_status_evidenced?: boolean;
+    mpl_attestation_reviewed?: boolean;
+    excluded_procedures_attestation_confirmed?: boolean;
+    indemnity_document_verified?: boolean;
+    indemnity_in_date?: boolean;
+    dbs_check_verified?: boolean;
   }
 ) {
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };
 
-  const allComplete = values.gmc_verified && values.website_verified;
+  // Load the doctor's practising country so we know whether UK gates apply
+  // for the completed_at flag.
+  const { data: doctorRow } = await supabase
+    .from("doctors")
+    .select("practising_country")
+    .eq("id", doctorId)
+    .maybeSingle();
+  const isUkDoctor = (doctorRow as { practising_country: string | null } | null)
+    ?.practising_country === "GB";
+
+  const ukComplete = isUkDoctor
+    ? Boolean(
+        values.cqc_status_evidenced &&
+          values.mpl_attestation_reviewed &&
+          values.excluded_procedures_attestation_confirmed &&
+          values.indemnity_document_verified &&
+          values.indemnity_in_date &&
+          values.dbs_check_verified
+      )
+    : true;
+
+  const allComplete =
+    values.gmc_verified && values.website_verified && ukComplete;
 
   const { error } = await supabase
     .from("doctor_approval_checklist")
@@ -122,6 +154,14 @@ export async function saveApprovalChecklist(
         gmc_verified: values.gmc_verified,
         website_verified: values.website_verified,
         notes: values.notes || null,
+        cqc_status_evidenced: values.cqc_status_evidenced ?? false,
+        mpl_attestation_reviewed: values.mpl_attestation_reviewed ?? false,
+        excluded_procedures_attestation_confirmed:
+          values.excluded_procedures_attestation_confirmed ?? false,
+        indemnity_document_verified:
+          values.indemnity_document_verified ?? false,
+        indemnity_in_date: values.indemnity_in_date ?? false,
+        dbs_check_verified: values.dbs_check_verified ?? false,
         completed_at: allComplete ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
       },
@@ -133,6 +173,14 @@ export async function saveApprovalChecklist(
   await logAdminAction(supabase, user.id, "approval_checklist_updated", "doctor", doctorId, {
     gmc_verified: values.gmc_verified,
     website_verified: values.website_verified,
+    is_uk_doctor: isUkDoctor,
+    cqc_status_evidenced: values.cqc_status_evidenced ?? false,
+    mpl_attestation_reviewed: values.mpl_attestation_reviewed ?? false,
+    excluded_procedures_attestation_confirmed:
+      values.excluded_procedures_attestation_confirmed ?? false,
+    indemnity_document_verified: values.indemnity_document_verified ?? false,
+    indemnity_in_date: values.indemnity_in_date ?? false,
+    dbs_check_verified: values.dbs_check_verified ?? false,
     complete: allComplete,
   });
 
@@ -150,16 +198,50 @@ export async function updateDoctorVerification(
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };
 
-  // When verifying, require completed approval checklist
+  // When verifying, require completed approval checklist. The gate is
+  // tightened for UK-practising doctors: every UK-conditional box must
+  // be ticked. This is the single most important guard in the UK CQC
+  // compliance plan (plan file: hashed-twirling-tiger.md).
   if (status === "verified") {
+    const { data: doctorRow } = await supabase
+      .from("doctors")
+      .select("practising_country")
+      .eq("id", doctorId)
+      .maybeSingle();
+    const isUkDoctor =
+      (doctorRow as { practising_country: string | null } | null)
+        ?.practising_country === "GB";
+
     const { data: checklist } = await supabase
       .from("doctor_approval_checklist")
-      .select("gmc_verified, website_verified")
+      .select(
+        "gmc_verified, website_verified, cqc_status_evidenced, mpl_attestation_reviewed, excluded_procedures_attestation_confirmed, indemnity_document_verified, indemnity_in_date, dbs_check_verified"
+      )
       .eq("doctor_id", doctorId)
       .maybeSingle();
 
     if (!checklist || !checklist.gmc_verified || !checklist.website_verified) {
-      return { error: "Complete the approval checklist before verifying this doctor." };
+      return {
+        error: "Complete the approval checklist before verifying this doctor.",
+      };
+    }
+
+    if (isUkDoctor) {
+      const ukMissing: string[] = [];
+      if (!checklist.cqc_status_evidenced) ukMissing.push("CQC status");
+      if (!checklist.mpl_attestation_reviewed)
+        ukMissing.push("MPL attestation");
+      if (!checklist.excluded_procedures_attestation_confirmed)
+        ukMissing.push("excluded procedures attestation");
+      if (!checklist.indemnity_document_verified)
+        ukMissing.push("indemnity document");
+      if (!checklist.indemnity_in_date) ukMissing.push("indemnity in date");
+      if (!checklist.dbs_check_verified) ukMissing.push("DBS check");
+      if (ukMissing.length > 0) {
+        return {
+          error: `UK-practising doctor: complete these UK regulatory checks before verifying — ${ukMissing.join(", ")}.`,
+        };
+      }
     }
   }
 

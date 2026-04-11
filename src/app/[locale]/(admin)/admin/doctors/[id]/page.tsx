@@ -78,10 +78,15 @@ export default async function AdminDoctorDetailPage({
 
   const currentPlan = licenseInfo?.tier || "free";
 
-  // Fetch approval checklist for this doctor
+  // Fetch approval checklist for this doctor. UK columns (added by
+  // migration 00088) are only meaningful when the doctor is
+  // UK-practising, but always selected so the checklist component can
+  // rehydrate them.
   const { data: checklistData } = await supabase
     .from("doctor_approval_checklist")
-    .select("gmc_verified, website_verified, notes")
+    .select(
+      "gmc_verified, website_verified, notes, cqc_status_evidenced, mpl_attestation_reviewed, excluded_procedures_attestation_confirmed, indemnity_document_verified, indemnity_in_date, dbs_check_verified"
+    )
     .eq("doctor_id", id)
     .maybeSingle();
 
@@ -360,6 +365,19 @@ export default async function AdminDoctorDetailPage({
         isFeatured={doctor.is_featured}
         currentPlan={currentPlan}
         checklist={checklistData}
+        ukRegulatory={{
+          practisingCountry: doctor.practising_country ?? null,
+          cqcStatus: doctor.cqc_status ?? null,
+          cqcProviderId: doctor.cqc_provider_id ?? null,
+          cqcLocationId: doctor.cqc_location_id ?? null,
+          mplDesignatedBody: doctor.mpl_designated_body ?? null,
+          excludedProceduresAttestation:
+            doctor.excluded_procedures_attestation ?? false,
+          indemnityInsurer: doctor.indemnity_insurer ?? null,
+          indemnityCoverGbp: doctor.indemnity_cover_gbp ?? null,
+          indemnityExpiry: doctor.indemnity_expiry ?? null,
+          dbsCheckDate: doctor.dbs_check_date ?? null,
+        }}
       />
 
       <div className="flex flex-wrap items-center gap-3">
