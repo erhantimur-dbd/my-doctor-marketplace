@@ -22,6 +22,7 @@ import {
 import { SpecialtyMarquee } from "@/components/shared/specialty-marquee";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { HowItWorksSection } from "@/components/home/how-it-works-section";
+import { ChatWidget } from "@/components/chat/chat-widget";
 
 const allSpecialties = [
   { slug: "general-practice", icon: "Stethoscope", key: "general_practice" },
@@ -317,6 +318,7 @@ export default async function HomePage() {
       </section>
 
       <Footer />
+      <ChatWidget />
     </div>
   );
 }

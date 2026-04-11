@@ -93,9 +93,9 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
       <div className="container mx-auto px-4 py-16">
         <div className="mx-auto max-w-md text-center">
           <CalendarDays className="mx-auto mb-4 h-12 w-12 text-green-600" />
-          <h1 className="text-2xl font-bold">Treatment Plan Active</h1>
+          <h1 className="text-2xl font-bold">Care Plan Active</h1>
           <p className="mt-4 text-muted-foreground">
-            This treatment plan has already been accepted and paid for.
+            This care plan has already been accepted and paid for.
             You can manage your sessions from your dashboard.
           </p>
         </div>
@@ -153,7 +153,7 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Stethoscope className="h-5 w-5" />
-              Treatment Plan Details
+              Care Plan Details
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

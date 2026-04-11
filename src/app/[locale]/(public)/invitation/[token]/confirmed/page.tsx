@@ -11,8 +11,8 @@ interface ConfirmedPageProps {
 }
 
 export const metadata: Metadata = {
-  title: "Treatment Plan Confirmed",
-  description: "Your treatment plan has been confirmed.",
+  title: "Care Plan Confirmed",
+  description: "Your care plan has been confirmed.",
 };
 
 export default async function InvitationConfirmedPage({ params }: ConfirmedPageProps) {
@@ -64,9 +64,9 @@ export default async function InvitationConfirmedPage({ params }: ConfirmedPageP
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
 
-        <h1 className="text-2xl font-bold">Treatment Plan Confirmed!</h1>
+        <h1 className="text-2xl font-bold">Care Plan Confirmed!</h1>
         <p className="mt-2 text-muted-foreground">
-          Your treatment plan with {doctorName} has been confirmed and paid.
+          Your care plan with {doctorName} has been confirmed and paid.
         </p>
 
         {/* First Session Details */}
@@ -115,7 +115,7 @@ export default async function InvitationConfirmedPage({ params }: ConfirmedPageP
                   {remainingSessions} session{remainingSessions > 1 ? "s" : ""} remaining
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Book your remaining sessions from your Treatment Plans dashboard when you&apos;re ready.
+                  Book your remaining sessions from your Care Plans dashboard when you&apos;re ready.
                 </p>
               </div>
             </CardContent>
@@ -126,7 +126,7 @@ export default async function InvitationConfirmedPage({ params }: ConfirmedPageP
         <div className="mt-8 flex flex-col gap-3">
           <Link href="/dashboard/treatment-plans">
             <Button className="w-full gap-2">
-              View Treatment Plans
+              View Care Plans
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>

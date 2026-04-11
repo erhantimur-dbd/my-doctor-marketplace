@@ -203,7 +203,7 @@ export const patientSidebarLinks: SidebarLink[] = [
   {
     href: "/dashboard/treatment-plans",
     icon: ClipboardList,
-    label: "Treatment Plans",
+    label: "Care Plans",
   },
   { href: "/dashboard/wallet", icon: Wallet, label: "Wallet" },
   { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },

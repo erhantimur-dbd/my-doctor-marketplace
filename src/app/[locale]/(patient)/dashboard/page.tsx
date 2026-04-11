@@ -127,7 +127,7 @@ export default async function PatientDashboard() {
     {
       href: "/dashboard/treatment-plans" as const,
       icon: ClipboardList,
-      label: "Treatment Plans",
+      label: "Care Plans",
       description: "View doctor recommendations",
       color: "bg-purple-50 text-purple-600",
     },

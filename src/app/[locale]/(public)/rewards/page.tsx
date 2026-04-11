@@ -267,7 +267,7 @@ export default function RewardsPage() {
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 You can redeem points at checkout for a discount on your next
-                booking, invoice, or treatment plan payment. 100 points = £1
+                booking, invoice, or care plan payment. 100 points = £1
                 discount.
               </p>
             </div>

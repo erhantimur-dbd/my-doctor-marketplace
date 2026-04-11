@@ -26,8 +26,8 @@ export async function generateMetadata({
   params,
 }: TreatmentPlanPageProps): Promise<Metadata> {
   return {
-    title: "Treatment Plan",
-    description: "View and accept your treatment plan.",
+    title: "Care Plan",
+    description: "View and accept your care plan.",
   };
 }
 
@@ -107,13 +107,13 @@ export default async function TreatmentPlanPage({
           <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <h1 className="text-2xl font-bold">
             {p.status === "expired"
-              ? "Treatment Plan Expired"
-              : "Treatment Plan Cancelled"}
+              ? "Care Plan Expired"
+              : "Care Plan Cancelled"}
           </h1>
           <p className="mt-4 text-muted-foreground">
             {p.status === "expired"
-              ? "This treatment plan has expired. Please contact your doctor to request a new one."
-              : "This treatment plan has been cancelled by the doctor."}
+              ? "This care plan has expired. Please contact your doctor to request a new one."
+              : "This care plan has been cancelled by the doctor."}
           </p>
         </div>
       </div>
@@ -125,9 +125,9 @@ export default async function TreatmentPlanPage({
       <div className="container mx-auto px-4 py-16">
         <div className="mx-auto max-w-md text-center">
           <CalendarDays className="mx-auto mb-4 h-12 w-12 text-green-600" />
-          <h1 className="text-2xl font-bold">Treatment Plan Active</h1>
+          <h1 className="text-2xl font-bold">Care Plan Active</h1>
           <p className="mt-4 text-muted-foreground">
-            This treatment plan has already been accepted.
+            This care plan has already been accepted.
             You can manage your sessions from your dashboard.
           </p>
         </div>
@@ -152,10 +152,19 @@ export default async function TreatmentPlanPage({
     <div className="container mx-auto px-4 py-8">
       <div className="mx-auto max-w-xl">
         <h1 className="mb-2 text-center text-3xl font-bold">
-          Treatment Plan
+          Care Plan
         </h1>
-        <p className="mb-8 text-center text-muted-foreground">
-          Review the details and accept your treatment plan
+        <p className="mb-2 text-center text-muted-foreground">
+          Review the details and accept your care plan
+        </p>
+        {/* Workstream 3.2 — NHS-care disclaimer. The care plan is
+            authored by the doctor; the platform facilitates booking and
+            payment only. Patients should always remain in contact with
+            their NHS GP for overall care. */}
+        <p className="mb-8 text-center text-xs text-muted-foreground">
+          This care plan is set by your doctor and is not a substitute for
+          your NHS care. Please discuss it with your NHS GP before starting
+          any significant treatment.
         </p>
 
         {/* Doctor Card */}
@@ -195,7 +204,7 @@ export default async function TreatmentPlanPage({
           </CardContent>
         </Card>
 
-        {/* Treatment Plan Details */}
+        {/* Care Plan Details */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -332,7 +341,7 @@ export default async function TreatmentPlanPage({
 
         {/* Expiry Notice */}
         <p className="mb-6 text-center text-sm text-muted-foreground">
-          This treatment plan expires on{" "}
+          This care plan expires on{" "}
           <strong>
             {new Date(p.expires_at).toLocaleDateString("en-GB", {
               day: "numeric",

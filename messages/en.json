@@ -351,7 +351,7 @@
     "settings": "Settings",
     "my_reviews": "My Reviews",
     "notifications": "Notifications",
-    "treatment_plans": "Treatment Plans"
+    "treatment_plans": "Care Plans"
   },
   "doctor_dashboard": {
     "overview": "Overview",
@@ -391,7 +391,7 @@
   },
   "follow_up": {
     "invite_title": "Send Follow-Up Invitation",
-    "invite_description": "Invite your patient for a follow-up consultation with pricing and treatment plan details.",
+    "invite_description": "Invite your patient for a follow-up consultation with pricing and care plan details.",
     "select_service": "Select a service",
     "custom_service": "Custom Service",
     "custom_service_name": "Service Name",
@@ -430,27 +430,27 @@
     "expired_message": "This follow-up invitation has expired. Please contact your doctor to request a new one.",
     "cancelled": "Invitation Cancelled",
     "cancelled_message": "This follow-up invitation has been cancelled by the doctor.",
-    "already_accepted": "Treatment Plan Active",
-    "already_accepted_message": "This treatment plan has already been accepted and paid for.",
+    "already_accepted": "Care Plan Active",
+    "already_accepted_message": "This care plan has already been accepted and paid for.",
     "select_slot": "Select Your First Session",
     "pay_and_book": "Pay & Book First Session",
     "login_to_continue": "Sign in to continue",
     "login_message": "You need to sign in to your account to book and pay for your appointment.",
     "sign_in_to_book": "Sign In to Book",
-    "treatment_plans": "Treatment Plans",
-    "treatment_plans_description": "Manage your treatment plans and book follow-up sessions",
+    "treatment_plans": "Care Plans",
+    "treatment_plans_description": "Manage your care plans and book follow-up sessions",
     "active_plans": "Active Plans",
     "completed_plans": "Completed Plans",
-    "no_active_plans": "No active treatment plans. When a doctor sends you a follow-up invitation, it will appear here after payment.",
+    "no_active_plans": "No active care plans. When a doctor sends you a follow-up invitation, it will appear here after payment.",
     "sessions_progress": "{booked} of {total} sessions booked",
     "book_next_session": "Book Next Session",
     "all_sessions_booked": "All sessions booked",
-    "plan_confirmed": "Treatment Plan Confirmed!",
-    "plan_confirmed_message": "Your treatment plan with {doctor} has been confirmed and paid.",
+    "plan_confirmed": "Care Plan Confirmed!",
+    "plan_confirmed_message": "Your care plan with {doctor} has been confirmed and paid.",
     "first_session_booked": "First Session Booked",
     "remaining_sessions": "{count} session remaining",
     "remaining_sessions_plural": "{count} sessions remaining",
-    "remaining_sessions_message": "Book your remaining sessions from your Treatment Plans dashboard when you're ready.",
+    "remaining_sessions_message": "Book your remaining sessions from your Care Plans dashboard when you're ready.",
     "session_booked": "Session booked successfully!",
     "book_follow_up_session": "Book Follow-Up Session",
     "book_follow_up_description": "Select a date and time for your next {service} session. This session is already paid for.",
@@ -688,7 +688,7 @@
     },
     "doctor-subscription": {
       "question": "What licence plans are available for doctors?",
-      "answer": "MyDoctors360 offers licence plans for doctors and clinics:\n\n<strong>Free:</strong> Basic doctor profile listing in our directory.\n\n<strong>Starter (£199/mo):</strong> Online booking calendar, unlimited bookings, email reminders, video consultations, and SMS & WhatsApp reminders.\n\n<strong>Professional (£299/mo):</strong> Everything in Starter plus advanced analytics, patient CRM, treatment plans, and priority support. Supports up to 4 doctors.\n\n<strong>Clinic Starter Pack (£1,495/mo):</strong> Everything in Professional plus 5 doctor profiles included, dedicated onboarding, custom branding, centralised clinic dashboard, and a dedicated account manager.\n\nAll paid plans include secure payment processing via Stripe Connect. Manage your licence from your Doctor Dashboard → Organisation → Billing."
+      "answer": "MyDoctors360 offers licence plans for doctors and clinics:\n\n<strong>Free:</strong> Basic doctor profile listing in our directory.\n\n<strong>Starter (£199/mo):</strong> Online booking calendar, unlimited bookings, email reminders, video consultations, and SMS & WhatsApp reminders.\n\n<strong>Professional (£299/mo):</strong> Everything in Starter plus advanced analytics, patient CRM, care plans, and priority support. Supports up to 4 doctors.\n\n<strong>Clinic Starter Pack (£1,495/mo):</strong> Everything in Professional plus 5 doctor profiles included, dedicated onboarding, custom branding, centralised clinic dashboard, and a dedicated account manager.\n\nAll paid plans include secure payment processing via Stripe Connect. Manage your licence from your Doctor Dashboard → Organisation → Billing."
     },
     "account-security": {
       "question": "How do I keep my account secure?",
@@ -936,6 +936,7 @@
     "powered_by_ai": "AI-generated summary",
     "try_ai_search": "Search with AI",
     "fallback_error": "AI is temporarily unavailable. Showing standard results.",
+    "specialty_finder_disclaimer": "This tool helps you find the right type of doctor. It is not medical advice, a diagnosis, or a triage system. If you think you need urgent help, call 999 or NHS 111.",
     "urgency_routine": "Routine",
     "urgency_urgent": "Book soon",
     "urgency_emergency": "Emergency",
@@ -1197,5 +1198,56 @@
     "select_country": "Select your country",
     "submitting": "Submitting...",
     "join_waitlist": "Join Waitlist"
+  },
+  "chat": {
+    "launcher": {
+      "tagline": "The AI that finds the perfect doctor for you",
+      "cta": "Find specialist",
+      "open": "Open chat assistant"
+    },
+    "window": {
+      "title": "MyDoctors360 Assistant",
+      "subtitle": "Find the right specialist, fast",
+      "greeting": "Hi! Tell me your symptoms or the kind of specialist you need — I'll find the best match on MyDoctors360.",
+      "thinking": "Thinking…",
+      "error": "Something went wrong. Please try again.",
+      "minimize": "Minimize",
+      "close": "Close chat"
+    },
+    "gdpr": {
+      "title": "Before we start",
+      "body": "This chat uses AI to understand your question and recommend doctors. Your messages are processed by our AI provider and are not saved beyond this browser session.",
+      "privacy_link": "See our <privacy>Privacy Policy</privacy> for details.",
+      "accept": "I understand, let's start"
+    },
+    "composer": {
+      "placeholder": "Type a message…",
+      "send": "Send"
+    },
+    "suggestions": {
+      "try": "Try asking:",
+      "items": {
+        "headaches": "I have bad headaches",
+        "dermatologist_london": "Dermatologist in London",
+        "turkish_gp": "A GP who speaks Turkish",
+        "video_consult": "I need a video consultation"
+      }
+    },
+    "message": {
+      "analyzing_symptoms": "Analyzing your symptoms…",
+      "searching_doctors": "Searching for doctors…",
+      "no_results": "No matching doctors yet. Try a different location or specialty.",
+      "search_error": "Could not load doctors right now. Please try again.",
+      "emergency_title": "This may be a medical emergency",
+      "emergency_default_reason": "Your symptoms could need urgent care. Please seek immediate help.",
+      "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now."
+    },
+    "card": {
+      "expert_in": "Expert in:",
+      "verified": "Verified",
+      "video": "Video",
+      "from": "From",
+      "book_appointment": "Book appointment"
+    }
   }
 }

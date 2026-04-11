@@ -68,7 +68,7 @@ export default async function TreatmentPlansPage() {
   if (!doctor) redirect("/en/register-doctor");
 
   if (!(await hasActiveLicense(supabase, doctor.id))) {
-    return <UpgradePrompt feature="Treatment Plans" />;
+    return <UpgradePrompt feature="Care Plans" />;
   }
 
   const { data: plans } = await supabase
@@ -90,9 +90,9 @@ export default async function TreatmentPlansPage() {
             <ClipboardList className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Treatment Plans</h1>
+            <h1 className="text-2xl font-bold">Care Plans</h1>
             <p className="text-muted-foreground">
-              Create and manage treatment plans for your patients
+              Create and manage care plans for your patients
             </p>
           </div>
         </div>
@@ -106,19 +106,19 @@ export default async function TreatmentPlansPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Treatment Plans</CardTitle>
+          <CardTitle>All Care Plans</CardTitle>
         </CardHeader>
         <CardContent>
           {!plans || plans.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ClipboardList className="mb-4 h-12 w-12 text-muted-foreground/50" />
               <p className="text-muted-foreground">
-                No treatment plans yet. Create your first plan.
+                No care plans yet. Create your first plan.
               </p>
               <Button asChild className="mt-4">
                 <Link href="/doctor-dashboard/treatment-plans/new">
                   <Plus className="mr-2 h-4 w-4" />
-                  Create Treatment Plan
+                  Create Care Plan
                 </Link>
               </Button>
             </div>

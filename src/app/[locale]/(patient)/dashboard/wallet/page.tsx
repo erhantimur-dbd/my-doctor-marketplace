@@ -112,7 +112,7 @@ export default async function WalletPage() {
         <div className="text-sm text-blue-800">
           <p className="font-medium">How wallet credits work</p>
           <p className="mt-1">
-            Wallet credits are automatically applied to your next booking, invoice, or treatment plan payment.
+            Wallet credits are automatically applied to your next booking, invoice, or care plan payment.
             You earn credits from: cancellation refunds (instant), loyalty points (redeemable at {POINTS_REDEMPTION_RATE} pts = £1), referral rewards, and gift cards.
           </p>
         </div>

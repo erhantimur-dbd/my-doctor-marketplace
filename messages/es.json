@@ -802,6 +802,7 @@
     "powered_by_ai": "Resumen generado por IA",
     "try_ai_search": "Buscar con IA",
     "fallback_error": "La IA no está disponible temporalmente. Mostrando resultados estándar.",
+    "specialty_finder_disclaimer": "Esta herramienta le ayuda a encontrar el tipo de médico adecuado. No es asesoramiento médico, diagnóstico ni sistema de triaje. En caso de emergencia, llame al 112.",
     "urgency_routine": "Rutina",
     "urgency_urgent": "Reservar pronto",
     "urgency_emergency": "Emergencia",
@@ -964,5 +965,56 @@
     "select_country": "Select your country",
     "submitting": "Submitting...",
     "join_waitlist": "Join Waitlist"
+  },
+  "chat": {
+    "launcher": {
+      "tagline": "The AI that finds the perfect doctor for you",
+      "cta": "Find specialist",
+      "open": "Open chat assistant"
+    },
+    "window": {
+      "title": "MyDoctors360 Assistant",
+      "subtitle": "Find the right specialist, fast",
+      "greeting": "Hi! Tell me your symptoms or the kind of specialist you need — I'll find the best match on MyDoctors360.",
+      "thinking": "Thinking…",
+      "error": "Something went wrong. Please try again.",
+      "minimize": "Minimize",
+      "close": "Close chat"
+    },
+    "gdpr": {
+      "title": "Before we start",
+      "body": "This chat uses AI to understand your question and recommend doctors. Your messages are processed by our AI provider and are not saved beyond this browser session.",
+      "privacy_link": "See our <privacy>Privacy Policy</privacy> for details.",
+      "accept": "I understand, let's start"
+    },
+    "composer": {
+      "placeholder": "Type a message…",
+      "send": "Send"
+    },
+    "suggestions": {
+      "try": "Try asking:",
+      "items": {
+        "headaches": "I have bad headaches",
+        "dermatologist_london": "Dermatologist in London",
+        "turkish_gp": "A GP who speaks Turkish",
+        "video_consult": "I need a video consultation"
+      }
+    },
+    "message": {
+      "analyzing_symptoms": "Analyzing your symptoms…",
+      "searching_doctors": "Searching for doctors…",
+      "no_results": "No matching doctors yet. Try a different location or specialty.",
+      "search_error": "Could not load doctors right now. Please try again.",
+      "emergency_title": "This may be a medical emergency",
+      "emergency_default_reason": "Your symptoms could need urgent care. Please seek immediate help.",
+      "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now."
+    },
+    "card": {
+      "expert_in": "Expert in:",
+      "verified": "Verified",
+      "video": "Video",
+      "from": "From",
+      "book_appointment": "Book appointment"
+    }
   }
 }

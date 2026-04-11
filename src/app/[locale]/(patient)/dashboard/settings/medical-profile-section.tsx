@@ -16,10 +16,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { HeartPulse, Loader2, X, ShieldCheck, Pill, ChevronDown, AlertTriangle, Activity } from "lucide-react";
+import { HeartPulse, Loader2, X, ShieldCheck, Pill, ChevronDown, AlertTriangle, Activity, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { updateMedicalProfile } from "./actions";
+import { clearMedicalProfile, updateMedicalProfile } from "./actions";
 import { searchMedications, searchAllergies, searchChronicConditions } from "@/actions/medications";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface MedicalProfileData {
   blood_type: string | null;
@@ -454,7 +465,31 @@ export function MedicalProfileSection({
         return;
       }
 
-      toast.success("Medical profile updated.");
+      toast.success("Intake information updated.");
+      router.refresh();
+    });
+  }
+
+  function handleClear() {
+    startTransition(async () => {
+      const result = await clearMedicalProfile();
+
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+
+      // Reset local state so the form reflects the wipe immediately
+      setBloodType("");
+      setAllergies([]);
+      setChronicConditions([]);
+      setCurrentMedications([]);
+      setEmergencyName("");
+      setEmergencyPhone("");
+      setNotes("");
+      setSharingConsent(false);
+
+      toast.success("Intake information cleared.");
       router.refresh();
     });
   }
@@ -464,13 +499,15 @@ export function MedicalProfileSection({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <HeartPulse className="h-4 w-4" />
-          Medical Profile
+          Intake Information
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          This information helps your doctor provide better care. It is only
-          visible to you and your treating physicians.
+          Intake information you choose to share with doctors when you book a
+          consultation. This is not a medical record — MyDoctors360 does not
+          use it for any purpose beyond passing it to the doctors you select.
+          You can clear it at any time.
         </p>
 
         <div>
@@ -557,7 +594,7 @@ export function MedicalProfileSection({
             <div className="flex-1 space-y-2">
               <div className="flex items-center justify-between">
                 <Label htmlFor="sharing-consent" className="font-medium">
-                  Share with my doctors
+                  Share with doctors I've consulted
                 </Label>
                 <Switch
                   id="sharing-consent"
@@ -567,14 +604,51 @@ export function MedicalProfileSection({
               </div>
               <p className="text-xs text-muted-foreground">
                 When enabled, doctors who have completed a consultation with you
-                can view your medical profile to provide better care. You can
+                can view this intake information to inform their care. You can
                 revoke access at any time by toggling this off.
+              </p>
+              <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
+                By enabling sharing you give explicit consent under UK GDPR
+                Article 9(2)(a) for your health data to be shared with those
+                doctors. The doctors themselves process that data under
+                Article 9(2)(h) (provision of healthcare) as independent
+                controllers. Without your consent this information is never
+                shared.
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" disabled={isPending} className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                Clear all
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear all intake information?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This wipes your blood type, allergies, chronic conditions,
+                  medications, emergency contact, notes, and revokes sharing
+                  consent. Doctors you have already consulted will immediately
+                  lose visibility of this data. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleClear}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Clear all
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
           <Button onClick={handleSave} disabled={isPending}>
             {isPending ? (
               <>
@@ -582,7 +656,7 @@ export function MedicalProfileSection({
                 Saving...
               </>
             ) : (
-              "Save Medical Profile"
+              "Save Intake Information"
             )}
           </Button>
         </div>

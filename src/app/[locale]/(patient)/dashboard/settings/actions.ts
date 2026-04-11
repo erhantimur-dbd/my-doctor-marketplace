@@ -237,6 +237,50 @@ export async function updateMedicalProfile(data: {
   return {};
 }
 
+/**
+ * Wipes all intake information from the patient's medical profile and
+ * revokes sharing consent. Implements the patient's Art 17 UK GDPR right
+ * to erasure for the data they chose to share via this platform. The row
+ * itself is kept so that any existing doctor references don't dangle; all
+ * fields are set to empty so doctors see nothing.
+ */
+export async function clearMedicalProfile(): Promise<{ error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { error } = await supabase
+    .from("medical_profiles")
+    .upsert(
+      {
+        patient_id: user.id,
+        blood_type: null,
+        allergies: [],
+        chronic_conditions: [],
+        current_medications: [],
+        emergency_contact_name: null,
+        emergency_contact_phone: null,
+        notes: null,
+        sharing_consent: false,
+        consent_given_at: null,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "patient_id" }
+    );
+
+  if (error) {
+    return { error: "Failed to clear medical profile." };
+  }
+
+  revalidatePath("/dashboard/settings");
+  return {};
+}
+
 export async function updateNotifications(input: {
   notificationEmail: boolean;
   notificationSms: boolean;

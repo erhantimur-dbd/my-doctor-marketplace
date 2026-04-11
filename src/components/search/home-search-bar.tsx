@@ -157,9 +157,6 @@ export function HomeSearchBar({
   const [aiSymptomResult, setAiSymptomResult] = useState<SymptomAnalysis | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const aiDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Sticky emergency: once an emergency is shown during a typing session,
-  // keep it visible until the user clears the input or the new result is "routine"
-  const emergencyStickyRef = useRef(false);
 
   // Popular specialties (resolved from the specialties prop)
   const popularSpecialties = POPULAR_SLUGS
@@ -271,7 +268,6 @@ export function HomeSearchBar({
     if (!isSearchMode) {
       setAiSymptomResult(null);
       setAiLoading(false);
-      emergencyStickyRef.current = false;
       return;
     }
 
@@ -288,7 +284,6 @@ export function HomeSearchBar({
     if (!shouldTryAI) {
       setAiSymptomResult(null);
       setAiLoading(false);
-      emergencyStickyRef.current = false;
       if (aiDebounceRef.current) clearTimeout(aiDebounceRef.current);
       return;
     }
@@ -299,24 +294,10 @@ export function HomeSearchBar({
     aiDebounceRef.current = setTimeout(async () => {
       try {
         const result = await analyzeSymptoms(trimmed, locale);
-        if (result.data) {
-          // Sticky emergency: if a previous analysis flagged emergency and the
-          // new (more-complete) query is still at least "urgent", preserve the
-          // emergency level. Only downgrade if the refined query is "routine"
-          // (meaning the user typed something clearly non-emergency).
-          if (emergencyStickyRef.current && result.data.urgency === "urgent") {
-            setAiSymptomResult({ ...result.data, urgency: "emergency" });
-          } else {
-            if (result.data.urgency === "emergency") {
-              emergencyStickyRef.current = true;
-            } else {
-              emergencyStickyRef.current = false;
-            }
-            setAiSymptomResult(result.data);
-          }
-        } else {
-          setAiSymptomResult(null);
-        }
+        // Emergency is now decided by a deterministic classifier, not
+        // an LLM. Any input that flags emergency will always flag
+        // emergency, so no debounce drift or sticky state is needed.
+        setAiSymptomResult(result.data ?? null);
       } catch {
         setAiSymptomResult(null);
       } finally {
@@ -996,6 +977,11 @@ export function HomeSearchBar({
                       iconColor={relatedSc.text}
                     />
                   )}
+                  {aiSymptomResult.urgency !== "emergency" && (
+                    <p className="px-1 pt-1 text-[11px] leading-snug text-muted-foreground">
+                      {tAi("specialty_finder_disclaimer")}
+                    </p>
+                  )}
                 </div>
               );
             })()}
@@ -1323,6 +1309,11 @@ export function HomeSearchBar({
                           iconBg={relatedSc.bg}
                           iconColor={relatedSc.text}
                         />
+                      )}
+                      {aiSymptomResult.urgency !== "emergency" && (
+                        <p className="px-1 pt-1 text-[11px] leading-snug text-muted-foreground">
+                          {tAi("specialty_finder_disclaimer")}
+                        </p>
                       )}
                     </div>
                   );

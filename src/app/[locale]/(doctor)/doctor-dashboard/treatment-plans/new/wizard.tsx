@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "@/i18n/navigation";
-import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/utils/currency";
 import {
   createTreatmentPlan,
   type CreateTreatmentPlanInput,
@@ -195,8 +195,6 @@ export function TreatmentPlanWizard({
 
   const pricing = useMemo(() => {
     const subtotal = unitPriceCents * totalSessions;
-    const platformFeePerSession = getBookingFeeCents(currency);
-    const totalPlatformFee = platformFeePerSession * totalSessions;
 
     let discountCents = 0;
     if (discountType === "percentage" && discountValue > 0) {
@@ -206,13 +204,13 @@ export function TreatmentPlanWizard({
     }
 
     const discountedTotal = Math.max(0, subtotal - discountCents);
-    const grandTotal = discountedTotal + totalPlatformFee;
+    const grandTotal = discountedTotal;
 
     return {
       unitPriceCents,
       subtotal,
-      platformFeePerSession,
-      totalPlatformFee,
+      platformFeePerSession: 0,
+      totalPlatformFee: 0,
       discountCents,
       discountedTotal,
       grandTotal,
@@ -288,7 +286,7 @@ export function TreatmentPlanWizard({
   function handleSubmit() {
     if (!hasStripe) {
       toast.error(
-        "Please complete your payment setup before creating treatment plans."
+        "Please complete your payment setup before creating care plans."
       );
       return;
     }
@@ -322,7 +320,7 @@ export function TreatmentPlanWizard({
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Treatment plan created and sent to the patient!");
+        toast.success("Care plan created and sent to the patient!");
         router.push("/doctor-dashboard/treatment-plans");
       }
     });
@@ -370,7 +368,7 @@ export function TreatmentPlanWizard({
         <div>
           <h2 className="text-lg font-semibold">Select Patient</h2>
           <p className="text-sm text-muted-foreground">
-            Choose a patient to create a treatment plan for. Only patients with
+            Choose a patient to create a care plan for. Only patients with
             prior bookings are shown.
           </p>
         </div>
@@ -455,9 +453,9 @@ export function TreatmentPlanWizard({
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold">Treatment Details</h2>
+          <h2 className="text-lg font-semibold">Care Plan Details</h2>
           <p className="text-sm text-muted-foreground">
-            Describe the treatment plan for your patient.
+            Describe the care plan for your patient.
           </p>
         </div>
 
@@ -479,7 +477,7 @@ export function TreatmentPlanWizard({
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
-              placeholder="Describe the treatment plan objectives and approach..."
+              placeholder="Describe the care plan objectives and approach..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -713,23 +711,6 @@ export function TreatmentPlanWizard({
                 {formatCurrency(pricing.subtotal, currency)}
               </span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Platform fee per session
-              </span>
-              <span className="font-medium">
-                {formatCurrency(pricing.platformFeePerSession, currency)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                Total platform fee ({totalSessions} sessions)
-              </span>
-              <span className="font-medium">
-                {formatCurrency(pricing.totalPlatformFee, currency)}
-              </span>
-            </div>
-
             {pricing.discountCents > 0 && (
               <div className="flex items-center justify-between text-sm text-green-600">
                 <span>
@@ -755,7 +736,7 @@ export function TreatmentPlanWizard({
             <p className="text-xs text-muted-foreground">
               Patient pays:{" "}
               {formatCurrency(
-                pricing.discountedTotal + pricing.totalPlatformFee,
+                pricing.discountedTotal,
                 currency
               )}
             </p>
@@ -868,7 +849,7 @@ export function TreatmentPlanWizard({
         <div>
           <h2 className="text-lg font-semibold">Review & Send</h2>
           <p className="text-sm text-muted-foreground">
-            Review all details before sending the treatment plan to your
+            Review all details before sending the care plan to your
             patient.
           </p>
         </div>
@@ -911,7 +892,7 @@ export function TreatmentPlanWizard({
             {/* Plan details */}
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Treatment Plan
+                Care Plan
               </p>
               <div className="space-y-1">
                 <p className="font-medium">{title}</p>
@@ -985,12 +966,6 @@ export function TreatmentPlanWizard({
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Platform fee</span>
-                  <span>
-                    {formatCurrency(pricing.totalPlatformFee, currency)}
-                  </span>
-                </div>
                 <Separator className="my-1" />
                 <div className="flex justify-between font-semibold">
                   <span>Total</span>
@@ -1025,7 +1000,7 @@ export function TreatmentPlanWizard({
             <p className="font-medium">Payment setup required</p>
             <p className="mt-1">
               You need to complete your Stripe payment setup before you can send
-              treatment plans. Go to your dashboard settings to complete the
+              care plans. Go to your dashboard settings to complete the
               setup.
             </p>
           </div>
@@ -1045,7 +1020,7 @@ export function TreatmentPlanWizard({
           ) : (
             <>
               <Check className="mr-2 h-4 w-4" />
-              Send Treatment Plan
+              Send Care Plan
             </>
           )}
         </Button>
@@ -1058,9 +1033,9 @@ export function TreatmentPlanWizard({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">New Treatment Plan</h1>
+        <h1 className="text-2xl font-bold">New Care Plan</h1>
         <p className="text-muted-foreground">
-          Create a structured treatment plan and send it to your patient.
+          Create a structured care plan and send it to your patient.
         </p>
       </div>
 

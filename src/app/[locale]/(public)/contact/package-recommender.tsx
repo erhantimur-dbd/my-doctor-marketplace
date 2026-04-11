@@ -36,7 +36,7 @@ function getRecommendationReason(
   answers: Answers
 ): string {
   if (tierId === "professional") {
-    return "Professional gives you advanced analytics, patient CRM, treatment plans, and priority support — maximising your visibility and patient engagement.";
+    return "Professional gives you advanced analytics, patient CRM, care plans, and priority support — maximising your visibility and patient engagement.";
   }
   if (tierId === "starter") {
     if (answers.needsVideo === "yes" && answers.patientsPerWeek === "over_30") {

@@ -9,7 +9,7 @@ import { formatCurrency } from "@/lib/utils/currency";
  *
  * Sends gentle, health-focused reminders for unpaid invoices (recommended
  * follow-up care). These are NOT payment demands — patients always have
- * the choice whether to continue with the treatment plan.
+ * the choice whether to continue with the care plan.
  *
  * Schedule: 3 reminders max, spaced out:
  *   Reminder 1: 3 days before due date
@@ -160,8 +160,8 @@ export async function GET(request: NextRequest) {
     await supabase.from("notifications").insert({
       user_id: invoice.patient_id,
       type: "treatment_reminder",
-      title: "Recommended Treatment Plan",
-      body: `Dr. ${doctorName} recommended follow-up care for you. Review your treatment plan when you're ready.`,
+      title: "Recommended Care Plan",
+      body: `Dr. ${doctorName} recommended follow-up care for you. Review your care plan when you're ready.`,
       channel: "in_app",
       data: { invoice_id: invoice.id },
     });

@@ -1,7 +1,17 @@
 import { z } from "zod/v4";
 
 /**
- * AI Symptom Analysis — maps patient symptoms to specialty + urgency
+ * Specialty Finder — maps patient input to a medical specialty slug.
+ *
+ * This schema is intentionally narrow. The AI's only job is to suggest
+ * which *type* of doctor the user should look for. Urgency triage is NOT
+ * done by the LLM — it is handled deterministically by
+ * `src/lib/ai/emergency-classifier.ts`, which runs BEFORE any LLM call.
+ *
+ * Do not add `urgency`, `severity`, or diagnosis fields to this schema.
+ * Letting an LLM decide whether something is a medical emergency is
+ * unsafe and regulatorily unacceptable (UK CQC compliance, Workstream
+ * 3.4). If you need a new clinical field, stop and escalate instead.
  */
 export const symptomAnalysisSchema = z.object({
   primarySpecialty: z
@@ -10,13 +20,6 @@ export const symptomAnalysisSchema = z.object({
   relatedSpecialties: z
     .array(z.string())
     .describe("Up to 2 related specialty slugs"),
-  urgency: z
-    .enum(["emergency", "urgent", "routine"])
-    .describe("emergency = seek ER immediately, urgent = book within days, routine = standard appointment"),
-  urgencyReason: z
-    .string()
-    .nullable()
-    .describe("Brief explanation of urgency assessment"),
   suggestedConsultationType: z
     .enum(["in_person", "video", "either"])
     .describe("Whether in-person visit is needed or video call suffices"),
@@ -24,10 +27,19 @@ export const symptomAnalysisSchema = z.object({
     .number()
     .min(0)
     .max(1)
-    .describe("Confidence in the analysis, 0-1"),
+    .describe("Confidence in the specialty match, 0-1"),
 });
 
-export type SymptomAnalysis = z.infer<typeof symptomAnalysisSchema>;
+/**
+ * The shape the UI consumes. Combines the LLM-produced specialty fields
+ * with urgency, which is set by the deterministic emergency classifier
+ * — never by the LLM. Only two levels exist: `emergency` (routed from
+ * the 999 classifier) or `routine` (everything else).
+ */
+export type SymptomAnalysis = z.infer<typeof symptomAnalysisSchema> & {
+  urgency: "emergency" | "routine";
+  urgencyReason: string | null;
+};
 
 /**
  * Natural Language Search — parses free-text query into structured filters

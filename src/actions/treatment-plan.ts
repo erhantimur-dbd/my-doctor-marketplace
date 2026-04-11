@@ -7,7 +7,7 @@ import { getStripe } from "@/lib/stripe/client";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
-import { getBookingFeeCents, formatCurrency } from "@/lib/utils/currency";
+import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
 import { sendEmail } from "@/lib/email/client";
 import { treatmentPlanEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
@@ -98,13 +98,13 @@ export async function createTreatmentPlan(
     // Doctor must have Stripe set up
     if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
       return {
-        error: "Please complete your payment setup before creating treatment plans.",
+        error: "Please complete your payment setup before creating care plans.",
       };
     }
 
     // Validate required fields
     if (!input.title || !input.title.trim()) {
-      return { error: "Treatment plan title is required." };
+      return { error: "Care plan title is required." };
     }
 
     if (!input.total_sessions || input.total_sessions < 1 || input.total_sessions > 20) {
@@ -186,8 +186,8 @@ export async function createTreatmentPlan(
       return { error: "Discount cannot make the total free. Please adjust." };
     }
 
-    const platformFeePerSessionCents = getBookingFeeCents(doctor.base_currency);
-    const totalPlatformFeeCents = platformFeePerSessionCents * totalSessions;
+    const platformFeePerSessionCents = 0;
+    const totalPlatformFeeCents = 0;
 
     // Generate secure token and set expiry
     const token = generateToken();
@@ -227,7 +227,7 @@ export async function createTreatmentPlan(
 
     if (insertError || !plan) {
       log.error("Treatment plan insert error:", { err: insertError });
-      return { error: "Failed to create treatment plan. Please try again." };
+      return { error: "Failed to create care plan. Please try again." };
     }
 
     // Fetch patient details for email
@@ -278,8 +278,8 @@ export async function createTreatmentPlan(
       createNotification({
         userId: input.patient_id,
         type: "treatment_plan",
-        title: "New Treatment Plan",
-        message: `Dr. ${doctorName} has created a treatment plan for you: ${input.title.trim()}`,
+        title: "New Care Plan",
+        message: `Dr. ${doctorName} has created a care plan for you: ${input.title.trim()}`,
         channels: ["in_app"],
         metadata: { treatment_plan_id: plan.id, token },
       }).catch((err) =>
@@ -324,7 +324,7 @@ export async function getTreatmentPlanByToken(token: string) {
       .single();
 
     if (error || !plan) {
-      return { plan: null, error: "Treatment plan not found." };
+      return { plan: null, error: "Care plan not found." };
     }
 
     // Lazy expiry: if sent and past expiration, mark as expired
@@ -339,7 +339,7 @@ export async function getTreatmentPlanByToken(token: string) {
     return { plan, error: null };
   } catch (err) {
     log.error("getTreatmentPlanByToken error:", { err: err });
-    return { plan: null, error: "Failed to fetch treatment plan." };
+    return { plan: null, error: "Failed to fetch care plan." };
   }
 }
 
@@ -356,7 +356,7 @@ export async function acceptTreatmentPlanFull(
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return { error: "You must be logged in to accept this treatment plan." };
+      return { error: "You must be logged in to accept this care plan." };
     }
 
     // Fetch treatment plan
@@ -367,15 +367,15 @@ export async function acceptTreatmentPlanFull(
       .single();
 
     if (planError || !plan) {
-      return { error: "Treatment plan not found." };
+      return { error: "Care plan not found." };
     }
 
     if (plan.patient_id !== user.id) {
-      return { error: "This treatment plan is not addressed to you." };
+      return { error: "This care plan is not addressed to you." };
     }
 
     if (plan.status !== "sent") {
-      return { error: "This treatment plan is no longer available." };
+      return { error: "This care plan is no longer available." };
     }
 
     if (new Date(plan.expires_at) < new Date()) {
@@ -383,7 +383,7 @@ export async function acceptTreatmentPlanFull(
         .from("treatment_plans")
         .update({ status: "expired" })
         .eq("id", plan.id);
-      return { error: "This treatment plan has expired." };
+      return { error: "This care plan has expired." };
     }
 
     // Fetch doctor Stripe info
@@ -413,7 +413,7 @@ export async function acceptTreatmentPlanFull(
         currency: plan.currency,
         consultation_fee_cents: plan.unit_price_cents,
         platform_fee_cents: plan.platform_fee_per_session_cents,
-        total_amount_cents: plan.discounted_total_cents + plan.total_platform_fee_cents,
+        total_amount_cents: plan.discounted_total_cents,
         service_id: plan.service_id,
         service_name: plan.service_name,
         treatment_plan_id: plan.id,
@@ -433,7 +433,7 @@ export async function acceptTreatmentPlanFull(
       : doctor.profile;
     const doctorName = `${profile.first_name} ${profile.last_name}`;
 
-    const totalChargeCents = plan.discounted_total_cents + plan.total_platform_fee_cents;
+    const totalChargeCents = plan.discounted_total_cents;
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
@@ -442,7 +442,7 @@ export async function acceptTreatmentPlanFull(
           price_data: {
             currency: plan.currency.toLowerCase(),
             product_data: {
-              name: `Treatment Plan: ${plan.title} (${plan.total_sessions} sessions) with Dr. ${doctorName}`,
+              name: `Care Plan: ${plan.title} (${plan.total_sessions} sessions) with Dr. ${doctorName}`,
               description: `First session: ${appointmentDate} at ${startTime}`,
             },
             unit_amount: totalChargeCents,
@@ -451,7 +451,7 @@ export async function acceptTreatmentPlanFull(
         },
       ],
       payment_intent_data: {
-        application_fee_amount: plan.total_platform_fee_cents,
+        application_fee_amount: getCommissionCents(plan.discounted_total_cents),
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
@@ -482,7 +482,7 @@ export async function acceptTreatmentPlanPerVisit(
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return { error: "You must be logged in to accept this treatment plan." };
+      return { error: "You must be logged in to accept this care plan." };
     }
 
     // Fetch treatment plan
@@ -493,15 +493,15 @@ export async function acceptTreatmentPlanPerVisit(
       .single();
 
     if (planError || !plan) {
-      return { error: "Treatment plan not found." };
+      return { error: "Care plan not found." };
     }
 
     if (plan.patient_id !== user.id) {
-      return { error: "This treatment plan is not addressed to you." };
+      return { error: "This care plan is not addressed to you." };
     }
 
     if (plan.status !== "sent") {
-      return { error: "This treatment plan is no longer available." };
+      return { error: "This care plan is no longer available." };
     }
 
     if (new Date(plan.expires_at) < new Date()) {
@@ -509,7 +509,7 @@ export async function acceptTreatmentPlanPerVisit(
         .from("treatment_plans")
         .update({ status: "expired" })
         .eq("id", plan.id);
-      return { error: "This treatment plan has expired." };
+      return { error: "This care plan has expired." };
     }
 
     // Update plan status to accepted
@@ -520,7 +520,7 @@ export async function acceptTreatmentPlanPerVisit(
 
     if (updateError) {
       log.error("Treatment plan accept error:", { err: updateError });
-      return { error: "Failed to accept treatment plan. Please try again." };
+      return { error: "Failed to accept care plan. Please try again." };
     }
 
     // Notify doctor
@@ -537,8 +537,8 @@ export async function acceptTreatmentPlanPerVisit(
     createNotification({
       userId: plan.doctor_id,
       type: "treatment_plan_accepted",
-      title: "Treatment Plan Accepted",
-      message: `${patientName} has accepted the treatment plan: ${plan.title}`,
+      title: "Care Plan Accepted",
+      message: `${patientName} has accepted the care plan: ${plan.title}`,
       channels: ["in_app"],
       metadata: { treatment_plan_id: plan.id },
     }).catch((err) =>
@@ -574,15 +574,15 @@ export async function bookTreatmentPlanSession(
       .single();
 
     if (planError || !plan) {
-      return { error: "Treatment plan not found." };
+      return { error: "Care plan not found." };
     }
 
     if (plan.patient_id !== user.id) {
-      return { error: "This treatment plan is not yours." };
+      return { error: "This care plan is not yours." };
     }
 
     if (!["accepted", "in_progress"].includes(plan.status)) {
-      return { error: "This treatment plan is not active." };
+      return { error: "This care plan is not active." };
     }
 
     if (plan.sessions_completed >= plan.total_sessions) {
@@ -721,8 +721,8 @@ export async function bookTreatmentPlanSession(
 
     // ─── Pay Per Visit: create booking + Stripe checkout ───
     const perSessionAmountCents = plan.unit_price_cents;
-    const perSessionFeeCents = plan.platform_fee_per_session_cents;
-    const totalForSession = perSessionAmountCents + perSessionFeeCents;
+    const perSessionFeeCents = 0;
+    const totalForSession = perSessionAmountCents;
 
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
@@ -787,7 +787,7 @@ export async function bookTreatmentPlanSession(
         },
       ],
       payment_intent_data: {
-        application_fee_amount: perSessionFeeCents,
+        application_fee_amount: getCommissionCents(perSessionAmountCents),
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
@@ -826,11 +826,11 @@ export async function cancelTreatmentPlan(
       .single();
 
     if (!plan) {
-      return { error: "Treatment plan not found." };
+      return { error: "Care plan not found." };
     }
 
     if (!["sent", "accepted"].includes(plan.status)) {
-      return { error: "Only sent or accepted treatment plans can be cancelled." };
+      return { error: "Only sent or accepted care plans can be cancelled." };
     }
 
     await supabase
@@ -847,8 +847,8 @@ export async function cancelTreatmentPlan(
     createNotification({
       userId: plan.patient_id,
       type: "treatment_plan_cancelled",
-      title: "Treatment Plan Cancelled",
-      message: `Dr. ${doctorName} has cancelled the treatment plan: ${plan.title}`,
+      title: "Care Plan Cancelled",
+      message: `Dr. ${doctorName} has cancelled the care plan: ${plan.title}`,
       channels: ["in_app"],
       metadata: { treatment_plan_id: planId },
     }).catch((err) =>
@@ -925,13 +925,13 @@ export async function getDoctorTreatmentPlans() {
 
     if (error) {
       log.error("getDoctorTreatmentPlans error:", { err: error });
-      return { plans: [], error: "Failed to fetch treatment plans." };
+      return { plans: [], error: "Failed to fetch care plans." };
     }
 
     return { plans: plans || [], error: null };
   } catch (err) {
     log.error("getDoctorTreatmentPlans error:", { err: err });
-    return { plans: [], error: "Failed to fetch treatment plans." };
+    return { plans: [], error: "Failed to fetch care plans." };
   }
 }
 
@@ -974,7 +974,7 @@ export async function getPatientTreatmentPlansV2() {
         pending: [],
         active: [],
         completed: [],
-        error: "Failed to fetch treatment plans.",
+        error: "Failed to fetch care plans.",
       };
     }
 
@@ -993,7 +993,7 @@ export async function getPatientTreatmentPlansV2() {
       pending: [],
       active: [],
       completed: [],
-      error: "Failed to fetch treatment plans.",
+      error: "Failed to fetch care plans.",
     };
   }
 }

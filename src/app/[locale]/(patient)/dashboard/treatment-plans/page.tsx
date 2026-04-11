@@ -26,8 +26,8 @@ import { Link } from "@/i18n/navigation";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Treatment Plans",
-  description: "Manage your treatment plans and book follow-up sessions.",
+  title: "Care Plans",
+  description: "Manage your care plans and book follow-up sessions.",
 };
 
 export default async function TreatmentPlansPage() {
@@ -96,13 +96,15 @@ export default async function TreatmentPlansPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Treatment Plans</h1>
+        <h1 className="text-2xl font-bold">Care Plans</h1>
         <p className="text-muted-foreground">
-          Manage your treatment plans and book follow-up sessions
+          Manage your care plans and book follow-up sessions. Each care plan
+          is set by your doctor — please discuss significant treatments with
+          your NHS GP.
         </p>
       </div>
 
-      {/* ─── Pending Treatment Plans ─── */}
+      {/* ─── Pending Care Plans ─── */}
       {pending.length > 0 && (
         <div>
           <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
@@ -200,11 +202,11 @@ export default async function TreatmentPlansPage() {
         </div>
       )}
 
-      {/* ─── Active Treatment Plans ─── */}
+      {/* ─── Active Care Plans ─── */}
       <div>
         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
           <FileText className="h-5 w-5 text-primary" />
-          Active Treatment Plans
+          Active Care Plans
         </h2>
         {active.length === 0 ? (
           !hasTreatmentPlans &&
@@ -213,8 +215,8 @@ export default async function TreatmentPlansPage() {
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <FileText className="mb-4 h-12 w-12 text-muted-foreground/50" />
                 <p className="text-muted-foreground">
-                  No active treatment plans. When a doctor creates a treatment
-                  plan for you, it will appear here after you accept it.
+                  No active care plans. When a doctor creates a care plan
+                  for you, it will appear here after you accept it.
                 </p>
               </CardContent>
             </Card>
@@ -328,12 +330,12 @@ export default async function TreatmentPlansPage() {
         )}
       </div>
 
-      {/* ─── Completed Treatment Plans ─── */}
+      {/* ─── Completed Care Plans ─── */}
       {completed.length > 0 && (
         <div>
           <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
             <CheckCircle className="h-5 w-5 text-green-600" />
-            Completed Treatment Plans
+            Completed Care Plans
           </h2>
           <div className="grid gap-4">
             {completed.map((plan: any) => {
@@ -530,7 +532,7 @@ export default async function TreatmentPlansPage() {
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <ClipboardList className="mb-4 h-12 w-12 text-muted-foreground/50" />
             <p className="text-muted-foreground">
-              No treatment plans yet. When a doctor creates a treatment plan for
+              No care plans yet. When a doctor creates a care plan for
               you, it will appear here.
             </p>
           </CardContent>

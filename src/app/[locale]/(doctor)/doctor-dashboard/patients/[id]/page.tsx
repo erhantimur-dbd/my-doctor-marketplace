@@ -157,7 +157,7 @@ export default async function PatientDetailPage({
               <HeartPulse className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Medical Profile</p>
+              <p className="text-sm text-muted-foreground">Patient Intake</p>
               <p className="text-lg font-bold">
                 {medicalProfile ? "Shared" : "Not shared"}
               </p>
@@ -166,14 +166,18 @@ export default async function PatientDetailPage({
         </Card>
       </div>
 
-      {/* Medical Profile */}
+      {/* Patient Intake Information */}
       {medicalProfile ? (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <HeartPulse className="h-4 w-4" />
-              Medical Profile
+              Patient Intake Information
             </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Shared by the patient for this care relationship. You are the
+              data controller for this information under UK GDPR Art 9(2)(h).
+            </p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -273,11 +277,11 @@ export default async function PatientDetailPage({
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <ShieldOff className="mb-4 h-12 w-12 text-muted-foreground/50" />
-            <p className="font-medium">Medical Profile Not Available</p>
+            <p className="font-medium">Intake Information Not Available</p>
             <p className="text-sm text-muted-foreground max-w-md mt-1">
               {hasCompletedBooking
-                ? "This patient has not shared their medical profile yet. They can enable sharing from their settings."
-                : "You need at least one completed consultation to view the patient's medical profile."}
+                ? "This patient has not chosen to share their intake information yet. They can enable sharing from their settings."
+                : "You need at least one completed consultation to view the patient's shared intake information."}
             </p>
           </CardContent>
         </Card>

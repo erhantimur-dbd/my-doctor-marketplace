@@ -25,7 +25,7 @@ import { BookTreatmentSessionDialog } from "../book-treatment-session-dialog";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Treatment Plan Details",
+  title: "Care Plan Details",
 };
 
 function getStatusBadge(status: string) {
@@ -214,7 +214,7 @@ export default async function TreatmentPlanDetailPage({
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Back to Treatment Plans
+        Back to Care Plans
       </Link>
 
       {/* Header */}
@@ -228,6 +228,10 @@ export default async function TreatmentPlanDetailPage({
             {plan.service_name} &middot;{" "}
             {plan.consultation_type === "video" ? "Video" : "In-Person"}{" "}
             &middot; {plan.session_duration_minutes} min per session
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            This care plan is set by your doctor. Please discuss any
+            significant treatment with your NHS GP.
           </p>
         </div>
         {isActive && sessionsRemaining > 0 && (

@@ -83,7 +83,7 @@ export function TreatmentPlanClient({
       if (result.error) {
         toast.error(result.error);
       } else if (result.success) {
-        toast.success("Treatment plan accepted! You can now book sessions.");
+        toast.success("Care plan accepted! You can now book sessions.");
         router.push(`/${locale}/treatment-plan/${planToken}/confirmed`);
       }
     });
@@ -99,7 +99,7 @@ export function TreatmentPlanClient({
           <div>
             <p className="text-lg font-semibold">Sign in to continue</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              You need to sign in to your account to accept this treatment
+              You need to sign in to your account to accept this care
               plan.
             </p>
           </div>
@@ -193,12 +193,12 @@ export function TreatmentPlanClient({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Check className="h-5 w-5" />
-          Accept Treatment Plan
+          Accept Care Plan
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
         <p className="text-sm text-muted-foreground">
-          Accept this treatment plan to get started. You will pay for each
+          Accept this care plan to get started. You will pay for each
           session individually as you book them from your dashboard.
         </p>
 
@@ -216,7 +216,7 @@ export function TreatmentPlanClient({
           ) : (
             <>
               <Check className="h-4 w-4" />
-              Accept Treatment Plan
+              Accept Care Plan
             </>
           )}
         </Button>

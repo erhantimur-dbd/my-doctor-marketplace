@@ -15,14 +15,13 @@ interface AISymptomResultProps {
   iconColor?: string;
 }
 
+// Only two levels exist after the deterministic classifier: `emergency`
+// (short-circuited to the 999 warning component upstream) or `routine`
+// (shown as a plain specialty suggestion with no triage label).
 const urgencyConfig = {
   routine: {
     color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
     key: "urgency_routine" as const,
-  },
-  urgent: {
-    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-    key: "urgency_urgent" as const,
   },
   emergency: {
     color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",

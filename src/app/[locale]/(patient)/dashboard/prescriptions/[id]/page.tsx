@@ -216,6 +216,24 @@ export default async function PatientPrescriptionDetailPage({
         </Card>
       )}
 
+      {/* NHS-GP banner — Workstream 3.1 of the UK CQC compliance plan.
+          This is a private prescription issued through the MyDoctors360
+          platform. Patients must be advised to inform their NHS GP so the
+          treatment is visible to the rest of their care team. */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-100">
+        <p className="font-medium">
+          This prescription was issued privately by {doctorName} through
+          MyDoctors360.
+        </p>
+        <p className="mt-1">
+          You should inform your NHS GP about any medicines you receive
+          privately so your full clinical picture is on record with your NHS
+          care team. Bring a copy of this prescription to your next GP
+          appointment, or send it via your GP practice&rsquo;s secure
+          messaging.
+        </p>
+      </div>
+
       {/* Disclaimer */}
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
         <p className="font-medium">Important</p>

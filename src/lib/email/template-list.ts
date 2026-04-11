@@ -44,11 +44,11 @@ export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string 
   { key: "reviewReceived", label: "Review Received (→ Doctor)", category: "Engagement" },
   { key: "newMessage", label: "New Message", category: "Engagement" },
   { key: "adminMessage", label: "Admin Broadcast", category: "Engagement" },
-  // Treatment
-  { key: "treatmentPlan", label: "Treatment Plan", category: "Treatment" },
-  { key: "followUpInvitation", label: "Follow-Up Invitation", category: "Treatment" },
-  { key: "treatmentContinuation", label: "Treatment Continuation", category: "Treatment" },
-  { key: "invoice", label: "Invoice", category: "Treatment" },
+  // Care plans
+  { key: "treatmentPlan", label: "Care Plan", category: "Care Plans" },
+  { key: "followUpInvitation", label: "Follow-Up Invitation", category: "Care Plans" },
+  { key: "treatmentContinuation", label: "Care Plan Reminder", category: "Care Plans" },
+  { key: "invoice", label: "Invoice", category: "Care Plans" },
   // Support
   { key: "supportTicketCreated", label: "Ticket Created", category: "Support" },
   { key: "supportTicketReply", label: "Ticket Reply", category: "Support" },

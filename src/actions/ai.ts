@@ -8,6 +8,7 @@ import {
   type SymptomAnalysis,
   type NLSearchFilters,
 } from "@/lib/ai/schemas";
+import { detectEmergency } from "@/lib/ai/emergency-classifier";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import crypto from "crypto";
@@ -40,27 +41,62 @@ function hashInput(text: string, locale: string): string {
     .digest("hex");
 }
 
-// ── Feature 1: AI Symptom Analysis ──────────────────────────
+// ── Feature 1: Specialty Finder ─────────────────────────────
+//
+// This action is a specialty finder, not a symptom checker or triage
+// tool. It helps users work out *which type of doctor* they should
+// book — never diagnoses, never triages severity, never prescribes.
+//
+// The 999-emergency check runs FIRST, deterministically, via
+// `detectEmergency()` in src/lib/ai/emergency-classifier.ts. The LLM is
+// only invoked after that check passes, and its only job is to map the
+// input to a specialty slug + suggested consultation type. Urgency is
+// set by the classifier, never by the LLM.
+//
+// Note on data handling: we do NOT store the raw input text. The cache
+// key is a sha256 hash of the lowercased input; the response row holds
+// only the specialty output. This keeps requests ephemeral — there's
+// no medical record being built up behind the scenes.
 
 export async function analyzeSymptoms(
   input: string,
   locale: string
 ): Promise<{ data: SymptomAnalysis | null; error: string | null }> {
+  const trimmed = input.trim();
+  if (trimmed.length < 3) {
+    return { data: null, error: "Input too short" };
+  }
+
+  // 1. Deterministic emergency check. Runs BEFORE the LLM and BEFORE
+  //    the cache. If the input matches any 999 hazard pattern, we
+  //    short-circuit with a general-practice + emergency response and
+  //    persist nothing. An LLM is never consulted for emergencies.
+  const emergency = detectEmergency(trimmed);
+  if (emergency.isEmergency) {
+    return {
+      data: {
+        primarySpecialty: "general-practice",
+        relatedSpecialties: [],
+        suggestedConsultationType: "in_person",
+        confidence: 1,
+        urgency: "emergency",
+        urgencyReason: emergency.reason,
+      },
+      error: null,
+    };
+  }
+
   if (!isAIEnabled()) {
     log.warn("[AI] analyzeSymptoms: OPENAI_API_KEY not found in env");
     return { data: null, error: "AI not configured" };
   }
   console.log("[AI] analyzeSymptoms: starting for input:", input.substring(0, 50));
 
-  const trimmed = input.trim();
-  if (trimmed.length < 3) {
-    return { data: null, error: "Input too short" };
-  }
-
   const supabase = createAdminClient();
   const hash = hashInput(trimmed, locale);
 
-  // 1. Check cache
+  // 2. Check cache by hash only. No plaintext lookup; the cache cannot
+  //    reveal what the user typed.
   try {
     const { data: cached } = await supabase
       .from("ai_symptom_cache")
@@ -78,7 +114,9 @@ export async function analyzeSymptoms(
     console.log("[AI] analyzeSymptoms: cache miss or table error:", (e as Error)?.message);
   }
 
-  // 2. AI call with timeout
+  // 3. AI call with timeout. The prompt is deliberately scoped to
+  //    "specialty finder": it must never return diagnoses, severity, or
+  //    treatment advice. Urgency is not part of the schema.
   const specialtySlugs = SPECIALTIES.map((s) => s.slug).join(", ");
 
   try {
@@ -88,16 +126,21 @@ export async function analyzeSymptoms(
     const { object } = await generateObject({
       model: aiModel,
       schema: symptomAnalysisSchema,
-      prompt: `You are a medical triage assistant for a healthcare booking platform.
-Given the patient's symptoms, determine:
+      prompt: `You are a SPECIALTY FINDER for a healthcare booking platform.
+Your only job is to map the user's description of what they are looking for
+to the most appropriate medical specialty category on the platform, so they
+can book the right type of doctor. You must NOT diagnose, assess severity,
+recommend treatment, or reassure the user about their condition.
+
+Given the user's input, return:
 1. The most appropriate medical specialty (MUST be one of: ${specialtySlugs})
 2. Up to 2 related specialties (from the same list)
-3. Urgency level: "emergency" if symptoms suggest immediate danger (chest pain + breathing difficulty, stroke signs, severe bleeding, loss of consciousness), "urgent" if should be seen within days, "routine" for standard appointments
-4. Whether in-person or video consultation is appropriate
+3. Whether in-person or video consultation is typically suitable for that
+   specialty (purely a format hint, not clinical advice)
 
-IMPORTANT TRIAGE RULES:
-- For vague, non-specific symptoms (general pain, fatigue, fever, cold, flu-like symptoms, dizziness, nausea, general malaise), the primarySpecialty MUST be "general-practice" (GP). Put the relevant specialist in relatedSpecialties.
-- When symptoms clearly point to a specific body part or organ system, route to the appropriate specialist as primarySpecialty:
+SPECIALTY ROUTING RULES:
+- For vague, non-specific descriptions (general pain, fatigue, fever, cold, flu-like symptoms, dizziness, nausea, general malaise), the primarySpecialty MUST be "general-practice" (GP). Put the relevant specialist in relatedSpecialties.
+- When the input clearly points to a specific body part or organ system, route to the appropriate specialist as primarySpecialty:
   • Teeth/gums/toothache/dental pain → "dentistry"
   • Skin rash/acne/mole/eczema → "dermatology"
   • Heart palpitations/chest pain/blood pressure → "cardiology"
@@ -114,21 +157,24 @@ IMPORTANT TRIAGE RULES:
   • Diabetes/thyroid/hormones → "endocrinology"
   • Kidney pain/urinary issues → "nephrology" or "urology"
   • Cosmetic/botox/aesthetic → "aesthetic-medicine"
-- Only default to "general-practice" when the symptom is truly vague and does not point to any specific specialist.
+- Only default to "general-practice" when the input is truly vague and does not point to any specific specialist.
 - Always include "general-practice" in relatedSpecialties if it's not the primarySpecialty.
 
-Patient symptoms: "${trimmed}"
-Patient locale: ${locale}
+User input: "${trimmed}"
+User locale: ${locale}
 
-CRITICAL: If symptoms suggest a medical emergency, you MUST set urgency to "emergency". Patient safety is the top priority.
-Return ONLY specialty slugs from the allowed list above.`,
+Return ONLY specialty slugs from the allowed list above. Do not return
+urgency, diagnosis, severity, or treatment suggestions — those are not
+fields in the response schema.`,
       abortSignal: controller.signal,
     });
 
     clearTimeout(timeout);
     console.log("[AI] analyzeSymptoms: AI returned:", JSON.stringify(object));
 
-    // Validate the specialty slug
+    // Validate the specialty slug. Compose the final UI-facing shape by
+    // adding a routine urgency — emergencies never get here, they were
+    // short-circuited at step 1 by the deterministic classifier.
     const validSlugs = new Set(SPECIALTIES.map((s) => s.slug));
     const result: SymptomAnalysis = {
       ...object,
@@ -138,14 +184,16 @@ Return ONLY specialty slugs from the allowed list above.`,
       relatedSpecialties: object.relatedSpecialties.filter((s) =>
         validSlugs.has(s)
       ),
+      urgency: "routine",
+      urgencyReason: null,
     };
 
-    // 3. Cache the result
+    // 4. Cache the result by hash only. We do NOT store the raw input;
+    //    see the module header comment for the rationale.
     try {
       await supabase.from("ai_symptom_cache").upsert(
         {
           input_hash: hash,
-          input_text: trimmed,
           locale,
           result: result as unknown as Record<string, unknown>,
           expires_at: new Date(

@@ -17,7 +17,7 @@ export const patientDashboardSteps: OnboardingStep[] = [
     targetSelector: '[data-tour="patient-quick-actions"]',
     title: "Quick Actions",
     description:
-      "Find a doctor, manage bookings, view treatment plans, or update your settings — all just one click away.",
+      "Find a doctor, manage bookings, view care plans, or update your settings — all just one click away.",
     position: "bottom",
   },
   {

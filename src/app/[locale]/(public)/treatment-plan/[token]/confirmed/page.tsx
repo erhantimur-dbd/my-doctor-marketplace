@@ -11,8 +11,8 @@ interface ConfirmedPageProps {
 }
 
 export const metadata: Metadata = {
-  title: "Treatment Plan Accepted",
-  description: "Your treatment plan has been accepted.",
+  title: "Care Plan Accepted",
+  description: "Your care plan has been accepted.",
 };
 
 export default async function TreatmentPlanConfirmedPage({
@@ -81,11 +81,11 @@ export default async function TreatmentPlanConfirmedPage({
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
 
-        <h1 className="text-2xl font-bold">Treatment Plan Accepted!</h1>
+        <h1 className="text-2xl font-bold">Care Plan Accepted!</h1>
         <p className="mt-2 text-muted-foreground">
           {isPaidFull
-            ? `Your treatment plan with ${doctorName} has been confirmed and paid.`
-            : `Your treatment plan with ${doctorName} has been accepted. You can now book sessions from your dashboard.`}
+            ? `Your care plan with ${doctorName} has been confirmed and paid.`
+            : `Your care plan with ${doctorName} has been accepted. You can now book sessions from your dashboard.`}
         </p>
 
         {/* First Session Details (pay_full only) */}
@@ -141,7 +141,7 @@ export default async function TreatmentPlanConfirmedPage({
                 </p>
                 <p className="text-sm text-muted-foreground">
                   Book your {isPaidFull ? "remaining" : ""} sessions from
-                  your Treatment Plans dashboard when you&apos;re ready.
+                  your Care Plans dashboard when you&apos;re ready.
                 </p>
               </div>
             </CardContent>
@@ -152,7 +152,7 @@ export default async function TreatmentPlanConfirmedPage({
         <div className="mt-8 flex flex-col gap-3">
           <Link href="/dashboard/treatment-plans">
             <Button className="w-full gap-2">
-              View Treatment Plans
+              View Care Plans
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>

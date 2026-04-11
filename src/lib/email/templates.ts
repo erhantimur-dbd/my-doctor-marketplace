@@ -1110,7 +1110,7 @@ export function subscriptionUpgradeInviteEmail({
 }
 
 // ---------------------------------------------------------------------------
-// Treatment Plan
+// Care Plan (internal names kept as "treatmentPlan*" for backwards compatibility)
 // ---------------------------------------------------------------------------
 
 interface TreatmentPlanParams {
@@ -1142,7 +1142,7 @@ export function treatmentPlanEmail({
   planUrl,
   expiresAt,
 }: TreatmentPlanParams): { subject: string; html: string } {
-  const subject = `Treatment Plan from ${doctorName} — ${planTitle}`;
+  const subject = `Care Plan from ${doctorName} — ${planTitle}`;
 
   const noteBlock = doctorNote
     ? `
@@ -1171,7 +1171,7 @@ export function treatmentPlanEmail({
 
   const html = baseLayout(`
     <h2 style="margin: 0 0 16px; font-size: 20px; color: #111827; font-weight: 700;">
-      New Treatment Plan
+      New Care Plan
     </h2>
 
     <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
@@ -1179,8 +1179,14 @@ export function treatmentPlanEmail({
     </p>
 
     <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
-      <strong>${doctorName}</strong> has created a treatment plan for you.
+      <strong>${doctorName}</strong> has created a care plan for you.
       Please review the details below and accept the plan to proceed.
+    </p>
+
+    <p style="margin: 0 0 20px; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      This care plan is set by your doctor and is not a substitute for your
+      NHS care. Please discuss it with your NHS GP before starting any
+      significant treatment.
     </p>
 
     ${noteBlock}
@@ -1203,10 +1209,10 @@ export function treatmentPlanEmail({
       </tr>
     </table>
 
-    ${button("View Treatment Plan", planUrl)}
+    ${button("View Care Plan", planUrl)}
 
     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
-      This treatment plan expires on <strong>${expiresAt}</strong>. If you have any questions, please contact your doctor directly.
+      This care plan expires on <strong>${expiresAt}</strong>. If you have any questions, please contact your doctor directly.
     </p>
   `);
 
@@ -1434,15 +1440,15 @@ export function treatmentContinuationEmail({
   reminderNumber,
 }: TreatmentReminderParams): { subject: string; html: string } {
   const subjectByReminder: Record<number, string> = {
-    1: `Your recommended treatment plan from Dr. ${doctorName}`,
+    1: `Your recommended care plan from Dr. ${doctorName}`,
     2: `Reminder: Dr. ${doctorName} recommended follow-up care for you`,
-    3: `Final reminder: Your treatment plan from Dr. ${doctorName}`,
+    3: `Final reminder: Your care plan from Dr. ${doctorName}`,
   };
 
   const introByReminder: Record<number, string> = {
-    1: `Following your recent consultation, <strong>Dr. ${doctorName}</strong> has recommended the following treatment plan for your continued care. If you'd like to proceed, you can review and accept it at your convenience.`,
-    2: `We wanted to gently remind you that <strong>Dr. ${doctorName}</strong> recommended a follow-up treatment plan after your recent visit. Your health is important, and the recommended care is still available if you'd like to proceed.`,
-    3: `This is a final, friendly reminder about the treatment plan <strong>Dr. ${doctorName}</strong> recommended for you. There's no obligation — but if you'd like to continue with the recommended care, the option is still open for a short time.`,
+    1: `Following your recent consultation, <strong>Dr. ${doctorName}</strong> has recommended the following care plan for your continued care. If you'd like to proceed, you can review and accept it at your convenience.`,
+    2: `We wanted to gently remind you that <strong>Dr. ${doctorName}</strong> recommended a follow-up care plan after your recent visit. Your health is important, and the recommended care is still available if you'd like to proceed.`,
+    3: `This is a final, friendly reminder about the care plan <strong>Dr. ${doctorName}</strong> recommended for you. There's no obligation — but if you'd like to continue with the recommended care, the option is still open for a short time.`,
   };
 
   const subject = subjectByReminder[reminderNumber] || subjectByReminder[1];
@@ -1450,7 +1456,7 @@ export function treatmentContinuationEmail({
 
   const html = baseLayout(`
     <h2 style="margin: 0 0 16px; font-size: 20px; color: #111827; font-weight: 700;">
-      Your Recommended Treatment Plan
+      Your Recommended Care Plan
     </h2>
 
     <p style="margin: 0 0 20px; font-size: 14px; color: #374151; line-height: 1.6;">
@@ -1474,11 +1480,17 @@ export function treatmentContinuationEmail({
       </tr>
     </table>
 
-    ${button("Review Treatment Plan", invoiceUrl)}
+    ${button("Review Care Plan", invoiceUrl)}
 
-    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+    <p style="margin: 24px 0 20px; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      This care plan is set by your doctor and is not a substitute for your
+      NHS care. Please discuss it with your NHS GP before starting any
+      significant treatment.
+    </p>
+
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       This is a recommendation from your doctor — there is no obligation to proceed.
-      If you have any questions about the suggested treatment, please contact Dr. ${doctorName} directly.
+      If you have any questions about the suggested care, please contact Dr. ${doctorName} directly.
     </p>
   `);
 
@@ -2070,6 +2082,131 @@ export function patientReferralInviteEmail({
     </div>
     <p style="margin: 0; font-size: 13px; color: #6b7280;">
       If you weren't expecting this invitation, you can safely ignore this email.
+    </p>
+  `;
+
+  return { subject, html: baseLayout(content) };
+}
+
+// ---------------------------------------------------------------------------
+// UK Regulatory — Indemnity Expiry Chase
+// ---------------------------------------------------------------------------
+// Sent by /api/cron/verify-doctor-credentials when a UK-practising doctor's
+// professional indemnity certificate is within 30 days of expiring. The
+// doctor must upload a renewal before the expiry date or their listing is
+// suspended. The email contains a direct link to the dashboard upload page.
+
+export function indemnityExpiryChaseEmail({
+  doctorName,
+  insurer,
+  expiryDate,
+  daysUntilExpiry,
+}: {
+  doctorName: string;
+  insurer: string | null;
+  expiryDate: string;
+  daysUntilExpiry: number;
+}): { subject: string; html: string } {
+  const subject =
+    daysUntilExpiry <= 0
+      ? `Action required: Your indemnity cover has expired`
+      : `Action required: Your indemnity cover expires in ${daysUntilExpiry} days`;
+
+  const formattedDate = new Date(expiryDate).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  const content = `
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Indemnity Cover Expiring</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Dear Dr. ${doctorName}, our records show your professional indemnity certificate is due to expire soon.
+    </p>
+
+    <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 24px;">
+      <p style="margin: 0 0 8px; font-size: 14px; color: #92400e; font-weight: 600;">
+        ${daysUntilExpiry <= 0 ? "Cover has already expired" : `Expires in ${daysUntilExpiry} day${daysUntilExpiry === 1 ? "" : "s"}`}
+      </p>
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+        ${insurer ? infoRow("Insurer", insurer) : ""}
+        ${infoRow("Expiry date", formattedDate)}
+      </table>
+    </div>
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      UK regulations require every doctor listed on mydoctors360.co.uk to hold
+      valid professional indemnity cover at all times. Please upload a renewed
+      certificate through your dashboard before the expiry date to avoid your
+      listing being suspended.
+    </p>
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      If your certificate has already been renewed, please log in and upload the
+      updated document — our compliance team cannot confirm coverage without it.
+    </p>
+
+    ${button("Upload renewed certificate", `${APP_URL}/en/doctor-dashboard/profile`)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280;">
+      This notice is part of our UK regulatory compliance process. If you have
+      questions, contact our compliance team at support@mydoctors360.com.
+    </p>
+  `;
+
+  return { subject, html: baseLayout(content) };
+}
+
+// ---------------------------------------------------------------------------
+// UK Regulatory — Credentials Suspended
+// ---------------------------------------------------------------------------
+// Sent by /api/cron/verify-doctor-credentials when we have auto-suspended a
+// UK-practising doctor's listing because a credential lapsed (indemnity
+// expired, DBS lapsed, or CQC registration changed to deregistered). This is
+// a break-glass notice — the doctor's bookings are NOT cancelled, but their
+// public listing is hidden until evidence is refreshed and reviewed.
+
+export function credentialsSuspendedEmail({
+  doctorName,
+  reasons,
+}: {
+  doctorName: string;
+  reasons: string[];
+}): { subject: string; html: string } {
+  const subject = `${BRAND_NAME} — Your listing has been temporarily suspended`;
+
+  const content = `
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Listing Suspended</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Dear Dr. ${doctorName}, your MyDoctors360 listing has been temporarily
+      suspended because one or more UK regulatory checks are no longer valid.
+    </p>
+
+    <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 24px;">
+      <p style="margin: 0 0 8px; font-size: 14px; color: #991b1b; font-weight: 600;">
+        Reasons for suspension
+      </p>
+      <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #991b1b; line-height: 1.6;">
+        ${reasons.map((r) => `<li>${r}</li>`).join("")}
+      </ul>
+    </div>
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      Patients can no longer book new appointments with you on
+      mydoctors360.co.uk. Existing confirmed bookings are unchanged — please
+      continue to honour them while you refresh your evidence.
+    </p>
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      To restore your listing, please log in, upload the refreshed document(s),
+      and our compliance team will review and re-approve within one working day.
+    </p>
+
+    ${button("Open dashboard", `${APP_URL}/en/doctor-dashboard/profile`)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280;">
+      If you believe this suspension is in error, contact our compliance team
+      at support@mydoctors360.com and we will investigate immediately.
     </p>
   `;
 
