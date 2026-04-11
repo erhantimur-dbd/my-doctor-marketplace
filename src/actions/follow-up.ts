@@ -403,7 +403,7 @@ export async function createInvitationCheckout(
 
     const sessionLabel =
       invitation.total_sessions > 1
-        ? `Treatment Plan: ${invitation.service_name} (${invitation.total_sessions} sessions) with Dr. ${doctorName}`
+        ? `Care Plan: ${invitation.service_name} (${invitation.total_sessions} sessions) with Dr. ${doctorName}`
         : `${invitation.service_name} with Dr. ${doctorName}`;
 
     const totalChargeCents =
@@ -472,15 +472,15 @@ export async function bookFollowUpSession(
       .single();
 
     if (invError || !invitation) {
-      return { error: "Treatment plan not found." };
+      return { error: "Care plan not found." };
     }
 
     if (invitation.patient_id !== user.id) {
-      return { error: "This treatment plan is not yours." };
+      return { error: "This care plan is not yours." };
     }
 
     if (invitation.status !== "accepted") {
-      return { error: "This treatment plan is not active." };
+      return { error: "This care plan is not active." };
     }
 
     if (invitation.sessions_booked >= invitation.total_sessions) {
@@ -688,7 +688,7 @@ export async function getPatientTreatmentPlans() {
 
     if (error) {
       log.error("getPatientTreatmentPlans error:", { err: error });
-      return { active: [], completed: [], error: "Failed to fetch treatment plans." };
+      return { active: [], completed: [], error: "Failed to fetch care plans." };
     }
 
     const active = (invitations || []).filter(
@@ -701,6 +701,6 @@ export async function getPatientTreatmentPlans() {
     return { active, completed, error: null };
   } catch (err) {
     log.error("getPatientTreatmentPlans error:", { err: err });
-    return { active: [], completed: [], error: "Failed to fetch treatment plans." };
+    return { active: [], completed: [], error: "Failed to fetch care plans." };
   }
 }
