@@ -42,7 +42,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { Link } from "@/i18n/navigation";
-import { centsToAmount, amountToCents, formatCurrency, RECOMMENDED_DEPOSIT_PERCENTAGE, PLATFORM_COMMISSION_PERCENT, getBookingFeeCents, calculateDepositCents, getCommissionCents } from "@/lib/utils/currency";
+import { centsToAmount, amountToCents, formatCurrency, RECOMMENDED_DEPOSIT_PERCENTAGE, PLATFORM_COMMISSION_PERCENT, calculateDepositCents, getCommissionCents } from "@/lib/utils/currency";
 import { LANGUAGES } from "@/lib/constants/countries";
 import {
   createDoctorService,
@@ -875,13 +875,12 @@ export default function ProfilePage() {
                     {consultationFeeCents > 0 && (() => {
                       const previewDeposit = calculateDepositCents(consultationFeeCents, inPersonDepositType, inPersonDepositValue);
                       const commission = getCommissionCents(consultationFeeCents);
-                      const bookingFee = getBookingFeeCents(doctor?.base_currency || "EUR");
                       if (!previewDeposit) return null;
                       return (
                         <div className="mt-2 space-y-1 text-xs text-blue-600 dark:text-blue-400">
                           <p>Preview for {formatCurrency(consultationFeeCents, doctor?.base_currency || "EUR")} consultation:</p>
-                          <p>• Deposit: {formatCurrency(previewDeposit, doctor?.base_currency || "EUR")} | Booking fee: {formatCurrency(bookingFee, doctor?.base_currency || "EUR")}</p>
-                          <p>• Patient pays: {formatCurrency(previewDeposit + bookingFee, doctor?.base_currency || "EUR")}</p>
+                          <p>• Deposit: {formatCurrency(previewDeposit, doctor?.base_currency || "EUR")}</p>
+                          <p>• Patient pays: {formatCurrency(previewDeposit, doctor?.base_currency || "EUR")}</p>
                           <p>• Commission: {formatCurrency(commission, doctor?.base_currency || "EUR")} | Remainder due on day: {formatCurrency(consultationFeeCents - previewDeposit, doctor?.base_currency || "EUR")}</p>
                         </div>
                       );

@@ -7,7 +7,7 @@ import { headers } from "next/headers";
 import { sendEmail } from "@/lib/email/client";
 import { invoiceEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
-import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
+import { formatCurrency, getCommissionCents } from "@/lib/utils/currency";
 import { getWalletBalance, debitWallet } from "@/lib/wallet";
 import { log } from "@/lib/utils/logger";
 
@@ -112,8 +112,8 @@ export async function createInvoice(
       return { error: "Discount cannot make the total free." };
     }
 
-    const platformFeeCents = getBookingFeeCents(doctor.base_currency);
-    const totalCents = afterDiscount + platformFeeCents;
+    const platformFeeCents = 0;
+    const totalCents = afterDiscount;
 
     // Generate invoice number
     const { data: seqResult } = await supabase.rpc("nextval_invoice_number");
@@ -326,7 +326,7 @@ export async function createInvoiceCheckout(
         },
       ],
       payment_intent_data: {
-        application_fee_amount: Math.min(invoice.platform_fee_cents, remainingCharge),
+        application_fee_amount: Math.min(getCommissionCents(invoice.total_cents), remainingCharge),
         transfer_data: {
           destination: doctor.stripe_account_id,
         },

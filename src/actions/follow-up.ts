@@ -13,7 +13,7 @@ import {
   type BookFollowUpSessionInput,
 } from "@/lib/validators/booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
-import { getBookingFeeCents, formatCurrency } from "@/lib/utils/currency";
+import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
 import { sendEmail } from "@/lib/email/client";
 import { followUpInvitationEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
@@ -164,7 +164,7 @@ export async function createFollowUpInvitation(
       return { error: "Discount cannot make the total free. Please adjust." };
     }
 
-    const platformFeeCents = getBookingFeeCents(doctor.base_currency) * totalSessions;
+    const platformFeeCents = 0;
 
     // Generate secure token and set expiry
     const token = generateToken();
@@ -382,8 +382,8 @@ export async function createInvitationCheckout(
         status: BOOKING_STATUSES.PENDING_PAYMENT,
         currency: invitation.currency,
         consultation_fee_cents: invitation.unit_price_cents,
-        platform_fee_cents: getBookingFeeCents(invitation.currency),
-        total_amount_cents: invitation.discounted_total_cents + invitation.platform_fee_cents,
+        platform_fee_cents: 0,
+        total_amount_cents: invitation.discounted_total_cents,
         service_id: invitation.service_id,
         service_name: invitation.service_name,
         invitation_id: invitation.id,
@@ -406,8 +406,7 @@ export async function createInvitationCheckout(
         ? `Care Plan: ${invitation.service_name} (${invitation.total_sessions} sessions) with Dr. ${doctorName}`
         : `${invitation.service_name} with Dr. ${doctorName}`;
 
-    const totalChargeCents =
-      invitation.discounted_total_cents + invitation.platform_fee_cents;
+    const totalChargeCents = invitation.discounted_total_cents;
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
@@ -425,7 +424,7 @@ export async function createInvitationCheckout(
         },
       ],
       payment_intent_data: {
-        application_fee_amount: invitation.platform_fee_cents,
+        application_fee_amount: getCommissionCents(invitation.discounted_total_cents),
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
@@ -488,8 +487,6 @@ export async function bookFollowUpSession(
     }
 
     // Create booking — already paid, so set to confirmed directly
-    const perSessionFeeCents = getBookingFeeCents(invitation.currency);
-
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .insert({
@@ -502,7 +499,7 @@ export async function bookFollowUpSession(
         status: BOOKING_STATUSES.CONFIRMED,
         currency: invitation.currency,
         consultation_fee_cents: invitation.unit_price_cents,
-        platform_fee_cents: perSessionFeeCents,
+        platform_fee_cents: 0,
         total_amount_cents: 0, // Already paid as part of package
         service_id: invitation.service_id,
         service_name: invitation.service_name,

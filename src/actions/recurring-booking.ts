@@ -142,10 +142,8 @@ export async function createRecurringBookings(input: CreateRecurringBookingInput
     }
   }
 
-  // Platform fee per booking
-  const { getBookingFeeCents } = await import("@/lib/utils/currency");
-  const platformFeeCents = getBookingFeeCents(doctor.base_currency);
-  const totalAmountCents = consultationFeeCents + platformFeeCents;
+  const platformFeeCents = 0;
+  const totalAmountCents = consultationFeeCents;
 
   const recurringGroupId = randomUUID();
   const bookingIds: string[] = [];

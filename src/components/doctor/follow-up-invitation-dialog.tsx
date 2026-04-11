@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Send, Loader2, Plus, X } from "lucide-react";
 import { createFollowUpInvitation } from "@/actions/follow-up";
-import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/utils/currency";
 import { toast } from "sonner";
 import { MEDICAL_TEST_GROUPS } from "@/lib/constants/medical-tests";
 
@@ -206,7 +206,6 @@ export function FollowUpInvitationDialog({
     );
 
     const subtotal = itemsSubtotal * totalSessions;
-    const platformFee = getBookingFeeCents(doctorCurrency) * totalSessions;
 
     let discountAmount = 0;
     if (discountType === "percentage" && discountValue > 0) {
@@ -216,9 +215,9 @@ export function FollowUpInvitationDialog({
     }
 
     const discountedTotal = Math.max(0, subtotal - discountAmount);
-    const grandTotal = discountedTotal + platformFee;
+    const grandTotal = discountedTotal;
 
-    return { itemsSubtotal, subtotal, platformFee, discountAmount, discountedTotal, grandTotal };
+    return { itemsSubtotal, subtotal, platformFee: 0, discountAmount, discountedTotal, grandTotal };
   }, [items, totalSessions, discountType, discountValue, doctorCurrency]);
 
   const resetForm = () => {
@@ -583,14 +582,6 @@ export function FollowUpInvitationDialog({
                   </span>
                 </div>
               )}
-              <div className="flex justify-between text-muted-foreground">
-                <span>
-                  Platform fee{totalSessions > 1 ? ` (${totalSessions}×)` : ""}
-                </span>
-                <span>
-                  {formatCurrency(priceCalc.platformFee, doctorCurrency)}
-                </span>
-              </div>
               <div className="flex justify-between border-t pt-1.5 font-semibold">
                 <span>Total (patient pays)</span>
                 <span>

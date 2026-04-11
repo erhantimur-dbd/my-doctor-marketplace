@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Receipt, Loader2, X } from "lucide-react";
 import { createInvoice } from "@/actions/invoices";
-import { formatCurrency, getBookingFeeCents } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/utils/currency";
 import { toast } from "sonner";
 import { MEDICAL_TEST_GROUPS } from "@/lib/constants/medical-tests";
 
@@ -134,7 +134,6 @@ export function CreateInvoiceDialog({
 
   const priceCalc = useMemo(() => {
     const subtotal = items.reduce((sum, item) => sum + item.priceCents * item.quantity, 0);
-    const platformFee = getBookingFeeCents(doctorCurrency);
 
     let discountAmount = 0;
     if (discountType === "percentage" && discountValue > 0) {
@@ -144,9 +143,9 @@ export function CreateInvoiceDialog({
     }
 
     const afterDiscount = Math.max(0, subtotal - discountAmount);
-    const total = afterDiscount + platformFee;
+    const total = afterDiscount;
 
-    return { subtotal, platformFee, discountAmount, afterDiscount, total };
+    return { subtotal, platformFee: 0, discountAmount, afterDiscount, total };
   }, [items, discountType, discountValue, doctorCurrency]);
 
   const resetForm = () => {
@@ -383,10 +382,6 @@ export function CreateInvoiceDialog({
                   <span>−{formatCurrency(priceCalc.discountAmount, doctorCurrency)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-muted-foreground">
-                <span>Platform fee</span>
-                <span>{formatCurrency(priceCalc.platformFee, doctorCurrency)}</span>
-              </div>
               <div className="flex justify-between border-t pt-1.5 font-semibold">
                 <span>Total (patient pays)</span>
                 <span>{formatCurrency(priceCalc.total, doctorCurrency)}</span>

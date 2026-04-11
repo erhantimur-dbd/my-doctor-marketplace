@@ -7,7 +7,7 @@ import { safeError } from "@/lib/utils/safe-error";
 import { subscriptionUpgradeInviteEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
-import { getBookingFeeCents } from "@/lib/utils/currency";
+import { getCommissionCents } from "@/lib/utils/currency";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { sendEmail } from "@/lib/email/client";
 import {
@@ -1715,8 +1715,8 @@ export async function adminCreateBookingOnBehalf(input: {
         : doctor.consultation_fee_cents;
   }
 
-  const platformFeeCents = getBookingFeeCents(doctor.base_currency);
-  const totalAmountCents = consultationFeeCents + platformFeeCents;
+  const platformFeeCents = 0;
+  const totalAmountCents = consultationFeeCents;
 
   // Insert booking with pending_payment + admin metadata
   const paymentLinkExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
@@ -1781,7 +1781,7 @@ export async function adminCreateBookingOnBehalf(input: {
       },
     ],
     payment_intent_data: {
-      application_fee_amount: platformFeeCents,
+      application_fee_amount: getCommissionCents(totalAmountCents),
       transfer_data: {
         destination: doctor.stripe_account_id,
       },
@@ -1923,7 +1923,7 @@ export async function adminResendPaymentLink(bookingId: string) {
       },
     ],
     payment_intent_data: {
-      application_fee_amount: booking.platform_fee_cents,
+      application_fee_amount: getCommissionCents(booking.total_amount_cents),
       transfer_data: {
         destination: doctor.stripe_account_id,
       },
