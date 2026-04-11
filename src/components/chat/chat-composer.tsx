@@ -44,7 +44,7 @@ export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-end gap-1.5 border-t border-border bg-background px-2.5 py-2"
+      className="flex items-center gap-2 border-t border-border bg-background px-2.5 py-2"
     >
       <div className="relative flex-1">
         <textarea
@@ -56,8 +56,9 @@ export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
           placeholder={t("placeholder")}
           rows={1}
           disabled={disabled}
+          style={{ minHeight: "36px" }}
           className={cn(
-            "w-full resize-none rounded-full border border-border bg-muted/40 px-3.5 py-2 text-[13px]",
+            "block w-full resize-none rounded-full border border-border bg-muted/40 px-3.5 py-1.5 text-[13px] leading-[22px]",
             "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30",
             "disabled:cursor-not-allowed disabled:opacity-60"
           )}
@@ -68,7 +69,7 @@ export function ChatComposer({ onSend, disabled }: ChatComposerProps) {
         disabled={disabled || !value.trim()}
         aria-label={t("send")}
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
+          "flex h-9 w-9 shrink-0 items-center justify-center self-end rounded-full transition-colors",
           value.trim() && !disabled
             ? "bg-primary text-primary-foreground hover:bg-primary/90"
             : "bg-muted text-muted-foreground"

@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Minimize2, X, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useChatStore } from "@/stores/chat-store";
+import { Logo } from "@/components/brand/logo";
 import { ChatMessage } from "./chat-message";
 import { ChatComposer } from "./chat-composer";
 import { ChatSuggestions } from "./chat-suggestions";
@@ -76,21 +77,19 @@ export function ChatWindow() {
         }}
         exit={{ opacity: 0, y: 20, scale: 0.98 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="fixed bottom-4 right-4 z-[90] flex w-[calc(100vw-2rem)] max-w-[360px] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl sm:bottom-6 sm:right-6 md:w-[360px]"
+        className="fixed bottom-4 right-4 flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl sm:bottom-6 sm:right-6"
         style={{
+          zIndex: 9999,
+          width: "min(360px, calc(100vw - 2rem))",
+          maxWidth: "360px",
           height: isMinimized ? 56 : "min(540px, calc(100vh - 3rem))",
         }}
       >
         {/* Header */}
         <div className="flex items-center justify-between gap-2 bg-gradient-to-br from-primary to-primary/80 px-3 py-2.5 text-primary-foreground">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/30">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white">
-                <div className="flex gap-[3px]">
-                  <div className="h-1 w-1 rounded-full bg-primary" />
-                  <div className="h-1 w-1 rounded-full bg-primary" />
-                </div>
-              </div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-white/40">
+              <Logo className="h-[18px] w-[18px] text-primary" />
             </div>
             <div className="min-w-0">
               <p className="truncate text-[13px] font-semibold leading-tight">

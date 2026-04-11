@@ -1201,6 +1201,7 @@
   },
   "chat": {
     "launcher": {
+      "eyebrow": "AI Assistant",
       "tagline": "The AI that finds the perfect doctor for you",
       "cta": "Find specialist",
       "open": "Open chat assistant"
