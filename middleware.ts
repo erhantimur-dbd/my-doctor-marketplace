@@ -68,6 +68,12 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   "/terms",
   "/privacy",
   "/cookie-policy",
+  "/about",
+  // UK regulatory and complaints pages (serve 200 on .co.uk, 404 on other
+  // regions — the page.tsx decides). Listed here so the coming-soon gate
+  // doesn't swallow them before the page-level region check runs.
+  "/regulatory",
+  "/complaints",
 ];
 
 // Root-level paths (no locale prefix) that bypass the gate.

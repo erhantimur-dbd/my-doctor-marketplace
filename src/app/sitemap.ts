@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { routing } from "@/i18n/routing";
 import { headers } from "next/headers";
 import type { MetadataRoute } from "next";
+import { regionFromHost } from "@/lib/region";
 
 const { locales } = routing;
 
@@ -10,6 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const host = headersList.get("host") || "";
   const protocol = host.includes("localhost") ? "http" : "https";
   const BASE_URL = host ? `${protocol}://${host}` : (process.env.NEXT_PUBLIC_APP_URL || "https://www.mydoctors360.co.uk");
+  const region = regionFromHost(host);
 
   const supabase = createAdminClient();
 
@@ -48,9 +50,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
 
   // Legal pages (lower priority, rarely change)
-  const legalPages = ["/terms", "/privacy", "/cookie-policy"];
+  const legalPages = ["/terms", "/privacy", "/cookie-policy", "/about"];
   const legalEntries = locales.flatMap((locale) =>
     legalPages.map((page) => ({
+      url: `${BASE_URL}/${locale}${page}`,
+      lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.3,
+    }))
+  );
+
+  // UK-only pages. These routes return 404 on non-UK regions, so we only
+  // emit them in the sitemap when the request came in on the .co.uk host.
+  // Keeps .com/.eu sitemaps free of routes that would 404 for their visitors.
+  const ukOnlyPages = region === "uk" ? ["/regulatory", "/complaints"] : [];
+  const ukOnlyEntries = locales.flatMap((locale) =>
+    ukOnlyPages.map((page) => ({
       url: `${BASE_URL}/${locale}${page}`,
       lastModified: new Date(),
       changeFrequency: "monthly" as const,
@@ -107,6 +122,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...highPriorityEntries,
     ...publicEntries,
     ...legalEntries,
+    ...ukOnlyEntries,
     ...doctorEntries,
     ...blogEntries,
     ...specialtyEntries,
