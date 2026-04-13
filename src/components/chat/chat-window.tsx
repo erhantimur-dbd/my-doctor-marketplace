@@ -31,6 +31,7 @@ export function ChatWindow() {
     hasAcceptedGdpr,
     messages: storedMessages,
     close,
+    minimize,
     toggleMinimized,
     acceptGdpr,
     setMessages,
@@ -144,6 +145,7 @@ export function ChatWindow() {
                           key={m.id}
                           message={m as UIMessage}
                           locale={locale}
+                          onBook={minimize}
                         />
                       ))}
                       {status === "submitted" && (

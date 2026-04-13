@@ -59,6 +59,7 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
         {/* Name */}
         <Link
           href={`/doctors/${doctor.slug}`}
+          onClick={onBook}
           className="mt-3 text-base font-semibold text-primary hover:underline"
         >
           {doctor.name}

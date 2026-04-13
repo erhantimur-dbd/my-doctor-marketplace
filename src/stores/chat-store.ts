@@ -12,6 +12,7 @@ interface ChatState {
   // actions
   open: () => void;
   close: () => void;
+  minimize: () => void;
   toggleMinimized: () => void;
   acceptGdpr: () => void;
   setMessages: (messages: UIMessage[]) => void;
@@ -43,6 +44,7 @@ export const useChatStore = create<ChatState>()(
       messages: [],
       open: () => set({ isOpen: true, isMinimized: false }),
       close: () => set({ isOpen: false, isMinimized: false }),
+      minimize: () => set({ isMinimized: true }),
       toggleMinimized: () => set((s) => ({ isMinimized: !s.isMinimized })),
       acceptGdpr: () => set({ hasAcceptedGdpr: true }),
       setMessages: (messages) => set({ messages }),
