@@ -51,7 +51,7 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
             className="absolute inset-0 animate-ping rounded-full bg-primary/40 opacity-60"
           />
           <div
-            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-teal-600 ring-2 ring-white/60"
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-teal-600 ring-2 ring-white"
             style={{
               boxShadow:
                 "0 12px 30px -8px rgba(8, 145, 178, 0.5), 0 4px 12px -4px rgba(14, 165, 233, 0.4)",
