@@ -89,6 +89,16 @@ function isAllowedOnComingSoon(pathname: string): boolean {
 }
 
 export async function middleware(request: NextRequest) {
+  // Serve /sitemap.xml and /robots.txt straight from the root-level metadata
+  // routes (src/app/sitemap.ts, src/app/robots.ts). Without this early return,
+  // next-intl rewrites them to /{locale}/sitemap.xml, which doesn't exist and
+  // resolves to the localized homepage HTML — Google Search Console then
+  // reports "Couldn't fetch" on the sitemap.
+  const rawPathname = request.nextUrl.pathname;
+  if (rawPathname === "/sitemap.xml" || rawPathname === "/robots.txt") {
+    return NextResponse.next();
+  }
+
   // Gate coming-soon domains — only doctor-onboarding routes pass through.
   // NOTE: The authoritative gate lives in vercel.json (Vercel edge rewrites
   // run before middleware). This block is a defence-in-depth backup in case
