@@ -111,6 +111,21 @@ export function ChatWindow() {
 
   return (
     <AnimatePresence>
+      {/* Responsive sizing — inline CSS to avoid Turbopack JIT issues */}
+      <style>{`
+        .chat-window-panel {
+          bottom: 1rem; left: 1rem; right: 1rem;
+          max-width: 360px;
+          height: min(540px, calc(100dvh - 3rem));
+        }
+        @media (min-width: 640px) {
+          .chat-window-panel {
+            bottom: 1.5rem; left: auto; right: 1.5rem;
+            width: 360px;
+            height: min(540px, calc(100dvh - 3rem));
+          }
+        }
+      `}</style>
       <motion.div
         key="chat-window"
         initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -122,12 +137,10 @@ export function ChatWindow() {
         }}
         exit={{ opacity: 0, y: 20, scale: 0.98 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="fixed bottom-4 right-4 flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl sm:bottom-6 sm:right-6"
+        className="chat-window-panel fixed flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
         style={{
           zIndex: 9999,
-          width: "min(360px, calc(100vw - 2rem))",
-          maxWidth: "360px",
-          height: isMinimized ? 56 : "min(540px, calc(100vh - 3rem))",
+          height: isMinimized ? 56 : undefined,
         }}
       >
         {/* Header */}
