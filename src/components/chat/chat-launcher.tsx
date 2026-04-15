@@ -43,18 +43,20 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
           type="button"
           onClick={onOpen}
           aria-label={t("open")}
-          className="group relative flex items-center justify-center"
-          style={{
-            boxShadow:
-              "0 12px 30px -8px rgba(8, 145, 178, 0.5), 0 4px 12px -4px rgba(14, 165, 233, 0.4)",
-          }}
+          className="group relative flex h-14 w-14 items-center justify-center rounded-full"
         >
           {/* Pulse ring */}
           <span
             aria-hidden
             className="absolute inset-0 animate-ping rounded-full bg-primary/40 opacity-60"
           />
-          <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-teal-600 shadow-lg">
+          <div
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-teal-600 ring-2 ring-white/60"
+            style={{
+              boxShadow:
+                "0 12px 30px -8px rgba(8, 145, 178, 0.5), 0 4px 12px -4px rgba(14, 165, 233, 0.4)",
+            }}
+          >
             <Logo className="h-7 w-7 text-white" />
           </div>
           {/* Online status dot */}
@@ -63,7 +65,7 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
               aria-hidden
               className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
             />
-            <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-primary" />
+            <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white" />
           </span>
         </button>
       </div>
