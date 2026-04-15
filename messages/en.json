@@ -1241,7 +1241,8 @@
       "search_error": "Could not load doctors right now. Please try again.",
       "emergency_title": "This may be a medical emergency",
       "emergency_default_reason": "Your symptoms could need urgent care. Please seek immediate help.",
-      "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now."
+      "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now.",
+      "looking_up": "Looking that up…"
     },
     "card": {
       "expert_in": "Expert in:",
@@ -1249,6 +1250,7 @@
       "video": "Video",
       "from": "From",
       "book_appointment": "Book appointment"
-    }
+    },
+    "nudge": "Still looking? I can help narrow it down — try filtering by language, location, or video consultations."
   }
 }

@@ -175,3 +175,55 @@ export function getHelpCategories(
 
 // Fallback: English-only categories for backward compatibility / SSR
 export { getHelpCategories as buildHelpCategories };
+
+/**
+ * Search articles by keyword matching against tags.
+ * Used by the chat `answerFaq` tool to find relevant help articles.
+ * Returns top matches sorted by tag-hit count (descending).
+ */
+export interface ArticleMatch {
+  id: string;
+  categoryId: string;
+  tags: string[];
+  audience: "patient" | "doctor" | "all";
+  score: number;
+}
+
+export function searchArticlesByTags(
+  query: string,
+  maxResults = 3
+): ArticleMatch[] {
+  const words = query
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+
+  if (words.length === 0) return [];
+
+  const scored: ArticleMatch[] = [];
+
+  for (const [categoryId, defs] of Object.entries(articleDefs)) {
+    for (const def of defs) {
+      let score = 0;
+      for (const word of words) {
+        for (const tag of def.tags) {
+          if (tag.includes(word) || word.includes(tag)) {
+            score++;
+          }
+        }
+      }
+      if (score > 0) {
+        scored.push({
+          id: def.id,
+          categoryId,
+          tags: def.tags,
+          audience: def.audience,
+          score,
+        });
+      }
+    }
+  }
+
+  return scored.sort((a, b) => b.score - a.score).slice(0, maxResults);
+}

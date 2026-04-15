@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minimize2, X, Loader2 } from "lucide-react";
+import { Minimize2, Sparkles, X, Loader2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useChatStore } from "@/stores/chat-store";
 import { Logo } from "@/components/brand/logo";
@@ -26,14 +26,19 @@ import { ChatGdprGate } from "./chat-gdpr-gate";
 export function ChatWindow() {
   const locale = useLocale();
   const t = useTranslations("chat.window");
+  const tNudge = useTranslations("chat");
   const {
     isMinimized,
     hasAcceptedGdpr,
+    nudgeShown,
+    showNudge,
     messages: storedMessages,
     close,
     minimize,
     toggleMinimized,
     acceptGdpr,
+    markNudgeShown,
+    setShowNudge,
     setMessages,
   } = useChatStore();
 
@@ -59,7 +64,46 @@ export function ChatWindow() {
     el.scrollTop = el.scrollHeight;
   }, [messages, status]);
 
+  // Nudge timer: 30s after doctor search results, show a hint if user hasn't acted
+  const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearNudgeTimer = useCallback(() => {
+    if (nudgeTimer.current) {
+      clearTimeout(nudgeTimer.current);
+      nudgeTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (nudgeShown) return;
+    // Check if latest assistant message has searchDoctors results
+    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+    if (!lastAssistant) return;
+    const hasResults = lastAssistant.parts.some(
+      (p) =>
+        p.type === "tool-searchDoctors" &&
+        (p as { state: string; output?: { doctors?: unknown[] } }).state === "output-available" &&
+        ((p as { output?: { doctors?: unknown[] } }).output?.doctors?.length ?? 0) > 0
+    );
+    if (hasResults && !nudgeTimer.current) {
+      nudgeTimer.current = setTimeout(() => {
+        setShowNudge(true);
+        markNudgeShown();
+      }, 30_000);
+    }
+    return clearNudgeTimer;
+  }, [messages, nudgeShown, clearNudgeTimer, setShowNudge, markNudgeShown]);
+
+  // Cancel nudge if user sends a new message or clicks a doctor
+  const handleBook = useCallback(() => {
+    clearNudgeTimer();
+    setShowNudge(false);
+    minimize();
+  }, [clearNudgeTimer, setShowNudge, minimize]);
+
   const handleSend = (text: string) => {
+    clearNudgeTimer();
+    setShowNudge(false);
     sendMessage({ text });
   };
 
@@ -145,13 +189,21 @@ export function ChatWindow() {
                           key={m.id}
                           message={m as UIMessage}
                           locale={locale}
-                          onBook={minimize}
+                          onBook={handleBook}
                         />
                       ))}
                       {status === "submitted" && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <Loader2 className="h-3 w-3 animate-spin" />
                           {t("thinking")}
+                        </div>
+                      )}
+                      {showNudge && (
+                        <div className="flex w-full justify-start">
+                          <div className="flex max-w-[90%] items-start gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground">
+                            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+                            {tNudge("nudge")}
+                          </div>
                         </div>
                       )}
                     </div>

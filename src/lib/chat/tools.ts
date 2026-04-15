@@ -21,6 +21,8 @@ import { z } from "zod/v4";
 import { analyzeSymptoms as analyzeSymptomsAction } from "@/actions/ai";
 import { searchDoctors as searchDoctorsAction } from "@/actions/search";
 import { formatSpecialtyName } from "@/lib/utils";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { searchArticlesByTags } from "@/components/help-center/help-center-data";
 
 export interface ChatDoctor {
   id: string;
@@ -173,6 +175,18 @@ export function buildChatTools(locale: string) {
             };
           });
 
+        // Fire-and-forget: log search intent for analytics
+        createAdminClient()
+          .from("chat_search_intents")
+          .insert({
+            specialty,
+            location: locationSlug,
+            language,
+            consultation_type: consultationType,
+            doctors_returned: doctors.length,
+          })
+          .then(() => {}, () => {});
+
         return {
           ok: true as const,
           doctors,
@@ -180,6 +194,40 @@ export function buildChatTools(locale: string) {
           fallbackApplied: ("fallbackApplied" in result
             ? (result as { fallbackApplied?: string | null }).fallbackApplied
             : null) || null,
+        };
+      },
+    }),
+
+    answerFaq: tool({
+      description:
+        "Answer a question about how the MyDoctors360 platform works — pricing, payments, cancellation, refunds, video consultations, account setup, supported languages, booking process, etc. Call this when the user asks a non-medical question about the platform. Do NOT call analyzeSymptoms or searchDoctors for platform questions.",
+      inputSchema: z.object({
+        question: z
+          .string()
+          .min(3)
+          .describe("The user's question about the platform, in their own words"),
+      }),
+      execute: async ({ question }) => {
+        const matches = searchArticlesByTags(question);
+        if (matches.length === 0) {
+          return {
+            ok: false as const,
+            error: "No matching help article found",
+          };
+        }
+        const top = matches[0];
+        return {
+          ok: true as const,
+          articleId: top.id,
+          categoryId: top.categoryId,
+          // i18n keys — the client resolves these with next-intl
+          questionKey: `${top.id}.question`,
+          answerKey: `${top.id}.answer`,
+          relatedArticles: matches.slice(1).map((m) => ({
+            articleId: m.id,
+            categoryId: m.categoryId,
+            questionKey: `${m.id}.question`,
+          })),
         };
       },
     }),

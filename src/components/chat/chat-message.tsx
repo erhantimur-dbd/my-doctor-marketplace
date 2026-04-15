@@ -1,8 +1,9 @@
 "use client";
 
 import type { UIMessage } from "ai";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, BookOpen, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { ChatDoctorCard } from "./chat-doctor-card";
 import type { ChatDoctor } from "@/lib/chat/tools";
@@ -177,8 +178,97 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
             return null;
           }
 
+          // ── Tool: answerFaq ──────────────────────
+          if (part.type === "tool-answerFaq") {
+            const tp = part as {
+              state: string;
+              output?: {
+                ok?: boolean;
+                articleId?: string;
+                categoryId?: string;
+                questionKey?: string;
+                answerKey?: string;
+                relatedArticles?: {
+                  articleId: string;
+                  categoryId: string;
+                  questionKey: string;
+                }[];
+              };
+            };
+
+            if (tp.state === "input-streaming" || tp.state === "input-available") {
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-xs text-muted-foreground"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {t("looking_up")}
+                </div>
+              );
+            }
+
+            if (tp.state === "output-available" && tp.output?.ok) {
+              return (
+                <FaqCard
+                  key={idx}
+                  articleId={tp.output.articleId!}
+                  questionKey={tp.output.questionKey!}
+                  answerKey={tp.output.answerKey!}
+                />
+              );
+            }
+            // If no match found, the LLM will respond in text — render nothing
+            return null;
+          }
+
           return null;
         })}
+      </div>
+    </div>
+  );
+}
+
+/** Styled FAQ answer card rendered inline in chat. */
+function FaqCard({
+  articleId,
+  questionKey,
+  answerKey,
+}: {
+  articleId: string;
+  questionKey: string;
+  answerKey: string;
+}) {
+  const t = useTranslations("helpArticles");
+
+  let question: string;
+  let answer: string;
+  try {
+    question = t(questionKey);
+    answer = t(answerKey);
+  } catch {
+    // Fallback if i18n key is missing
+    question = articleId.replace(/-/g, " ");
+    answer = "";
+  }
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-background shadow-sm">
+      <div className="flex items-start gap-2.5 border-b border-border bg-primary/5 px-3.5 py-2.5">
+        <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <p className="text-sm font-semibold text-foreground">{question}</p>
+      </div>
+      <div className="px-3.5 py-3">
+        <p className="text-[13px] leading-relaxed text-foreground/85">
+          {answer}
+        </p>
+        <Link
+          href="/support"
+          className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+        >
+          <BookOpen className="h-3 w-3" />
+          Visit Help Centre
+        </Link>
       </div>
     </div>
   );

@@ -8,6 +8,8 @@ interface ChatState {
   isOpen: boolean;
   isMinimized: boolean;
   hasAcceptedGdpr: boolean;
+  nudgeShown: boolean;
+  showNudge: boolean;
   messages: UIMessage[];
   // actions
   open: () => void;
@@ -15,6 +17,8 @@ interface ChatState {
   minimize: () => void;
   toggleMinimized: () => void;
   acceptGdpr: () => void;
+  markNudgeShown: () => void;
+  setShowNudge: (show: boolean) => void;
   setMessages: (messages: UIMessage[]) => void;
   reset: () => void;
 }
@@ -41,14 +45,18 @@ export const useChatStore = create<ChatState>()(
       isOpen: false,
       isMinimized: false,
       hasAcceptedGdpr: false,
+      nudgeShown: false,
+      showNudge: false,
       messages: [],
       open: () => set({ isOpen: true, isMinimized: false }),
       close: () => set({ isOpen: false, isMinimized: false }),
       minimize: () => set({ isMinimized: true }),
       toggleMinimized: () => set((s) => ({ isMinimized: !s.isMinimized })),
       acceptGdpr: () => set({ hasAcceptedGdpr: true }),
+      markNudgeShown: () => set({ nudgeShown: true, showNudge: false }),
+      setShowNudge: (show) => set({ showNudge: show }),
       setMessages: (messages) => set({ messages }),
-      reset: () => set({ messages: [], isOpen: false, isMinimized: false }),
+      reset: () => set({ messages: [], isOpen: false, isMinimized: false, nudgeShown: false, showNudge: false }),
     }),
     {
       name: "md360-chat",
@@ -58,6 +66,7 @@ export const useChatStore = create<ChatState>()(
         hasAcceptedGdpr: state.hasAcceptedGdpr,
         isOpen: state.isOpen,
         isMinimized: state.isMinimized,
+        nudgeShown: state.nudgeShown,
       }),
     }
   )

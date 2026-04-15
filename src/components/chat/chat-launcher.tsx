@@ -54,7 +54,7 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
             aria-hidden
             className="absolute inset-0 animate-ping rounded-full bg-primary/40 opacity-60"
           />
-          <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-teal-600 shadow-lg ring-2 ring-white/60">
+          <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-teal-600 shadow-lg">
             <Logo className="h-7 w-7 text-white" />
           </div>
           {/* Online status dot */}
@@ -63,7 +63,7 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
               aria-hidden
               className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
             />
-            <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-white" />
+            <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-emerald-400 ring-2 ring-primary" />
           </span>
         </button>
       </div>
