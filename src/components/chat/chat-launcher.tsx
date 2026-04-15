@@ -38,7 +38,7 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
       `}</style>
 
       {/* ── Mobile: compact circular logo button ── */}
-      <div className="chat-launcher-mobile">
+      <div className="chat-launcher-mobile p-4 -m-4">
         <button
           type="button"
           onClick={onOpen}
