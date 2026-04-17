@@ -191,11 +191,10 @@ export default function PricingPage() {
             For Doctors &amp; Clinics
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
-            Grow Your Practice with MyDoctors360
+            Build trust, grow your practice with MyDoctors360
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Join our premium marketplace and reach patients across Europe.
-            Simple pricing, powerful tools, 12-month commitment billed monthly.
+            Strengthen your online presence with a comprehensive profile, verified reviews and professional connections that drive practice growth.
           </p>
         </div>
       </section>
