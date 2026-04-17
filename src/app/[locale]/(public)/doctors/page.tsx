@@ -280,7 +280,7 @@ export default async function DoctorsPage({
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
               </span>
-              Available within the next hour
+              Appointment available within the next hour
             </div>
           )}
 
