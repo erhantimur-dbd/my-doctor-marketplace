@@ -9,6 +9,11 @@ import { reviewReceivedEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
 import { createNotification } from "@/lib/notifications";
 import { shouldAutoApprove } from "@/lib/reviews/auto-approve";
+import {
+  MAX_ENDORSEMENTS_PER_REVIEW,
+  isValidSkillSlug,
+  getSkill,
+} from "@/lib/constants/skills";
 
 /** Fetch a single highlighted 5-star review (most recent with a comment) */
 export async function getFeaturedReview(doctorId: string) {
@@ -41,6 +46,41 @@ export async function getFeaturedReview(doctorId: string) {
   };
 }
 
+export interface DoctorEndorsement {
+  slug: string;
+  label: string;
+  count: number;
+}
+
+/**
+ * Aggregate skill-endorsement counts for a doctor.
+ * Only counts endorsements on visible reviews (RLS also enforces this).
+ */
+export async function getDoctorEndorsementCounts(
+  doctorId: string
+): Promise<DoctorEndorsement[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("review_endorsements")
+    .select("skill_slug")
+    .eq("doctor_id", doctorId);
+
+  if (error || !data) return [];
+
+  const counts = new Map<string, number>();
+  for (const row of data) {
+    counts.set(row.skill_slug, (counts.get(row.skill_slug) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([slug, count]) => {
+      const skill = getSkill(slug);
+      return { slug, label: skill?.label ?? slug, count };
+    })
+    .sort((a, b) => b.count - a.count);
+}
+
 export async function submitReview(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -53,6 +93,12 @@ export async function submitReview(formData: FormData) {
   const rating = parseInt(formData.get("rating") as string, 10);
   const title = formData.get("title") as string;
   const comment = formData.get("comment") as string;
+
+  // Skill endorsements are sent as repeated "skills[]" fields (up to 5).
+  const rawSkills = formData.getAll("skills[]").map((s) => String(s));
+  const skillSlugs = Array.from(new Set(rawSkills))
+    .filter(isValidSkillSlug)
+    .slice(0, MAX_ENDORSEMENTS_PER_REVIEW);
 
   if (!bookingId || !rating || rating < 1 || rating > 5) {
     return { error: "Invalid review data" };
@@ -87,17 +133,36 @@ export async function submitReview(formData: FormData) {
     comment || null
   );
 
-  const { error } = await supabase.from("reviews").insert({
-    booking_id: bookingId,
-    patient_id: user.id,
-    doctor_id: booking.doctor_id,
-    rating,
-    title: title || null,
-    comment: comment || null,
-    is_visible: autoApproved,
-  });
+  const { data: insertedReview, error } = await supabase
+    .from("reviews")
+    .insert({
+      booking_id: bookingId,
+      patient_id: user.id,
+      doctor_id: booking.doctor_id,
+      rating,
+      title: title || null,
+      comment: comment || null,
+      is_visible: autoApproved,
+    })
+    .select("id")
+    .single();
 
-  if (error) return { error: safeError(error) };
+  if (error || !insertedReview) return { error: safeError(error) };
+
+  // Insert skill endorsements (best-effort — don't fail the review if these error)
+  if (skillSlugs.length > 0) {
+    const rows = skillSlugs.map((slug) => ({
+      review_id: insertedReview.id,
+      doctor_id: booking.doctor_id,
+      skill_slug: slug,
+    }));
+    const { error: endorseErr } = await supabase
+      .from("review_endorsements")
+      .insert(rows);
+    if (endorseErr) {
+      log.error("[Reviews] Failed to save endorsements", { err: endorseErr });
+    }
+  }
 
   // Send review notification email to the doctor (non-blocking)
   const admin = createAdminClient();

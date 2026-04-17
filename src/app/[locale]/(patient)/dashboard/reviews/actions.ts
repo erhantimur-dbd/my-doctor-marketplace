@@ -3,6 +3,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { shouldAutoApprove } from "@/lib/reviews/auto-approve";
+import {
+  MAX_ENDORSEMENTS_PER_REVIEW,
+  isValidSkillSlug,
+} from "@/lib/constants/skills";
+
+function sanitizeSkillSlugs(input: string[] | undefined): string[] {
+  if (!input) return [];
+  return Array.from(new Set(input))
+    .filter(isValidSkillSlug)
+    .slice(0, MAX_ENDORSEMENTS_PER_REVIEW);
+}
 
 interface SubmitReviewInput {
   bookingId: string;
@@ -10,6 +21,7 @@ interface SubmitReviewInput {
   rating: number;
   title: string | null;
   comment: string | null;
+  skillSlugs?: string[];
 }
 
 export async function submitReview(
@@ -68,18 +80,33 @@ export async function submitReview(
   );
 
   // Insert review — auto-approved reviews are immediately visible
-  const { error: insertError } = await supabase.from("reviews").insert({
-    booking_id: input.bookingId,
-    doctor_id: input.doctorId,
-    patient_id: user.id,
-    rating: input.rating,
-    title: input.title,
-    comment: input.comment,
-    is_visible: autoApproved,
-  });
+  const { data: inserted, error: insertError } = await supabase
+    .from("reviews")
+    .insert({
+      booking_id: input.bookingId,
+      doctor_id: input.doctorId,
+      patient_id: user.id,
+      rating: input.rating,
+      title: input.title,
+      comment: input.comment,
+      is_visible: autoApproved,
+    })
+    .select("id")
+    .single();
 
-  if (insertError) {
+  if (insertError || !inserted) {
     return { error: "Failed to submit review. Please try again." };
+  }
+
+  const skills = sanitizeSkillSlugs(input.skillSlugs);
+  if (skills.length > 0) {
+    await supabase.from("review_endorsements").insert(
+      skills.map((slug) => ({
+        review_id: inserted.id,
+        doctor_id: input.doctorId,
+        skill_slug: slug,
+      }))
+    );
   }
 
   revalidatePath("/dashboard/reviews");
@@ -93,6 +120,7 @@ interface UpdateReviewInput {
   rating: number;
   title: string | null;
   comment: string | null;
+  skillSlugs?: string[];
 }
 
 export async function updatePatientReview(
@@ -115,7 +143,7 @@ export async function updatePatientReview(
   // Fetch the review and verify ownership
   const { data: review, error: fetchError } = await supabase
     .from("reviews")
-    .select("id, patient_id, created_at")
+    .select("id, patient_id, doctor_id, created_at")
     .eq("id", input.reviewId)
     .single();
 
@@ -148,6 +176,25 @@ export async function updatePatientReview(
 
   if (updateError) {
     return { error: "Failed to update review. Please try again." };
+  }
+
+  // Replace endorsements: delete all and re-insert the new selection.
+  if (input.skillSlugs !== undefined) {
+    await supabase
+      .from("review_endorsements")
+      .delete()
+      .eq("review_id", input.reviewId);
+
+    const skills = sanitizeSkillSlugs(input.skillSlugs);
+    if (skills.length > 0) {
+      await supabase.from("review_endorsements").insert(
+        skills.map((slug) => ({
+          review_id: input.reviewId,
+          doctor_id: review.doctor_id,
+          skill_slug: slug,
+        }))
+      );
+    }
   }
 
   revalidatePath("/dashboard/reviews");

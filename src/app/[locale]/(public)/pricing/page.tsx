@@ -20,7 +20,40 @@ import {
   X,
   Building2,
   Crown,
+  Award,
+  TrendingUp,
+  Target,
+  MessageSquareHeart,
+  Globe2,
 } from "lucide-react";
+
+const BENEFITS = [
+  {
+    icon: Award,
+    title: "Enhance your reputation",
+    description: "Your expertise, backed by verified patients and trusted colleagues.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Grow your practice",
+    description: "Harness trust to drive visibility, enquiries and sustainable growth.",
+  },
+  {
+    icon: Target,
+    title: "Reach target patients",
+    description: "Reach target patients with treatment tags.",
+  },
+  {
+    icon: MessageSquareHeart,
+    title: "Improve patient experience",
+    description: "Get actionable insights from review analytics.",
+  },
+  {
+    icon: Globe2,
+    title: "Build your professional network",
+    description: "Network and collaborate with MyDoctors360 Connect.",
+  },
+];
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { ClinicGetStartedButton } from "@/components/shared/clinic-get-started-button";
 import {
@@ -164,6 +197,37 @@ export default function PricingPage() {
             Join our premium marketplace and reach patients across Europe.
             Simple pricing, powerful tools, 12-month commitment billed monthly.
           </p>
+        </div>
+      </section>
+
+      {/* Benefits */}
+      <section className="border-b bg-background px-4 py-12 md:py-16">
+        <div className="container mx-auto max-w-6xl">
+          <div className="mx-auto max-w-3xl text-center">
+            <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
+              Build trust, grow your practice
+            </h2>
+            <p className="mt-3 text-muted-foreground">
+              Strengthen your online presence with a comprehensive profile, verified reviews and professional connections that drive practice growth.
+            </p>
+          </div>
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {BENEFITS.map((benefit) => {
+              const Icon = benefit.icon;
+              return (
+                <div
+                  key={benefit.title}
+                  className="flex flex-col rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-base font-semibold leading-tight">{benefit.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{benefit.description}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
