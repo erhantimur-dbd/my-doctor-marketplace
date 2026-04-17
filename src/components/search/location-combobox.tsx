@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo, useTransition } from "react";
-import { MapPin, Loader2, Check, Navigation, Globe, Search } from "lucide-react";
+import { MapPin, Loader2, Check, Navigation, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { geocodeAddress, findNearestLocation } from "@/lib/utils/geo";
 import { searchPlaces, getPlaceCoordinates } from "@/actions/places";
@@ -165,24 +165,30 @@ export function LocationCombobox({
       ? `${selectedLocation.city}, ${COUNTRY_NAMES[selectedLocation.country_code] || selectedLocation.country_code}`
       : placeName || "";
 
-  // Filter locations and countries client-side
+  // UK-only launch: hide non-UK cities and surface popular cities first.
+  const UK_CITY_PRIORITY = ["london", "manchester", "liverpool", "leeds", "birmingham", "edinburgh"];
+  const ukLocations = useMemo(() => {
+    const uk = locations.filter((l) => l.country_code === "GB");
+    return uk.sort((a, b) => {
+      const aIdx = UK_CITY_PRIORITY.indexOf(a.city.toLowerCase());
+      const bIdx = UK_CITY_PRIORITY.indexOf(b.city.toLowerCase());
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return a.city.localeCompare(b.city);
+    });
+  }, [locations]);
+
   const term = search.trim().toLowerCase();
-  const filteredCountries = term
-    ? countries.filter(
-        (c) =>
-          c.name.toLowerCase().includes(term) ||
-          c.code.toLowerCase().includes(term)
-      )
-    : countries;
   const filteredLocations = term
-    ? locations.filter((l) => {
+    ? ukLocations.filter((l) => {
         return (
           l.city.toLowerCase().includes(term) ||
           l.country_code.toLowerCase().includes(term) ||
           l.slug.toLowerCase().includes(term)
         );
       })
-    : locations;
+    : ukLocations;
 
   // Handle postcode geocoding with debounce
   useEffect(() => {
@@ -549,34 +555,6 @@ export function LocationCombobox({
             </div>
           )}
 
-          {/* Countries group */}
-          {filteredCountries.length > 0 && (
-            <div className={geocodeResult || placePredictions.length > 0 ? "border-t" : ""}>
-              <div className="px-3 pt-2 pb-1">
-                <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-                  Countries
-                </span>
-              </div>
-              {filteredCountries.map((c) => (
-                <button
-                  key={c.slug}
-                  type="button"
-                  onClick={() => handleSelect(c.slug)}
-                  className={cn(
-                    "flex w-full items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-accent",
-                    value === c.slug && "font-medium"
-                  )}
-                >
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <span>{countryFlag(c.code)} {c.name}</span>
-                  {value === c.slug && (
-                    <Check className="ml-auto h-4 w-4 text-primary" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Cities group */}
           {filteredLocations.length > 0 && (
             <div>
@@ -606,7 +584,7 @@ export function LocationCombobox({
           )}
 
           {/* No results */}
-          {filteredLocations.length === 0 && filteredCountries.length === 0 && placePredictions.length === 0 && !geocodeResult && !geocoding && !placesLoading && !placesDebouncing && search.trim() && (
+          {filteredLocations.length === 0 && placePredictions.length === 0 && !geocodeResult && !geocoding && !placesLoading && !placesDebouncing && search.trim() && (
             <div className="px-3 py-4 text-center text-sm text-muted-foreground">
               No locations found for &ldquo;{search.trim()}&rdquo;
             </div>
