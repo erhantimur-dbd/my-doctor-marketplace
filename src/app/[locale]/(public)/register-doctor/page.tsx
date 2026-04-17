@@ -61,7 +61,40 @@ import {
   CreditCard,
   Check,
   X,
+  Award,
+  TrendingUp,
+  Target,
+  MessageSquareHeart,
+  Globe2,
 } from "lucide-react";
+
+const BENEFITS = [
+  {
+    icon: Award,
+    title: "Enhance your reputation",
+    description: "Your expertise, backed by verified patients and trusted colleagues.",
+  },
+  {
+    icon: TrendingUp,
+    title: "Grow your practice",
+    description: "Harness trust to drive visibility, enquiries and sustainable growth.",
+  },
+  {
+    icon: Target,
+    title: "Reach target patients",
+    description: "Reach target patients with treatment tags.",
+  },
+  {
+    icon: MessageSquareHeart,
+    title: "Improve patient experience",
+    description: "Get actionable insights from review analytics.",
+  },
+  {
+    icon: Globe2,
+    title: "Build your professional network",
+    description: "Network and collaborate with MyDoctors360 Connect.",
+  },
+];
 
 const STEPS = [
   { number: 1, title: "Personal Info", icon: User },
@@ -427,7 +460,39 @@ export default function RegisterDoctorPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl px-4 py-8">
+    <>
+      {/* Hero + Benefits */}
+      <section className="border-b bg-gradient-to-b from-primary/5 to-background">
+        <div className="container mx-auto max-w-6xl px-4 py-12 sm:py-16">
+          <div className="mx-auto max-w-3xl text-center">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
+              Build trust, grow your practice
+            </h1>
+            <p className="mt-4 text-base text-muted-foreground sm:text-lg">
+              Strengthen your online presence with a comprehensive profile, verified reviews and professional connections that drive practice growth.
+            </p>
+          </div>
+          <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            {BENEFITS.map((benefit) => {
+              const Icon = benefit.icon;
+              return (
+                <div
+                  key={benefit.title}
+                  className="flex flex-col rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-base font-semibold leading-tight">{benefit.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{benefit.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <div className="container mx-auto max-w-2xl px-4 py-8">
       {/* Step Indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -1544,6 +1609,7 @@ export default function RegisterDoctorPage() {
           Sign in
         </Link>
       </p>
-    </div>
+      </div>
+    </>
   );
 }
