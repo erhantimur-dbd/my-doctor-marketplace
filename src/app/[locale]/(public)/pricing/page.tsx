@@ -205,10 +205,10 @@ export default function PricingPage() {
         <div className="container mx-auto max-w-6xl">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-2xl font-bold tracking-tight md:text-3xl">
-              Build trust, grow your practice
+              Grow Your Practice with MyDoctors360
             </h2>
             <p className="mt-3 text-muted-foreground">
-              Strengthen your online presence with a comprehensive profile, verified reviews and professional connections that drive practice growth.
+              Join our premium marketplace and reach patients across Europe. Simple pricing, powerful tools, 12-month commitment billed monthly.
             </p>
           </div>
           <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
