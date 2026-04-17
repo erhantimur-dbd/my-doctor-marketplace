@@ -20,6 +20,7 @@ import {
   CalendarDays,
   Stethoscope,
   Tag,
+  ThumbsUp,
 } from "lucide-react";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -32,6 +33,8 @@ import { FavoriteButton } from "@/components/doctors/favorite-button";
 import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 import { TrackDoctorView } from "@/components/doctors/track-doctor-view";
 import { PhotoGallery } from "@/components/doctors/photo-gallery";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getDoctorEndorsementCounts } from "@/actions/reviews";
 import { generateMetadata as seoMetadata } from "@/lib/seo/metadata";
 import { doctorJsonLd } from "@/lib/seo/json-ld";
 import type { Metadata } from "next";
@@ -121,6 +124,10 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     .select("summary_text, sentiment_tags")
     .eq("doctor_id", doctor.id)
     .single();
+
+  // Aggregate skill endorsements for this doctor
+  const endorsements = await getDoctorEndorsementCounts(doctor.id);
+  const totalEndorsements = endorsements.reduce((sum, e) => sum + e.count, 0);
 
   // Check if doctor has an active license (for booking eligibility)
   const { data: doctorLicense } = doctor.organization_id
@@ -535,86 +542,119 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
             </Card>
           )}
 
-          {/* Reviews */}
+          {/* Reviews + Skill Endorsements */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Star className="h-5 w-5" />
-                Reviews ({doctor.total_reviews})
-              </CardTitle>
-              {doctor.total_reviews > 5 && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href={`/doctors/${doctor.slug}/reviews`}>
-                    View All
-                  </Link>
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent>
-              {/* AI Review Summary */}
-              {reviewSummary && doctor.total_reviews >= 3 && (
-                <div className="mb-4">
-                  <ReviewSummaryCard
-                    summary={reviewSummary.summary_text}
-                    sentimentTags={reviewSummary.sentiment_tags || []}
-                    reviewSummaryTitle="What patients say"
-                    poweredByAi="AI-generated summary"
-                  />
-                </div>
-              )}
+            <CardContent className="pt-6">
+              <Tabs defaultValue="reviews">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="reviews" className="flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    Reviews ({doctor.total_reviews})
+                  </TabsTrigger>
+                  <TabsTrigger value="endorsements" className="flex items-center gap-2">
+                    <ThumbsUp className="h-4 w-4" />
+                    Skill Endorsements ({totalEndorsements})
+                  </TabsTrigger>
+                </TabsList>
 
-              {(!reviews || reviews.length === 0) && (
-                <p className="text-sm text-muted-foreground">
-                  No reviews yet
-                </p>
-              )}
-              {reviews && reviews.length > 0 && (
-                <div className="space-y-4">
-                  {reviews.map(
-                    (review: any) => (
-                      <div key={review.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="flex">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating
-                                    ? "fill-yellow-400 text-yellow-400"
-                                    : "text-muted"
-                                }`}
-                              />
-                            ))}
+                <TabsContent value="reviews" className="mt-4">
+                  {doctor.total_reviews > 5 && (
+                    <div className="mb-3 flex justify-end">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/doctors/${doctor.slug}/reviews`}>
+                          View All
+                        </Link>
+                      </Button>
+                    </div>
+                  )}
+
+                  {reviewSummary && doctor.total_reviews >= 3 && (
+                    <div className="mb-4">
+                      <ReviewSummaryCard
+                        summary={reviewSummary.summary_text}
+                        sentimentTags={reviewSummary.sentiment_tags || []}
+                        reviewSummaryTitle="What patients say"
+                        poweredByAi="AI-generated summary"
+                      />
+                    </div>
+                  )}
+
+                  {(!reviews || reviews.length === 0) && (
+                    <p className="text-sm text-muted-foreground">
+                      No reviews yet
+                    </p>
+                  )}
+                  {reviews && reviews.length > 0 && (
+                    <div className="space-y-4">
+                      {reviews.map(
+                        (review: any) => (
+                          <div key={review.id}>
+                            <div className="flex items-center gap-2">
+                              <div className="flex">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`h-4 w-4 ${
+                                      i < review.rating
+                                        ? "fill-yellow-400 text-yellow-400"
+                                        : "text-muted"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <span className="text-sm font-medium">
+                                {review.patient.first_name}{" "}
+                                {review.patient.last_name.charAt(0)}.
+                              </span>
+                            </div>
+                            {review.title && (
+                              <p className="mt-1 font-medium">{review.title}</p>
+                            )}
+                            {review.comment && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {review.comment}
+                              </p>
+                            )}
+                            {review.doctor_response && (
+                              <div className="mt-2 rounded-md bg-muted/50 p-3">
+                                <p className="text-xs font-medium">
+                                  Doctor&apos;s Response
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                  {review.doctor_response}
+                                </p>
+                              </div>
+                            )}
+                            <Separator className="mt-4" />
                           </div>
-                          <span className="text-sm font-medium">
-                            {review.patient.first_name}{" "}
-                            {review.patient.last_name.charAt(0)}.
+                        )
+                      )}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="endorsements" className="mt-4">
+                  {endorsements.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No skill endorsements yet. Patients can endorse skills when they leave a review.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {endorsements.map((e) => (
+                        <div
+                          key={e.slug}
+                          className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-sm"
+                        >
+                          <span>{e.label}</span>
+                          <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
+                            {e.count}
                           </span>
                         </div>
-                        {review.title && (
-                          <p className="mt-1 font-medium">{review.title}</p>
-                        )}
-                        {review.comment && (
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {review.comment}
-                          </p>
-                        )}
-                        {review.doctor_response && (
-                          <div className="mt-2 rounded-md bg-muted/50 p-3">
-                            <p className="text-xs font-medium">
-                              Doctor&apos;s Response
-                            </p>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {review.doctor_response}
-                            </p>
-                          </div>
-                        )}
-                        <Separator className="mt-4" />
-                      </div>
-                    )
+                      ))}
+                    </div>
                   )}
-                </div>
-              )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
         </div>

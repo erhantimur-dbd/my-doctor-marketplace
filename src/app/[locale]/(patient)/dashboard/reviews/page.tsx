@@ -41,7 +41,7 @@ export default async function ReviewsPage() {
 
   if (!user) redirect("/en/login");
 
-  // Fetch existing reviews by this patient
+  // Fetch existing reviews by this patient (with endorsements + doctor specialties)
   const { data: reviews } = await supabase
     .from("reviews")
     .select(
@@ -54,9 +54,11 @@ export default async function ReviewsPage() {
       created_at,
       booking_id,
       doctor:doctors(
-        title, slug,
-        profile:profiles(first_name, last_name)
-      )
+        id, title, slug,
+        profile:profiles(first_name, last_name),
+        doctor_specialties(specialty:specialties(slug))
+      ),
+      review_endorsements(skill_slug)
     `
     )
     .eq("patient_id", user.id)
@@ -78,7 +80,8 @@ export default async function ReviewsPage() {
       doctor_id,
       doctor:doctors(
         id, title, slug,
-        profile:profiles(first_name, last_name)
+        profile:profiles(first_name, last_name),
+        doctor_specialties(specialty:specialties(slug))
       )
     `
     )
@@ -142,6 +145,14 @@ export default async function ReviewsPage() {
                       bookingId={booking.id}
                       doctorId={booking.doctor.id}
                       doctorName={doctorName}
+                      doctorSpecialtySlugs={
+                        (booking.doctor.doctor_specialties ?? [])
+                          .map((ds: { specialty: { slug: string } | { slug: string }[] }) => {
+                            const s = Array.isArray(ds.specialty) ? ds.specialty[0] : ds.specialty;
+                            return s?.slug;
+                          })
+                          .filter(Boolean) as string[]
+                      }
                     />
                   </div>
                 );
@@ -204,8 +215,21 @@ export default async function ReviewsPage() {
                         {canEdit && (
                           <WriteReviewDialog
                             bookingId={review.booking_id}
-                            doctorId=""
+                            doctorId={review.doctor.id}
                             doctorName={doctorName}
+                            doctorSpecialtySlugs={
+                              (review.doctor.doctor_specialties ?? [])
+                                .map((ds: { specialty: { slug: string } | { slug: string }[] }) => {
+                                  const s = Array.isArray(ds.specialty) ? ds.specialty[0] : ds.specialty;
+                                  return s?.slug;
+                                })
+                                .filter(Boolean) as string[]
+                            }
+                            initialSkillSlugs={
+                              (review.review_endorsements ?? []).map(
+                                (e: { skill_slug: string }) => e.skill_slug
+                              )
+                            }
                             isEditing
                             reviewId={review.id}
                             initialRating={review.rating}

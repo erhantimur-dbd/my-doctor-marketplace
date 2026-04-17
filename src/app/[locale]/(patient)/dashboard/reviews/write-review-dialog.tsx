@@ -15,19 +15,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Star, Loader2, Pencil } from "lucide-react";
+import { Star, Loader2, Pencil, Check } from "lucide-react";
 import { toast } from "sonner";
 import { submitReview, updatePatientReview } from "./actions";
+import {
+  MAX_ENDORSEMENTS_PER_REVIEW,
+  skillsForSpecialties,
+} from "@/lib/constants/skills";
+import { cn } from "@/lib/utils";
 
 interface WriteReviewDialogProps {
   bookingId: string;
   doctorId: string;
   doctorName: string;
+  /** Specialty slugs of the doctor, used to filter the skill chip list. */
+  doctorSpecialtySlugs?: string[];
   isEditing?: boolean;
   reviewId?: string;
   initialRating?: number;
   initialTitle?: string;
   initialComment?: string;
+  initialSkillSlugs?: string[];
 }
 
 function StarSelector({
@@ -72,18 +80,34 @@ export function WriteReviewDialog({
   bookingId,
   doctorId,
   doctorName,
+  doctorSpecialtySlugs,
   isEditing = false,
   reviewId,
   initialRating = 0,
   initialTitle = "",
   initialComment = "",
+  initialSkillSlugs = [],
 }: WriteReviewDialogProps) {
   const [open, setOpen] = useState(false);
   const [rating, setRating] = useState(initialRating);
   const [title, setTitle] = useState(initialTitle);
   const [comment, setComment] = useState(initialComment);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(initialSkillSlugs);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  const availableSkills = skillsForSpecialties(doctorSpecialtySlugs ?? []);
+
+  function toggleSkill(slug: string) {
+    setSelectedSkills((prev) => {
+      if (prev.includes(slug)) return prev.filter((s) => s !== slug);
+      if (prev.length >= MAX_ENDORSEMENTS_PER_REVIEW) {
+        toast.info(`You can select up to ${MAX_ENDORSEMENTS_PER_REVIEW} skills.`);
+        return prev;
+      }
+      return [...prev, slug];
+    });
+  }
 
   function handleSubmit() {
     if (rating === 0) {
@@ -98,6 +122,7 @@ export function WriteReviewDialog({
           rating,
           title: title.trim() || null,
           comment: comment.trim() || null,
+          skillSlugs: selectedSkills,
         });
 
         if (result.error) {
@@ -113,6 +138,7 @@ export function WriteReviewDialog({
           rating,
           title: title.trim() || null,
           comment: comment.trim() || null,
+          skillSlugs: selectedSkills,
         });
 
         if (result.error) {
@@ -128,6 +154,7 @@ export function WriteReviewDialog({
         setRating(0);
         setTitle("");
         setComment("");
+        setSelectedSkills([]);
       }
       router.refresh();
     });
@@ -194,6 +221,45 @@ export function WriteReviewDialog({
             {comment.length > 0 && (
               <p className="text-xs text-muted-foreground text-right">
                 {comment.length}/1000
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              What did they do well?{" "}
+              <span className="font-normal text-muted-foreground">
+                (optional, up to {MAX_ENDORSEMENTS_PER_REVIEW})
+              </span>
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {availableSkills.map((skill) => {
+                const active = selectedSkills.includes(skill.slug);
+                const disabled =
+                  !active && selectedSkills.length >= MAX_ENDORSEMENTS_PER_REVIEW;
+                return (
+                  <button
+                    key={skill.slug}
+                    type="button"
+                    onClick={() => toggleSkill(skill.slug)}
+                    disabled={disabled}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs transition-colors",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-input bg-background hover:bg-accent",
+                      disabled && "opacity-40 cursor-not-allowed"
+                    )}
+                  >
+                    {active && <Check className="h-3 w-3" />}
+                    {skill.label}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedSkills.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {selectedSkills.length} / {MAX_ENDORSEMENTS_PER_REVIEW} selected
               </p>
             )}
           </div>
