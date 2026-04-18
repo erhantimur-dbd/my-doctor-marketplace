@@ -66,9 +66,11 @@ export default async function HomePage() {
       <Header />
 
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800 px-4 py-20 md:py-32">
+      <section className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800 px-4 pt-20 pb-40 md:pt-32 md:pb-56">
         {/* Radial highlight overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
+        {/* Bottom fade to background */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 md:h-64 bg-gradient-to-b from-transparent to-background" />
         <HeroSpecialtyIcons hideOnMobile variant="dark" />
 
         <div className="relative container mx-auto text-center">
