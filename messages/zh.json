@@ -96,6 +96,8 @@
     "search_name_placeholder_mobile": "搜索姓名、专科、治疗或症状",
     "search_specialty_placeholder": "所有专科",
     "search_location_placeholder": "所有地区",
+    "search_what_label": "您要搜索什么",
+    "search_where_label": "地点",
     "search_button": "搜索",
     "use_my_location": "使用我的位置",
     "detecting_location": "定位中...",

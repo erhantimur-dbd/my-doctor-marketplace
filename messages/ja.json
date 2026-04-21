@@ -96,6 +96,8 @@
     "search_name_placeholder_mobile": "名前、専門、治療、症状を検索",
     "search_specialty_placeholder": "すべての診療科",
     "search_location_placeholder": "すべての地域",
+    "search_what_label": "何をお探しですか",
+    "search_where_label": "どこで",
     "search_button": "検索",
     "use_my_location": "現在地を使用",
     "detecting_location": "検出中...",

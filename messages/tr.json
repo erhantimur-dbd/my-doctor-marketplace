@@ -96,6 +96,8 @@
     "search_name_placeholder_mobile": "İsim, uzmanlık, tedavi veya rahatsızlık ara",
     "search_specialty_placeholder": "Tum uzmanliklar",
     "search_location_placeholder": "Tum konumlar",
+    "search_what_label": "Ne arıyorsunuz",
+    "search_where_label": "Nerede",
     "search_button": "Ara",
     "use_my_location": "Konumumu kullan",
     "detecting_location": "Algılanıyor...",

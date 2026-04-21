@@ -1052,63 +1052,126 @@ export function HomeSearchBar({
     <div className={cn("mx-auto", compact ? "max-w-full" : "max-w-4xl")} ref={wrapperRef}>
       {/* Desktop layout */}
       <div className="relative hidden md:block">
-        <div className={cn("flex items-center gap-0 rounded-full border bg-background", compact ? "shadow-lg ring-1 ring-white/20" : "shadow-lg transition-shadow hover:shadow-xl")}>
-          {/* Text input */}
-          <div className="flex items-center gap-2 flex-1 pl-5 pr-2 overflow-hidden">
-            <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              onKeyDown={handleKeyDown}
-              placeholder={t("search_name_placeholder")}
-              className={cn("flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground", compact ? "h-10" : "h-14")}
-              autoComplete="off"
-            />
+        {compact ? (
+          /* Compact variant (used in sticky header / narrow contexts) */
+          <div className="flex items-center gap-0 rounded-full border bg-background shadow-lg ring-1 ring-white/20">
+            <div className="flex items-center gap-2 flex-1 pl-5 pr-2 overflow-hidden">
+              <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <input
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={handleKeyDown}
+                placeholder={t("search_name_placeholder")}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground h-10"
+                autoComplete="off"
+              />
+            </div>
+            <div className="h-8 w-px bg-border" />
+            <div className="w-72">
+              <LocationCombobox
+                locations={locations}
+                value={location}
+                onValueChange={handleLocationChange}
+                placeholder={t("search_location_placeholder")}
+                variant="inline"
+                geoSupported={geo.supported}
+                geoLoading={geo.loading}
+                onUseMyLocation={handleLocateClick}
+                useMyLocationLabel={t("use_my_location")}
+                detectingLabel={t("detecting_location") || "Detecting..."}
+                onPlaceSelect={handlePlaceSelect}
+                placeName={placeData?.name}
+                onEnterKey={handleSmartSearch}
+              />
+            </div>
+            <div className="pr-1.5">
+              <Button
+                size="default"
+                className="rounded-full px-4"
+                onClick={handleSmartSearch}
+                disabled={aiLoading}
+              >
+                {aiLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="mr-1.5 h-4 w-4" />
+                )}
+                {t("search_button")}
+                <Sparkles className="ml-1.5 h-3 w-3 opacity-50" />
+              </Button>
+            </div>
           </div>
-
-          {/* Divider */}
-          <div className="h-8 w-px bg-border" />
-
-          {/* Location — searchable combobox */}
-          <div className="w-72">
-            <LocationCombobox
-              locations={locations}
-              value={location}
-              onValueChange={handleLocationChange}
-              placeholder={t("search_location_placeholder")}
-              variant="inline"
-              geoSupported={geo.supported}
-              geoLoading={geo.loading}
-              onUseMyLocation={handleLocateClick}
-              useMyLocationLabel={t("use_my_location")}
-              detectingLabel={t("detecting_location") || "Detecting..."}
-              onPlaceSelect={handlePlaceSelect}
-              placeName={placeData?.name}
-              onEnterKey={handleSmartSearch}
-            />
-          </div>
-
-          {/* Search button — AI-powered */}
-          <div className="pr-1.5">
-            <Button
-              size={compact ? "default" : "lg"}
-              className={cn("rounded-full", compact ? "px-4" : "px-6")}
-              onClick={handleSmartSearch}
-              disabled={aiLoading}
+        ) : (
+          /* Prominent variant — Doctify-style with labels inside fields */
+          <div className="flex items-stretch gap-0 rounded-full border-2 border-white/40 bg-background shadow-2xl ring-8 ring-white/10 transition-shadow hover:shadow-[0_24px_60px_-12px_rgba(30,64,175,0.45)]">
+            {/* What field */}
+            <label
+              htmlFor="home-search-what"
+              className="flex flex-col justify-center flex-1 min-w-0 rounded-l-full px-6 py-3 cursor-text text-left transition-colors hover:bg-muted/30"
             >
-              {aiLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Search className="mr-1.5 h-4 w-4" />
-              )}
-              {t("search_button")}
-              <Sparkles className="ml-1.5 h-3 w-3 opacity-50" />
-            </Button>
+              <span className="text-xs font-semibold text-primary leading-tight">
+                {t("search_what_label")}
+              </span>
+              <input
+                id="home-search-what"
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={handleKeyDown}
+                placeholder={t("search_name_placeholder")}
+                className="h-6 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                autoComplete="off"
+              />
+            </label>
+
+            {/* Divider */}
+            <div className="w-px bg-border my-3" />
+
+            {/* Where field */}
+            <div className="flex flex-col justify-center w-72 px-5 py-3 text-left">
+              <span className="text-xs font-semibold text-foreground leading-tight">
+                {t("search_where_label")}
+              </span>
+              <LocationCombobox
+                locations={locations}
+                value={location}
+                onValueChange={handleLocationChange}
+                placeholder={t("search_location_placeholder")}
+                variant="seamless"
+                geoSupported={geo.supported}
+                geoLoading={geo.loading}
+                onUseMyLocation={handleLocateClick}
+                useMyLocationLabel={t("use_my_location")}
+                detectingLabel={t("detecting_location") || "Detecting..."}
+                onPlaceSelect={handlePlaceSelect}
+                placeName={placeData?.name}
+                onEnterKey={handleSmartSearch}
+              />
+            </div>
+
+            {/* Circular search button */}
+            <div className="flex items-center pr-2">
+              <Button
+                size="icon"
+                aria-label={t("search_button")}
+                className="h-14 w-14 rounded-full shadow-lg"
+                onClick={handleSmartSearch}
+                disabled={aiLoading}
+              >
+                {aiLoading ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5" />
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
 
         {!compact && (
           <>
@@ -1150,19 +1213,26 @@ export function HomeSearchBar({
       {/* Mobile layout */}
       <div className={cn("relative flex md:hidden flex-col gap-3 rounded-2xl border bg-background", compact ? "p-3 shadow-md" : "p-4 shadow-lg")}>
         {/* Text input */}
-        <div className="flex items-center gap-2 rounded-lg border px-3">
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <input
-            ref={mobileInputRef}
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setShowSuggestions(true)}
-            onKeyDown={handleKeyDown}
-            placeholder={speech.isListening ? t("voice_listening") : t("search_name_placeholder_mobile")}
-            className="h-11 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
-            autoComplete="off"
-          />
+        <label htmlFor="home-search-what-mobile" className="flex flex-col rounded-lg border px-3 py-2 cursor-text text-left">
+          {!compact && (
+            <span className="text-xs font-semibold text-primary leading-tight">
+              {t("search_what_label")}
+            </span>
+          )}
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <input
+              id="home-search-what-mobile"
+              ref={mobileInputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onKeyDown={handleKeyDown}
+              placeholder={speech.isListening ? t("voice_listening") : t("search_name_placeholder_mobile")}
+              className={cn("flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground", compact ? "h-11" : "h-7")}
+              autoComplete="off"
+            />
           {/* Voice search mic button (mobile only, feature-detected) */}
           {speech.isSupported && (
             <button
@@ -1188,7 +1258,8 @@ export function HomeSearchBar({
               )}
             </button>
           )}
-        </div>
+          </div>
+        </label>
 
         {/* Autocomplete dropdown — mobile (positioned inside the card) */}
         {hasSuggestions && (
@@ -1343,21 +1414,49 @@ export function HomeSearchBar({
         )}
 
         {/* Location — searchable combobox */}
-        <LocationCombobox
-          locations={locations}
-          value={location}
-          onValueChange={handleLocationChange}
-          placeholder={t("search_location_placeholder")}
-          variant="bordered"
-          geoSupported={geo.supported}
-          geoLoading={geo.loading}
-          onUseMyLocation={handleLocateClick}
-          useMyLocationLabel={t("use_my_location")}
-          detectingLabel={t("detecting_location") || "Detecting..."}
-          onEnterKey={handleSmartSearch}
-          onPlaceSelect={handlePlaceSelect}
-          placeName={placeData?.name}
-        />
+        {compact ? (
+          <LocationCombobox
+            locations={locations}
+            value={location}
+            onValueChange={handleLocationChange}
+            placeholder={t("search_location_placeholder")}
+            variant="bordered"
+            geoSupported={geo.supported}
+            geoLoading={geo.loading}
+            onUseMyLocation={handleLocateClick}
+            useMyLocationLabel={t("use_my_location")}
+            detectingLabel={t("detecting_location") || "Detecting..."}
+            onEnterKey={handleSmartSearch}
+            onPlaceSelect={handlePlaceSelect}
+            placeName={placeData?.name}
+          />
+        ) : (
+          <div className="flex flex-col rounded-lg border px-3 py-2 text-left">
+            <span className="text-xs font-semibold text-foreground leading-tight">
+              {t("search_where_label")}
+            </span>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                <LocationCombobox
+                  locations={locations}
+                  value={location}
+                  onValueChange={handleLocationChange}
+                  placeholder={t("search_location_placeholder")}
+                  variant="seamless"
+                  geoSupported={geo.supported}
+                  geoLoading={geo.loading}
+                  onUseMyLocation={handleLocateClick}
+                  useMyLocationLabel={t("use_my_location")}
+                  detectingLabel={t("detecting_location") || "Detecting..."}
+                  onEnterKey={handleSmartSearch}
+                  onPlaceSelect={handlePlaceSelect}
+                  placeName={placeData?.name}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {!compact && (
           <>

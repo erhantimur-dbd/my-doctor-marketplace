@@ -96,6 +96,8 @@
     "search_name_placeholder_mobile": "Procurar um nome, especialidade, tratamento ou condição",
     "search_specialty_placeholder": "Todas as especialidades",
     "search_location_placeholder": "Todas as localizações",
+    "search_what_label": "O que está procurando",
+    "search_where_label": "Onde",
     "search_button": "Pesquisar",
     "use_my_location": "Usar minha localização",
     "detecting_location": "Detectando...",

@@ -45,8 +45,8 @@ export interface LocationComboboxProps {
   value: string; // location slug or ""
   onValueChange: (slug: string) => void;
   placeholder?: string;
-  /** Render as a compact inline input (for home search bar), a full-width bordered input (for filters), or a pill chip (for horizontal filter bar) */
-  variant?: "inline" | "bordered" | "pill";
+  /** Render as a compact inline input (for home search bar), a full-width bordered input (for filters), a pill chip (for horizontal filter bar), or a seamless input with no chrome (for labeled containers) */
+  variant?: "inline" | "bordered" | "pill" | "seamless";
   /** Show "Use my location" button */
   geoSupported?: boolean;
   geoLoading?: boolean;
@@ -387,6 +387,7 @@ export function LocationCombobox({
 
   const isInline = variant === "inline";
   const isPill = variant === "pill";
+  const isSeamless = variant === "seamless";
 
   // Show clear button when either a predefined location or a Place is selected
   const hasSelection = !!value || !!placeName;
@@ -399,12 +400,14 @@ export function LocationCombobox({
           "flex items-center gap-2",
           isInline
             ? "h-14 px-3"
-            : isPill
-              ? "h-8 rounded-full border border-input bg-background px-3 text-sm font-medium"
-              : "h-10 rounded-md border border-input bg-background px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+            : isSeamless
+              ? "h-6 px-0"
+              : isPill
+                ? "h-8 rounded-full border border-input bg-background px-3 text-sm font-medium"
+                : "h-10 rounded-md border border-input bg-background px-3 ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
         )}
       >
-        <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+        {!isSeamless && <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />}
         <input
           ref={inputRef}
           type="text"
