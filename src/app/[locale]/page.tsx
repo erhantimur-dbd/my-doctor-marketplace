@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "@/components/layout/dynamic-header";
 import { Footer } from "@/components/layout/footer";
 import { HomeSearchBar } from "@/components/search/home-search-bar";
-import { getSpecialties, getLocations } from "@/actions/search";
+import { getSpecialties, getLocations, getFeaturedDoctors } from "@/actions/search";
 import { getLiveAvailabilityCounts } from "@/actions/live-availability";
 import {
   Calendar,
@@ -55,10 +55,11 @@ export default async function HomePage() {
   const t = await getTranslations("home");
   const ts = await getTranslations("specialty");
 
-  const [specialties, locations, liveCounts] = await Promise.all([
+  const [specialties, locations, liveCounts, featuredDoctors] = await Promise.all([
     getSpecialties(),
     getLocations(),
     getLiveAvailabilityCounts(),
+    getFeaturedDoctors(5),
   ]);
 
   return (
@@ -83,7 +84,7 @@ export default async function HomePage() {
 
           {/* Real search bar */}
           <div className="relative z-20 mt-10">
-            <HomeSearchBar specialties={specialties} locations={locations} />
+            <HomeSearchBar specialties={specialties} locations={locations} featuredDoctors={featuredDoctors} />
           </div>
 
           {/* Trust indicators */}

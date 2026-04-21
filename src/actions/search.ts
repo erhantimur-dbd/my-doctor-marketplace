@@ -743,6 +743,68 @@ export interface DoctorSuggestion {
   specialty: string;
 }
 
+export interface FeaturedDoctor extends DoctorSuggestion {
+  avatarUrl: string | null;
+}
+
+/**
+ * Returns top-rated verified doctors for the homepage search dropdown
+ * "Specialists" column. Ordered by featured flag, then rating, then reviews.
+ */
+export async function getFeaturedDoctors(
+  limit = 5
+): Promise<FeaturedDoctor[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("doctors")
+    .select(
+      `
+      slug,
+      profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+      specialties:doctor_specialties(
+        specialty:specialties(name_key),
+        is_primary
+      )
+    `
+    )
+    .eq("verification_status", "verified")
+    .eq("is_active", true)
+    .order("is_featured", { ascending: false })
+    .order("avg_rating", { ascending: false })
+    .order("total_reviews", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+
+  return data.map((d: Record<string, unknown>) => {
+    const profile: Record<string, unknown> = Array.isArray(d.profile)
+      ? d.profile[0]
+      : (d.profile as Record<string, unknown>);
+    const specs = d.specialties as Array<{
+      specialty: { name_key: string } | { name_key: string }[];
+      is_primary: boolean;
+    }>;
+    const primarySpec = specs?.find((s) => s.is_primary);
+    const spec = primarySpec || specs?.[0];
+    const specData = spec?.specialty;
+    const nameKey = Array.isArray(specData)
+      ? specData[0]?.name_key
+      : specData?.name_key;
+
+    return {
+      name: `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim(),
+      slug: d.slug as string,
+      specialty: nameKey
+        ? nameKey
+            .replace("specialty.", "")
+            .replace(/_/g, " ")
+            .replace(/\b\w/g, (l: string) => l.toUpperCase())
+        : "",
+      avatarUrl: (profile?.avatar_url as string | null) ?? null,
+    };
+  });
+}
+
 export async function searchSuggestions(
   query: string
 ): Promise<DoctorSuggestion[]> {
