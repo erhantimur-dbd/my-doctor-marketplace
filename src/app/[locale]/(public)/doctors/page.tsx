@@ -4,6 +4,7 @@ import {
   getLocations,
   getMultiDayAvailabilityBatch,
   getSearchExpansionSuggestions,
+  getFeaturedDoctors,
 } from "@/actions/search";
 import { getLiveDoctorAvailability } from "@/actions/live-availability";
 import { DoctorCard } from "@/components/doctors/doctor-card";
@@ -52,7 +53,7 @@ export default async function DoctorsPage({
   const sp = await searchParams;
   const t = await getTranslations("search");
 
-  const [result, specialties, locations] = await Promise.all([
+  const [result, specialties, locations, featuredDoctors] = await Promise.all([
     searchDoctors({
       specialty: sp.specialty,
       location: sp.location,
@@ -76,6 +77,7 @@ export default async function DoctorsPage({
     }),
     getSpecialties(),
     getLocations(),
+    getFeaturedDoctors(5),
   ]);
 
   const typedDoctors = result.doctors as unknown as Parameters<
@@ -208,6 +210,7 @@ export default async function DoctorsPage({
             <HomeSearchBar
               specialties={specialties}
               locations={locations}
+              featuredDoctors={featuredDoctors}
               initialQuery={sp.query || ""}
               initialLocation={sp.location || ""}
               initialConsultationType={
