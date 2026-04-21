@@ -98,6 +98,7 @@
     "search_location_placeholder": "Tutte le località",
     "search_what_label": "Cosa stai cercando",
     "search_where_label": "Dove",
+    "search_missing_input": "Inserisci un nome, specialità o condizione",
     "search_button": "Cerca",
     "use_my_location": "Usa la mia posizione",
     "detecting_location": "Rilevamento...",

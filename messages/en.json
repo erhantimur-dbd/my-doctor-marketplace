@@ -98,6 +98,7 @@
     "search_location_placeholder": "Any location",
     "search_what_label": "What are you searching for",
     "search_where_label": "Where",
+    "search_missing_input": "Please enter a name, specialty or condition",
     "search_button": "Search",
     "use_my_location": "Use my location",
     "detecting_location": "Detecting...",

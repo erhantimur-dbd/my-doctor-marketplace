@@ -98,6 +98,7 @@
     "search_location_placeholder": "Alle Standorte",
     "search_what_label": "Wonach suchen Sie",
     "search_where_label": "Wo",
+    "search_missing_input": "Bitte geben Sie einen Namen, Fachgebiet oder eine Beschwerde ein",
     "search_button": "Suchen",
     "use_my_location": "Meinen Standort verwenden",
     "detecting_location": "Erkennung...",

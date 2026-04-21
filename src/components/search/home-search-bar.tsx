@@ -32,6 +32,7 @@ import {
   Mic,
   Clock,
   X,
+  AlertCircle,
 } from "lucide-react";
 import { cn, formatSpecialtyName } from "@/lib/utils";
 import { useGeolocation } from "@/hooks/use-geolocation";
@@ -158,6 +159,16 @@ export function HomeSearchBar({
 
   // AI search loading state (triggered by Search button for NL routing)
   const [aiLoading, setAiLoading] = useState(false);
+
+  // Validation: flag when user clicks Search with empty query
+  const [missingInputWarning, setMissingInputWarning] = useState(false);
+
+  // Clear warning the moment the user types or picks something
+  useEffect(() => {
+    if (missingInputWarning && query.trim().length > 0) {
+      setMissingInputWarning(false);
+    }
+  }, [query, missingInputWarning]);
 
   // Popular specialties (resolved from the specialties prop)
   const popularSpecialties = POPULAR_SLUGS
@@ -519,9 +530,17 @@ export function HomeSearchBar({
   const handleSmartSearch = useCallback(() => {
     const trimmed = query.trim();
     if (!trimmed) {
-      handleSearch(); // empty → show all doctors
+      // Block empty searches — prompt the user to pick a suggestion instead
+      setMissingInputWarning(true);
+      setShowSuggestions(true);
+      (inputRef.current || mobileInputRef.current)?.focus();
       return;
     }
+    // Clear any lingering warning when we do have input
+    setMissingInputWarning(false);
+    // Show spinner immediately so the user knows we're working. The spinner
+    // stays until navigation replaces the page (or handleNLSearch clears it).
+    setAiLoading(true);
     // Fast path: if query exactly matches a specialty name/slug, skip AI
     const term = trimmed.toLowerCase();
     const matchedSpec = specialties.find((s) => {
@@ -871,8 +890,14 @@ export function HomeSearchBar({
           <div className="grid grid-cols-3 gap-2 p-2">
             {/* Popular specialties */}
             <div className="min-w-0">
-              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                {t("suggestions_popular_specialties")}
+              <div className={cn(
+                "flex items-center gap-1.5 px-2 py-1.5 text-xs font-semibold",
+                missingInputWarning
+                  ? "rounded-md bg-destructive/10 text-destructive"
+                  : "text-muted-foreground"
+              )}>
+                {missingInputWarning && <AlertCircle className="h-3.5 w-3.5 shrink-0" />}
+                {missingInputWarning ? t("search_missing_input") : t("suggestions_popular_specialties")}
               </div>
               {popularSpecialties.map((s) => {
                 itemIndex++;
@@ -1106,13 +1131,21 @@ export function HomeSearchBar({
           </div>
         ) : (
           /* Prominent variant — Doctify-style with labels inside fields */
-          <div className="flex items-stretch gap-0 rounded-full border-2 border-white/40 bg-background shadow-2xl ring-8 ring-white/10 transition-shadow hover:shadow-[0_24px_60px_-12px_rgba(30,64,175,0.45)]">
+          <div className={cn(
+            "flex items-stretch gap-0 rounded-full border-2 bg-background shadow-2xl transition-shadow hover:shadow-[0_24px_60px_-12px_rgba(30,64,175,0.45)]",
+            missingInputWarning
+              ? "border-destructive/60 ring-8 ring-destructive/20"
+              : "border-white/40 ring-8 ring-white/10"
+          )}>
             {/* What field */}
             <label
               htmlFor="home-search-what"
               className="flex flex-col justify-center flex-1 min-w-0 rounded-l-full px-6 py-3 cursor-text text-left transition-colors hover:bg-muted/30"
             >
-              <span className="text-xs font-semibold text-primary leading-tight">
+              <span className={cn(
+                "text-xs font-semibold leading-tight",
+                missingInputWarning ? "text-destructive" : "text-primary"
+              )}>
                 {t("search_what_label")}
               </span>
               <input
@@ -1134,7 +1167,10 @@ export function HomeSearchBar({
 
             {/* Where field */}
             <div className="flex flex-col justify-center w-72 px-5 py-3 text-left">
-              <span className="text-xs font-semibold text-foreground leading-tight">
+              <span className={cn(
+                "text-xs font-semibold leading-tight",
+                missingInputWarning ? "text-destructive" : "text-foreground"
+              )}>
                 {t("search_where_label")}
               </span>
               <LocationCombobox
@@ -1213,9 +1249,18 @@ export function HomeSearchBar({
       {/* Mobile layout */}
       <div className={cn("relative flex md:hidden flex-col gap-3 rounded-2xl border bg-background", compact ? "p-3 shadow-md" : "p-4 shadow-lg")}>
         {/* Text input */}
-        <label htmlFor="home-search-what-mobile" className="flex flex-col rounded-lg border px-3 py-2 cursor-text text-left">
+        <label
+          htmlFor="home-search-what-mobile"
+          className={cn(
+            "flex flex-col rounded-lg border px-3 py-2 cursor-text text-left",
+            missingInputWarning && "border-destructive/60 ring-2 ring-destructive/20"
+          )}
+        >
           {!compact && (
-            <span className="text-xs font-semibold text-primary leading-tight">
+            <span className={cn(
+              "text-xs font-semibold leading-tight",
+              missingInputWarning ? "text-destructive" : "text-primary"
+            )}>
               {t("search_what_label")}
             </span>
           )}
@@ -1269,8 +1314,14 @@ export function HomeSearchBar({
                 {/* Popular specialties */}
                 {popularSpecialties.length > 0 && (
                   <div className="p-1">
-                    <div className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">
-                      {t("suggestions_popular_specialties")}
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold",
+                      missingInputWarning
+                        ? "rounded-md bg-destructive/10 text-destructive"
+                        : "text-muted-foreground"
+                    )}>
+                      {missingInputWarning && <AlertCircle className="h-3.5 w-3.5 shrink-0" />}
+                      {missingInputWarning ? t("search_missing_input") : t("suggestions_popular_specialties")}
                     </div>
                     {popularSpecialties.map((s) => renderSpecialtyCol(s, -1, { mobile: true }))}
                   </div>
@@ -1431,8 +1482,14 @@ export function HomeSearchBar({
             placeName={placeData?.name}
           />
         ) : (
-          <div className="flex flex-col rounded-lg border px-3 py-2 text-left">
-            <span className="text-xs font-semibold text-foreground leading-tight">
+          <div className={cn(
+            "flex flex-col rounded-lg border px-3 py-2 text-left",
+            missingInputWarning && "border-destructive/60 ring-2 ring-destructive/20"
+          )}>
+            <span className={cn(
+              "text-xs font-semibold leading-tight",
+              missingInputWarning ? "text-destructive" : "text-foreground"
+            )}>
               {t("search_where_label")}
             </span>
             <div className="flex items-center gap-2">

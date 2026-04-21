@@ -98,6 +98,7 @@
     "search_location_placeholder": "Todas las ubicaciones",
     "search_what_label": "Qué estás buscando",
     "search_where_label": "Dónde",
+    "search_missing_input": "Introduce un nombre, especialidad o condición",
     "search_button": "Buscar",
     "use_my_location": "Usar mi ubicación",
     "detecting_location": "Detectando...",

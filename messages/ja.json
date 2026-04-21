@@ -98,6 +98,7 @@
     "search_location_placeholder": "すべての地域",
     "search_what_label": "何をお探しですか",
     "search_where_label": "どこで",
+    "search_missing_input": "名前、専門、症状を入力してください",
     "search_button": "検索",
     "use_my_location": "現在地を使用",
     "detecting_location": "検出中...",

@@ -98,6 +98,7 @@
     "search_location_placeholder": "所有地区",
     "search_what_label": "您要搜索什么",
     "search_where_label": "地点",
+    "search_missing_input": "请输入姓名、专科或症状",
     "search_button": "搜索",
     "use_my_location": "使用我的位置",
     "detecting_location": "定位中...",
