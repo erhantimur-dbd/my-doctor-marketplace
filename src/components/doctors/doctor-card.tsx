@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { MapPin, Shield, Video, User, Accessibility, CalendarDays, FlaskConical, Loader2, ChevronLeft, ChevronRight, Globe, FileText, Quote, X } from "lucide-react";
 import { LANGUAGES } from "@/lib/constants/countries";
+import { getSkill } from "@/lib/constants/skills";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency, formatConvertedCurrency } from "@/lib/utils/currency";
 import { useCurrency } from "@/providers/currency-provider";
@@ -62,6 +63,7 @@ interface DoctorCardProps {
       };
       is_primary: boolean;
     }[];
+    skills?: { skill_slug: string }[] | null;
   };
   locale?: string;
   isHighlighted?: boolean;
@@ -110,6 +112,12 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
     const secondarySpecialties = doctor.specialties
       ?.filter((s) => !s.is_primary && s.specialty.slug !== primarySpecialty?.slug)
       .map((s) => s.specialty) || [];
+    const MAX_SKILL_CHIPS = 3;
+    const skillLabels: string[] = (doctor.skills || [])
+      .map((s) => getSkill(s.skill_slug)?.label)
+      .filter((l): l is string => !!l);
+    const visibleSkills = skillLabels.slice(0, MAX_SKILL_CHIPS);
+    const hiddenSkillCount = Math.max(0, skillLabels.length - MAX_SKILL_CHIPS);
 
     const selectedDay = cardAvailability?.days[selectedDayIndex];
 
@@ -292,6 +300,29 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                           </div>
                         )}
                       </div>
+
+                      {/* Key skill chips */}
+                      {skillLabels.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {visibleSkills.map((label) => (
+                            <Badge
+                              key={label}
+                              variant="outline"
+                              className="border-primary/25 bg-primary/5 px-2 py-0.5 text-[11px] font-normal text-primary"
+                            >
+                              {label}
+                            </Badge>
+                          ))}
+                          {hiddenSkillCount > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="border-border bg-muted/40 px-2 py-0.5 text-[11px] font-normal text-muted-foreground"
+                            >
+                              +{hiddenSkillCount}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
 
                     </div>
 

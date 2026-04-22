@@ -74,6 +74,7 @@ export default async function DoctorsPage({
       placeLat: sp.placeLat ? Number(sp.placeLat) : undefined,
       placeLng: sp.placeLng ? Number(sp.placeLng) : undefined,
       radius: sp.radius ? Number(sp.radius) : undefined,
+      skill: sp.skill,
     }),
     getSpecialties(),
     getLocations(),

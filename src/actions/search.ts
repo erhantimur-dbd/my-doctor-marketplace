@@ -159,6 +159,7 @@ export async function searchDoctors(filters: SearchFilters) {
         specialty:specialties(id, name_key, slug),
         is_primary
       ),
+      skills:doctor_skills(skill_slug),
       photos:doctor_photos(storage_path, alt_text, is_primary)
     `,
       { count: "exact" }
