@@ -60,6 +60,34 @@ export function ChatWindow() {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    // If the latest assistant message returned 2+ doctor cards, anchor the
+    // first card near the top of the viewport instead of auto-scrolling to
+    // the bottom — which would push earlier cards off-screen.
+    const lastMsg = messages[messages.length - 1];
+    const hasMultipleDoctorResults = lastMsg?.parts?.some((p) => {
+      if (p.type !== "tool-searchDoctors") return false;
+      const tp = p as {
+        state?: string;
+        output?: { ok?: boolean; doctors?: unknown[] };
+      };
+      return (
+        tp.state === "output-available" &&
+        tp.output?.ok === true &&
+        (tp.output?.doctors?.length ?? 0) >= 2
+      );
+    });
+    if (hasMultipleDoctorResults) {
+      const blocks = el.querySelectorAll<HTMLElement>(
+        "[data-chat-doctor-results]"
+      );
+      const last = blocks[blocks.length - 1];
+      if (last) {
+        const rect = last.getBoundingClientRect();
+        const containerRect = el.getBoundingClientRect();
+        el.scrollTop = el.scrollTop + (rect.top - containerRect.top) - 12;
+        return;
+      }
+    }
     el.scrollTop = el.scrollHeight;
   }, [messages, status]);
 

@@ -165,7 +165,11 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
               }
 
               return (
-                <div key={idx} className="flex w-full flex-col gap-2.5">
+                <div
+                  key={idx}
+                  data-chat-doctor-results="true"
+                  className="flex w-full flex-col gap-2.5"
+                >
                   {tp.output.fallbackApplied && (
                     <p className="text-[11px] italic text-muted-foreground">
                       {tp.output.fallbackApplied}
