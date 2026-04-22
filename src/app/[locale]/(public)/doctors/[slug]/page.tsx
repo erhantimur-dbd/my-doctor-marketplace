@@ -35,6 +35,7 @@ import { TrackDoctorView } from "@/components/doctors/track-doctor-view";
 import { PhotoGallery } from "@/components/doctors/photo-gallery";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getDoctorEndorsementCounts } from "@/actions/reviews";
+import { getSkill } from "@/lib/constants/skills";
 import { generateMetadata as seoMetadata } from "@/lib/seo/metadata";
 import { doctorJsonLd } from "@/lib/seo/json-ld";
 import type { Metadata } from "next";
@@ -128,6 +129,18 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
   // Aggregate skill endorsements for this doctor
   const endorsements = await getDoctorEndorsementCounts(doctor.id);
   const totalEndorsements = endorsements.reduce((sum, e) => sum + e.count, 0);
+
+  // Doctor-declared skills (labels resolved from the curated taxonomy;
+  // unknown/legacy slugs are dropped so stale rows don't render).
+  const { data: skillRows } = await adminDb
+    .from("doctor_skills")
+    .select("skill_slug")
+    .eq("doctor_id", doctor.id);
+  const doctorSkillLabels = (
+    (skillRows as { skill_slug: string }[] | null) || []
+  )
+    .map((r) => getSkill(r.skill_slug)?.label)
+    .filter((label): label is string => !!label);
 
   // Check if doctor has an active license (for booking eligibility)
   const { data: doctorLicense } = doctor.organization_id
@@ -314,6 +327,31 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                 <p className="whitespace-pre-wrap text-muted-foreground">
                   {doctor.bio}
                 </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Key Skills */}
+          {doctorSkillLabels.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Key Skills
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {doctorSkillLabels.map((label) => (
+                    <Badge
+                      key={label}
+                      variant="outline"
+                      className="border-primary/25 bg-primary/5 text-primary"
+                    >
+                      {label}
+                    </Badge>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
