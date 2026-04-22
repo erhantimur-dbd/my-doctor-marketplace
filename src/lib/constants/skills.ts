@@ -15,6 +15,9 @@ export interface SkillMeta {
 
 export const MAX_ENDORSEMENTS_PER_REVIEW = 5;
 
+/** Upper limit on skills a doctor can self-declare on their profile. */
+export const MAX_DOCTOR_SKILLS = 10;
+
 export const SKILLS: readonly SkillMeta[] = [
   // Universal (shown for every specialty)
   { slug: "clear-communication", label: "Clear communication", specialties: "all" },
@@ -169,6 +172,21 @@ export function skillsForSpecialties(specialtySlugs: string[]): SkillMeta[] {
   return SKILLS.filter(
     (s) =>
       s.specialties === "all" ||
+      s.specialties.some((slug) => specialtySlugs.includes(slug))
+  );
+}
+
+/**
+ * Procedural skills (specialty-scoped) available to a doctor based on their
+ * specialty slugs. Excludes the universal "all" soft skills — those are for
+ * patient endorsements in reviews, not for doctor self-declaration.
+ */
+export function doctorDeclarableSkillsForSpecialties(
+  specialtySlugs: string[]
+): SkillMeta[] {
+  return SKILLS.filter(
+    (s) =>
+      s.specialties !== "all" &&
       s.specialties.some((slug) => specialtySlugs.includes(slug))
   );
 }
