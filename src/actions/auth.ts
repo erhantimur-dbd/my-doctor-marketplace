@@ -442,6 +442,48 @@ async function createDoctorAccount(formData: FormData): Promise<
     return { error: safeError(doctorError) };
   }
 
+  // Doctor-declared specialties — required, validated against the
+  // specialties table. The first selected slug becomes is_primary=true.
+  // Non-blocking: if the insert fails the doctor account still exists
+  // and an admin can resolve specialties later.
+  const selectedSpecialtiesRaw = formData.get("selected_specialties") as
+    | string
+    | null;
+  if (selectedSpecialtiesRaw && newDoctor) {
+    try {
+      const parsed = JSON.parse(selectedSpecialtiesRaw);
+      if (Array.isArray(parsed)) {
+        const requestedSlugs = Array.from(
+          new Set(parsed.filter((s): s is string => typeof s === "string"))
+        );
+        if (requestedSlugs.length > 0) {
+          const { data: specialtyRows } = await adminSupabase
+            .from("specialties")
+            .select("id, slug")
+            .in("slug", requestedSlugs);
+          const slugToId = new Map<string, string>(
+            (specialtyRows ?? []).map((s: { id: string; slug: string }) => [
+              s.slug,
+              s.id,
+            ])
+          );
+          const ordered = requestedSlugs
+            .filter((slug) => slugToId.has(slug))
+            .map((slug, idx) => ({
+              doctor_id: newDoctor.id,
+              specialty_id: slugToId.get(slug)!,
+              is_primary: idx === 0,
+            }));
+          if (ordered.length > 0) {
+            await adminSupabase.from("doctor_specialties").insert(ordered);
+          }
+        }
+      }
+    } catch (err) {
+      log.error("Doctor specialties insert failed:", { err });
+    }
+  }
+
   // Doctor-declared skills — optional, from the curated taxonomy
   // (src/lib/constants/skills.ts). Non-blocking: if the insert fails the
   // doctor account still exists and they can add skills later.

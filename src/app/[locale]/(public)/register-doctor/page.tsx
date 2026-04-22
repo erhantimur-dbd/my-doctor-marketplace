@@ -344,6 +344,7 @@ export default function RegisterDoctorPage() {
 
     // Professional data
     formData.set("gmc_number", gmcNumber);
+    formData.set("selected_specialties", JSON.stringify(selectedSpecialties));
     if (selectedSkills.length > 0) {
       formData.set("selected_skills", JSON.stringify(selectedSkills));
     }
