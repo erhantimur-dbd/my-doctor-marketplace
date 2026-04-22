@@ -442,6 +442,39 @@ async function createDoctorAccount(formData: FormData): Promise<
     return { error: safeError(doctorError) };
   }
 
+  // Doctor-declared skills — optional, from the curated taxonomy
+  // (src/lib/constants/skills.ts). Non-blocking: if the insert fails the
+  // doctor account still exists and they can add skills later.
+  const selectedSkillsRaw = formData.get("selected_skills") as string | null;
+  if (selectedSkillsRaw && newDoctor) {
+    try {
+      const parsed = JSON.parse(selectedSkillsRaw);
+      if (Array.isArray(parsed)) {
+        const { isValidSkillSlug, MAX_DOCTOR_SKILLS } = await import(
+          "@/lib/constants/skills"
+        );
+        const validSlugs = Array.from(
+          new Set(
+            parsed.filter(
+              (s): s is string =>
+                typeof s === "string" && isValidSkillSlug(s)
+            )
+          )
+        ).slice(0, MAX_DOCTOR_SKILLS);
+        if (validSlugs.length > 0) {
+          await adminSupabase.from("doctor_skills").insert(
+            validSlugs.map((slug) => ({
+              doctor_id: newDoctor.id,
+              skill_slug: slug,
+            }))
+          );
+        }
+      }
+    } catch (err) {
+      log.error("Doctor skills insert failed:", { err });
+    }
+  }
+
   // Process referral code if provided (link this doctor as a referred signup)
   if (referralCode && newDoctor) {
     const { processReferralSignup } = await import("@/actions/referral");

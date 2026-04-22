@@ -30,6 +30,10 @@ import { Link } from "@/i18n/navigation";
 import { registerDoctor, registerDoctorWithCheckout, signInWithGoogle, signInWithApple, signInWithFacebook, signInWithAzure, signInWithTwitter } from "@/actions/auth";
 import { validateReferralCode } from "@/actions/referral";
 import { SPECIALTIES } from "@/lib/constants/specialties";
+import {
+  MAX_DOCTOR_SKILLS,
+  doctorDeclarableSkillsForSpecialties,
+} from "@/lib/constants/skills";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
 import { isLaunchRegion } from "@/lib/constants/launch-regions";
 import { DoctorWaitlistForm } from "@/components/shared/doctor-waitlist-form";
@@ -151,6 +155,7 @@ export default function RegisterDoctorPage() {
   const [title, setTitle] = useState("Dr.");
   const [gmcNumber, setGmcNumber] = useState("");
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [yearsOfExperience, setYearsOfExperience] = useState("");
 
   // Step 3: Practice details
@@ -278,6 +283,24 @@ export default function RegisterDoctorPage() {
     setStep((s) => Math.max(s - 1, 1));
   }
 
+  function toggleSkill(slug: string) {
+    setSelectedSkills((prev) => {
+      if (prev.includes(slug)) return prev.filter((s) => s !== slug);
+      if (prev.length >= MAX_DOCTOR_SKILLS) return prev;
+      return [...prev, slug];
+    });
+  }
+
+  // When specialties change, drop any selected skills that no longer match.
+  useEffect(() => {
+    const availableSlugs = new Set(
+      doctorDeclarableSkillsForSpecialties(selectedSpecialties).map(
+        (s) => s.slug
+      )
+    );
+    setSelectedSkills((prev) => prev.filter((s) => availableSlugs.has(s)));
+  }, [selectedSpecialties]);
+
   function toggleSpecialty(slug: string) {
     setSelectedSpecialties((prev) =>
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
@@ -321,6 +344,9 @@ export default function RegisterDoctorPage() {
 
     // Professional data
     formData.set("gmc_number", gmcNumber);
+    if (selectedSkills.length > 0) {
+      formData.set("selected_skills", JSON.stringify(selectedSkills));
+    }
 
     // Referral data
     if (referralCode) formData.set("referral_code", referralCode);
@@ -741,6 +767,44 @@ export default function RegisterDoctorPage() {
                   })}
                 </div>
               </div>
+              {selectedSpecialties.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Key Skills</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Optional. Pick up to {MAX_DOCTOR_SKILLS} specific
+                    procedures or conditions you treat. Patients use these to
+                    find doctors for specific needs (e.g. &ldquo;mole
+                    check&rdquo;, &ldquo;IBS&rdquo;, &ldquo;fertility&rdquo;).
+                    {selectedSkills.length > 0 && (
+                      <span className="ml-1 font-medium text-foreground">
+                        {selectedSkills.length} / {MAX_DOCTOR_SKILLS} selected.
+                      </span>
+                    )}
+                  </p>
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {doctorDeclarableSkillsForSpecialties(
+                      selectedSpecialties
+                    ).map((skill) => {
+                      const isSelected = selectedSkills.includes(skill.slug);
+                      const atLimit =
+                        !isSelected &&
+                        selectedSkills.length >= MAX_DOCTOR_SKILLS;
+                      return (
+                        <Badge
+                          key={skill.slug}
+                          variant={isSelected ? "default" : "outline"}
+                          className={`cursor-pointer px-3 py-1.5 ${
+                            atLimit ? "cursor-not-allowed opacity-40" : ""
+                          }`}
+                          onClick={() => !atLimit && toggleSkill(skill.slug)}
+                        >
+                          {skill.label}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
