@@ -4,42 +4,55 @@ import { useCallback, useEffect, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { AnimatePresence, motion } from "framer-motion";
-import { Minimize2, Sparkles, X, Loader2 } from "lucide-react";
+import {
+  Minimize2,
+  Maximize2,
+  Shrink,
+  X,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useChatStore } from "@/stores/chat-store";
 import { Logo } from "@/components/brand/logo";
+import { cn } from "@/lib/utils";
 import { ChatMessage } from "./chat-message";
 import { ChatComposer } from "./chat-composer";
 import { ChatSuggestions } from "./chat-suggestions";
 import { ChatGdprGate } from "./chat-gdpr-gate";
+import { ChatFilterBar, type AppliedFilters } from "./chat-filter-bar";
+import { ChatShortlistStrip } from "./chat-shortlist-strip";
+import { ChatCompareView } from "./chat-compare-view";
 
 /**
- * The expanded chat panel. Mounted conditionally by <ChatWidget> when the
- * store's `isOpen` is true. Handles:
- *   - useChat hook setup (AI SDK v6 with DefaultChatTransport)
- *   - Zustand <-> useChat message sync (initial load + ongoing persistence)
- *   - GDPR gate on first-ever open in the session
- *   - Empty-state suggestions
- *   - Auto-scroll to the newest message
- *   - Header with minimize + close
+ * The expanded chat panel. Three sizes driven by user intent:
+ *   - compact:    360×540 corner widget (first-open)
+ *   - expanded:   720×720 centered modal (after first message, or manual)
+ *   - fullscreen: fills viewport (manual toggle)
+ *
+ * Size auto-advances from compact → expanded on first user message, after
+ * which the user controls it via the header toggle. Conversation state
+ * (messages, GDPR acceptance, size) is persisted via the chat store.
  */
 export function ChatWindow() {
   const locale = useLocale();
   const t = useTranslations("chat.window");
-  const tNudge = useTranslations("chat");
   const {
     isMinimized,
+    size,
     hasAcceptedGdpr,
-    nudgeShown,
-    showNudge,
+    hasAutoExpanded,
     messages: storedMessages,
+    compareOpen,
     close,
     minimize,
     toggleMinimized,
+    cycleSize,
+    setSize,
+    markAutoExpanded,
     acceptGdpr,
-    markNudgeShown,
-    setShowNudge,
     setMessages,
+    setCompareOpen,
   } = useChatStore();
 
   const { messages, sendMessage, status, error } = useChat({
@@ -50,13 +63,10 @@ export function ChatWindow() {
     messages: storedMessages as UIMessage[],
   });
 
-  // Persist every message update to Zustand so the conversation survives
-  // page navigation within the session.
   useEffect(() => {
     setMessages(messages as UIMessage[]);
   }, [messages, setMessages]);
 
-  // Auto-scroll to the bottom whenever a new message or streaming chunk arrives
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = scrollRef.current;
@@ -64,68 +74,120 @@ export function ChatWindow() {
     el.scrollTop = el.scrollHeight;
   }, [messages, status]);
 
-  // Nudge timer: 30s after doctor search results, show a hint if user hasn't acted
-  const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearNudgeTimer = useCallback(() => {
-    if (nudgeTimer.current) {
-      clearTimeout(nudgeTimer.current);
-      nudgeTimer.current = null;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (nudgeShown) return;
-    // Check if latest assistant message has searchDoctors results
-    const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-    if (!lastAssistant) return;
-    const hasResults = lastAssistant.parts.some(
-      (p) =>
-        p.type === "tool-searchDoctors" &&
-        (p as { state: string; output?: { doctors?: unknown[] } }).state === "output-available" &&
-        ((p as { output?: { doctors?: unknown[] } }).output?.doctors?.length ?? 0) > 0
-    );
-    if (hasResults && !nudgeTimer.current) {
-      nudgeTimer.current = setTimeout(() => {
-        setShowNudge(true);
-        markNudgeShown();
-      }, 30_000);
-    }
-    return clearNudgeTimer;
-  }, [messages, nudgeShown, clearNudgeTimer, setShowNudge, markNudgeShown]);
-
-  // Cancel nudge if user sends a new message or clicks a doctor
   const handleBook = useCallback(() => {
-    clearNudgeTimer();
-    setShowNudge(false);
     minimize();
-  }, [clearNudgeTimer, setShowNudge, minimize]);
+  }, [minimize]);
 
   const handleSend = (text: string) => {
-    clearNudgeTimer();
-    setShowNudge(false);
+    if (!hasAutoExpanded && size === "compact") {
+      setSize("expanded");
+      markAutoExpanded();
+    }
     sendMessage({ text });
   };
 
+  const handleRefine = (filters: AppliedFilters) => {
+    const parts: string[] = [];
+    if (filters.specialty) parts.push(`specialty ${humanize(filters.specialty)}`);
+    if (filters.locationSlug) parts.push(`in ${humanize(filters.locationSlug)}`);
+    if (filters.language) parts.push(`speaking ${filters.language}`);
+    if (filters.consultationType)
+      parts.push(
+        filters.consultationType === "video" ? "video only" : "in person only"
+      );
+    const msg = parts.length
+      ? `Re-run the search with only these filters: ${parts.join(", ")}. Drop any other filters.`
+      : "Search without any filters — show the most popular doctors.";
+    sendMessage({ text: msg });
+  };
+
   const isBusy = status === "submitted" || status === "streaming";
+  const isExpanded = size === "expanded" || size === "fullscreen";
+
+  const sizeClass =
+    size === "fullscreen"
+      ? "chat-window-fullscreen"
+      : size === "expanded"
+        ? "chat-window-expanded"
+        : "chat-window-compact";
+
+  const nextSizeLabel =
+    size === "compact"
+      ? t("expand")
+      : size === "expanded"
+        ? t("fullscreen")
+        : t("shrink");
+
+  const NextSizeIcon = size === "fullscreen" ? Shrink : Maximize2;
 
   return (
     <AnimatePresence>
-      {/* Responsive sizing — inline CSS to avoid Turbopack JIT issues */}
       <style>{`
-        .chat-window-panel {
+        .chat-window-base {
+          position: fixed;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          border: 1px solid var(--border);
+          background: var(--background);
+          border-radius: 1rem;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .chat-window-compact {
           bottom: 1rem; left: 1rem; right: 1rem;
           max-width: 360px;
           height: min(540px, calc(100dvh - 3rem));
         }
         @media (min-width: 640px) {
-          .chat-window-panel {
+          .chat-window-compact {
             bottom: 1.5rem; left: auto; right: 1.5rem;
             width: 360px;
             height: min(540px, calc(100dvh - 3rem));
           }
         }
+        .chat-window-expanded {
+          top: 0; left: 0; right: 0; bottom: 0;
+          width: 100%; height: 100%;
+          border-radius: 0;
+          border: 0;
+        }
+        @media (min-width: 768px) {
+          .chat-window-expanded {
+            inset: 0;
+            margin: auto;
+            width: min(720px, calc(100vw - 3rem));
+            height: min(720px, calc(100dvh - 3rem));
+            border-radius: 1.25rem;
+            border: 1px solid var(--border);
+          }
+        }
+        .chat-window-fullscreen {
+          top: 0; left: 0; right: 0; bottom: 0;
+          width: 100%; height: 100%;
+          border-radius: 0;
+          border: 0;
+        }
+        .chat-window-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(15, 23, 42, 0.45);
+          backdrop-filter: blur(4px);
+          z-index: 9998;
+        }
       `}</style>
+
+      {isExpanded && (
+        <motion.div
+          key="chat-backdrop"
+          className="chat-window-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={close}
+        />
+      )}
+
       <motion.div
         key="chat-window"
         initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -137,28 +199,59 @@ export function ChatWindow() {
         }}
         exit={{ opacity: 0, y: 20, scale: 0.98 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="chat-window-panel fixed flex flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl"
+        className={cn("chat-window-base", sizeClass)}
         style={{
           zIndex: 9999,
           height: isMinimized ? 56 : undefined,
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between gap-2 bg-gradient-to-br from-primary to-primary/80 px-3 py-2.5 text-primary-foreground">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-white/40">
-              <Logo className="h-[18px] w-[18px] text-primary" />
+        <div
+          className={cn(
+            "flex items-center justify-between gap-2 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground",
+            isExpanded ? "px-5 py-3.5" : "px-3 py-2.5"
+          )}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div
+              className={cn(
+                "flex shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-white/40",
+                isExpanded ? "h-10 w-10" : "h-8 w-8"
+              )}
+            >
+              <Logo
+                className={cn("text-primary", isExpanded ? "h-6 w-6" : "h-[18px] w-[18px]")}
+              />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold leading-tight">
+              <p
+                className={cn(
+                  "truncate font-semibold leading-tight",
+                  isExpanded ? "text-base" : "text-[13px]"
+                )}
+              >
                 {t("title")}
               </p>
-              <p className="truncate text-[10px] leading-tight text-white/80">
+              <p
+                className={cn(
+                  "truncate leading-tight text-white/80",
+                  isExpanded ? "text-xs" : "text-[10px]"
+                )}
+              >
                 {t("subtitle")}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={cycleSize}
+              aria-label={nextSizeLabel}
+              title={nextSizeLabel}
+              className="rounded-full p-1.5 hover:bg-white/15"
+            >
+              <NextSizeIcon className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={toggleMinimized}
@@ -178,25 +271,68 @@ export function ChatWindow() {
           </div>
         </div>
 
-        {/* Body — hidden when minimized */}
+        {/* Body */}
         {!isMinimized && (
           <>
             {!hasAcceptedGdpr ? (
               <ChatGdprGate onAccept={acceptGdpr} />
+            ) : compareOpen ? (
+              <ChatCompareView
+                locale={locale}
+                onClose={() => setCompareOpen(false)}
+                onBook={handleBook}
+                variant={isExpanded ? "expanded" : "compact"}
+              />
             ) : (
               <>
                 <div
                   ref={scrollRef}
-                  className="flex-1 overflow-y-auto bg-muted/10 px-3 py-3"
+                  className={cn(
+                    "flex-1 overflow-y-auto bg-muted/10",
+                    isExpanded ? "px-6 py-5" : "px-3 py-3"
+                  )}
                 >
                   {messages.length === 0 ? (
-                    <div className="flex h-full flex-col justify-start">
-                      <div className="mb-2 rounded-2xl bg-muted px-3 py-2 text-[13px] leading-relaxed text-foreground">
+                    <div
+                      className={cn(
+                        "flex flex-col",
+                        isExpanded ? "gap-4" : "gap-2"
+                      )}
+                    >
+                      {isExpanded && (
+                        <div className="flex flex-col items-center gap-2 pt-2 pb-1 text-center">
+                          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                            {t("hero_title")}
+                          </h2>
+                          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+                            {t("hero_body")}
+                          </p>
+                        </div>
+                      )}
+                      <div
+                        className={cn(
+                          "rounded-2xl bg-muted leading-relaxed text-foreground",
+                          isExpanded
+                            ? "px-4 py-3 text-sm"
+                            : "px-3 py-2 text-[13px] mb-2"
+                        )}
+                      >
                         {t("greeting")}
                       </div>
+                      {isExpanded && (
+                        <div className="flex items-start gap-2.5 rounded-xl border border-border bg-background px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <span>{t("disclaimer")}</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="flex flex-col gap-2.5">
+                    <div
+                      className={cn(
+                        "flex flex-col",
+                        isExpanded ? "gap-3.5" : "gap-2.5"
+                      )}
+                    >
                       {messages.map((m) => (
                         <ChatMessage
                           key={m.id}
@@ -211,21 +347,28 @@ export function ChatWindow() {
                           {t("thinking")}
                         </div>
                       )}
-                      {showNudge && (
-                        <div className="flex w-full justify-start">
-                          <div className="flex max-w-[90%] items-start gap-2 rounded-2xl border border-primary/20 bg-primary/5 px-3.5 py-2.5 text-[13px] leading-relaxed text-foreground">
-                            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
-                            {tNudge("nudge")}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
 
                 {messages.length === 0 && (
-                  <ChatSuggestions onPick={handleSend} />
+                  <ChatSuggestions
+                    onPick={handleSend}
+                    variant={isExpanded ? "expanded" : "compact"}
+                  />
                 )}
+
+                {messages.length > 0 && (
+                  <ChatFilterBar
+                    messages={messages as UIMessage[]}
+                    onApply={handleRefine}
+                    variant={isExpanded ? "expanded" : "compact"}
+                  />
+                )}
+
+                <ChatShortlistStrip
+                  variant={isExpanded ? "expanded" : "compact"}
+                />
 
                 {error && (
                   <div className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-200">
@@ -241,4 +384,12 @@ export function ChatWindow() {
       </motion.div>
     </AnimatePresence>
   );
+}
+
+function humanize(slug: string): string {
+  return slug
+    .split(/[-_]/)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ")
+    .replace(/\b(Uk|Us|Eu)\b/g, (m) => m.toUpperCase());
 }

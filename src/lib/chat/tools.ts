@@ -19,10 +19,20 @@
 import { tool } from "ai";
 import { z } from "zod/v4";
 import { analyzeSymptoms as analyzeSymptomsAction } from "@/actions/ai";
-import { searchDoctors as searchDoctorsAction } from "@/actions/search";
+import {
+  searchDoctors as searchDoctorsAction,
+  getNextAvailabilityBatch,
+} from "@/actions/search";
 import { formatSpecialtyName } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { searchArticlesByTags } from "@/components/help-center/help-center-data";
+
+export interface ChatDoctorSlot {
+  date: string;
+  start: string;
+  end: string;
+  consultationType: string;
+}
 
 export interface ChatDoctor {
   id: string;
@@ -40,6 +50,10 @@ export interface ChatDoctor {
   consultationTypes: string[];
   languages: string[];
   isVerified: boolean;
+  slotsByType: {
+    in_person: ChatDoctorSlot[];
+    video: ChatDoctorSlot[];
+  };
 }
 
 export function buildChatTools(locale: string) {
@@ -113,9 +127,19 @@ export function buildChatTools(locale: string) {
           page: 1,
         });
 
-        const doctors: ChatDoctor[] = (result.doctors || [])
-          .slice(0, 5)
-          .map((raw: Record<string, unknown>) => {
+        const rawDoctors = (result.doctors || []).slice(0, 5);
+
+        const doctorIds = rawDoctors
+          .map((d) => (d as { id?: string }).id)
+          .filter((id): id is string => !!id);
+        const [inPersonAvail, videoAvail] = doctorIds.length
+          ? await Promise.all([
+              getNextAvailabilityBatch(doctorIds, "in_person"),
+              getNextAvailabilityBatch(doctorIds, "video"),
+            ])
+          : [{}, {}];
+
+        const doctors: ChatDoctor[] = rawDoctors.map((raw: Record<string, unknown>) => {
             const d = raw as {
               id: string;
               slug: string;
@@ -150,6 +174,30 @@ export function buildChatTools(locale: string) {
               .slice(0, 3)
               .map((s) => formatSpecialtyName(s.specialty.name_key));
 
+            const inPerson = inPersonAvail[d.id];
+            const video = videoAvail[d.id];
+            const toSlots = (
+              a: { date: string; slots: { start: string; end: string }[]; consultationType: string } | undefined
+            ): ChatDoctorSlot[] =>
+              a
+                ? a.slots.slice(0, 3).map((s) => ({
+                    date: a.date,
+                    start: s.start,
+                    end: s.end,
+                    consultationType: a.consultationType,
+                  }))
+                : [];
+            const supportsInPerson = (d.consultation_types || []).includes(
+              "in_person"
+            );
+            const supportsVideo = (d.consultation_types || []).includes(
+              "video"
+            );
+            const slotsByType = {
+              in_person: supportsInPerson ? toSlots(inPerson) : [],
+              video: supportsVideo ? toSlots(video) : [],
+            };
+
             return {
               id: d.id,
               slug: d.slug,
@@ -172,6 +220,7 @@ export function buildChatTools(locale: string) {
               consultationTypes: d.consultation_types || [],
               languages: d.languages || [],
               isVerified: d.verification_status === "verified",
+              slotsByType,
             };
           });
 

@@ -987,10 +987,16 @@
     "window": {
       "title": "MyDoctors360 Assistant",
       "subtitle": "Find the right specialist, fast",
-      "greeting": "Hi! Tell me your symptoms or the kind of specialist you need — I'll find the best match on MyDoctors360.",
+      "greeting": "Hi! Tell me the specialty, city, or language you need — I'll match you with the right private doctor.",
+      "hero_title": "Find your ideal doctor",
+      "hero_body": "Tell me what you're looking for — specialty, city, preferred language, or how soon you need an appointment. I'll find the best matches on MyDoctors360.",
+      "disclaimer": "I'm a concierge, not a clinician. I help you find and book the right doctor — I don't diagnose or give medical advice.",
       "thinking": "Thinking…",
       "error": "Something went wrong. Please try again.",
       "minimize": "Minimize",
+      "expand": "Expand",
+      "fullscreen": "Fullscreen",
+      "shrink": "Shrink",
       "close": "Close chat"
     },
     "gdpr": {
@@ -1006,14 +1012,16 @@
     "suggestions": {
       "try": "Try asking:",
       "items": {
-        "headaches": "I have bad headaches",
-        "dermatologist_london": "Dermatologist in London",
-        "turkish_gp": "A GP who speaks Turkish",
-        "video_consult": "I need a video consultation"
+        "specialty": "Browse by specialty",
+        "near_me": "Find doctors near me",
+        "language": "A doctor who speaks my language",
+        "this_week": "Available this week",
+        "video_consult": "I need a video consultation",
+        "second_opinion": "I want a second opinion"
       }
     },
     "message": {
-      "analyzing_symptoms": "Analyzing your symptoms…",
+      "analyzing_symptoms": "Finding the right specialty…",
       "searching_doctors": "Searching for doctors…",
       "no_results": "No matching doctors yet. Try a different location or specialty.",
       "search_error": "Could not load doctors right now. Please try again.",
@@ -1026,7 +1034,41 @@
       "verified": "Verified",
       "video": "Video",
       "from": "From",
-      "book_appointment": "Book appointment"
+      "book_appointment": "Book appointment",
+      "add_to_shortlist": "Save to shortlist",
+      "remove_from_shortlist": "Remove from shortlist",
+      "shortlist_full": "Shortlist is full (max {limit})",
+      "next_available_in_person": "Next in-person · {date}",
+      "next_available_video": "Next video · {date}"
+    },
+    "filters": {
+      "specialty": "Specialty",
+      "location": "Location",
+      "language": "Language",
+      "type": "Type",
+      "video": "Video",
+      "in_person": "In-person",
+      "remove_filter": "Remove {name} filter"
+    },
+    "shortlist": {
+      "count": "{count, plural, one {# doctor saved} other {# doctors saved}}",
+      "compare": "Compare",
+      "clear": "Clear shortlist"
+    },
+    "compare": {
+      "title": "Comparing {count} doctors",
+      "back": "Back to chat",
+      "need_two": "Save at least 2 doctors to compare them side-by-side.",
+      "fee": "Fee",
+      "rating": "Rating",
+      "location": "Location",
+      "languages": "Languages",
+      "video": "Video",
+      "verified": "Verified",
+      "next_in_person": "Next in-person",
+      "next_video": "Next video",
+      "yes": "Yes",
+      "no": "No"
     }
   }
 }

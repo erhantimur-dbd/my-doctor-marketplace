@@ -30,6 +30,23 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
   const t = useTranslations("chat.message");
   const isUser = message.role === "user";
 
+  // If the model ran a successful doctor search and rendered cards, the LLM
+  // sometimes ALSO enumerates the doctors in markdown text. That's redundant
+  // and noisy — suppress text parts in this message that look like a doctor
+  // list (numbered or bulleted + bold markdown). Short follow-up questions
+  // still render.
+  const hasDoctorCards = message.parts.some(
+    (p) =>
+      p.type === "tool-searchDoctors" &&
+      (p as { state?: string; output?: { ok?: boolean; doctors?: unknown[] } })
+        .state === "output-available" &&
+      (p as { output?: { ok?: boolean; doctors?: unknown[] } }).output?.ok &&
+      ((p as { output?: { doctors?: unknown[] } }).output?.doctors?.length ?? 0) >
+        0
+  );
+  const looksLikeDoctorList = (text: string) =>
+    /\*\*.*\*\*/.test(text) && /(^|\n)\s*(\d+\.|[-*])\s/.test(text);
+
   return (
     <div
       className={cn(
@@ -48,6 +65,7 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
           if (part.type === "text") {
             const text = (part as { text: string }).text;
             if (!text) return null;
+            if (hasDoctorCards && looksLikeDoctorList(text)) return null;
             return (
               <div
                 key={idx}
