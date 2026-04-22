@@ -4,14 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  Minimize2,
-  Maximize2,
-  Shrink,
-  X,
-  Loader2,
-  ShieldCheck,
-} from "lucide-react";
+import { Maximize2, Minimize2, X, Loader2, ShieldCheck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useChatStore } from "@/stores/chat-store";
 import { Logo } from "@/components/brand/logo";
@@ -25,29 +18,25 @@ import { ChatShortlistStrip } from "./chat-shortlist-strip";
 import { ChatCompareView } from "./chat-compare-view";
 
 /**
- * The expanded chat panel. Three sizes driven by user intent:
- *   - compact:    360×540 corner widget (first-open)
- *   - expanded:   720×720 centered modal (after first message, or manual)
- *   - fullscreen: fills viewport (manual toggle)
+ * The chat panel has two sizes, controlled by a single toggle in the header:
+ *   - compact:    360×540 corner widget (default)
+ *   - fullscreen: centered 720×720 modal with backdrop (desktop) /
+ *                 covers the whole viewport on mobile
  *
- * Size auto-advances from compact → expanded on first user message, after
- * which the user controls it via the header toggle. Conversation state
- * (messages, GDPR acceptance, size) is persisted via the chat store.
+ * Auto-grows to fullscreen on the first user message. State persists via the
+ * chat store (sessionStorage).
  */
 export function ChatWindow() {
   const locale = useLocale();
   const t = useTranslations("chat.window");
   const {
-    isMinimized,
     size,
     hasAcceptedGdpr,
     hasAutoExpanded,
     messages: storedMessages,
     compareOpen,
     close,
-    minimize,
-    toggleMinimized,
-    cycleSize,
+    toggleSize,
     setSize,
     markAutoExpanded,
     acceptGdpr,
@@ -75,12 +64,12 @@ export function ChatWindow() {
   }, [messages, status]);
 
   const handleBook = useCallback(() => {
-    minimize();
-  }, [minimize]);
+    close();
+  }, [close]);
 
   const handleSend = (text: string) => {
     if (!hasAutoExpanded && size === "compact") {
-      setSize("expanded");
+      setSize("fullscreen");
       markAutoExpanded();
     }
     sendMessage({ text });
@@ -102,23 +91,11 @@ export function ChatWindow() {
   };
 
   const isBusy = status === "submitted" || status === "streaming";
-  const isExpanded = size === "expanded" || size === "fullscreen";
+  const isFullscreen = size === "fullscreen";
 
-  const sizeClass =
-    size === "fullscreen"
-      ? "chat-window-fullscreen"
-      : size === "expanded"
-        ? "chat-window-expanded"
-        : "chat-window-compact";
-
-  const nextSizeLabel =
-    size === "compact"
-      ? t("expand")
-      : size === "expanded"
-        ? t("fullscreen")
-        : t("shrink");
-
-  const NextSizeIcon = size === "fullscreen" ? Shrink : Maximize2;
+  const sizeClass = isFullscreen ? "chat-window-fullscreen" : "chat-window-compact";
+  const toggleLabel = isFullscreen ? t("shrink") : t("expand");
+  const ToggleIcon = isFullscreen ? Minimize2 : Maximize2;
 
   return (
     <AnimatePresence>
@@ -145,14 +122,14 @@ export function ChatWindow() {
             height: min(540px, calc(100dvh - 3rem));
           }
         }
-        .chat-window-expanded {
+        .chat-window-fullscreen {
           top: 0; left: 0; right: 0; bottom: 0;
           width: 100%; height: 100%;
           border-radius: 0;
           border: 0;
         }
         @media (min-width: 768px) {
-          .chat-window-expanded {
+          .chat-window-fullscreen {
             inset: 0;
             margin: auto;
             width: min(720px, calc(100vw - 3rem));
@@ -160,12 +137,6 @@ export function ChatWindow() {
             border-radius: 1.25rem;
             border: 1px solid var(--border);
           }
-        }
-        .chat-window-fullscreen {
-          top: 0; left: 0; right: 0; bottom: 0;
-          width: 100%; height: 100%;
-          border-radius: 0;
-          border: 0;
         }
         .chat-window-backdrop {
           position: fixed;
@@ -176,7 +147,7 @@ export function ChatWindow() {
         }
       `}</style>
 
-      {isExpanded && (
+      {isFullscreen && (
         <motion.div
           key="chat-backdrop"
           className="chat-window-backdrop"
@@ -191,43 +162,35 @@ export function ChatWindow() {
       <motion.div
         key="chat-window"
         initial={{ opacity: 0, y: 20, scale: 0.98 }}
-        animate={{
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          height: isMinimized ? 56 : undefined,
-        }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.98 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
         className={cn("chat-window-base", sizeClass)}
-        style={{
-          zIndex: 9999,
-          height: isMinimized ? 56 : undefined,
-        }}
+        style={{ zIndex: 9999 }}
       >
         {/* Header */}
         <div
           className={cn(
             "flex items-center justify-between gap-2 bg-gradient-to-br from-primary to-primary/80 text-primary-foreground",
-            isExpanded ? "px-5 py-3.5" : "px-3 py-2.5"
+            isFullscreen ? "px-5 py-3.5" : "px-3 py-2.5"
           )}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <div
               className={cn(
                 "flex shrink-0 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-white/40",
-                isExpanded ? "h-10 w-10" : "h-8 w-8"
+                isFullscreen ? "h-10 w-10" : "h-8 w-8"
               )}
             >
               <Logo
-                className={cn("text-primary", isExpanded ? "h-6 w-6" : "h-[18px] w-[18px]")}
+                className={cn("text-primary", isFullscreen ? "h-6 w-6" : "h-[18px] w-[18px]")}
               />
             </div>
             <div className="min-w-0">
               <p
                 className={cn(
                   "truncate font-semibold leading-tight",
-                  isExpanded ? "text-base" : "text-[13px]"
+                  isFullscreen ? "text-base" : "text-[13px]"
                 )}
               >
                 {t("title")}
@@ -235,7 +198,7 @@ export function ChatWindow() {
               <p
                 className={cn(
                   "truncate leading-tight text-white/80",
-                  isExpanded ? "text-xs" : "text-[10px]"
+                  isFullscreen ? "text-xs" : "text-[10px]"
                 )}
               >
                 {t("subtitle")}
@@ -245,20 +208,12 @@ export function ChatWindow() {
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={cycleSize}
-              aria-label={nextSizeLabel}
-              title={nextSizeLabel}
+              onClick={toggleSize}
+              aria-label={toggleLabel}
+              title={toggleLabel}
               className="rounded-full p-1.5 hover:bg-white/15"
             >
-              <NextSizeIcon className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={toggleMinimized}
-              aria-label={t("minimize")}
-              className="rounded-full p-1.5 hover:bg-white/15"
-            >
-              <Minimize2 className="h-4 w-4" />
+              <ToggleIcon className="h-4 w-4" />
             </button>
             <button
               type="button"
@@ -272,113 +227,109 @@ export function ChatWindow() {
         </div>
 
         {/* Body */}
-        {!isMinimized && (
+        {!hasAcceptedGdpr ? (
+          <ChatGdprGate onAccept={acceptGdpr} />
+        ) : compareOpen ? (
+          <ChatCompareView
+            locale={locale}
+            onClose={() => setCompareOpen(false)}
+            onBook={handleBook}
+            variant={isFullscreen ? "expanded" : "compact"}
+          />
+        ) : (
           <>
-            {!hasAcceptedGdpr ? (
-              <ChatGdprGate onAccept={acceptGdpr} />
-            ) : compareOpen ? (
-              <ChatCompareView
-                locale={locale}
-                onClose={() => setCompareOpen(false)}
-                onBook={handleBook}
-                variant={isExpanded ? "expanded" : "compact"}
-              />
-            ) : (
-              <>
+            <div
+              ref={scrollRef}
+              className={cn(
+                "flex-1 overflow-y-auto bg-muted/10",
+                isFullscreen ? "px-6 py-5" : "px-3 py-3"
+              )}
+            >
+              {messages.length === 0 ? (
                 <div
-                  ref={scrollRef}
                   className={cn(
-                    "flex-1 overflow-y-auto bg-muted/10",
-                    isExpanded ? "px-6 py-5" : "px-3 py-3"
+                    "flex flex-col",
+                    isFullscreen ? "gap-4" : "gap-2"
                   )}
                 >
-                  {messages.length === 0 ? (
-                    <div
-                      className={cn(
-                        "flex flex-col",
-                        isExpanded ? "gap-4" : "gap-2"
-                      )}
-                    >
-                      {isExpanded && (
-                        <div className="flex flex-col items-center gap-2 pt-2 pb-1 text-center">
-                          <h2 className="text-2xl font-bold tracking-tight text-foreground">
-                            {t("hero_title")}
-                          </h2>
-                          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-                            {t("hero_body")}
-                          </p>
-                        </div>
-                      )}
-                      <div
-                        className={cn(
-                          "rounded-2xl bg-muted leading-relaxed text-foreground",
-                          isExpanded
-                            ? "px-4 py-3 text-sm"
-                            : "px-3 py-2 text-[13px] mb-2"
-                        )}
-                      >
-                        {t("greeting")}
-                      </div>
-                      {isExpanded && (
-                        <div className="flex items-start gap-2.5 rounded-xl border border-border bg-background px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                          <span>{t("disclaimer")}</span>
-                        </div>
-                      )}
+                  {isFullscreen && (
+                    <div className="flex flex-col items-center gap-2 pt-2 pb-1 text-center">
+                      <h2 className="text-2xl font-bold tracking-tight text-foreground">
+                        {t("hero_title")}
+                      </h2>
+                      <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+                        {t("hero_body")}
+                      </p>
                     </div>
-                  ) : (
-                    <div
-                      className={cn(
-                        "flex flex-col",
-                        isExpanded ? "gap-3.5" : "gap-2.5"
-                      )}
-                    >
-                      {messages.map((m) => (
-                        <ChatMessage
-                          key={m.id}
-                          message={m as UIMessage}
-                          locale={locale}
-                          onBook={handleBook}
-                        />
-                      ))}
-                      {status === "submitted" && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          {t("thinking")}
-                        </div>
-                      )}
+                  )}
+                  <div
+                    className={cn(
+                      "rounded-2xl bg-muted leading-relaxed text-foreground",
+                      isFullscreen
+                        ? "px-4 py-3 text-sm"
+                        : "px-3 py-2 text-[13px] mb-2"
+                    )}
+                  >
+                    {t("greeting")}
+                  </div>
+                  {isFullscreen && (
+                    <div className="flex items-start gap-2.5 rounded-xl border border-border bg-background px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+                      <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <span>{t("disclaimer")}</span>
                     </div>
                   )}
                 </div>
+              ) : (
+                <div
+                  className={cn(
+                    "flex flex-col",
+                    isFullscreen ? "gap-3.5" : "gap-2.5"
+                  )}
+                >
+                  {messages.map((m) => (
+                    <ChatMessage
+                      key={m.id}
+                      message={m as UIMessage}
+                      locale={locale}
+                      onBook={handleBook}
+                    />
+                  ))}
+                  {status === "submitted" && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      {t("thinking")}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-                {messages.length === 0 && (
-                  <ChatSuggestions
-                    onPick={handleSend}
-                    variant={isExpanded ? "expanded" : "compact"}
-                  />
-                )}
-
-                {messages.length > 0 && (
-                  <ChatFilterBar
-                    messages={messages as UIMessage[]}
-                    onApply={handleRefine}
-                    variant={isExpanded ? "expanded" : "compact"}
-                  />
-                )}
-
-                <ChatShortlistStrip
-                  variant={isExpanded ? "expanded" : "compact"}
-                />
-
-                {error && (
-                  <div className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-200">
-                    {t("error")}
-                  </div>
-                )}
-
-                <ChatComposer onSend={handleSend} disabled={isBusy} />
-              </>
+            {messages.length === 0 && (
+              <ChatSuggestions
+                onPick={handleSend}
+                variant={isFullscreen ? "expanded" : "compact"}
+              />
             )}
+
+            {messages.length > 0 && (
+              <ChatFilterBar
+                messages={messages as UIMessage[]}
+                onApply={handleRefine}
+                variant={isFullscreen ? "expanded" : "compact"}
+              />
+            )}
+
+            <ChatShortlistStrip
+              variant={isFullscreen ? "expanded" : "compact"}
+            />
+
+            {error && (
+              <div className="border-t border-red-200 bg-red-50 px-4 py-2 text-xs text-red-800 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-200">
+                {t("error")}
+              </div>
+            )}
+
+            <ChatComposer onSend={handleSend} disabled={isBusy} />
           </>
         )}
       </motion.div>

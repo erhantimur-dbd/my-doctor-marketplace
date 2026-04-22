@@ -987,9 +987,7 @@
       "disclaimer": "I'm a concierge, not a clinician. I help you find and book the right doctor — I don't diagnose or give medical advice.",
       "thinking": "Thinking…",
       "error": "Something went wrong. Please try again.",
-      "minimize": "Minimize",
       "expand": "Expand",
-      "fullscreen": "Fullscreen",
       "shrink": "Shrink",
       "close": "Close chat"
     },
@@ -1029,6 +1027,7 @@
       "video": "Video",
       "from": "From",
       "book_appointment": "Book appointment",
+      "view_profile": "View profile",
       "add_to_shortlist": "Save to shortlist",
       "remove_from_shortlist": "Remove from shortlist",
       "shortlist_full": "Shortlist is full (max {limit})",

@@ -29,6 +29,22 @@ async function getClientIp(): Promise<string> {
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
 }
 
+/** Build the OAuth callback URL, optionally preserving a post-login
+ *  destination as ?next=... The redirect must be a relative internal path;
+ *  external URLs and protocol-relative strings are dropped for safety. */
+function buildOAuthCallback(
+  origin: string,
+  locale: string,
+  redirectTo?: string
+): string {
+  const base = `${origin}/${locale}/callback`;
+  if (!redirectTo) return base;
+  const isSafeRelative =
+    redirectTo.startsWith("/") && !redirectTo.startsWith("//");
+  if (!isSafeRelative) return base;
+  return `${base}?next=${encodeURIComponent(redirectTo)}`;
+}
+
 export async function login(formData: FormData) {
   // Rate limit: 5 login attempts per 15 minutes per IP
   const ip = await getClientIp();
@@ -817,14 +833,14 @@ export async function logout(locale: string = "en") {
   redirect(`/${locale}`);
 }
 
-export async function signInWithGoogle(locale: string = "en") {
+export async function signInWithGoogle(locale: string = "en", redirectTo?: string) {
   const supabase = await createClient();
   const origin = await getOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${origin}/${locale}/callback`,
+      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
     },
   });
 
@@ -839,14 +855,14 @@ export async function signInWithGoogle(locale: string = "en") {
   redirect(data.url);
 }
 
-export async function signInWithApple(locale: string = "en") {
+export async function signInWithApple(locale: string = "en", redirectTo?: string) {
   const supabase = await createClient();
   const origin = await getOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "apple",
     options: {
-      redirectTo: `${origin}/${locale}/callback`,
+      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
     },
   });
 
@@ -861,14 +877,14 @@ export async function signInWithApple(locale: string = "en") {
   redirect(data.url);
 }
 
-export async function signInWithFacebook(locale: string = "en") {
+export async function signInWithFacebook(locale: string = "en", redirectTo?: string) {
   const supabase = await createClient();
   const origin = await getOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "facebook",
     options: {
-      redirectTo: `${origin}/${locale}/callback`,
+      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
     },
   });
 
@@ -883,14 +899,14 @@ export async function signInWithFacebook(locale: string = "en") {
   redirect(data.url);
 }
 
-export async function signInWithAzure(locale: string = "en") {
+export async function signInWithAzure(locale: string = "en", redirectTo?: string) {
   const supabase = await createClient();
   const origin = await getOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "azure",
     options: {
-      redirectTo: `${origin}/${locale}/callback`,
+      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
       scopes: "openid profile email",
     },
   });
@@ -906,14 +922,14 @@ export async function signInWithAzure(locale: string = "en") {
   redirect(data.url);
 }
 
-export async function signInWithTwitter(locale: string = "en") {
+export async function signInWithTwitter(locale: string = "en", redirectTo?: string) {
   const supabase = await createClient();
   const origin = await getOrigin();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "twitter",
     options: {
-      redirectTo: `${origin}/${locale}/callback`,
+      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
     },
   });
 

@@ -5,13 +5,12 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { UIMessage } from "ai";
 import type { ChatDoctor } from "@/lib/chat/tools";
 
-type ChatSize = "compact" | "expanded" | "fullscreen";
+type ChatSize = "compact" | "fullscreen";
 
 export const SHORTLIST_LIMIT = 3;
 
 interface ChatState {
   isOpen: boolean;
-  isMinimized: boolean;
   size: ChatSize;
   hasAcceptedGdpr: boolean;
   hasAutoExpanded: boolean;
@@ -21,10 +20,8 @@ interface ChatState {
   // actions
   open: () => void;
   close: () => void;
-  minimize: () => void;
-  toggleMinimized: () => void;
+  toggleSize: () => void;
   setSize: (size: ChatSize) => void;
-  cycleSize: () => void;
   markAutoExpanded: () => void;
   acceptGdpr: () => void;
   setMessages: (messages: UIMessage[]) => void;
@@ -54,28 +51,17 @@ export const useChatStore = create<ChatState>()(
   persist(
     (set, get) => ({
       isOpen: false,
-      isMinimized: false,
       size: "compact",
       hasAcceptedGdpr: false,
       hasAutoExpanded: false,
       messages: [],
       shortlist: [],
       compareOpen: false,
-      open: () => set({ isOpen: true, isMinimized: false }),
-      close: () => set({ isOpen: false, isMinimized: false, compareOpen: false }),
-      minimize: () => set({ isMinimized: true }),
-      toggleMinimized: () => set((s) => ({ isMinimized: !s.isMinimized })),
-      setSize: (size) => set({ size, isMinimized: false }),
-      cycleSize: () =>
-        set((s) => ({
-          size:
-            s.size === "compact"
-              ? "expanded"
-              : s.size === "expanded"
-                ? "fullscreen"
-                : "compact",
-          isMinimized: false,
-        })),
+      open: () => set({ isOpen: true }),
+      close: () => set({ isOpen: false, compareOpen: false }),
+      setSize: (size) => set({ size }),
+      toggleSize: () =>
+        set((s) => ({ size: s.size === "compact" ? "fullscreen" : "compact" })),
       markAutoExpanded: () => set({ hasAutoExpanded: true }),
       acceptGdpr: () => set({ hasAcceptedGdpr: true }),
       setMessages: (messages) => set({ messages }),
@@ -98,7 +84,6 @@ export const useChatStore = create<ChatState>()(
         set({
           messages: [],
           isOpen: false,
-          isMinimized: false,
           size: "compact",
           hasAutoExpanded: false,
           shortlist: [],
@@ -112,7 +97,6 @@ export const useChatStore = create<ChatState>()(
         messages: state.messages,
         hasAcceptedGdpr: state.hasAcceptedGdpr,
         isOpen: state.isOpen,
-        isMinimized: state.isMinimized,
         size: state.size,
         hasAutoExpanded: state.hasAutoExpanded,
         shortlist: state.shortlist,

@@ -10,11 +10,14 @@ import {
   Video,
   Heart,
   User,
+  UserCircle,
 } from "lucide-react";
 import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
 import { useChatStore, SHORTLIST_LIMIT } from "@/stores/chat-store";
+import { useUser } from "@/hooks/use-user";
+import { getAuthedHref } from "@/lib/chat/booking-href";
 import type { ChatDoctor, ChatDoctorSlot } from "@/lib/chat/tools";
 
 interface ChatDoctorCardProps {
@@ -29,6 +32,12 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
   const toggleShortlist = useChatStore((s) => s.toggleShortlist);
   const saved = shortlist.some((d) => d.id === doctor.id);
   const atLimit = !saved && shortlist.length >= SHORTLIST_LIMIT;
+  const { user } = useUser();
+  const isAuthenticated = !!user;
+  const bookHref = getAuthedHref(`/doctors/${doctor.slug}/book`, {
+    isAuthenticated,
+    locale,
+  });
 
   const initials = doctor.name
     .replace(/^(Dr\.?|Prof\.?)\s+/i, "")
@@ -168,6 +177,8 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
               })}
               slots={doctor.slotsByType.in_person}
               doctorSlug={doctor.slug}
+              locale={locale}
+              isAuthenticated={isAuthenticated}
               onBook={onBook}
             />
           )}
@@ -182,6 +193,8 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
               })}
               slots={doctor.slotsByType.video}
               doctorSlug={doctor.slug}
+              locale={locale}
+              isAuthenticated={isAuthenticated}
               onBook={onBook}
               variant="video"
             />
@@ -200,17 +213,30 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
             )}
           </span>
         </div>
-        <Link
-          href={`/doctors/${doctor.slug}/book`}
-          onClick={onBook}
-          className={cn(
-            "flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm",
-            "hover:bg-primary/90 transition-colors"
-          )}
-        >
-          <CalendarDays className="h-4 w-4" />
-          {t("book_appointment")}
-        </Link>
+        <div className="grid grid-cols-2 gap-2">
+          <Link
+            href={`/doctors/${doctor.slug}`}
+            onClick={onBook}
+            className={cn(
+              "flex items-center justify-center gap-1.5 rounded-xl border border-primary/30 bg-background px-3 py-2.5 text-xs font-semibold text-primary",
+              "hover:bg-primary/5 transition-colors"
+            )}
+          >
+            <UserCircle className="h-4 w-4" />
+            {t("view_profile")}
+          </Link>
+          <Link
+            href={bookHref}
+            onClick={onBook}
+            className={cn(
+              "flex items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm",
+              "hover:bg-primary/90 transition-colors"
+            )}
+          >
+            <CalendarDays className="h-4 w-4" />
+            {t("book_appointment")}
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -221,6 +247,8 @@ function SlotRow({
   label,
   slots,
   doctorSlug,
+  locale,
+  isAuthenticated,
   onBook,
   variant = "in_person",
 }: {
@@ -228,6 +256,8 @@ function SlotRow({
   label: string;
   slots: ChatDoctorSlot[];
   doctorSlug: string;
+  locale: string;
+  isAuthenticated: boolean;
   onBook?: () => void;
   variant?: "in_person" | "video";
 }) {
@@ -243,6 +273,8 @@ function SlotRow({
             key={`${slot.date}-${slot.start}`}
             doctorSlug={doctorSlug}
             slot={slot}
+            locale={locale}
+            isAuthenticated={isAuthenticated}
             onBook={onBook}
             variant={variant}
           />
@@ -255,18 +287,24 @@ function SlotRow({
 function SlotPill({
   doctorSlug,
   slot,
+  locale,
+  isAuthenticated,
   onBook,
   variant = "in_person",
 }: {
   doctorSlug: string;
   slot: ChatDoctorSlot;
+  locale: string;
+  isAuthenticated: boolean;
   onBook?: () => void;
   variant?: "in_person" | "video";
 }) {
   const startTime = slot.start.slice(11, 16);
+  const slotPath = `/doctors/${doctorSlug}/book?date=${slot.date}&time=${encodeURIComponent(slot.start)}&type=${slot.consultationType}`;
+  const href = getAuthedHref(slotPath, { isAuthenticated, locale });
   return (
     <Link
-      href={`/doctors/${doctorSlug}/book?date=${slot.date}&time=${encodeURIComponent(slot.start)}&type=${slot.consultationType}`}
+      href={href}
       onClick={onBook}
       className={cn(
         "inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",

@@ -212,7 +212,7 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
           <div className="space-y-3">
             <form
               action={async () => {
-                const result = await signInWithGoogle(locale);
+                const result = await signInWithGoogle(locale, redirectTo || undefined);
                 if (result?.error) setError(result.error);
               }}
             >
@@ -224,7 +224,7 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
 
             <form
               action={async () => {
-                const result = await signInWithApple(locale);
+                const result = await signInWithApple(locale, redirectTo || undefined);
                 if (result?.error) setError(result.error);
               }}
             >
@@ -236,7 +236,7 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
 
             <form
               action={async () => {
-                const result = await signInWithFacebook(locale);
+                const result = await signInWithFacebook(locale, redirectTo || undefined);
                 if (result?.error) setError(result.error);
               }}
             >
@@ -248,7 +248,7 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
 
             <form
               action={async () => {
-                const result = await signInWithAzure(locale);
+                const result = await signInWithAzure(locale, redirectTo || undefined);
                 if (result?.error) setError(result.error);
               }}
             >
@@ -260,7 +260,7 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
 
             <form
               action={async () => {
-                const result = await signInWithTwitter(locale);
+                const result = await signInWithTwitter(locale, redirectTo || undefined);
                 if (result?.error) setError(result.error);
               }}
             >

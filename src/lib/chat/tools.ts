@@ -171,7 +171,6 @@ export function buildChatTools(locale: string) {
               .filter(
                 (s) => !s.is_primary && s.specialty.slug !== primary?.slug
               )
-              .slice(0, 3)
               .map((s) => formatSpecialtyName(s.specialty.name_key));
 
             const inPerson = inPersonAvail[d.id];
