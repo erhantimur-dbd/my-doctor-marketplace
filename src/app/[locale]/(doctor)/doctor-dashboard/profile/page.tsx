@@ -49,6 +49,14 @@ import {
   updateDoctorService,
   deleteDoctorService,
 } from "@/actions/doctor-services";
+import {
+  getDoctorSkillsAndSpecialties,
+  setDoctorSkills,
+} from "@/actions/doctor-skills";
+import {
+  MAX_DOCTOR_SKILLS,
+  doctorDeclarableSkillsForSpecialties,
+} from "@/lib/constants/skills";
 import { PriceBookEditor } from "@/components/doctor/price-book-editor";
 import { PracticePhotosManager } from "@/components/doctor/practice-photos-manager";
 import type { Education, Certification, Doctor, DoctorService } from "@/types";
@@ -87,6 +95,13 @@ export default function ProfilePage() {
   const [isWheelchairAccessible, setIsWheelchairAccessible] = useState(false);
   const [inPersonDepositType, setInPersonDepositType] = useState<"none" | "percentage" | "flat">("none");
   const [inPersonDepositValue, setInPersonDepositValue] = useState<number | null>(null);
+
+  // Skills state
+  const [doctorSpecialties, setDoctorSpecialties] = useState<string[]>([]);
+  const [skills, setSkills] = useState<string[]>([]);
+  const [savingSkills, setSavingSkills] = useState(false);
+  const [savedSkills, setSavedSkills] = useState(false);
+  const [skillsError, setSkillsError] = useState("");
 
   // Services state
   const [services, setServices] = useState<DoctorService[]>([]);
@@ -224,7 +239,34 @@ export default function ProfilePage() {
 
     if (photoData) setPhotos(photoData);
 
+    // Load current skills + specialties (for the skills picker filter)
+    const skillsResult = await getDoctorSkillsAndSpecialties();
+    setSkills(skillsResult.skills);
+    setDoctorSpecialties(skillsResult.specialties);
+
     setLoading(false);
+  }
+
+  function toggleSkill(slug: string) {
+    setSkills((prev) => {
+      if (prev.includes(slug)) return prev.filter((s) => s !== slug);
+      if (prev.length >= MAX_DOCTOR_SKILLS) return prev;
+      return [...prev, slug];
+    });
+    setSavedSkills(false);
+  }
+
+  async function handleSaveSkills() {
+    setSavingSkills(true);
+    setSkillsError("");
+    const result = await setDoctorSkills(skills);
+    setSavingSkills(false);
+    if (result.error) {
+      setSkillsError(result.error);
+      return;
+    }
+    setSavedSkills(true);
+    setTimeout(() => setSavedSkills(false), 3000);
   }
 
   async function handleSave() {
@@ -545,6 +587,76 @@ export default function ProfilePage() {
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Key Skills */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5" />
+              Key Skills
+            </CardTitle>
+            <CardDescription>
+              Procedures and conditions you treat. Patients use these to find
+              you for specific needs. Up to {MAX_DOCTOR_SKILLS}.
+            </CardDescription>
+          </div>
+          <Button
+            size="sm"
+            onClick={handleSaveSkills}
+            disabled={savingSkills}
+          >
+            {savingSkills ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : savedSkills ? (
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            {savedSkills ? "Saved" : "Save Skills"}
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {doctorSpecialties.length === 0 ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              Set your specialties first (contact support) — skills are filtered
+              to match the procedures and conditions within your specialty.
+            </p>
+          ) : (
+            <>
+              <p className="text-xs text-muted-foreground">
+                {skills.length} / {MAX_DOCTOR_SKILLS} selected
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {doctorDeclarableSkillsForSpecialties(doctorSpecialties).map(
+                  (skill) => {
+                    const isSelected = skills.includes(skill.slug);
+                    const atLimit =
+                      !isSelected && skills.length >= MAX_DOCTOR_SKILLS;
+                    return (
+                      <Badge
+                        key={skill.slug}
+                        variant={isSelected ? "default" : "outline"}
+                        className={`px-3 py-1.5 ${
+                          atLimit
+                            ? "cursor-not-allowed opacity-40"
+                            : "cursor-pointer"
+                        }`}
+                        onClick={() => !atLimit && toggleSkill(skill.slug)}
+                      >
+                        {skill.label}
+                      </Badge>
+                    );
+                  }
+                )}
+              </div>
+              {skillsError && (
+                <p className="text-xs text-destructive">{skillsError}</p>
+              )}
+            </>
+          )}
         </CardContent>
       </Card>
 
