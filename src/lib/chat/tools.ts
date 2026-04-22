@@ -40,7 +40,8 @@ export interface ChatDoctor {
   name: string;
   avatarUrl: string | null;
   specialtyDisplay: string | null;
-  relatedSpecialties: string[];
+  /** Full list of the doctor's specialties, primary first, deduped. */
+  allSpecialties: string[];
   city: string | null;
   countryCode: string | null;
   rating: number;
@@ -167,11 +168,18 @@ export function buildChatTools(locale: string) {
               d.specialties?.find((s) => s.is_primary)?.specialty ||
               d.specialties?.[0]?.specialty ||
               null;
-            const others = (d.specialties || [])
-              .filter(
-                (s) => !s.is_primary && s.specialty.slug !== primary?.slug
-              )
-              .map((s) => formatSpecialtyName(s.specialty.name_key));
+            // Primary first, then the rest, deduped by slug.
+            const seen = new Set<string>();
+            const allSpecialties: string[] = [];
+            if (primary) {
+              seen.add(primary.slug);
+              allSpecialties.push(formatSpecialtyName(primary.name_key));
+            }
+            for (const s of d.specialties || []) {
+              if (seen.has(s.specialty.slug)) continue;
+              seen.add(s.specialty.slug);
+              allSpecialties.push(formatSpecialtyName(s.specialty.name_key));
+            }
 
             const inPerson = inPersonAvail[d.id];
             const video = videoAvail[d.id];
@@ -209,7 +217,7 @@ export function buildChatTools(locale: string) {
               specialtyDisplay: primary
                 ? formatSpecialtyName(primary.name_key)
                 : null,
-              relatedSpecialties: others,
+              allSpecialties,
               city: d.location?.city || null,
               countryCode: d.location?.country_code || null,
               rating: Number(d.avg_rating) || 0,

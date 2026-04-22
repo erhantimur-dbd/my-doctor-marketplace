@@ -38,6 +38,15 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
     isAuthenticated,
     locale,
   });
+  // Defensive fallbacks for doctor objects rehydrated from an older cached
+  // session that pre-dates allSpecialties / slotsByType fields.
+  const allSpecialties =
+    doctor.allSpecialties ??
+    (doctor as unknown as { relatedSpecialties?: string[] })
+      .relatedSpecialties ??
+    [];
+  const inPersonSlots = doctor.slotsByType?.in_person ?? [];
+  const videoSlots = doctor.slotsByType?.video ?? [];
 
   const initials = doctor.name
     .replace(/^(Dr\.?|Prof\.?)\s+/i, "")
@@ -145,13 +154,13 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
         </div>
       </div>
 
-      {doctor.relatedSpecialties.length > 0 && (
+      {allSpecialties.length > 0 && (
         <div className="px-4 pb-3 text-left">
           <p className="mb-1.5 text-xs font-semibold text-foreground">
             {t("expert_in")}
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {doctor.relatedSpecialties.map((spec) => (
+            {allSpecialties.map((spec) => (
               <span
                 key={spec}
                 className="inline-flex items-center rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-foreground"
@@ -163,35 +172,28 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
         </div>
       )}
 
-      {(doctor.slotsByType.in_person.length > 0 ||
-        doctor.slotsByType.video.length > 0) && (
+      {(inPersonSlots.length > 0 || videoSlots.length > 0) && (
         <div className="flex flex-col gap-2.5 border-t border-border px-4 py-3">
-          {doctor.slotsByType.in_person.length > 0 && (
+          {inPersonSlots.length > 0 && (
             <SlotRow
               icon={<User className="h-3 w-3 text-primary" />}
               label={t("next_available_in_person", {
-                date: formatRelativeDate(
-                  doctor.slotsByType.in_person[0].date,
-                  locale
-                ),
+                date: formatRelativeDate(inPersonSlots[0].date, locale),
               })}
-              slots={doctor.slotsByType.in_person}
+              slots={inPersonSlots}
               doctorSlug={doctor.slug}
               locale={locale}
               isAuthenticated={isAuthenticated}
               onBook={onBook}
             />
           )}
-          {doctor.slotsByType.video.length > 0 && (
+          {videoSlots.length > 0 && (
             <SlotRow
               icon={<Video className="h-3 w-3 text-purple-600" />}
               label={t("next_available_video", {
-                date: formatRelativeDate(
-                  doctor.slotsByType.video[0].date,
-                  locale
-                ),
+                date: formatRelativeDate(videoSlots[0].date, locale),
               })}
-              slots={doctor.slotsByType.video}
+              slots={videoSlots}
               doctorSlug={doctor.slug}
               locale={locale}
               isAuthenticated={isAuthenticated}
