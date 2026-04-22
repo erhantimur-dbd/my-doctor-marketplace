@@ -127,6 +127,11 @@ export interface SearchFilters {
   placeLng?: number;
   /** Proximity search: radius in km (default 25) */
   radius?: number;
+  /**
+   * Skill slug from the curated taxonomy (src/lib/constants/skills.ts).
+   * Filters to doctors who have self-declared this skill in doctor_skills.
+   */
+  skill?: string;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -188,6 +193,23 @@ export async function searchDoctors(filters: SearchFilters) {
       return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
     }
 
+    query = query.in("id", ids);
+  }
+
+  // Skill filter — resolve skill slug → matching doctor IDs via doctor_skills.
+  // Applied before specialty so the narrower filter runs first.
+  if (filters.skill) {
+    const { data: skillRows } = await supabase
+      .from("doctor_skills")
+      .select("doctor_id")
+      .eq("skill_slug", filters.skill);
+
+    const ids = (skillRows || []).map(
+      (r: { doctor_id: string }) => r.doctor_id
+    );
+    if (ids.length === 0) {
+      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+    }
     query = query.in("id", ids);
   }
 

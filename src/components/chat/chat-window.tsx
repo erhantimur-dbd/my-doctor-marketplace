@@ -112,6 +112,7 @@ export function ChatWindow() {
       parts.push(
         filters.consultationType === "video" ? "video only" : "in person only"
       );
+    if (filters.skill) parts.push(`skill ${humanize(filters.skill)}`);
     const msg = parts.length
       ? `Re-run the search with only these filters: ${parts.join(", ")}. Drop any other filters.`
       : "Search without any filters — show the most popular doctors.";

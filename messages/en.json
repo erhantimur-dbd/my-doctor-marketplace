@@ -1258,6 +1258,7 @@
     },
     "card": {
       "expert_in": "Expert in:",
+      "skilled_in": "Skilled in:",
       "verified": "Verified",
       "video": "Video",
       "from": "From",
@@ -1276,6 +1277,7 @@
       "type": "Type",
       "video": "Video",
       "in_person": "In-person",
+      "skill": "Skill",
       "remove_filter": "Remove {name} filter"
     },
     "shortlist": {

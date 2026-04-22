@@ -26,6 +26,7 @@ import {
 import { formatSpecialtyName } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { searchArticlesByTags } from "@/components/help-center/help-center-data";
+import { getSkill } from "@/lib/constants/skills";
 
 export interface ChatDoctorSlot {
   date: string;
@@ -42,6 +43,8 @@ export interface ChatDoctor {
   specialtyDisplay: string | null;
   /** Full list of the doctor's specialties, primary first, deduped. */
   allSpecialties: string[];
+  /** Doctor-declared skills (labels, not slugs). Empty if none declared. */
+  allSkills: string[];
   city: string | null;
   countryCode: string | null;
   rating: number;
@@ -91,7 +94,7 @@ export function buildChatTools(locale: string) {
 
     searchDoctors: tool({
       description:
-        "Search MyDoctors360 for verified private doctors matching the given specialty, location, language, or consultation type. Returns up to 5 doctors as rich cards that the client renders inline in the chat. Call this once you know what specialty the user needs — either after analyzeSymptoms or when the user asked directly (e.g. 'dermatologist in London'). If the result urgency was 'emergency', do NOT call this tool.",
+        "Search MyDoctors360 for verified private doctors matching the given specialty, location, language, consultation type, or specific skill. Returns up to 5 doctors as rich cards that the client renders inline in the chat. Call this once you know what specialty the user needs — either after analyzeSymptoms or when the user asked directly (e.g. 'dermatologist in London'). If the result urgency was 'emergency', do NOT call this tool.",
       inputSchema: z.object({
         specialty: z
           .string()
@@ -117,13 +120,20 @@ export function buildChatTools(locale: string) {
           .describe(
             "Set only if the user explicitly asked for in-person or video. Null otherwise."
           ),
+        skill: z
+          .string()
+          .nullable()
+          .describe(
+            "A specific procedure or condition slug from the skills taxonomy (e.g. 'mole-check', 'botox', 'knee-surgery', 'ibs-treatment', 'migraine-management', 'fertility-care'). Use this when the user asks about a specific procedure or condition, not just a broad specialty. Null if the user only named a broad specialty."
+          ),
       }),
-      execute: async ({ specialty, locationSlug, language, consultationType }) => {
+      execute: async ({ specialty, locationSlug, language, consultationType, skill }) => {
         const result = await searchDoctorsAction({
           specialty: specialty || undefined,
           location: locationSlug || undefined,
           language: language || undefined,
           consultationType: consultationType || undefined,
+          skill: skill || undefined,
           sort: "featured",
           page: 1,
         });
@@ -133,12 +143,17 @@ export function buildChatTools(locale: string) {
         const doctorIds = rawDoctors
           .map((d) => (d as { id?: string }).id)
           .filter((id): id is string => !!id);
-        const [inPersonAvail, videoAvail] = doctorIds.length
+        const [inPersonAvail, videoAvail, skillsByDoctor] = doctorIds.length
           ? await Promise.all([
               getNextAvailabilityBatch(doctorIds, "in_person"),
               getNextAvailabilityBatch(doctorIds, "video"),
+              fetchDoctorSkills(doctorIds),
             ])
-          : [{}, {}];
+          : [
+              {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>,
+              {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>,
+              {} as Record<string, string[]>,
+            ];
 
         const doctors: ChatDoctor[] = rawDoctors.map((raw: Record<string, unknown>) => {
             const d = raw as {
@@ -183,6 +198,7 @@ export function buildChatTools(locale: string) {
 
             const inPerson = inPersonAvail[d.id];
             const video = videoAvail[d.id];
+            const allSkills = (skillsByDoctor as Record<string, string[]>)[d.id] || [];
             const toSlots = (
               a: { date: string; slots: { start: string; end: string }[]; consultationType: string } | undefined
             ): ChatDoctorSlot[] =>
@@ -218,6 +234,7 @@ export function buildChatTools(locale: string) {
                 ? formatSpecialtyName(primary.name_key)
                 : null,
               allSpecialties,
+              allSkills,
               city: d.location?.city || null,
               countryCode: d.location?.country_code || null,
               rating: Number(d.avg_rating) || 0,
@@ -288,4 +305,29 @@ export function buildChatTools(locale: string) {
       },
     }),
   };
+}
+
+/**
+ * Batch-fetch doctor-declared skills for a set of doctor IDs. Returns a map
+ * from doctor_id to an array of skill display labels (resolved via the
+ * curated taxonomy). Unknown slugs are dropped so stale rows don't leak.
+ */
+async function fetchDoctorSkills(
+  doctorIds: string[]
+): Promise<Record<string, string[]>> {
+  if (doctorIds.length === 0) return {};
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("doctor_skills")
+    .select("doctor_id, skill_slug")
+    .in("doctor_id", doctorIds);
+  if (error || !data) return {};
+  const result: Record<string, string[]> = {};
+  for (const row of data as { doctor_id: string; skill_slug: string }[]) {
+    const meta = getSkill(row.skill_slug);
+    if (!meta) continue;
+    if (!result[row.doctor_id]) result[row.doctor_id] = [];
+    result[row.doctor_id].push(meta.label);
+  }
+  return result;
 }

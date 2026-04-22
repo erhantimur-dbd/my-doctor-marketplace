@@ -39,14 +39,18 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
     locale,
   });
   // Defensive fallbacks for doctor objects rehydrated from an older cached
-  // session that pre-dates allSpecialties / slotsByType fields.
+  // session that pre-dates allSpecialties / allSkills / slotsByType fields.
   const allSpecialties =
     doctor.allSpecialties ??
     (doctor as unknown as { relatedSpecialties?: string[] })
       .relatedSpecialties ??
     [];
+  const allSkills = doctor.allSkills ?? [];
   const inPersonSlots = doctor.slotsByType?.in_person ?? [];
   const videoSlots = doctor.slotsByType?.video ?? [];
+  const MAX_SKILL_CHIPS = 5;
+  const visibleSkills = allSkills.slice(0, MAX_SKILL_CHIPS);
+  const hiddenSkillCount = Math.max(0, allSkills.length - MAX_SKILL_CHIPS);
 
   const initials = doctor.name
     .replace(/^(Dr\.?|Prof\.?)\s+/i, "")
@@ -168,6 +172,29 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
                 {spec}
               </span>
             ))}
+          </div>
+        </div>
+      )}
+
+      {allSkills.length > 0 && (
+        <div className="px-4 pb-3 text-left">
+          <p className="mb-1.5 text-xs font-semibold text-foreground">
+            {t("skilled_in")}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {visibleSkills.map((skill) => (
+              <span
+                key={skill}
+                className="inline-flex items-center rounded-md border border-primary/25 bg-primary/5 px-2 py-0.5 text-[11px] text-primary"
+              >
+                {skill}
+              </span>
+            ))}
+            {hiddenSkillCount > 0 && (
+              <span className="inline-flex items-center rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[11px] text-muted-foreground">
+                +{hiddenSkillCount}
+              </span>
+            )}
           </div>
         </div>
       )}

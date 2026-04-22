@@ -5,12 +5,14 @@ import type { UIMessage } from "ai";
 import { X, Filter } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
+import { getSkill } from "@/lib/constants/skills";
 
 export interface AppliedFilters {
   specialty: string | null;
   locationSlug: string | null;
   language: string | null;
   consultationType: "in_person" | "video" | null;
+  skill: string | null;
 }
 
 interface ChatFilterBarProps {
@@ -44,6 +46,7 @@ export function ChatFilterBar({
             locationSlug?: string | null;
             language?: string | null;
             consultationType?: "in_person" | "video" | null;
+            skill?: string | null;
           };
           output?: { ok?: boolean };
         };
@@ -58,6 +61,7 @@ export function ChatFilterBar({
             locationSlug: part.input.locationSlug ?? null,
             language: part.input.language ?? null,
             consultationType: part.input.consultationType ?? null,
+            skill: part.input.skill ?? null,
           };
         }
       }
@@ -95,6 +99,14 @@ export function ChatFilterBar({
           ? t("video")
           : t("in_person"),
     });
+  if (filters.skill) {
+    const skillMeta = getSkill(filters.skill);
+    chips.push({
+      key: "skill",
+      label: t("skill"),
+      value: skillMeta?.label ?? humanize(filters.skill),
+    });
+  }
 
   if (chips.length === 0) return null;
 
