@@ -16,37 +16,13 @@ const supportEmail =
 const whatsappNumber = process.env.NEXT_PUBLIC_WHATSAPP_BUSINESS_NUMBER || "";
 
 const faqs = [
-  {
-    question: "How do I book an appointment?",
-    answer:
-      "Browse our doctor directory, select a specialist that fits your needs, choose an available time slot from their calendar, and complete the booking with a secure online payment. You'll receive an instant confirmation email with all the details.",
-  },
-  {
-    question: "Can I cancel or reschedule my booking?",
-    answer:
-      "Yes. You can cancel or reschedule from your patient dashboard. Each doctor sets their own cancellation policy, so please review the policy on the doctor's profile before booking. Cancellations made within the allowed window are eligible for a full refund.",
-  },
-  {
-    question: "How do refunds work?",
-    answer:
-      "If you cancel within the doctor's cancellation window, your refund is processed automatically back to your original payment method. Refunds typically appear within 5-10 business days depending on your bank. If a doctor cancels your appointment, you will always receive a full refund.",
-  },
-  {
-    question: "How do video consultations work?",
-    answer:
-      "When you book a video consultation, you'll receive a unique video call link in your confirmation email and dashboard. At the scheduled time, simply click the link to join a secure, HD video session with your doctor. No software installation is required.",
-  },
-  {
-    question: "How do I update my profile or payment information?",
-    answer:
-      "Log in to your dashboard and navigate to Settings. From there you can update your personal details, contact information, and manage your saved payment methods. Changes take effect immediately.",
-  },
-  {
-    question: "I'm a doctor \u2014 how do I join MyDoctors360?",
-    answer:
-      "Visit our 'Join as a Doctor' page to create your professional profile. After submitting your credentials and medical license, our team will verify your information within 24-48 hours. Once approved, you can set your availability, consultation fees, and start receiving patient bookings.",
-  },
-];
+  { question: "faq_booking_q", answer: "faq_booking_a" },
+  { question: "faq_cancel_q", answer: "faq_cancel_a" },
+  { question: "faq_refunds_q", answer: "faq_refunds_a" },
+  { question: "faq_video_q", answer: "faq_video_a" },
+  { question: "faq_profile_q", answer: "faq_profile_a" },
+  { question: "faq_doctor_join_q", answer: "faq_doctor_join_a" },
+] as const;
 
 export async function generateMetadata({
   params,
@@ -79,11 +55,10 @@ export default async function SupportPage({
             <HelpCircle className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
-            How Can We Help?
+            {t("support_hero_title")}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Reach our support team through email, support tickets, or WhatsApp.
-            We&apos;re here to make your experience seamless.
+            {t("support_hero_subtitle")}
           </p>
         </div>
       </section>
@@ -126,18 +101,18 @@ export default async function SupportPage({
               <div className="flex flex-col items-center gap-2 bg-blue-50 px-6 py-6 dark:bg-blue-950/30">
                 <Mail className="h-7 w-7 text-blue-600" />
                 <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100">
-                  Email Support
+                  {t("support_email_title")}
                 </h3>
               </div>
               <CardContent className="flex flex-1 flex-col items-center gap-4 pt-6">
                 <p className="text-sm text-muted-foreground">
-                  Send us an email and we&apos;ll respond within 24 hours.
+                  {t("support_email_desc")}
                 </p>
                 <span className="text-sm font-medium text-primary">
                   {supportEmail}
                 </span>
                 <Button className="mt-auto w-full rounded-full" asChild>
-                  <a href={`mailto:${supportEmail}`}>Send Email</a>
+                  <a href={`mailto:${supportEmail}`}>{t("support_email_button")}</a>
                 </Button>
               </CardContent>
             </Card>
@@ -147,20 +122,19 @@ export default async function SupportPage({
               <div className="flex flex-col items-center gap-2 bg-emerald-50 px-6 py-6 dark:bg-emerald-950/30">
                 <FileText className="h-7 w-7 text-emerald-600" />
                 <h3 className="text-lg font-semibold text-emerald-900 dark:text-emerald-100">
-                  Support Tickets
+                  {t("support_tickets_title")}
                 </h3>
               </div>
               <CardContent className="flex flex-1 flex-col items-center gap-4 pt-6">
                 <p className="text-sm text-muted-foreground">
-                  Create a ticket for the fastest response. Track status in
-                  real-time from your dashboard.
+                  {t("support_tickets_desc")}
                 </p>
                 <Button
                   className="mt-auto w-full rounded-full"
                   variant="outline"
                   asChild
                 >
-                  <Link href="/login">Log In to Create Ticket</Link>
+                  <Link href="/login">{t("support_tickets_button")}</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -175,11 +149,10 @@ export default async function SupportPage({
               </div>
               <CardContent className="flex flex-1 flex-col items-center gap-4 pt-6">
                 <p className="text-sm text-muted-foreground">
-                  Chat with us on WhatsApp during business hours for quick
-                  assistance.
+                  {t("support_whatsapp_desc")}
                 </p>
                 <span className="text-xs font-medium text-muted-foreground">
-                  Mon&ndash;Fri, 9:00&ndash;18:00 CET
+                  {t("support_whatsapp_hours")}
                 </span>
                 <Button
                   className="mt-auto w-full rounded-full"
@@ -191,7 +164,7 @@ export default async function SupportPage({
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Chat on WhatsApp
+                    {t("support_whatsapp_button")}
                   </a>
                 </Button>
               </CardContent>
@@ -204,11 +177,10 @@ export default async function SupportPage({
       <section className="bg-muted/30 px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-3xl">
           <h2 className="text-center text-2xl font-bold md:text-3xl">
-            Frequently Asked Questions
+            {t("support_faq_title")}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-muted-foreground">
-            Find quick answers to common questions about bookings, payments, and
-            using MyDoctors360.
+            {t("support_faq_subtitle")}
           </p>
 
           <div className="mt-10">
@@ -221,10 +193,10 @@ export default async function SupportPage({
                       value={`faq-${index}`}
                     >
                       <AccordionTrigger className="text-left font-medium">
-                        {faq.question}
+                        {t(faq.question)}
                       </AccordionTrigger>
                       <AccordionContent className="text-muted-foreground">
-                        {faq.answer}
+                        {t(faq.answer)}
                       </AccordionContent>
                     </AccordionItem>
                   ))}
@@ -239,15 +211,14 @@ export default async function SupportPage({
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto text-center">
           <h2 className="text-2xl font-bold md:text-3xl">
-            Still Need Help?
+            {t("still_need_help")}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Our team is ready to assist you. Don&apos;t hesitate to reach out
-            through any of the channels above.
+            {t("support_cta_desc")}
           </p>
           <Button size="lg" className="mt-8 rounded-full" asChild>
             <a href={`mailto:${supportEmail}`}>
-              Contact Support <Mail className="ml-2 h-4 w-4" />
+              {t("contact_support")} <Mail className="ml-2 h-4 w-4" />
             </a>
           </Button>
         </div>
