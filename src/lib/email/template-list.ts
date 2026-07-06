@@ -25,6 +25,7 @@ export type TemplateKey =
   | "doctorReferralInvitation"
   | "referralReward"
   | "subscriptionUpgradeInvite"
+  | "doctorPayout"
   | "availabilityAlert"
   | "satisfactionSurvey";
 
@@ -61,6 +62,8 @@ export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string 
   { key: "referralReward", label: "Referral Reward", category: "Referral" },
   // Subscription
   { key: "subscriptionUpgradeInvite", label: "Upgrade Invite", category: "Subscription" },
+  // Payments
+  { key: "doctorPayout", label: "Doctor Payout", category: "Payments" },
   // Notifications
   { key: "availabilityAlert", label: "Availability Alert", category: "Notifications" },
   { key: "satisfactionSurvey", label: "Satisfaction Survey (NPS)", category: "Notifications" },

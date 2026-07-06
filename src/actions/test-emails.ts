@@ -204,6 +204,12 @@ const SAMPLE_DATA = {
       originalTime: "10:00",
       dashboardUrl: `${APP_URL}/en/dashboard/bookings`,
     }),
+  doctorPayout: () =>
+    templates.doctorPayoutEmail({
+      doctorName: "Sarah Williams",
+      amountFormatted: "£1,250.00",
+      arrivalDate: "3 April 2026",
+    }),
   availabilityAlert: () =>
     templates.availabilityAlertEmail({
       patientName: "John",

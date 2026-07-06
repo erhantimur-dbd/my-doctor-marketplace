@@ -1998,6 +1998,66 @@ export function reschedulePaymentEmail({
   return { subject, html };
 }
 
+// ---------------------------------------------------------------------------
+// Doctor Payout Notification (Stripe payout.paid / payout.failed)
+// ---------------------------------------------------------------------------
+
+interface DoctorPayoutParams {
+  doctorName: string;
+  amountFormatted: string;
+  arrivalDate?: string;
+  failed?: boolean;
+}
+
+export function doctorPayoutEmail({
+  doctorName,
+  amountFormatted,
+  arrivalDate,
+  failed,
+}: DoctorPayoutParams): { subject: string; html: string } {
+  if (failed) {
+    const subject = "Action needed: your payout could not be completed";
+
+    const html = baseLayout(`
+      <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Payout Could Not Be Completed</h2>
+      <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+        Hi Dr. ${doctorName}, your payout of <strong>${amountFormatted}</strong> could not be completed. This usually happens when the bank details on your Stripe account are missing or out of date.
+      </p>
+
+      <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+        <p style="margin: 0; font-size: 13px; color: #991b1b; line-height: 1.5;">
+          Please check your bank details in Stripe. Once they are updated, Stripe will automatically retry the transfer.
+        </p>
+      </div>
+
+      ${button("Review Payout Settings", `${APP_URL}/en/doctor-dashboard/payments`)}
+
+      <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+        Your funds are safe and will be paid out as soon as your bank details are confirmed. If you need help, please contact our support team.
+      </p>
+    `);
+
+    return { subject, html };
+  }
+
+  const subject = `Your payout of ${amountFormatted} is on the way`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Payout on the Way</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi Dr. ${doctorName}, a payout of <strong>${amountFormatted}</strong> has left for your bank account.${arrivalDate ? ` It is expected to arrive by <strong>${arrivalDate}</strong>.` : ""}
+    </p>
+
+    ${button("View Earnings", `${APP_URL}/en/doctor-dashboard/payments`)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      You can review all your earnings and payouts from your dashboard at any time.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
 export function giftCardEmail({
   recipientName,
   senderName,

@@ -6,7 +6,7 @@ import { exportBookingToMicrosoftCalendar } from "@/lib/microsoft/sync";
 import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
-import { bookingConfirmationEmail } from "@/lib/email/templates";
+import { bookingConfirmationEmail, doctorPayoutEmail } from "@/lib/email/templates";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
 import {
   TEMPLATE_BOOKING_CONFIRMATION,
@@ -744,6 +744,69 @@ export async function POST(request: NextRequest) {
       console.warn(
         `[Stripe] Doctor deauthorized Connect account ${account.id}. Doctor deactivated.`
       );
+      break;
+    }
+
+    // ── Doctor Payout Sent / Failed (from connected accounts) ─────────────
+    case "payout.paid":
+    case "payout.failed": {
+      if (!event.account) break;
+
+      try {
+        const payout = event.data.object as Stripe.Payout;
+        const failed = event.type === "payout.failed";
+
+        const { data: payoutDoctor } = await supabase
+          .from("doctors")
+          .select(`
+            id,
+            profile_id,
+            profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
+          `)
+          .eq("stripe_account_id", event.account)
+          .single();
+
+        if (!payoutDoctor) break;
+
+        const doctorProfile: any = Array.isArray(payoutDoctor.profile)
+          ? payoutDoctor.profile[0]
+          : payoutDoctor.profile;
+
+        if (!doctorProfile) break;
+
+        const amountFormatted = formatCurrency(payout.amount, payout.currency.toUpperCase());
+        const arrivalDate = payout.arrival_date
+          ? new Date(payout.arrival_date * 1000).toLocaleDateString("en-GB", {
+              day: "numeric", month: "long", year: "numeric",
+            })
+          : undefined;
+
+        if (doctorProfile.email) {
+          const { subject, html } = doctorPayoutEmail({
+            doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+            amountFormatted,
+            arrivalDate,
+            failed,
+          });
+
+          sendEmail({ to: doctorProfile.email, subject, html }).catch((err) =>
+            console.error("Payout email error:", err)
+          );
+        }
+
+        createNotification({
+          userId: payoutDoctor.profile_id,
+          type: failed ? "payout_failed" : "payout_paid",
+          title: failed ? "Payout Failed" : "Payout Sent",
+          message: failed
+            ? `Your payout of ${amountFormatted} could not be completed. Please check your bank details in Stripe.`
+            : `Your payout of ${amountFormatted} is on the way to your bank account.`,
+          channels: ["in_app"],
+          metadata: { payout_id: payout.id },
+        }).catch((err) => console.error("Payout notification error:", err));
+      } catch (err) {
+        console.error("Payout webhook error (non-fatal):", err);
+      }
       break;
     }
 
