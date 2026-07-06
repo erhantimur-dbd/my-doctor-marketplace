@@ -37,6 +37,7 @@ import {
   FileText,
   ArrowRight,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/utils/currency";
 import { respondToReschedule } from "@/actions/reschedule";
 import { saveVisitSummary } from "@/actions/booking";
@@ -51,6 +52,8 @@ function createSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
+
+const PAGE_SIZE = 50;
 
 const STATUS_COLORS: Record<string, string> = {
   pending_approval: "bg-yellow-100 text-yellow-800",
@@ -80,10 +83,14 @@ export default function BookingsPage() {
 }
 
 function BookingsContent() {
+  const t = useTranslations("doctor_dashboard");
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [doctorCurrency, setDoctorCurrency] = useState("EUR");
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
 
   // Reject dialog state
@@ -107,7 +114,7 @@ function BookingsContent() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [page]);
 
   async function loadData() {
     const supabase = createSupabase();
@@ -126,16 +133,19 @@ function BookingsContent() {
     setDoctorId(doctor.id);
     setDoctorCurrency(doctor.base_currency);
 
-    const { data } = await supabase
+    const { data, count } = await supabase
       .from("bookings")
       .select(
-        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
+        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)",
+        { count: "exact" }
       )
       .eq("doctor_id", doctor.id)
       .order("appointment_date", { ascending: false })
-      .order("start_time", { ascending: false });
+      .order("start_time", { ascending: false })
+      .range(0, page * PAGE_SIZE - 1);
 
     setBookings((data as unknown as BookingRow[]) || []);
+    setTotalCount(count ?? 0);
 
     // Fetch pending reschedule requests for this doctor's bookings
     const { data: reschedules } = await supabase
@@ -152,6 +162,7 @@ function BookingsContent() {
 
     setRescheduleRequests((reschedules as unknown as any[]) || []);
     setLoading(false);
+    setLoadingMore(false);
   }
 
   async function acceptBooking(bookingId: string) {
@@ -238,6 +249,7 @@ function BookingsContent() {
 
   const today = new Date().toISOString().split("T")[0];
 
+  // Tabs filter the loaded window client-side, so tab counts reflect loaded rows only
   const pendingBookings = bookings.filter(
     (b) => b.status === "pending_approval"
   );
@@ -646,6 +658,25 @@ function BookingsContent() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {bookings.length < totalCount && (
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-sm text-muted-foreground">
+            {t("showing_of", { shown: bookings.length, total: totalCount })}
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setLoadingMore(true);
+              setPage((p) => p + 1);
+            }}
+            disabled={loadingMore}
+          >
+            {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {t("load_more")}
+          </Button>
+        </div>
+      )}
 
       {/* Reject Dialog */}
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
