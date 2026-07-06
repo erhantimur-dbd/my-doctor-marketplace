@@ -45,11 +45,15 @@ export default async function AdminBookingsPage({
     status?: string;
     from?: string;
     to?: string;
+    page?: string;
   }>;
 }) {
-  const { tab: rawTab, q, status: filterStatus, from: fromDate, to: toDate } = await searchParams;
+  const sp = await searchParams;
+  const { tab: rawTab, q, status: filterStatus, from: fromDate, to: toDate } = sp;
   const tab: TabKey =
     rawTab === "past" || rawTab === "all" ? rawTab : "upcoming";
+  const perPage = 50;
+  const page = Math.max(1, Number(sp.page) || 1);
 
   const supabase = await createClient();
   const {
@@ -95,9 +99,10 @@ export default async function AdminBookingsPage({
       `id, booking_number, appointment_date, start_time, end_time, status, consultation_type,
        total_amount_cents, platform_fee_cents, currency,
        patient:profiles!bookings_patient_id_fkey(first_name, last_name),
-       doctor:doctors!inner(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+       doctor:doctors!inner(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`,
+      { count: "exact" }
     )
-    .limit(100);
+    .range((page - 1) * perPage, page * perPage - 1);
 
   if (tab === "upcoming") {
     query = query
@@ -128,9 +133,10 @@ export default async function AdminBookingsPage({
     query = query.lte("appointment_date", toDate);
   }
 
-  const { data: allBookings } = await query;
+  const { data: allBookings, count: totalCount } = await query;
+  const totalPages = Math.max(1, Math.ceil((totalCount ?? 0) / perPage));
 
-  // Client-side text search
+  // Client-side text search (only matches bookings on the current page)
   let bookings = (allBookings as any[]) || [];
   if (q) {
     const lowerQ = q.toLowerCase();
@@ -163,6 +169,12 @@ export default async function AdminBookingsPage({
   ];
 
   const hasFilters = q || filterStatus || fromDate || toDate;
+
+  const pageHref = (targetPage: number) =>
+    `/admin/bookings?${new URLSearchParams({
+      ...sp,
+      page: String(targetPage),
+    } as Record<string, string>).toString()}`;
 
   return (
     <div className="space-y-6">
@@ -298,6 +310,39 @@ export default async function AdminBookingsPage({
           </Table>
         </CardContent>
       </Card>
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Page {page} of {totalPages}
+          {q && (
+            <span className="ml-2 text-xs">
+              (text search only filters the current page)
+            </span>
+          )}
+        </p>
+        {totalPages > 1 && (
+          <div className="flex gap-2">
+            {page > 1 ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={pageHref(page - 1)}>Previous</Link>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled>
+                Previous
+              </Button>
+            )}
+            {page < totalPages ? (
+              <Button variant="outline" size="sm" asChild>
+                <Link href={pageHref(page + 1)}>Next</Link>
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" disabled>
+                Next
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
