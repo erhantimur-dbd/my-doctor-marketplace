@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/dynamic-header";
 import { Link } from "@/i18n/navigation";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 import { DoctorSessionGuard } from "@/components/shared/session-timeout-guard";
+import { SkipLink } from "@/components/shared/skip-link";
 import { DashboardMobileNav } from "@/components/layout/dashboard-mobile-nav";
 import { LicenseBanner } from "@/components/shared/license-banner";
 import { InvitationBanner } from "@/components/shared/invitation-banner";
@@ -15,6 +16,7 @@ export default function DoctorLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <SkipLink />
       <DoctorSessionGuard />
       <Header />
       <InvitationBanner />
@@ -39,7 +41,9 @@ export default function DoctorLayout({
             ))}
           </nav>
         </aside>
-        <main className="min-w-0 flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">
+          {children}
+        </main>
       </div>
       <DashboardMobileNav
         portal="doctor"

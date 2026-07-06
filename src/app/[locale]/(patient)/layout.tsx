@@ -3,6 +3,7 @@ import { Header } from "@/components/layout/dynamic-header";
 import { Link } from "@/i18n/navigation";
 import { UnreadBadge } from "@/components/shared/unread-badge";
 import { PatientSessionGuard } from "@/components/shared/session-timeout-guard";
+import { SkipLink } from "@/components/shared/skip-link";
 import { DashboardMobileNav } from "@/components/layout/dashboard-mobile-nav";
 import { patientSidebarLinks } from "@/lib/constants/sidebar-links";
 
@@ -13,6 +14,7 @@ export default function PatientLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col">
+      <SkipLink />
       <PatientSessionGuard />
       <Header />
       <div className="container mx-auto flex flex-1 gap-8 px-4 py-8 pb-20 md:pb-8">
@@ -35,7 +37,9 @@ export default function PatientLayout({
             ))}
           </nav>
         </aside>
-        <main className="min-w-0 flex-1">{children}</main>
+        <main id="main-content" tabIndex={-1} className="min-w-0 flex-1">
+          {children}
+        </main>
       </div>
       <DashboardMobileNav
         portal="patient"
