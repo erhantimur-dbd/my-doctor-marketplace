@@ -3,6 +3,7 @@ import { routing } from "@/i18n/routing";
 import { headers } from "next/headers";
 import type { MetadataRoute } from "next";
 import { regionFromHost } from "@/lib/region";
+import { isValidSkillSlug } from "@/lib/constants/skills";
 
 const { locales } = routing;
 
@@ -118,6 +119,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
   );
 
+  // Dynamic skill landing pages (only skills declared by active verified doctors)
+  const { data: skillRows } = await supabase
+    .from("doctor_skills")
+    .select("skill_slug, doctors!inner(id)")
+    .eq("doctors.is_active", true)
+    .eq("doctors.verification_status", "verified");
+
+  const skillSlugs = [
+    ...new Set(
+      (skillRows || [])
+        .map((row) => row.skill_slug as string)
+        .filter(isValidSkillSlug)
+    ),
+  ];
+
+  const skillEntries = locales.flatMap((locale) =>
+    skillSlugs.map((slug) => ({
+      url: `${BASE_URL}/${locale}/skills/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }))
+  );
+
   return [
     ...highPriorityEntries,
     ...publicEntries,
@@ -126,5 +151,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...doctorEntries,
     ...blogEntries,
     ...specialtyEntries,
+    ...skillEntries,
   ];
 }
