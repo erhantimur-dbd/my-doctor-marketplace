@@ -23,7 +23,11 @@
     "featured": "推荐",
     "no_results": "未找到结果",
     "error": "出现错误",
-    "success": "成功"
+    "success": "成功",
+    "skip_to_content": "跳转到主要内容",
+    "error_title": "出了点问题",
+    "error_description": "加载此页面时发生意外错误。请重试。",
+    "error_retry": "重试"
   },
   "nav": {
     "find_doctor": "查找医生",
@@ -217,7 +221,8 @@
     "your_email": "Your email",
     "submitting": "Submitting...",
     "map_view": "地图视图",
-    "doctors_on_map": "{count, plural, one {# 位医生} other {# 位医生}}"
+    "doctors_on_map": "{count, plural, one {# 位医生} other {# 位医生}}",
+    "rating_aria": "根据 {count} 条评价，评分为 {rating}/5"
   },
   "booking": {
     "select_date": "选择日期",
@@ -393,7 +398,9 @@
     "service_saved": "服务保存成功",
     "service_deleted": "服务已删除",
     "confirm_delete_service": "确定要删除此服务吗？",
-    "send_followup": "发送随访"
+    "send_followup": "发送随访",
+    "load_more": "加载更多",
+    "showing_of": "显示 {shown} / {total} 条"
   },
   "follow_up": {
     "invite_title": "发送复诊邀请",
@@ -557,7 +564,9 @@
     "error_invalid_score": "NPS评分必须介于0到10之间。",
     "error_not_found": "问卷不存在或链接已过期。",
     "error_already_submitted": "此问卷已提交。谢谢！",
-    "error_submit_failed": "问卷提交失败，请重试。"
+    "error_submit_failed": "问卷提交失败，请重试。",
+    "review_cta_title": "愿意公开分享您的就诊体验吗？",
+    "review_cta_button": "撰写公开评价"
   },
   "helpCenter": {
     "title": "帮助中心",

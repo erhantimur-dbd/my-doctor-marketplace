@@ -23,7 +23,11 @@
     "featured": "Destaque",
     "no_results": "Nenhum resultado encontrado",
     "error": "Algo deu errado",
-    "success": "Sucesso"
+    "success": "Sucesso",
+    "skip_to_content": "Ir para o conteúdo principal",
+    "error_title": "Algo correu mal",
+    "error_description": "Ocorreu um erro inesperado ao carregar esta página. Tente novamente.",
+    "error_retry": "Tentar novamente"
   },
   "nav": {
     "find_doctor": "Encontrar Médico",
@@ -217,7 +221,8 @@
     "price_max": "Preço Máximo",
     "price_range_label": "Preço por sessão",
     "map_view": "Vista de Mapa",
-    "doctors_on_map": "{count, plural, one {# médico} other {# médicos}}"
+    "doctors_on_map": "{count, plural, one {# médico} other {# médicos}}",
+    "rating_aria": "Avaliado com {rating} em 5 com base em {count} avaliações"
   },
   "booking": {
     "select_date": "Selecionar Data",
@@ -393,7 +398,9 @@
     "service_saved": "Serviço guardado com sucesso",
     "service_deleted": "Serviço eliminado",
     "confirm_delete_service": "Tem a certeza de que pretende eliminar este serviço?",
-    "send_followup": "Enviar Seguimento"
+    "send_followup": "Enviar Seguimento",
+    "load_more": "Carregar mais",
+    "showing_of": "A mostrar {shown} de {total}"
   },
   "follow_up": {
     "invite_title": "Enviar Convite de Acompanhamento",
@@ -557,7 +564,9 @@
     "error_invalid_score": "A pontuação NPS deve estar entre 0 e 10.",
     "error_not_found": "Pesquisa não encontrada ou link expirado.",
     "error_already_submitted": "Esta pesquisa já foi enviada. Obrigado!",
-    "error_submit_failed": "Falha ao enviar a pesquisa. Por favor, tente novamente."
+    "error_submit_failed": "Falha ao enviar a pesquisa. Por favor, tente novamente.",
+    "review_cta_title": "Gostaria de partilhar a sua experiência publicamente?",
+    "review_cta_button": "Deixar uma avaliação pública"
   },
   "helpCenter": {
     "title": "Central de Ajuda",

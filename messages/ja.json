@@ -23,7 +23,11 @@
     "featured": "おすすめ",
     "no_results": "結果が見つかりません",
     "error": "エラーが発生しました",
-    "success": "成功"
+    "success": "成功",
+    "skip_to_content": "メインコンテンツへスキップ",
+    "error_title": "問題が発生しました",
+    "error_description": "このページの読み込み中に予期しないエラーが発生しました。もう一度お試しください。",
+    "error_retry": "再試行"
   },
   "nav": {
     "find_doctor": "医師を探す",
@@ -217,7 +221,8 @@
     "price_max": "最高料金",
     "price_range_label": "診察1回あたりの料金",
     "map_view": "地図表示",
-    "doctors_on_map": "{count, plural, one {#人の医師} other {#人の医師}}"
+    "doctors_on_map": "{count, plural, one {#人の医師} other {#人の医師}}",
+    "rating_aria": "{count}件のレビューに基づく5点満点中{rating}点の評価"
   },
   "booking": {
     "select_date": "日付を選択",
@@ -393,7 +398,9 @@
     "service_saved": "サービスを保存しました",
     "service_deleted": "サービスを削除しました",
     "confirm_delete_service": "このサービスを削除してもよろしいですか？",
-    "send_followup": "フォローアップを送信"
+    "send_followup": "フォローアップを送信",
+    "load_more": "さらに読み込む",
+    "showing_of": "{total}件中{shown}件を表示"
   },
   "follow_up": {
     "invite_title": "フォローアップ招待を送信",
@@ -557,7 +564,9 @@
     "error_invalid_score": "NPSスコアは0から10の間で入力してください。",
     "error_not_found": "アンケートが見つからないか、リンクの有効期限が切れています。",
     "error_already_submitted": "このアンケートはすでに送信されています。ありがとうございました！",
-    "error_submit_failed": "アンケートの送信に失敗しました。もう一度お試しください。"
+    "error_submit_failed": "アンケートの送信に失敗しました。もう一度お試しください。",
+    "review_cta_title": "体験を公開レビューとして共有しませんか？",
+    "review_cta_button": "公開レビューを書く"
   },
   "helpCenter": {
     "title": "ヘルプセンター",

@@ -23,7 +23,11 @@
     "featured": "Destacado",
     "no_results": "No se encontraron resultados",
     "error": "Algo salió mal",
-    "success": "Éxito"
+    "success": "Éxito",
+    "skip_to_content": "Ir al contenido principal",
+    "error_title": "Algo salió mal",
+    "error_description": "Se produjo un error inesperado al cargar esta página. Inténtelo de nuevo.",
+    "error_retry": "Reintentar"
   },
   "nav": {
     "find_doctor": "Buscar Médico",
@@ -217,7 +221,8 @@
     "price_max": "Precio Máximo",
     "price_range_label": "Precio por sesión",
     "map_view": "Vista de Mapa",
-    "doctors_on_map": "{count, plural, one {# médico} other {# médicos}}"
+    "doctors_on_map": "{count, plural, one {# médico} other {# médicos}}",
+    "rating_aria": "Valorado con {rating} de 5 según {count} reseñas"
   },
   "booking": {
     "select_date": "Seleccionar Fecha",
@@ -393,7 +398,9 @@
     "service_saved": "Servicio guardado correctamente",
     "service_deleted": "Servicio eliminado",
     "confirm_delete_service": "¿Seguro que quieres eliminar este servicio?",
-    "send_followup": "Enviar Seguimiento"
+    "send_followup": "Enviar Seguimiento",
+    "load_more": "Cargar más",
+    "showing_of": "Mostrando {shown} de {total}"
   },
   "follow_up": {
     "invite_title": "Enviar Invitación de Seguimiento",
@@ -557,7 +564,9 @@
     "error_invalid_score": "La puntuación NPS debe estar entre 0 y 10.",
     "error_not_found": "Encuesta no encontrada o el enlace ha caducado.",
     "error_already_submitted": "Esta encuesta ya ha sido enviada. ¡Gracias!",
-    "error_submit_failed": "No se pudo enviar la encuesta. Por favor, inténtalo de nuevo."
+    "error_submit_failed": "No se pudo enviar la encuesta. Por favor, inténtalo de nuevo.",
+    "review_cta_title": "¿Le gustaría compartir su experiencia públicamente?",
+    "review_cta_button": "Dejar una reseña pública"
   },
   "helpCenter": {
     "title": "Centro de Ayuda",

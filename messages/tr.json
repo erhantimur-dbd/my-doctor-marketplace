@@ -23,7 +23,11 @@
     "featured": "One Cikan",
     "no_results": "Sonuc bulunamadi",
     "error": "Bir hata olustu",
-    "success": "Basarili"
+    "success": "Basarili",
+    "skip_to_content": "Ana içeriğe geç",
+    "error_title": "Bir şeyler ters gitti",
+    "error_description": "Bu sayfa yüklenirken beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.",
+    "error_retry": "Tekrar dene"
   },
   "nav": {
     "home": "Ana Sayfa",
@@ -217,7 +221,8 @@
     "notify_me": "Notify Me",
     "your_name": "Your name",
     "your_email": "Your email",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "rating_aria": "{count} değerlendirmeye göre 5 üzerinden {rating} puan"
   },
   "booking": {
     "select_date": "Tarih Secin",
@@ -393,7 +398,9 @@
     "service_saved": "Hizmet başarıyla kaydedildi",
     "service_deleted": "Hizmet silindi",
     "confirm_delete_service": "Bu hizmeti silmek istediğinizden emin misiniz?",
-    "send_followup": "Takip Gönder"
+    "send_followup": "Takip Gönder",
+    "load_more": "Daha fazla yükle",
+    "showing_of": "{total} kayıttan {shown} tanesi gösteriliyor"
   },
   "follow_up": {
     "invite_title": "Takip Daveti Gönder",
@@ -557,7 +564,9 @@
     "error_invalid_score": "NPS puanı 0 ile 10 arasında olmalıdır.",
     "error_not_found": "Anket bulunamadı veya bağlantının süresi dolmuş.",
     "error_already_submitted": "Bu anket zaten gönderildi. Teşekkürler!",
-    "error_submit_failed": "Gönderim başarısız oldu. Lütfen tekrar deneyin."
+    "error_submit_failed": "Gönderim başarısız oldu. Lütfen tekrar deneyin.",
+    "review_cta_title": "Deneyiminizi herkese açık paylaşmak ister misiniz?",
+    "review_cta_button": "Herkese açık değerlendirme yazın"
   },
   "helpCenter": {
     "title": "Yardım Merkezi",

@@ -23,7 +23,11 @@
     "featured": "En vedette",
     "no_results": "Aucun resultat",
     "error": "Une erreur est survenue",
-    "success": "Succes"
+    "success": "Succes",
+    "skip_to_content": "Aller au contenu principal",
+    "error_title": "Une erreur est survenue",
+    "error_description": "Une erreur inattendue s'est produite lors du chargement de cette page. Veuillez réessayer.",
+    "error_retry": "Réessayer"
   },
   "nav": {
     "home": "Accueil",
@@ -217,7 +221,8 @@
     "notify_me": "Notify Me",
     "your_name": "Your name",
     "your_email": "Your email",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "rating_aria": "Noté {rating} sur 5 d'après {count} avis"
   },
   "booking": {
     "select_date": "Choisir une date",
@@ -393,7 +398,9 @@
     "service_saved": "Service enregistré avec succès",
     "service_deleted": "Service supprimé",
     "confirm_delete_service": "Êtes-vous sûr de vouloir supprimer ce service ?",
-    "send_followup": "Envoyer un suivi"
+    "send_followup": "Envoyer un suivi",
+    "load_more": "Charger plus",
+    "showing_of": "{shown} sur {total} affichés"
   },
   "follow_up": {
     "invite_title": "Envoyer une invitation de suivi",
@@ -557,7 +564,9 @@
     "error_invalid_score": "Le score NPS doit être entre 0 et 10.",
     "error_not_found": "Enquête introuvable ou lien expiré.",
     "error_already_submitted": "Cette enquête a déjà été soumise. Merci !",
-    "error_submit_failed": "Échec de l'envoi. Veuillez réessayer."
+    "error_submit_failed": "Échec de l'envoi. Veuillez réessayer.",
+    "review_cta_title": "Souhaitez-vous partager votre expérience publiquement ?",
+    "review_cta_button": "Laisser un avis public"
   },
   "helpCenter": {
     "title": "Centre d'aide",

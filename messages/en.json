@@ -23,7 +23,11 @@
     "featured": "Featured",
     "no_results": "No results found",
     "error": "Something went wrong",
-    "success": "Success"
+    "success": "Success",
+    "skip_to_content": "Skip to main content",
+    "error_title": "Something went wrong",
+    "error_description": "An unexpected error occurred while loading this page. Please try again.",
+    "error_retry": "Try again"
   },
   "nav": {
     "home": "Home",
@@ -217,7 +221,8 @@
     "notify_me": "Notify Me",
     "your_name": "Your name",
     "your_email": "Your email",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "rating_aria": "Rated {rating} out of 5 based on {count} reviews"
   },
   "booking": {
     "select_date": "Select Date",
@@ -393,7 +398,9 @@
     "service_saved": "Service saved successfully",
     "service_deleted": "Service deleted",
     "confirm_delete_service": "Are you sure you want to delete this service?",
-    "send_followup": "Send Follow-up"
+    "send_followup": "Send Follow-up",
+    "load_more": "Load more",
+    "showing_of": "Showing {shown} of {total}"
   },
   "follow_up": {
     "invite_title": "Send Follow-Up Invitation",
@@ -557,7 +564,9 @@
     "error_invalid_score": "NPS score must be between 0 and 10.",
     "error_not_found": "Survey not found or link has expired.",
     "error_already_submitted": "This survey has already been submitted. Thank you!",
-    "error_submit_failed": "Failed to submit survey. Please try again."
+    "error_submit_failed": "Failed to submit survey. Please try again.",
+    "review_cta_title": "Would you like to share your experience publicly?",
+    "review_cta_button": "Leave a public review"
   },
   "helpCenter": {
     "title": "Help Center",

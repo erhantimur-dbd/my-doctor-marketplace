@@ -23,7 +23,11 @@
     "featured": "In Evidenza",
     "no_results": "Nessun risultato trovato",
     "error": "Si è verificato un errore",
-    "success": "Successo"
+    "success": "Successo",
+    "skip_to_content": "Vai al contenuto principale",
+    "error_title": "Qualcosa è andato storto",
+    "error_description": "Si è verificato un errore imprevisto durante il caricamento della pagina. Riprova.",
+    "error_retry": "Riprova"
   },
   "nav": {
     "find_doctor": "Trova un Medico",
@@ -217,7 +221,8 @@
     "price_max": "Prezzo Massimo",
     "price_range_label": "Prezzo per seduta",
     "map_view": "Vista Mappa",
-    "doctors_on_map": "{count, plural, one {# medico} other {# medici}}"
+    "doctors_on_map": "{count, plural, one {# medico} other {# medici}}",
+    "rating_aria": "Valutazione di {rating} su 5 in base a {count} recensioni"
   },
   "booking": {
     "select_date": "Seleziona Data",
@@ -393,7 +398,9 @@
     "service_saved": "Servizio salvato con successo",
     "service_deleted": "Servizio eliminato",
     "confirm_delete_service": "Sei sicuro di voler eliminare questo servizio?",
-    "send_followup": "Invia Follow-Up"
+    "send_followup": "Invia Follow-Up",
+    "load_more": "Carica altri",
+    "showing_of": "Visualizzati {shown} di {total}"
   },
   "follow_up": {
     "invite_title": "Invia Invito di Follow-Up",
@@ -557,7 +564,9 @@
     "error_invalid_score": "Il punteggio NPS deve essere compreso tra 0 e 10.",
     "error_not_found": "Sondaggio non trovato o link scaduto.",
     "error_already_submitted": "Questo sondaggio è già stato inviato. Grazie!",
-    "error_submit_failed": "Invio del sondaggio non riuscito. Riprova."
+    "error_submit_failed": "Invio del sondaggio non riuscito. Riprova.",
+    "review_cta_title": "Vuoi condividere pubblicamente la tua esperienza?",
+    "review_cta_button": "Lascia una recensione pubblica"
   },
   "helpCenter": {
     "title": "Centro Assistenza",

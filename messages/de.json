@@ -23,7 +23,11 @@
     "featured": "Empfohlen",
     "no_results": "Keine Ergebnisse gefunden",
     "error": "Etwas ist schiefgelaufen",
-    "success": "Erfolg"
+    "success": "Erfolg",
+    "skip_to_content": "Zum Hauptinhalt springen",
+    "error_title": "Etwas ist schiefgelaufen",
+    "error_description": "Beim Laden dieser Seite ist ein unerwarteter Fehler aufgetreten. Bitte versuchen Sie es erneut.",
+    "error_retry": "Erneut versuchen"
   },
   "nav": {
     "home": "Startseite",
@@ -217,7 +221,8 @@
     "notify_me": "Notify Me",
     "your_name": "Your name",
     "your_email": "Your email",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "rating_aria": "Bewertet mit {rating} von 5 basierend auf {count} Bewertungen"
   },
   "booking": {
     "select_date": "Datum wahlen",
@@ -393,7 +398,9 @@
     "service_saved": "Leistung erfolgreich gespeichert",
     "service_deleted": "Leistung gelöscht",
     "confirm_delete_service": "Möchten Sie diese Leistung wirklich löschen?",
-    "send_followup": "Nachsorge senden"
+    "send_followup": "Nachsorge senden",
+    "load_more": "Mehr laden",
+    "showing_of": "{shown} von {total} angezeigt"
   },
   "follow_up": {
     "invite_title": "Nachsorge-Einladung senden",
@@ -557,7 +564,9 @@
     "error_invalid_score": "NPS-Bewertung muss zwischen 0 und 10 liegen.",
     "error_not_found": "Umfrage nicht gefunden oder Link abgelaufen.",
     "error_already_submitted": "Diese Umfrage wurde bereits ausgefüllt. Vielen Dank!",
-    "error_submit_failed": "Fehler beim Absenden. Bitte versuchen Sie es erneut."
+    "error_submit_failed": "Fehler beim Absenden. Bitte versuchen Sie es erneut.",
+    "review_cta_title": "Möchten Sie Ihre Erfahrung öffentlich teilen?",
+    "review_cta_button": "Öffentliche Bewertung abgeben"
   },
   "helpCenter": {
     "title": "Hilfezentrum",
