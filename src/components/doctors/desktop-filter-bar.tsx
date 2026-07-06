@@ -74,6 +74,7 @@ export function DesktopFilterBar({
       {/* Available Today toggle chip */}
       <button
         type="button"
+        aria-pressed={currentFilters.availableToday === "true"}
         onClick={() =>
           updateFilter(
             "availableToday",
@@ -94,6 +95,7 @@ export function DesktopFilterBar({
       {/* Wheelchair Accessible toggle chip */}
       <button
         type="button"
+        aria-pressed={currentFilters.wheelchairAccessible === "true"}
         onClick={() =>
           updateFilter(
             "wheelchairAccessible",
@@ -119,7 +121,10 @@ export function DesktopFilterBar({
         value={currentFilters.specialty || "all"}
         onValueChange={(v) => updateFilter("specialty", v)}
       >
-        <SelectTrigger className="h-8 w-auto shrink-0 gap-1 rounded-full border px-3 text-sm font-medium [&>svg]:h-3.5 [&>svg]:w-3.5">
+        <SelectTrigger
+          aria-label={t("any_specialty")}
+          className="h-8 w-auto shrink-0 gap-1 rounded-full border px-3 text-sm font-medium [&>svg]:h-3.5 [&>svg]:w-3.5"
+        >
           <SelectValue placeholder={t("any_specialty")} />
         </SelectTrigger>
         <SelectContent>
@@ -159,7 +164,10 @@ export function DesktopFilterBar({
         value={currentFilters.consultationType || "all"}
         onValueChange={(v) => updateFilter("consultationType", v)}
       >
-        <SelectTrigger className="h-8 w-auto shrink-0 gap-1 rounded-full border px-3 text-sm font-medium [&>svg]:h-3.5 [&>svg]:w-3.5">
+        <SelectTrigger
+          aria-label={t("all_types")}
+          className="h-8 w-auto shrink-0 gap-1 rounded-full border px-3 text-sm font-medium [&>svg]:h-3.5 [&>svg]:w-3.5"
+        >
           <SelectValue placeholder={t("all_types")} />
         </SelectTrigger>
         <SelectContent>
@@ -182,7 +190,10 @@ export function DesktopFilterBar({
         value={currentFilters.sort || "featured"}
         onValueChange={handleSortChange}
       >
-        <SelectTrigger className="h-8 w-auto shrink-0 gap-1 rounded-full border px-3 text-sm font-medium [&>svg]:h-3.5 [&>svg]:w-3.5">
+        <SelectTrigger
+          aria-label={t("sort_by")}
+          className="h-8 w-auto shrink-0 gap-1 rounded-full border px-3 text-sm font-medium [&>svg]:h-3.5 [&>svg]:w-3.5"
+        >
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

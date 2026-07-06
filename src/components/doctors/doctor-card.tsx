@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ interface DoctorCardProps {
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
   function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact, distanceKm, liveAvailable }, ref) {
     const router = useRouter();
+    const t = useTranslations("search");
     const { currency: displayCurrency, convert } = useCurrency();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
     const [showFullAvailability, setShowFullAvailability] = useState(false);
@@ -238,7 +240,14 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             </>
                           )}
                           {doctor.avg_rating > 0 && (
-                            <div className="mt-1">
+                            <div
+                              className="mt-1"
+                              role="img"
+                              aria-label={t("rating_aria", {
+                                rating: Number(doctor.avg_rating).toFixed(1),
+                                count: doctor.total_reviews,
+                              })}
+                            >
                               <StarRating
                                 rating={doctor.avg_rating}
                                 totalReviews={doctor.total_reviews}
@@ -661,12 +670,20 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                     </div>
 
                     {doctor.avg_rating > 0 && (
-                      <StarRating
-                        rating={doctor.avg_rating}
-                        totalReviews={doctor.total_reviews}
-                        size="sm"
-                        showCount
-                      />
+                      <div
+                        role="img"
+                        aria-label={t("rating_aria", {
+                          rating: Number(doctor.avg_rating).toFixed(1),
+                          count: doctor.total_reviews,
+                        })}
+                      >
+                        <StarRating
+                          rating={doctor.avg_rating}
+                          totalReviews={doctor.total_reviews}
+                          size="sm"
+                          showCount
+                        />
+                      </div>
                     )}
 
                     {/* Detail rows */}

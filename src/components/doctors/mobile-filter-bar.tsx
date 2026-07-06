@@ -128,6 +128,7 @@ export function MobileFilterBar({
       {/* Available Today chip */}
       <button
         type="button"
+        aria-pressed={currentFilters.availableToday === "true"}
         onClick={() =>
           updateFilter(
             "availableToday",
@@ -148,6 +149,7 @@ export function MobileFilterBar({
       {/* Wheelchair Accessible chip */}
       <button
         type="button"
+        aria-pressed={currentFilters.wheelchairAccessible === "true"}
         onClick={() =>
           updateFilter(
             "wheelchairAccessible",
@@ -186,6 +188,8 @@ export function MobileFilterBar({
       {/* Filters button → opens bottom sheet */}
       <button
         type="button"
+        aria-haspopup="dialog"
+        aria-expanded={sheetOpen}
         onClick={() => setSheetOpen(true)}
         className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent"
       >
