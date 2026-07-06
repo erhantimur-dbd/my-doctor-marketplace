@@ -33,7 +33,13 @@ export async function generateMetadata({
   });
 }
 
-export default function ContactPage() {
+export default async function ContactPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "contact" });
   return (
     <>
       {/* Hero */}
@@ -43,11 +49,10 @@ export default function ContactPage() {
             <Phone className="h-7 w-7 text-primary" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
-            Get in Touch
+            {t("hero_title")}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Whether you&apos;re a doctor exploring our platform, a potential
-            partner, or just have a question — we&apos;d love to hear from you.
+            {t("hero_subtitle")}
           </p>
         </div>
       </section>
@@ -57,11 +62,10 @@ export default function ContactPage() {
         <div className="container mx-auto max-w-5xl">
           <div className="mb-10 text-center">
             <h2 className="text-2xl font-bold md:text-3xl">
-              For Doctors
+              {t("for_doctors_title")}
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              Find the right plan for your practice, or speak to our sales team
-              for personalised guidance.
+              {t("for_doctors_subtitle")}
             </p>
           </div>
 
@@ -77,21 +81,20 @@ export default function ContactPage() {
                 <div className="flex flex-col items-center gap-2 bg-amber-50 px-6 py-6 dark:bg-amber-950/30">
                   <Stethoscope className="h-7 w-7 text-amber-600" />
                   <h3 className="text-lg font-semibold text-amber-900 dark:text-amber-100">
-                    Talk to Sales
+                    {t("sales_title")}
                   </h3>
                 </div>
                 <CardContent className="flex flex-col items-center gap-4 pt-6 text-center">
                   <p className="text-sm text-muted-foreground">
-                    Need help deciding? Our team can walk you through the plans,
-                    answer questions about onboarding, and help you get set up.
+                    {t("sales_desc")}
                   </p>
                   <span className="text-sm font-medium text-primary">
                     {salesEmail}
                   </span>
                   <Button className="w-full rounded-full" asChild>
-                    <a href={`mailto:${salesEmail}?subject=Doctor Onboarding Inquiry`}>
+                    <a href={`mailto:${salesEmail}?subject=${encodeURIComponent(t("sales_email_subject"))}`}>
                       <Mail className="mr-2 h-4 w-4" />
-                      Email Sales Team
+                      {t("sales_button")}
                     </a>
                   </Button>
                 </CardContent>
@@ -99,7 +102,7 @@ export default function ContactPage() {
 
               <Card>
                 <CardContent className="py-5 text-center">
-                  <p className="text-sm font-medium">Quick Links</p>
+                  <p className="text-sm font-medium">{t("quick_links")}</p>
                   <div className="mt-3 flex flex-col gap-2">
                     <Button
                       variant="outline"
@@ -107,7 +110,7 @@ export default function ContactPage() {
                       className="w-full rounded-full"
                       asChild
                     >
-                      <Link href="/pricing">View Pricing Plans</Link>
+                      <Link href="/pricing">{t("link_pricing")}</Link>
                     </Button>
                     <Button
                       variant="outline"
@@ -115,7 +118,7 @@ export default function ContactPage() {
                       className="w-full rounded-full"
                       asChild
                     >
-                      <Link href="/register-doctor">Join as Doctor</Link>
+                      <Link href="/register-doctor">{t("link_join")}</Link>
                     </Button>
                     <Button
                       variant="outline"
@@ -123,7 +126,7 @@ export default function ContactPage() {
                       className="w-full rounded-full"
                       asChild
                     >
-                      <Link href="/how-it-works">How It Works</Link>
+                      <Link href="/how-it-works">{t("link_how")}</Link>
                     </Button>
                   </div>
                 </CardContent>
@@ -138,11 +141,10 @@ export default function ContactPage() {
         <div className="container mx-auto max-w-5xl">
           <div className="mb-10 text-center">
             <h2 className="text-2xl font-bold md:text-3xl">
-              General Inquiries
+              {t("inquiries_title")}
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              Partnerships, press, or anything else — drop us a message and
-              we&apos;ll get back to you within 24 hours.
+              {t("inquiries_subtitle")}
             </p>
           </div>
 
@@ -157,18 +159,16 @@ export default function ContactPage() {
             <div className="flex flex-col items-center gap-2 bg-sky-50 px-6 py-6 dark:bg-sky-950/30">
               <HelpCircle className="h-7 w-7 text-sky-600" />
               <h3 className="text-lg font-semibold text-sky-900 dark:text-sky-100">
-                Already a User?
+                {t("existing_title")}
               </h3>
             </div>
             <CardContent className="flex flex-col items-center gap-4 pt-6 text-center">
               <p className="max-w-md text-sm text-muted-foreground">
-                If you&apos;re an existing patient or doctor and need help with
-                bookings, billing, or your account, visit our Support Centre for
-                faster assistance.
+                {t("existing_desc")}
               </p>
               <Button variant="outline" className="rounded-full" asChild>
                 <Link href="/support">
-                  Go to Support Centre
+                  {t("existing_button")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -181,11 +181,10 @@ export default function ContactPage() {
       <section className="bg-gradient-to-br from-primary to-primary/80 px-4 py-16 md:py-24">
         <div className="container mx-auto text-center">
           <h2 className="text-2xl font-bold text-primary-foreground md:text-3xl">
-            Ready to Grow Your Practice?
+            {t("cta_title")}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-            Join hundreds of doctors across Europe who use MyDoctors360 to connect
-            with patients and manage their practice.
+            {t("cta_desc")}
           </p>
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Button
@@ -195,7 +194,7 @@ export default function ContactPage() {
               asChild
             >
               <Link href="/register-doctor">
-                Join as Doctor <ArrowRight className="ml-2 h-4 w-4" />
+                {t("link_join")} <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button
@@ -204,7 +203,7 @@ export default function ContactPage() {
               className="rounded-full text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground"
               asChild
             >
-              <Link href="/pricing">View Pricing</Link>
+              <Link href="/pricing">{t("cta_pricing")}</Link>
             </Button>
           </div>
         </div>

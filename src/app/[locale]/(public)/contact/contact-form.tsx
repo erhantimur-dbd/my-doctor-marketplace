@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,13 +18,14 @@ import { Loader2, CheckCircle2, Send } from "lucide-react";
 import { submitContactInquiry } from "@/actions/contact";
 
 const INQUIRY_TYPES = [
-  { value: "doctor_onboarding", label: "Doctor Onboarding" },
-  { value: "partnership", label: "Partnership" },
-  { value: "press", label: "Press & Media" },
-  { value: "general", label: "General Inquiry" },
-];
+  { value: "doctor_onboarding", labelKey: "type_doctor_onboarding" },
+  { value: "partnership", labelKey: "type_partnership" },
+  { value: "press", labelKey: "type_press" },
+  { value: "general", labelKey: "type_general" },
+] as const;
 
 export function ContactForm() {
+  const t = useTranslations("contact");
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -52,10 +54,9 @@ export function ContactForm() {
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-950/30">
             <CheckCircle2 className="h-8 w-8 text-green-600" />
           </div>
-          <h3 className="text-xl font-bold">Thank You!</h3>
+          <h3 className="text-xl font-bold">{t("thanks_title")}</h3>
           <p className="max-w-md text-muted-foreground">
-            We&apos;ve received your inquiry and will get back to you within 24
-            hours. Check your email for a confirmation.
+            {t("thanks_desc")}
           </p>
           <Button
             variant="outline"
@@ -65,7 +66,7 @@ export function ContactForm() {
               setInquiryType("");
             }}
           >
-            Send Another Inquiry
+            {t("send_another")}
           </Button>
         </CardContent>
       </Card>
@@ -77,10 +78,10 @@ export function ContactForm() {
       <div className="flex flex-col items-center gap-2 bg-slate-50 px-6 py-6 dark:bg-slate-950/30">
         <Send className="h-7 w-7 text-slate-600" />
         <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-          Send Us a Message
+          {t("form_title")}
         </h3>
         <p className="text-center text-sm text-slate-600/70 dark:text-slate-400">
-          General inquiries, partnership proposals, or press requests.
+          {t("form_subtitle")}
         </p>
       </div>
 
@@ -106,11 +107,11 @@ export function ContactForm() {
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">{t("label_name")}</Label>
               <Input
                 id="name"
                 name="name"
-                placeholder="Your full name"
+                placeholder={t("placeholder_name")}
                 required
                 maxLength={100}
                 disabled={isPending}
@@ -118,12 +119,12 @@ export function ContactForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+              <Label htmlFor="email">{t("label_email")}</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder={t("placeholder_email")}
                 required
                 disabled={isPending}
               />
@@ -131,19 +132,19 @@ export function ContactForm() {
           </div>
 
           <div className="space-y-2">
-            <Label>Inquiry Type *</Label>
+            <Label>{t("label_type")}</Label>
             <Select
               value={inquiryType}
               onValueChange={setInquiryType}
               disabled={isPending}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select an inquiry type" />
+                <SelectValue placeholder={t("placeholder_type")} />
               </SelectTrigger>
               <SelectContent>
                 {INQUIRY_TYPES.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
-                    {type.label}
+                    {t(type.labelKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -151,11 +152,11 @@ export function ContactForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="message">Message *</Label>
+            <Label htmlFor="message">{t("label_message")}</Label>
             <Textarea
               id="message"
               name="message"
-              placeholder="Tell us what you'd like to know..."
+              placeholder={t("placeholder_message")}
               rows={5}
               required
               minLength={10}
@@ -163,7 +164,7 @@ export function ContactForm() {
               disabled={isPending}
             />
             <p className="text-xs text-muted-foreground">
-              Minimum 10 characters, maximum 2,000 characters.
+              {t("message_hint")}
             </p>
           </div>
 
@@ -175,12 +176,12 @@ export function ContactForm() {
             {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Sending...
+                {t("sending")}
               </>
             ) : (
               <>
                 <Send className="mr-2 h-4 w-4" />
-                Send Message
+                {t("send_message")}
               </>
             )}
           </Button>
