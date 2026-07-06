@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/email/client";
 import { availabilityAlertEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
+import { rateLimit } from "@/lib/rate-limit";
 
 /**
  * Subscribe to notifications when a doctor has new availability.
@@ -20,6 +21,12 @@ export async function subscribeToAvailability(
   } = await supabase.auth.getUser();
 
   if (!user) return { success: false, error: "You must be logged in." };
+
+  // Rate limit: 20 alert subscriptions per hour per user
+  const { limited } = await rateLimit(`availalert:${user.id}`, 20, 60 * 60 * 1000);
+  if (limited) {
+    return { success: false, error: "Too many alert subscriptions. Please try again later." };
+  }
 
   // Verify doctor exists
   const { data: doctor } = await supabase

@@ -9,6 +9,7 @@ import { reviewReceivedEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
 import { createNotification } from "@/lib/notifications";
 import { shouldAutoApprove } from "@/lib/reviews/auto-approve";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   MAX_ENDORSEMENTS_PER_REVIEW,
   isValidSkillSlug,
@@ -88,6 +89,12 @@ export async function submitReview(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Not authenticated" };
+
+  // Rate limit: 5 review submissions per hour per user
+  const { limited } = await rateLimit(`review:${user.id}`, 5, 60 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many reviews submitted. Please try again later." };
+  }
 
   const bookingId = formData.get("booking_id") as string;
   const rating = parseInt(formData.get("rating") as string, 10);

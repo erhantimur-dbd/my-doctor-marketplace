@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createNotification } from "@/lib/notifications";
 import { newMessageEmail } from "@/lib/email/templates";
 import { revalidatePath } from "next/cache";
+import { rateLimit } from "@/lib/rate-limit";
 
 /**
  * Get patients eligible for messaging — those with at least one completed booking.
@@ -245,6 +246,15 @@ export async function sendMessage(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { success: false, error: "Not authenticated" };
+
+  // Rate limit: 30 messages per hour per user
+  const { limited } = await rateLimit(`msg:${user.id}`, 30, 60 * 60 * 1000);
+  if (limited) {
+    return {
+      success: false,
+      error: "You are sending messages too quickly. Please wait a moment.",
+    };
+  }
 
   const { data: profile } = await supabase
     .from("profiles")

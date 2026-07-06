@@ -3,6 +3,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { log } from "@/lib/utils/logger";
+import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/utils/client-ip";
 
 const VALID_INQUIRY_TYPES = [
   "doctor_onboarding",
@@ -17,6 +19,12 @@ export async function submitContactInquiry(formData: FormData) {
   if (honeypot) {
     // Silently succeed without saving
     return { success: true };
+  }
+
+  // Rate limit: 5 inquiries per hour per IP
+  const { limited } = await rateLimit(`contact:${await getClientIp()}`, 5, 60 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many inquiries. Please try again later." };
   }
 
   // Extract fields

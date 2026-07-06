@@ -29,6 +29,7 @@ import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
 import { sendSms } from "@/lib/sms/client";
 import { bookingCancellationSms } from "@/lib/sms/templates";
 import { creditWallet, debitWallet, getWalletBalance } from "@/lib/wallet";
+import { rateLimit } from "@/lib/rate-limit";
 
 import {
   calculateDepositCents,
@@ -77,6 +78,12 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     if (!user) {
       return { error: "You must be logged in to book an appointment." };
+    }
+
+    // Rate limit: 10 booking attempts per 10 minutes per user
+    const { limited } = await rateLimit(`booking:${user.id}`, 10, 10 * 60 * 1000);
+    if (limited) {
+      return { error: "Too many booking attempts. Please wait a few minutes and try again." };
     }
 
     // Fetch doctor with profile to get pricing and Stripe account
