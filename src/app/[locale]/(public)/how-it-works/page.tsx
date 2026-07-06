@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -178,6 +180,21 @@ const faqs = [
       "Many specialists offer appointments within days, and some GPs have same-day availability. You can filter by \u201cEarliest Available\u201d when searching to find the fastest option.",
   },
 ];
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "meta" });
+  const seoMeta = (await import("@/lib/seo/metadata")).generateMetadata;
+  return seoMeta({
+    title: t("howItWorks.title"),
+    description: t("howItWorks.description"),
+    path: `/${locale}/how-it-works`,
+  });
+}
 
 export default async function HowItWorksPage() {
   // Fetch latest 3 blog posts for the blog preview section

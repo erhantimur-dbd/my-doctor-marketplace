@@ -1300,5 +1300,35 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "meta": {
+    "pricing": {
+      "title": "Tarifs pour médecins et cliniques",
+      "description": "Des formules transparentes pour les médecins et cliniques sur MyDoctors360. Commencez gratuitement et évoluez avec votre cabinet privé."
+    },
+    "contact": {
+      "title": "Nous contacter",
+      "description": "Contactez l'équipe MyDoctors360 – questions sur les réservations, les partenariats ou l'inscription en tant que médecin."
+    },
+    "support": {
+      "title": "Aide et assistance",
+      "description": "Trouvez des réponses aux questions fréquentes sur les réservations, paiements, remboursements et téléconsultations – ou contactez notre équipe."
+    },
+    "howItWorks": {
+      "title": "Comment ça marche",
+      "description": "Trouvez un médecin privé vérifié, réservez en ligne et payez en toute sécurité. Découvrez le fonctionnement de MyDoctors360 étape par étape."
+    },
+    "specialties": {
+      "title": "Spécialités médicales",
+      "description": "Parcourez les médecins par spécialité – de la médecine générale à la cardiologie – et réservez en ligne des spécialistes privés vérifiés."
+    },
+    "registerDoctor": {
+      "title": "Rejoindre en tant que médecin",
+      "description": "Créez votre profil professionnel, faites-vous vérifier et recevez des réservations de patients privés sur MyDoctors360."
+    },
+    "registerTestingService": {
+      "title": "Inscrire votre service d'analyses",
+      "description": "Référencez votre service de diagnostic ou d'analyses médicales sur MyDoctors360 et touchez de nouveaux patients en ligne."
+    }
   }
 }

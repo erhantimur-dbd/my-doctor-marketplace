@@ -3,7 +3,7 @@ import { PrivacyDefault } from "./privacy-default";
 import { PrivacyUk } from "./privacy-uk";
 
 export const metadata = {
-  title: "Privacy Policy | MyDoctors360",
+  title: "Privacy Policy",
   description: "Privacy policy for MyDoctors360 healthcare marketplace.",
 };
 

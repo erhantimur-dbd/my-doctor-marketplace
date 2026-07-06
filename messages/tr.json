@@ -1300,5 +1300,35 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "meta": {
+    "pricing": {
+      "title": "Doktorlar ve Klinikler için Fiyatlandırma",
+      "description": "MyDoctors360'ta doktorlar ve klinikler için şeffaf planlar. Ücretsiz başlayın, muayenehaneniz büyüdükçe planınızı yükseltin."
+    },
+    "contact": {
+      "title": "İletişim",
+      "description": "MyDoctors360 ekibiyle iletişime geçin – randevular, iş birlikleri veya doktor olarak katılım hakkındaki sorularınız için."
+    },
+    "support": {
+      "title": "Yardım ve Destek",
+      "description": "Randevular, ödemeler, iadeler ve görüntülü görüşmeler hakkında sık sorulan soruların yanıtlarını bulun veya destek ekibimize ulaşın."
+    },
+    "howItWorks": {
+      "title": "Nasıl Çalışır",
+      "description": "Doğrulanmış bir özel doktor bulun, randevunuzu çevrimiçi alın ve güvenle ödeyin. MyDoctors360'ın adım adım nasıl çalıştığını görün."
+    },
+    "specialties": {
+      "title": "Tıbbi Uzmanlık Alanları",
+      "description": "Doktorlara uzmanlık alanına göre göz atın – pratisyen hekimlikten kardiyolojiye – ve doğrulanmış özel uzmanlardan çevrimiçi randevu alın."
+    },
+    "registerDoctor": {
+      "title": "Doktor Olarak Katılın",
+      "description": "Profesyonel profilinizi oluşturun, doğrulamayı tamamlayın ve MyDoctors360 üzerinden özel hasta randevuları almaya başlayın."
+    },
+    "registerTestingService": {
+      "title": "Test Hizmetinizi Kaydedin",
+      "description": "Tanı veya tıbbi test hizmetinizi MyDoctors360'ta listeleyin ve çevrimiçi olarak yeni hastalara ulaşın."
+    }
   }
 }

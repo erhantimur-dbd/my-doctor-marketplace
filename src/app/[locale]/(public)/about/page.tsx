@@ -3,7 +3,7 @@ import { AboutDefault } from "./about-default";
 import { AboutUk } from "./about-uk";
 
 export const metadata = {
-  title: "About | MyDoctors360",
+  title: "About",
   description:
     "MyDoctors360 is a technology platform that connects patients with independent private doctors.",
 };

@@ -3,7 +3,7 @@ import { isRegion } from "@/lib/region";
 import { ComplaintsUk } from "./complaints-uk";
 
 export const metadata = {
-  title: "Complaints | MyDoctors360",
+  title: "Complaints",
   description:
     "How to raise a concern about MyDoctors360 or about the clinical care you received through the platform, in the United Kingdom.",
 };

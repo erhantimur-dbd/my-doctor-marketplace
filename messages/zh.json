@@ -1300,5 +1300,35 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "meta": {
+    "pricing": {
+      "title": "医生与诊所定价",
+      "description": "MyDoctors360 为医生和诊所提供透明的订阅方案。免费开始，随着私人诊所的发展随时升级。"
+    },
+    "contact": {
+      "title": "联系我们",
+      "description": "联系 MyDoctors360 团队 – 关于预约、合作或医生入驻的问题，欢迎咨询。"
+    },
+    "support": {
+      "title": "帮助与支持",
+      "description": "查找有关预约、付款、退款和视频问诊的常见问题解答，或联系我们的支持团队。"
+    },
+    "howItWorks": {
+      "title": "使用指南",
+      "description": "查找经过认证的私人医生，在线预约并安全付款。逐步了解 MyDoctors360 的使用方式。"
+    },
+    "specialties": {
+      "title": "医学专科",
+      "description": "按专科浏览医生 – 从全科到心脏科 – 在线预约经过认证的私人专科医生。"
+    },
+    "registerDoctor": {
+      "title": "医生入驻",
+      "description": "创建您的专业档案，完成认证，开始在 MyDoctors360 接收私人患者预约。"
+    },
+    "registerTestingService": {
+      "title": "登记检测服务",
+      "description": "在 MyDoctors360 上发布您的诊断或医学检测服务，在线触达新患者。"
+    }
   }
 }

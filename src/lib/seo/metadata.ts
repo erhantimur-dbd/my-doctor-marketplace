@@ -20,7 +20,8 @@ export function generateMetadata({
   const url = `${BASE_URL}${path}`;
 
   return {
-    title: `${title} | MyDoctors360`,
+    // absolute: the root layout template would otherwise append "| MyDoctors360" a second time
+    title: { absolute: `${title} | MyDoctors360` },
     description,
     ...(noIndex && { robots: { index: false, follow: false } }),
     openGraph: {

@@ -1300,5 +1300,35 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "meta": {
+    "pricing": {
+      "title": "Preise für Ärzte & Kliniken",
+      "description": "Transparente Tarife für Ärzte und Kliniken auf MyDoctors360. Starten Sie kostenlos und erweitern Sie Ihren Tarif, wenn Ihre Privatpraxis wächst."
+    },
+    "contact": {
+      "title": "Kontakt",
+      "description": "Kontaktieren Sie das MyDoctors360-Team – Fragen zu Buchungen, Partnerschaften oder zur Registrierung als Arzt."
+    },
+    "support": {
+      "title": "Hilfe & Support",
+      "description": "Antworten auf häufige Fragen zu Buchungen, Zahlungen, Erstattungen und Videosprechstunden – oder kontaktieren Sie unser Support-Team."
+    },
+    "howItWorks": {
+      "title": "So funktioniert's",
+      "description": "Finden Sie einen verifizierten Privatarzt, buchen Sie online einen Termin und zahlen Sie sicher. So funktioniert MyDoctors360 – Schritt für Schritt."
+    },
+    "specialties": {
+      "title": "Medizinische Fachrichtungen",
+      "description": "Ärzte nach Fachrichtung durchsuchen – von der Allgemeinmedizin bis zur Kardiologie – und verifizierte Privatspezialisten online buchen."
+    },
+    "registerDoctor": {
+      "title": "Als Arzt registrieren",
+      "description": "Erstellen Sie Ihr professionelles Profil, lassen Sie sich verifizieren und erhalten Sie Buchungen von Privatpatienten auf MyDoctors360."
+    },
+    "registerTestingService": {
+      "title": "Testdienst registrieren",
+      "description": "Listen Sie Ihren Diagnostik- oder medizinischen Testdienst auf MyDoctors360 und erreichen Sie neue Patienten online."
+    }
   }
 }

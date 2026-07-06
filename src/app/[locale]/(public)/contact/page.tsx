@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -15,6 +17,21 @@ const salesEmail =
   process.env.CONTACT_ADMIN_EMAIL ||
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL ||
   "sales@mydoctors360.com";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "meta" });
+  const seoMeta = (await import("@/lib/seo/metadata")).generateMetadata;
+  return seoMeta({
+    title: t("contact.title"),
+    description: t("contact.description"),
+    path: `/${locale}/contact`,
+  });
+}
 
 export default function ContactPage() {
   return (

@@ -3,7 +3,7 @@ import { isRegion } from "@/lib/region";
 import { RegulatoryUk } from "./regulatory-uk";
 
 export const metadata = {
-  title: "Regulatory Status | MyDoctors360",
+  title: "Regulatory Status",
   description:
     "How MyDoctors360 is regulated in the United Kingdom, how each listed doctor is regulated, and how to verify them on the GMC register and CQC directory.",
 };

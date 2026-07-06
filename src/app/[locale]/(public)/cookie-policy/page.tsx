@@ -3,7 +3,7 @@ import { CookiePolicyDefault } from "./cookie-policy-default";
 import { CookiePolicyUk } from "./cookie-policy-uk";
 
 export const metadata = {
-  title: "Cookie Policy | MyDoctors360",
+  title: "Cookie Policy",
   description: "Cookie policy for MyDoctors360 healthcare marketplace.",
 };
 

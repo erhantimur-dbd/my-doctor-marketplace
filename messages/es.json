@@ -1300,5 +1300,35 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "meta": {
+    "pricing": {
+      "title": "Precios para médicos y clínicas",
+      "description": "Planes transparentes para médicos y clínicas en MyDoctors360. Empiece gratis y amplíe su plan a medida que crece su consulta privada."
+    },
+    "contact": {
+      "title": "Contacto",
+      "description": "Póngase en contacto con el equipo de MyDoctors360: preguntas sobre reservas, colaboraciones o cómo unirse como médico."
+    },
+    "support": {
+      "title": "Ayuda y soporte",
+      "description": "Encuentre respuestas a preguntas frecuentes sobre reservas, pagos, reembolsos y videoconsultas, o contacte con nuestro equipo de soporte."
+    },
+    "howItWorks": {
+      "title": "Cómo funciona",
+      "description": "Encuentre un médico privado verificado, reserve su cita en línea y pague con seguridad. Descubra cómo funciona MyDoctors360 paso a paso."
+    },
+    "specialties": {
+      "title": "Especialidades médicas",
+      "description": "Explore médicos por especialidad, desde medicina general hasta cardiología, y reserve en línea con especialistas privados verificados."
+    },
+    "registerDoctor": {
+      "title": "Únase como médico",
+      "description": "Cree su perfil profesional, verifíquese y empiece a recibir reservas de pacientes privados en MyDoctors360."
+    },
+    "registerTestingService": {
+      "title": "Registre su servicio de pruebas",
+      "description": "Publique su servicio de diagnóstico o pruebas médicas en MyDoctors360 y llegue a nuevos pacientes en línea."
+    }
   }
 }

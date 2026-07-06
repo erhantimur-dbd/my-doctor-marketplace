@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 export const metadata = {
-  title: "Rewards Programme | MyDoctors360",
+  title: "Rewards Programme",
   description:
     "Earn loyalty points on every booking with MyDoctors360 Rewards. Bronze, Silver, and Gold tiers with up to 20 points per £1 spent. 100 points = £1 discount.",
 };

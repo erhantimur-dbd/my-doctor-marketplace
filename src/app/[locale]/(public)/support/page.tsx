@@ -9,6 +9,8 @@ import {
 import { Link } from "@/i18n/navigation";
 import { Mail, FileText, MessageCircle, HelpCircle, BookOpen, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import type { Metadata } from "next";
 
 const supportEmail =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@mydoctors360.com";
@@ -46,6 +48,21 @@ const faqs = [
       "Visit our 'Join as a Doctor' page to create your professional profile. After submitting your credentials and medical license, our team will verify your information within 24-48 hours. Once approved, you can set your availability, consultation fees, and start receiving patient bookings.",
   },
 ];
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "meta" });
+  const seoMeta = (await import("@/lib/seo/metadata")).generateMetadata;
+  return seoMeta({
+    title: t("support.title"),
+    description: t("support.description"),
+    path: `/${locale}/support`,
+  });
+}
 
 export default function SupportPage() {
   const t = useTranslations("helpCenter");

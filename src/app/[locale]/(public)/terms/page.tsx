@@ -3,7 +3,7 @@ import { TermsDefault } from "./terms-default";
 import { TermsUk } from "./terms-uk";
 
 export const metadata = {
-  title: "Terms of Service | MyDoctors360",
+  title: "Terms of Service",
   description: "Terms of service for using the MyDoctors360 healthcare marketplace.",
 };
 

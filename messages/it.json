@@ -1300,5 +1300,35 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "meta": {
+    "pricing": {
+      "title": "Prezzi per medici e cliniche",
+      "description": "Piani trasparenti per medici e cliniche su MyDoctors360. Inizia gratis e passa a un piano superiore man mano che il tuo studio privato cresce."
+    },
+    "contact": {
+      "title": "Contattaci",
+      "description": "Contatta il team di MyDoctors360: domande su prenotazioni, collaborazioni o su come iscriversi come medico."
+    },
+    "support": {
+      "title": "Aiuto e assistenza",
+      "description": "Trova le risposte alle domande frequenti su prenotazioni, pagamenti, rimborsi e videoconsulti, oppure contatta il nostro team di assistenza."
+    },
+    "howItWorks": {
+      "title": "Come funziona",
+      "description": "Trova un medico privato verificato, prenota online e paga in sicurezza. Scopri come funziona MyDoctors360 passo dopo passo."
+    },
+    "specialties": {
+      "title": "Specialità mediche",
+      "description": "Sfoglia i medici per specialità, dalla medicina generale alla cardiologia, e prenota online specialisti privati verificati."
+    },
+    "registerDoctor": {
+      "title": "Iscriviti come medico",
+      "description": "Crea il tuo profilo professionale, ottieni la verifica e inizia a ricevere prenotazioni da pazienti privati su MyDoctors360."
+    },
+    "registerTestingService": {
+      "title": "Registra il tuo servizio di analisi",
+      "description": "Pubblica il tuo servizio di diagnostica o analisi mediche su MyDoctors360 e raggiungi nuovi pazienti online."
+    }
   }
 }

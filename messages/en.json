@@ -1300,5 +1300,35 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "meta": {
+    "pricing": {
+      "title": "Pricing for Doctors & Clinics",
+      "description": "Transparent plans for doctors and clinics on MyDoctors360. Start free and upgrade as your private practice grows."
+    },
+    "contact": {
+      "title": "Contact Us",
+      "description": "Get in touch with the MyDoctors360 team — questions about bookings, partnerships, or joining as a doctor."
+    },
+    "support": {
+      "title": "Help & Support",
+      "description": "Find answers to common questions about bookings, payments, refunds, and video consultations — or contact our support team."
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "description": "Find a verified private doctor, book an appointment online, and pay securely. See how MyDoctors360 works step by step."
+    },
+    "specialties": {
+      "title": "Medical Specialties",
+      "description": "Browse doctors by medical specialty — from general practice to cardiology — and book verified private specialists online."
+    },
+    "registerDoctor": {
+      "title": "Join as a Doctor",
+      "description": "Create your professional profile, get verified, and start receiving private patient bookings on MyDoctors360."
+    },
+    "registerTestingService": {
+      "title": "Register Your Testing Service",
+      "description": "List your diagnostic or medical testing service on MyDoctors360 and reach new patients online."
+    }
   }
 }

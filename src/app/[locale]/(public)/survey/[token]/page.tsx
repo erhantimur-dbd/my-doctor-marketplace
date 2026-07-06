@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import { getSurveyByToken } from "@/actions/surveys";
 import { SurveyForm } from "./survey-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+
+// Tokenized per-patient page — must never be indexed
+export const metadata: Metadata = {
+  title: "Appointment Survey",
+  robots: { index: false, follow: false },
+};
 
 export default async function SurveyPage({
   params,

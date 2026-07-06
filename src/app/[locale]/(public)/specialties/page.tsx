@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,21 @@ const allSpecialties = [
   { slug: "rheumatology", icon: "Bone", key: "rheumatology", desc: "Autoimmune diseases and joint disorders" },
   { slug: "nephrology", icon: "Droplets", key: "nephrology", desc: "Kidney health and renal diseases" },
 ];
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "meta" });
+  const seoMeta = (await import("@/lib/seo/metadata")).generateMetadata;
+  return seoMeta({
+    title: t("specialties.title"),
+    description: t("specialties.description"),
+    path: `/${locale}/specialties`,
+  });
+}
 
 export default async function SpecialtiesPage() {
   const [t, liveCounts] = await Promise.all([
