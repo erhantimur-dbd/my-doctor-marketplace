@@ -1339,5 +1339,15 @@
       "title": "検査サービスを登録",
       "description": "診断・医療検査サービスをMyDoctors360に掲載し、オンラインで新しい患者にリーチしましょう。"
     }
+  },
+  "skills": {
+    "badge": "スキル",
+    "heading": "このスキルを持つ医師",
+    "related": "関連スキル",
+    "empty_title": "このスキルを持つ医師はまだいません",
+    "empty_description": "{skill}を提供する医師を積極的に受け入れています。この分野の医師の方は、今すぐ当プラットフォームにご参加ください。",
+    "join_cta": "医師として登録",
+    "meta_title": "{skill} — 医師を探して予約",
+    "meta_description": "{skill}を提供する認証済みの医師を検索し、MyDoctors360でオンライン予約できます。"
   }
 }

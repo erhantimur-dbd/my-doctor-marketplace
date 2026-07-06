@@ -1339,5 +1339,15 @@
       "title": "Inscrire votre service d'analyses",
       "description": "Référencez votre service de diagnostic ou d'analyses médicales sur MyDoctors360 et touchez de nouveaux patients en ligne."
     }
+  },
+  "skills": {
+    "badge": "Compétence",
+    "heading": "Médecins possédant cette compétence",
+    "related": "Compétences associées",
+    "empty_title": "Aucun médecin avec cette compétence pour l'instant",
+    "empty_description": "Nous recrutons activement des médecins proposant {skill}. Si vous exercez dans ce domaine, rejoignez notre plateforme dès aujourd'hui.",
+    "join_cta": "Rejoindre en tant que médecin",
+    "meta_title": "{skill} — Trouver et réserver un médecin",
+    "meta_description": "Parcourez des médecins vérifiés proposant {skill} et réservez en ligne sur MyDoctors360."
   }
 }

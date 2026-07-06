@@ -1339,5 +1339,15 @@
       "title": "Registre su servicio de pruebas",
       "description": "Publique su servicio de diagnóstico o pruebas médicas en MyDoctors360 y llegue a nuevos pacientes en línea."
     }
+  },
+  "skills": {
+    "badge": "Habilidad",
+    "heading": "Médicos con esta habilidad",
+    "related": "Habilidades relacionadas",
+    "empty_title": "Aún no hay médicos con esta habilidad",
+    "empty_description": "Estamos incorporando activamente médicos que ofrecen {skill}. Si eres médico en este campo, únete hoy a nuestra plataforma.",
+    "join_cta": "Únete como médico",
+    "meta_title": "{skill} — Encuentra y reserva médico",
+    "meta_description": "Explora médicos verificados que ofrecen {skill} y reserva cita en línea en MyDoctors360."
   }
 }

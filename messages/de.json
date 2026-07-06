@@ -1339,5 +1339,15 @@
       "title": "Testdienst registrieren",
       "description": "Listen Sie Ihren Diagnostik- oder medizinischen Testdienst auf MyDoctors360 und erreichen Sie neue Patienten online."
     }
+  },
+  "skills": {
+    "badge": "Fähigkeit",
+    "heading": "Ärzte mit dieser Fähigkeit",
+    "related": "Verwandte Fähigkeiten",
+    "empty_title": "Noch keine Ärzte mit dieser Fähigkeit",
+    "empty_description": "Wir nehmen aktiv Ärzte mit {skill} auf. Wenn Sie in diesem Bereich tätig sind, treten Sie noch heute unserer Plattform bei.",
+    "join_cta": "Als Arzt registrieren",
+    "meta_title": "{skill} — Ärzte finden & buchen",
+    "meta_description": "Verifizierte Ärzte mit {skill} durchsuchen und Termine online bei MyDoctors360 buchen."
   }
 }

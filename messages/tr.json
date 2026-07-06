@@ -1339,5 +1339,15 @@
       "title": "Test Hizmetinizi Kaydedin",
       "description": "Tanı veya tıbbi test hizmetinizi MyDoctors360'ta listeleyin ve çevrimiçi olarak yeni hastalara ulaşın."
     }
+  },
+  "skills": {
+    "badge": "Beceri",
+    "heading": "Bu beceriye sahip doktorlar",
+    "related": "İlgili Beceriler",
+    "empty_title": "Bu Beceriye Sahip Henüz Doktor Yok",
+    "empty_description": "{skill} sunan doktorları aktif olarak platformumuza dahil ediyoruz. Bu alanda bir doktorsanız, bugün platformumuza katılın.",
+    "join_cta": "Doktor Olarak Katıl",
+    "meta_title": "{skill} — Doktor Bul ve Randevu Al",
+    "meta_description": "{skill} sunan doğrulanmış doktorlara göz atın ve MyDoctors360'ta çevrimiçi randevu alın."
   }
 }

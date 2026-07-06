@@ -1339,5 +1339,15 @@
       "title": "Registe o seu serviço de análises",
       "description": "Anuncie o seu serviço de diagnóstico ou análises clínicas no MyDoctors360 e alcance novos pacientes online."
     }
+  },
+  "skills": {
+    "badge": "Competência",
+    "heading": "Médicos com esta competência",
+    "related": "Competências relacionadas",
+    "empty_title": "Ainda não há médicos com esta competência",
+    "empty_description": "Estamos a integrar ativamente médicos que oferecem {skill}. Se é médico nesta área, junte-se hoje à nossa plataforma.",
+    "join_cta": "Junte-se como médico",
+    "meta_title": "{skill} — Encontre e marque médico",
+    "meta_description": "Explore médicos verificados que oferecem {skill} e marque consultas online no MyDoctors360."
   }
 }

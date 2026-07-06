@@ -25,11 +25,12 @@ export async function generateMetadata({
   // reject here so the response carries a real 404 status, not a streamed one
   if (!skill) notFound();
 
+  const t = await getTranslations({ locale, namespace: "skills" });
   const seoMeta = (await import("@/lib/seo/metadata")).generateMetadata;
 
   return seoMeta({
-    title: `${skill.label} — Find & Book Doctors`,
-    description: `Browse verified doctors offering ${skill.label} and book appointments online at MyDoctors360.`,
+    title: t("meta_title", { skill: skill.label }),
+    description: t("meta_description", { skill: skill.label }),
     path: `/${locale}/skills/${slug}`,
   });
 }
@@ -40,9 +41,11 @@ export default async function SkillDetailPage({ params }: PageParams) {
   const skill = getSkill(slug);
   if (!skill) notFound();
 
-  const tCommon = await getTranslations("common");
-  const tSearch = await getTranslations("search");
-  const tFilters = await getTranslations("chat.filters");
+  // Pass the explicit locale: on statically-rendered pages the implicit
+  // getTranslations("ns") resolves to the default locale, not the route's.
+  const tCommon = await getTranslations({ locale, namespace: "common" });
+  const tSearch = await getTranslations({ locale, namespace: "search" });
+  const tSkills = await getTranslations({ locale, namespace: "skills" });
 
   const result = await searchDoctors({ skill: slug });
 
@@ -79,7 +82,7 @@ export default async function SkillDetailPage({ params }: PageParams) {
           </div>
 
           <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
-            {tFilters("skill")}
+            {tSkills("badge")}
           </Badge>
 
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
@@ -111,7 +114,7 @@ export default async function SkillDetailPage({ params }: PageParams) {
         <div className="container mx-auto">
           <div className="mb-8 flex items-center justify-between">
             <h2 className="text-2xl font-bold md:text-3xl">
-              Doctors with this skill
+              {tSkills("heading")}
             </h2>
             {result.total > 0 && (
               <Button variant="ghost" asChild>
@@ -136,16 +139,14 @@ export default async function SkillDetailPage({ params }: PageParams) {
                   <Award className="h-8 w-8 text-primary" />
                 </div>
                 <h3 className="text-lg font-semibold">
-                  No Doctors with This Skill Yet
+                  {tSkills("empty_title")}
                 </h3>
                 <p className="max-w-md text-sm text-muted-foreground">
-                  We&apos;re actively onboarding doctors offering {skill.label}.
-                  If you&apos;re a doctor in this field, join our platform
-                  today.
+                  {tSkills("empty_description", { skill: skill.label })}
                 </p>
                 <Button className="rounded-full" asChild>
                   <Link href="/register-doctor">
-                    Join as Doctor <ArrowRight className="ml-2 h-4 w-4" />
+                    {tSkills("join_cta")} <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </CardContent>
@@ -159,7 +160,7 @@ export default async function SkillDetailPage({ params }: PageParams) {
         <section className="bg-muted/30 px-4 py-12 md:py-20">
           <div className="container mx-auto">
             <h2 className="mb-8 text-center text-2xl font-bold md:text-3xl">
-              Related Skills
+              {tSkills("related")}
             </h2>
             <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-3">
               {relatedSkills.map((related) => (

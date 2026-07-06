@@ -1339,5 +1339,15 @@
       "title": "登记检测服务",
       "description": "在 MyDoctors360 上发布您的诊断或医学检测服务，在线触达新患者。"
     }
+  },
+  "skills": {
+    "badge": "技能",
+    "heading": "具备此技能的医生",
+    "related": "相关技能",
+    "empty_title": "暂无具备此技能的医生",
+    "empty_description": "我们正在积极引入提供{skill}的医生。如果您是该领域的医生，欢迎立即加入我们的平台。",
+    "join_cta": "以医生身份加入",
+    "meta_title": "{skill} — 查找并预约医生",
+    "meta_description": "浏览提供{skill}的认证医生，并在 MyDoctors360 在线预约。"
   }
 }

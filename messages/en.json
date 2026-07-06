@@ -1339,5 +1339,15 @@
       "title": "Register Your Testing Service",
       "description": "List your diagnostic or medical testing service on MyDoctors360 and reach new patients online."
     }
+  },
+  "skills": {
+    "badge": "Skill",
+    "heading": "Doctors with this skill",
+    "related": "Related Skills",
+    "empty_title": "No Doctors with This Skill Yet",
+    "empty_description": "We're actively onboarding doctors offering {skill}. If you're a doctor in this field, join our platform today.",
+    "join_cta": "Join as Doctor",
+    "meta_title": "{skill} — Find & Book Doctors",
+    "meta_description": "Browse verified doctors offering {skill} and book appointments online at MyDoctors360."
   }
 }

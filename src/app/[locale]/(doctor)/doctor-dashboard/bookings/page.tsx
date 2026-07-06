@@ -55,6 +55,9 @@ function createSupabase() {
 
 const PAGE_SIZE = 50;
 
+const BOOKING_SELECT =
+  "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)";
+
 const STATUS_COLORS: Record<string, string> = {
   pending_approval: "bg-yellow-100 text-yellow-800",
   pending_payment: "bg-orange-100 text-orange-800",
@@ -88,8 +91,10 @@ function BookingsContent() {
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [doctorCurrency, setDoctorCurrency] = useState("EUR");
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
+  // Only the past/history window is paginated; future bookings are fetched in full.
+  const [pastPage, setPastPage] = useState(1);
+  const [pastLoaded, setPastLoaded] = useState(0);
+  const [pastTotalCount, setPastTotalCount] = useState(0);
   const [loadingMore, setLoadingMore] = useState(false);
   const [activeTab, setActiveTab] = useState("pending");
 
@@ -114,38 +119,62 @@ function BookingsContent() {
 
   useEffect(() => {
     loadData();
-  }, [page]);
+  }, [pastPage]);
 
   async function loadData() {
     const supabase = createSupabase();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      setLoadingMore(false);
+      return;
+    }
 
     const { data: doctor } = await supabase
       .from("doctors")
       .select("id, base_currency")
       .eq("profile_id", user.id)
       .single();
-    if (!doctor) return;
+    if (!doctor) {
+      setLoading(false);
+      setLoadingMore(false);
+      return;
+    }
 
     setDoctorId(doctor.id);
     setDoctorCurrency(doctor.base_currency);
 
-    const { data, count } = await supabase
-      .from("bookings")
-      .select(
-        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)",
-        { count: "exact" }
-      )
-      .eq("doctor_id", doctor.id)
-      .order("appointment_date", { ascending: false })
-      .order("start_time", { ascending: false })
-      .range(0, page * PAGE_SIZE - 1);
+    const today = new Date().toISOString().split("T")[0];
 
-    setBookings((data as unknown as BookingRow[]) || []);
-    setTotalCount(count ?? 0);
+    // Two windows so the client-side date-partitioned tabs are never starved:
+    // future-dated bookings (naturally bounded) are fetched in full, while the
+    // unbounded past history is paged with the Load more control below.
+    const [futureRes, pastRes] = await Promise.all([
+      supabase
+        .from("bookings")
+        .select(BOOKING_SELECT)
+        .eq("doctor_id", doctor.id)
+        .gte("appointment_date", today)
+        .order("appointment_date", { ascending: true })
+        .order("start_time", { ascending: true })
+        .limit(500),
+      supabase
+        .from("bookings")
+        .select(BOOKING_SELECT, { count: "exact" })
+        .eq("doctor_id", doctor.id)
+        .lt("appointment_date", today)
+        .order("appointment_date", { ascending: false })
+        .order("start_time", { ascending: false })
+        .range(0, pastPage * PAGE_SIZE - 1),
+    ]);
+
+    const future = (futureRes.data as unknown as BookingRow[]) || [];
+    const past = (pastRes.data as unknown as BookingRow[]) || [];
+    setBookings([...future, ...past]);
+    setPastLoaded(past.length);
+    setPastTotalCount(pastRes.count ?? 0);
 
     // Fetch pending reschedule requests for this doctor's bookings
     const { data: reschedules } = await supabase
@@ -249,7 +278,8 @@ function BookingsContent() {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // Tabs filter the loaded window client-side, so tab counts reflect loaded rows only
+  // Both date windows are loaded, so these client-side partitions are complete
+  // except for older history beyond the current past page (surfaced via Load more).
   const pendingBookings = bookings.filter(
     (b) => b.status === "pending_approval"
   );
@@ -659,16 +689,16 @@ function BookingsContent() {
         </TabsContent>
       </Tabs>
 
-      {bookings.length < totalCount && (
+      {pastLoaded < pastTotalCount && (
         <div className="flex flex-col items-center gap-2">
           <p className="text-sm text-muted-foreground">
-            {t("showing_of", { shown: bookings.length, total: totalCount })}
+            {t("showing_of", { shown: pastLoaded, total: pastTotalCount })}
           </p>
           <Button
             variant="outline"
             onClick={() => {
               setLoadingMore(true);
-              setPage((p) => p + 1);
+              setPastPage((p) => p + 1);
             }}
             disabled={loadingMore}
           >
