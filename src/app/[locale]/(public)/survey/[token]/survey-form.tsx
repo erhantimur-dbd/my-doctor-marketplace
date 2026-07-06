@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, CheckCircle2, Star } from "lucide-react";
 import { submitSurvey } from "@/actions/surveys";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 interface SurveyFormProps {
   token: string;
@@ -57,6 +58,14 @@ export function SurveyForm({ token, doctorName, appointmentDate }: SurveyFormPro
           <p className="mt-2 text-muted-foreground">
             {t("thank_you_message")}
           </p>
+          <div className="mt-8 border-t pt-6">
+            <p className="mb-3 text-sm font-medium">
+              {t("review_cta_title")}
+            </p>
+            <Button asChild variant="outline">
+              <Link href="/dashboard/reviews">{t("review_cta_button")}</Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );

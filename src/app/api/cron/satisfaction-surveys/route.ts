@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
 
       // Send email
       const surveyUrl = `${origin}/en/survey/${token}`;
+      const reviewUrl = `${origin}/en/dashboard/reviews`;
       const { subject, html } = satisfactionSurveyEmail({
         patientName: patient.first_name || "there",
         doctorName,
@@ -93,6 +94,7 @@ export async function GET(request: NextRequest) {
           year: "numeric",
         }),
         surveyUrl,
+        reviewUrl,
       });
 
       await sendEmail({ to: patient.email, subject, html });

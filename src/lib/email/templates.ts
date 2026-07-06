@@ -1613,6 +1613,7 @@ interface SatisfactionSurveyParams {
   doctorName: string;
   date: string;
   surveyUrl: string;
+  reviewUrl?: string;
 }
 
 export function satisfactionSurveyEmail({
@@ -1620,6 +1621,7 @@ export function satisfactionSurveyEmail({
   doctorName,
   date,
   surveyUrl,
+  reviewUrl,
 }: SatisfactionSurveyParams): { subject: string; html: string } {
   const subject = `How was your appointment with Dr. ${doctorName}?`;
 
@@ -1643,6 +1645,13 @@ export function satisfactionSurveyEmail({
     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       This survey takes less than a minute to complete. Your response is confidential and helps us improve our service.
     </p>
+    ${
+      reviewUrl
+        ? `<p style="margin: 16px 0 0; font-size: 14px; color: #374151; line-height: 1.6;">
+      Prefer to leave a public review for <strong>Dr. ${doctorName}</strong>? <a href="${reviewUrl}" style="color: ${BRAND_COLOR}; font-weight: 500;">Share your experience</a>
+    </p>`
+        : ""
+    }
   `);
 
   return { subject, html };
