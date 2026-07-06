@@ -51,7 +51,7 @@ export default async function DoctorsPage({
 }: DoctorsPageProps) {
   const { locale } = await params;
   const sp = await searchParams;
-  const t = await getTranslations("search");
+  const t = await getTranslations({ locale, namespace: "search" });
 
   const [result, specialties, locations, featuredDoctors] = await Promise.all([
     searchDoctors({

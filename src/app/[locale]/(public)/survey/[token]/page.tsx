@@ -14,10 +14,10 @@ export const metadata: Metadata = {
 export default async function SurveyPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: Promise<{ locale: string; token: string }>;
 }) {
-  const { token } = await params;
-  const t = await getTranslations("survey");
+  const { locale, token } = await params;
+  const t = await getTranslations({ locale, namespace: "survey" });
   const result = await getSurveyByToken(token);
 
   if (result.error || !result.survey) {

@@ -50,9 +50,14 @@ export async function generateMetadata({
   });
 }
 
-export default async function SpecialtiesPage() {
+export default async function SpecialtiesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const [t, liveCounts] = await Promise.all([
-    getTranslations("specialty"),
+    getTranslations({ locale, namespace: "specialty" }),
     getLiveAvailabilityCounts(),
   ]);
 

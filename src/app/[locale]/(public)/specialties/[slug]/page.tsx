@@ -83,7 +83,7 @@ export default async function SpecialtyDetailPage({ params }: PageParams) {
   const meta = getSpecialtyMeta(slug);
   if (!meta) notFound();
 
-  const t = await getTranslations("specialty");
+  const t = await getTranslations({ locale, namespace: "specialty" });
   const data = await getSpecialtyBySlug(slug);
   const color = getSpecialtyColor(slug);
   const Icon = iconMap[meta.icon] || Stethoscope;

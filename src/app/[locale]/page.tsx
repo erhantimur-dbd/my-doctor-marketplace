@@ -51,9 +51,14 @@ const allSpecialties = [
   { slug: "nephrology", icon: "Droplets", key: "nephrology" },
 ];
 
-export default async function HomePage() {
-  const t = await getTranslations("home");
-  const ts = await getTranslations("specialty");
+export default async function HomePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "home" });
+  const ts = await getTranslations({ locale, namespace: "specialty" });
 
   const [specialties, locations, liveCounts, featuredDoctors] = await Promise.all([
     getSpecialties(),
