@@ -2,6 +2,7 @@
 
 import { Link } from "@/i18n/navigation";
 import Image from "next/image";
+import { isKnownAvatarHost } from "@/components/shared/optimized-avatar";
 import { useTranslations } from "next-intl";
 import {
   MapPin,
@@ -98,7 +99,7 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
               fill
               sizes="80px"
               className="object-cover"
-              unoptimized
+              unoptimized={!isKnownAvatarHost(doctor.avatarUrl)}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5 text-base font-semibold text-primary/70">

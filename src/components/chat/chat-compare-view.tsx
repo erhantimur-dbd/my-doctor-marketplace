@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { isKnownAvatarHost } from "@/components/shared/optimized-avatar";
 import {
   ArrowLeft,
   MapPin,
@@ -118,7 +119,7 @@ export function ChatCompareView({
                         fill
                         sizes="56px"
                         className="object-cover"
-                        unoptimized
+                        unoptimized={!isKnownAvatarHost(doctor.avatarUrl)}
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5 text-xs font-semibold text-primary/70">

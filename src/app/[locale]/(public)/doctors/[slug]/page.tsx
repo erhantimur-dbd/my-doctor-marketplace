@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { ClickableProfileMap } from "@/components/maps/clickable-profile-map";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OptimizedAvatar } from "@/components/shared/optimized-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -220,14 +220,17 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
             <FavoriteButton doctorId={doctor.id} />
           </div>
           <div className="mt-4 flex flex-col gap-6 sm:flex-row sm:items-center">
-            <Avatar className="h-20 w-20 shrink-0 border-[3px] border-white/30 shadow-lg sm:h-24 sm:w-24">
-              {doctor.profile.avatar_url ? (
-                <AvatarImage src={doctor.profile.avatar_url} alt={fullName} />
-              ) : null}
-              <AvatarFallback className="bg-white/20 text-white text-2xl">
-                <User className="h-10 w-10" />
-              </AvatarFallback>
-            </Avatar>
+            <OptimizedAvatar
+              src={doctor.profile.avatar_url}
+              alt={fullName}
+              sizes="(min-width: 640px) 96px, 80px"
+              className="h-20 w-20 shrink-0 border-[3px] border-white/30 shadow-lg sm:h-24 sm:w-24"
+              fallback={
+                <span className="flex size-full items-center justify-center bg-white/20 text-2xl text-white">
+                  <User className="h-10 w-10" />
+                </span>
+              }
+            />
 
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-3">

@@ -83,7 +83,6 @@ export function PaymentIcons() {
         width={ICON_WIDTH}
         height={28}
         className="rounded-[4px]"
-        unoptimized
       />
       <ApplePayIcon />
       <GooglePayIcon />

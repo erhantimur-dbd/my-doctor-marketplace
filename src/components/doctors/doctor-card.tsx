@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { OptimizedAvatar } from "@/components/shared/optimized-avatar";
 import {
   Dialog,
   DialogClose,
@@ -198,26 +198,26 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
               )}>
                   <div className="flex gap-4">
                     {/* Avatar */}
-                    <Avatar className={cn("h-14 w-14 shrink-0 ring-2 ring-background shadow-sm", isTestingService && "rounded-xl")}>
-                      {doctor.profile.avatar_url ? (
-                        <AvatarImage
-                          src={doctor.profile.avatar_url}
-                          alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
-                        />
-                      ) : null}
-                      <AvatarFallback className={cn(
-                        "text-base font-semibold",
-                        isTestingService
-                          ? "rounded-xl bg-teal-50 dark:bg-teal-950/30"
-                          : "bg-gradient-to-br from-primary/10 to-primary/5 text-primary/70"
-                      )}>
-                        {isTestingService ? (
-                          <FlaskConical className="h-5 w-5 text-teal-600" />
-                        ) : (
-                          `${doctor.profile.first_name[0]}${doctor.profile.last_name[0]}`
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
+                    <OptimizedAvatar
+                      src={doctor.profile.avatar_url}
+                      alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
+                      sizes="56px"
+                      className={cn("h-14 w-14 ring-2 ring-background shadow-sm", isTestingService && "rounded-xl")}
+                      fallback={
+                        <span className={cn(
+                          "flex size-full items-center justify-center text-base font-semibold",
+                          isTestingService
+                            ? "rounded-xl bg-teal-50 dark:bg-teal-950/30"
+                            : "bg-gradient-to-br from-primary/10 to-primary/5 text-primary/70"
+                        )}>
+                          {isTestingService ? (
+                            <FlaskConical className="h-5 w-5 text-teal-600" />
+                          ) : (
+                            `${doctor.profile.first_name[0]}${doctor.profile.last_name[0]}`
+                          )}
+                        </span>
+                      }
+                    />
 
                     {/* Info */}
                     <div className="min-w-0 flex-1 overflow-hidden">
@@ -635,21 +635,26 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                 <div className="flex flex-col md:grid md:grid-cols-[2fr_3fr] md:gap-6 h-full">
                   {/* ── Left Panel: Doctor Profile (desktop only) ── */}
                   <div className="hidden md:flex md:flex-col md:items-center md:justify-center md:text-center md:border-r md:pr-6 md:overflow-hidden md:gap-3">
-                    <Avatar className={cn("h-20 w-20", isTestingService && "rounded-xl")}>
-                      {doctor.profile.avatar_url ? (
-                        <AvatarImage
-                          src={doctor.profile.avatar_url}
-                          alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
-                        />
-                      ) : null}
-                      <AvatarFallback className={cn("text-2xl", isTestingService && "rounded-xl bg-teal-50 dark:bg-teal-950/30")}>
-                        {isTestingService ? (
-                          <FlaskConical className="h-8 w-8 text-teal-600" />
-                        ) : (
-                          <User className="h-8 w-8" />
-                        )}
-                      </AvatarFallback>
-                    </Avatar>
+                    <OptimizedAvatar
+                      src={doctor.profile.avatar_url}
+                      alt={`${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`}
+                      sizes="80px"
+                      className={cn("h-20 w-20", isTestingService && "rounded-xl")}
+                      fallback={
+                        <span className={cn(
+                          "flex size-full items-center justify-center text-2xl",
+                          isTestingService
+                            ? "rounded-xl bg-teal-50 dark:bg-teal-950/30"
+                            : "bg-muted text-muted-foreground"
+                        )}>
+                          {isTestingService ? (
+                            <FlaskConical className="h-8 w-8 text-teal-600" />
+                          ) : (
+                            <User className="h-8 w-8" />
+                          )}
+                        </span>
+                      }
+                    />
 
                     <div>
                       <h3 className="text-lg font-semibold leading-tight">
