@@ -39,6 +39,27 @@ const PAST_STATUSES = [
   "refunded",
 ];
 
+const PER_PAGE = 20;
+
+const BOOKING_SELECT = `
+  id,
+  booking_number,
+  start_time,
+  end_time,
+  status,
+  consultation_type,
+  consultation_fee_cents,
+  platform_fee_cents,
+  total_amount_cents,
+  currency,
+  patient_notes,
+  created_at,
+  doctor:doctors(
+    slug, title, clinic_name,
+    profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url)
+  )
+`;
+
 function getStatusBadgeVariant(
   status: string
 ): "default" | "secondary" | "destructive" | "outline" {
@@ -177,7 +198,7 @@ function BookingCard({
 
 interface BookingsPageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; tab?: string; page?: string }>;
 }
 
 export default async function BookingsPage({
@@ -185,8 +206,11 @@ export default async function BookingsPage({
   searchParams,
 }: BookingsPageProps) {
   const { locale } = await params;
-  const { view: rawView } = await searchParams;
+  const { view: rawView, tab: rawTab, page: rawPage } = await searchParams;
   const view = rawView === "calendar" ? "calendar" : "list";
+  const tab = rawTab === "past" ? "past" : "upcoming";
+  const parsedPage = rawPage ? Number(rawPage) : 1;
+  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const supabase = await createClient();
   const {
     data: { user },
@@ -194,32 +218,63 @@ export default async function BookingsPage({
 
   if (!user) redirect("/en/login");
 
-  const { data: bookings, error } = await supabase
-    .from("bookings")
-    .select(
-      `
-      id,
-      booking_number,
-      start_time,
-      end_time,
-      status,
-      consultation_type,
-      consultation_fee_cents,
-      platform_fee_cents,
-      total_amount_cents,
-      currency,
-      patient_notes,
-      created_at,
-      doctor:doctors(
-        slug, title, clinic_name,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url)
-      )
-    `
-    )
-    .eq("patient_id", user.id)
-    .order("start_time", { ascending: false });
+  let calendarBookings: BookingRow[] = [];
+  let tabBookings: BookingRow[] = [];
+  let upcomingCount = 0;
+  let pastCount = 0;
+  let totalCount = 0;
+  let fetchError = false;
 
-  if (error) {
+  if (view === "calendar") {
+    // Calendar renders all bookings at once, so cap the fetch to a sane maximum
+    const { data, error } = await supabase
+      .from("bookings")
+      .select(BOOKING_SELECT)
+      .eq("patient_id", user.id)
+      .order("start_time", { ascending: false })
+      .limit(500);
+
+    if (error) fetchError = true;
+    calendarBookings = (data || []) as unknown as BookingRow[];
+  } else {
+    const [upcomingRes, pastRes] = await Promise.all([
+      supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("patient_id", user.id)
+        .in("status", UPCOMING_STATUSES),
+      supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("patient_id", user.id)
+        .in("status", PAST_STATUSES),
+    ]);
+
+    if (upcomingRes.error || pastRes.error) {
+      fetchError = true;
+    } else {
+      upcomingCount = upcomingRes.count ?? 0;
+      pastCount = pastRes.count ?? 0;
+      totalCount = tab === "past" ? pastCount : upcomingCount;
+
+      const from = (page - 1) * PER_PAGE;
+      if (from < totalCount) {
+        const { data, error, count } = await supabase
+          .from("bookings")
+          .select(BOOKING_SELECT, { count: "exact" })
+          .eq("patient_id", user.id)
+          .in("status", tab === "past" ? PAST_STATUSES : UPCOMING_STATUSES)
+          .order("start_time", { ascending: tab === "upcoming" })
+          .range(from, from + PER_PAGE - 1);
+
+        if (error) fetchError = true;
+        tabBookings = (data || []) as unknown as BookingRow[];
+        if (count !== null) totalCount = count;
+      }
+    }
+  }
+
+  if (fetchError) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">My Bookings</h1>
@@ -234,14 +289,8 @@ export default async function BookingsPage({
     );
   }
 
-  const typedBookings = (bookings || []) as unknown as BookingRow[];
-
-  const upcomingBookings = typedBookings.filter((b) =>
-    UPCOMING_STATUSES.includes(b.status)
-  );
-  const pastBookings = typedBookings.filter((b) =>
-    PAST_STATUSES.includes(b.status)
-  );
+  const tabHref = (value: "upcoming" | "past") =>
+    `/dashboard/bookings?tab=${value}${rawView ? `&view=${rawView}` : ""}`;
 
   return (
     <div className="space-y-6">
@@ -276,40 +325,58 @@ export default async function BookingsPage({
       </div>
 
       {view === "calendar" ? (
-        <CalendarView bookings={typedBookings} locale={locale} />
+        <CalendarView bookings={calendarBookings} locale={locale} />
       ) : (
-        <Tabs defaultValue="upcoming">
+        <Tabs value={tab}>
           <TabsList>
-            <TabsTrigger value="upcoming">
-              Upcoming ({upcomingBookings.length})
+            <TabsTrigger value="upcoming" asChild>
+              <Link href={tabHref("upcoming")}>
+                Upcoming ({upcomingCount})
+              </Link>
             </TabsTrigger>
-            <TabsTrigger value="past">
-              Past ({pastBookings.length})
+            <TabsTrigger value="past" asChild>
+              <Link href={tabHref("past")}>
+                Past ({pastCount})
+              </Link>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="upcoming" className="mt-4">
-            {upcomingBookings.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center py-12 text-center">
-                  <Calendar className="h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">
-                    No upcoming bookings
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    You don&apos;t have any upcoming appointments scheduled.
-                  </p>
-                  <Button className="mt-6" asChild>
-                    <Link href="/doctors">
-                      <Search className="mr-2 h-4 w-4" />
-                      Find a Doctor
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+          <TabsContent value={tab} className="mt-4">
+            {tabBookings.length === 0 ? (
+              tab === "upcoming" ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center py-12 text-center">
+                    <Calendar className="h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium">
+                      No upcoming bookings
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      You don&apos;t have any upcoming appointments scheduled.
+                    </p>
+                    <Button className="mt-6" asChild>
+                      <Link href="/doctors">
+                        <Search className="mr-2 h-4 w-4" />
+                        Find a Doctor
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center py-12 text-center">
+                    <Clock className="h-12 w-12 text-muted-foreground" />
+                    <h3 className="mt-4 text-lg font-medium">
+                      No past bookings
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Your completed and past bookings will appear here.
+                    </p>
+                  </CardContent>
+                </Card>
+              )
             ) : (
               <div className="space-y-3">
-                {upcomingBookings.map((booking: BookingRow) => (
+                {tabBookings.map((booking: BookingRow) => (
                   <BookingCard
                     key={booking.id}
                     booking={booking}
@@ -318,29 +385,28 @@ export default async function BookingsPage({
                 ))}
               </div>
             )}
-          </TabsContent>
 
-          <TabsContent value="past" className="mt-4">
-            {pastBookings.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center py-12 text-center">
-                  <Clock className="h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium">
-                    No past bookings
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Your completed and past bookings will appear here.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {pastBookings.map((booking: BookingRow) => (
-                  <BookingCard
-                    key={booking.id}
-                    booking={booking}
-                    locale={locale}
-                  />
+            {totalCount > PER_PAGE && (
+              <div className="mt-8 flex justify-center gap-2">
+                {Array.from(
+                  { length: Math.ceil(totalCount / PER_PAGE) },
+                  (_, i) => i + 1
+                ).map((pageNumber) => (
+                  <a
+                    key={pageNumber}
+                    href={`?${new URLSearchParams({
+                      ...(rawView ? { view: rawView } : {}),
+                      tab,
+                      page: String(pageNumber),
+                    }).toString()}`}
+                    className={`inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                      pageNumber === page
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {pageNumber}
+                  </a>
                 ))}
               </div>
             )}
