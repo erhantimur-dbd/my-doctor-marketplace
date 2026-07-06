@@ -28,34 +28,6 @@ import {
   MessageSquareHeart,
   Globe2,
 } from "lucide-react";
-
-const BENEFITS = [
-  {
-    icon: Award,
-    title: "Enhance your reputation",
-    description: "Your expertise, backed by verified patients and trusted colleagues.",
-  },
-  {
-    icon: TrendingUp,
-    title: "Grow your practice",
-    description: "Harness trust to drive visibility, enquiries and sustainable growth.",
-  },
-  {
-    icon: Target,
-    title: "Reach target patients",
-    description: "Reach target patients with treatment tags.",
-  },
-  {
-    icon: MessageSquareHeart,
-    title: "Improve patient experience",
-    description: "Get actionable insights from review analytics.",
-  },
-  {
-    icon: Globe2,
-    title: "Build your professional network",
-    description: "Network and collaborate with MyDoctors360 Connect.",
-  },
-];
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { ClinicGetStartedButton } from "@/components/shared/clinic-get-started-button";
 import {
@@ -66,66 +38,69 @@ import {
   formatPriceForLocale,
   formatPrice,
 } from "@/lib/constants/license-tiers";
-import { useLocale } from "next-intl";
+
+const BENEFITS = [
+  { icon: Award, key: "benefit_reputation" },
+  { icon: TrendingUp, key: "benefit_grow" },
+  { icon: Target, key: "benefit_target" },
+  { icon: MessageSquareHeart, key: "benefit_experience" },
+  { icon: Globe2, key: "benefit_network" },
+] as const;
 
 const platformFeatures = [
+  { icon: Globe, key: "pf_visibility", bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-600" },
+  { icon: Calendar, key: "pf_scheduling", bg: "bg-violet-50 dark:bg-violet-950/30", text: "text-violet-600" },
+  { icon: CreditCard, key: "pf_payments", bg: "bg-emerald-50 dark:bg-emerald-950/30", text: "text-emerald-600" },
+  { icon: Video, key: "pf_video", bg: "bg-purple-50 dark:bg-purple-950/30", text: "text-purple-600" },
+  { icon: Bell, key: "pf_reminders", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-600" },
+  { icon: BarChart3, key: "pf_analytics", bg: "bg-cyan-50 dark:bg-cyan-950/30", text: "text-cyan-600" },
+  { icon: Users, key: "pf_crm", bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-600" },
+  { icon: Shield, key: "pf_badge", bg: "bg-teal-50 dark:bg-teal-950/30", text: "text-teal-600" },
+] as const;
+
+const gettingStartedSteps = [
   {
-    icon: Globe,
-    title: "Multi-Country Visibility",
-    description: "Reach patients across Germany, UK, Turkey, France, and more EU countries.",
-    bg: "bg-blue-50 dark:bg-blue-950/30",
-    text: "text-blue-600",
-  },
-  {
-    icon: Calendar,
-    title: "Smart Scheduling",
-    description: "Customizable availability calendar with recurring schedules and date overrides.",
-    bg: "bg-violet-50 dark:bg-violet-950/30",
-    text: "text-violet-600",
-  },
-  {
-    icon: CreditCard,
-    title: "Secure Payments",
-    description: "Automatic payment collection via Stripe. Patients pay upfront, you get paid out to your bank.",
-    bg: "bg-emerald-50 dark:bg-emerald-950/30",
-    text: "text-emerald-600",
-  },
-  {
-    icon: Video,
-    title: "Video Consultations",
-    description: "Offer telemedicine appointments with built-in HD video calling.",
-    bg: "bg-purple-50 dark:bg-purple-950/30",
-    text: "text-purple-600",
-  },
-  {
-    icon: Bell,
-    title: "Automated Reminders",
-    description: "Reduce no-shows with automatic email, SMS, and WhatsApp appointment reminders.",
-    bg: "bg-amber-50 dark:bg-amber-950/30",
-    text: "text-amber-600",
-  },
-  {
-    icon: BarChart3,
-    title: "Revenue Analytics",
-    description: "Track your earnings, booking trends, and patient demographics in real-time.",
-    bg: "bg-cyan-50 dark:bg-cyan-950/30",
-    text: "text-cyan-600",
-  },
-  {
-    icon: Users,
-    title: "Patient CRM",
-    description: "Manage patient records, visit history, and notes in one place.",
-    bg: "bg-rose-50 dark:bg-rose-950/30",
-    text: "text-rose-600",
-  },
-  {
-    icon: Shield,
-    title: "Verification Badge",
-    description: "Get a verified badge on your profile after our credential verification process.",
+    step: "1",
+    icon: Stethoscope,
+    key: "step1",
     bg: "bg-teal-50 dark:bg-teal-950/30",
     text: "text-teal-600",
+    ring: "ring-teal-200 dark:ring-teal-800",
   },
-];
+  {
+    step: "2",
+    icon: Shield,
+    key: "step2",
+    bg: "bg-blue-50 dark:bg-blue-950/30",
+    text: "text-blue-600",
+    ring: "ring-blue-200 dark:ring-blue-800",
+  },
+  {
+    step: "3",
+    icon: CreditCard,
+    key: "step3",
+    bg: "bg-violet-50 dark:bg-violet-950/30",
+    text: "text-violet-600",
+    ring: "ring-violet-200 dark:ring-violet-800",
+  },
+  {
+    step: "4",
+    icon: Zap,
+    key: "step4",
+    bg: "bg-amber-50 dark:bg-amber-950/30",
+    text: "text-amber-600",
+    ring: "ring-amber-200 dark:ring-amber-800",
+  },
+] as const;
+
+const uspFeatures = [
+  { icon: Calendar, key: "usp_booking" },
+  { icon: Bell, key: "usp_reminders" },
+  { icon: BarChart3, key: "usp_analytics" },
+  { icon: Shield, key: "usp_verified" },
+  { icon: CreditCard, key: "usp_payments" },
+  { icon: Globe, key: "usp_multilang" },
+] as const;
 
 /** Icon for each tier */
 function getTierIcon(tierId: string) {
@@ -191,8 +166,13 @@ export async function generateMetadata({
   });
 }
 
-export default function PricingPage() {
-  const locale = useLocale();
+export default async function PricingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "pricing" });
 
   // Get paid tiers for the main grid (exclude free, it's shown separately)
   const paidTiers = LICENSE_TIERS.filter((t) => !t.isFreeTier);
@@ -205,13 +185,13 @@ export default function PricingPage() {
         <HeroSpecialtyIcons />
         <div className="relative container mx-auto text-center">
           <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
-            For Doctors &amp; Clinics
+            {t("hero_badge")}
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight md:text-5xl">
-            Build trust, grow your practice with MyDoctors360
+            {t("hero_title")}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Strengthen your online presence with a comprehensive profile, verified reviews and professional connections that drive practice growth.
+            {t("hero_subtitle")}
           </p>
         </div>
       </section>
@@ -224,14 +204,14 @@ export default function PricingPage() {
               const Icon = benefit.icon;
               return (
                 <div
-                  key={benefit.title}
+                  key={benefit.key}
                   className="flex flex-col rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
                 >
                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Icon className="h-5 w-5" />
                   </div>
-                  <h3 className="text-base font-semibold leading-tight">{benefit.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{benefit.description}</p>
+                  <h3 className="text-base font-semibold leading-tight">{t(`${benefit.key}_title`)}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{t(`${benefit.key}_desc`)}</p>
                 </div>
               );
             })}
@@ -261,7 +241,7 @@ export default function PricingPage() {
                   {isPopular && (
                     <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
                       <Badge className="bg-foreground text-background shadow-md hover:bg-foreground">
-                        Most Popular
+                        {t("most_popular")}
                       </Badge>
                     </div>
                   )}
@@ -281,7 +261,7 @@ export default function PricingPage() {
                   <div className="flex h-[80px] flex-col items-center justify-center px-6 text-center">
                     {isEnterprise ? (
                       <>
-                        <span className="text-4xl font-bold">Custom</span>
+                        <span className="text-4xl font-bold">{t("custom_price")}</span>
                       </>
                     ) : (
                       <>
@@ -290,7 +270,8 @@ export default function PricingPage() {
                             {formatPriceForLocale(tier.priceMonthlyPence, locale)}
                           </span>
                           <span className="text-muted-foreground">
-                            {tier.perUser ? " / user / mo" : " / month"}
+                            {" "}
+                            {tier.perUser ? t("per_user_mo") : t("per_month")}
                           </span>
                         </div>
                       </>
@@ -301,25 +282,27 @@ export default function PricingPage() {
                   <div className="flex h-[48px] flex-col items-center justify-center px-6 text-center">
                     {isEnterprise ? (
                       <p className="text-xs text-muted-foreground">
-                        Tailored to your needs
+                        {t("enterprise_tailored")}
                       </p>
                     ) : (
                       <>
                         {tier.commitmentMonths > 0 && (
                           <p className="text-xs text-muted-foreground">
-                            12-month commitment, billed monthly
+                            {t("commitment_note")}
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground">
                           {tier.perUser
-                            ? `${tier.defaultSeats}–${tier.maxSeats} users`
+                            ? t("seats_range", { min: tier.defaultSeats, max: tier.maxSeats })
                             : tier.includedSeats > 1
-                              ? `${tier.includedSeats} users included, up to ${tier.maxSeats}`
-                              : `${tier.defaultSeats} user`}
+                              ? t("seats_included", { included: tier.includedSeats, max: tier.maxSeats })
+                              : t("seats_single", { count: tier.defaultSeats })}
                           {tier.extraSeatPricePence > 0 && !tier.perUser && (
                             <>
                               {" · "}
-                              {formatPriceForLocale(tier.extraSeatPricePence, locale)}/extra seat
+                              {t("extra_seat", {
+                                price: formatPriceForLocale(tier.extraSeatPricePence, locale),
+                              })}
                             </>
                           )}
                         </p>
@@ -353,7 +336,7 @@ export default function PricingPage() {
                         asChild
                       >
                         <Link href="/support">
-                          Get in Touch for a Demo
+                          {t("enterprise_cta")}
                           <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                       </Button>
@@ -366,7 +349,7 @@ export default function PricingPage() {
                         asChild
                       >
                         <Link href={`/register-doctor?tier=${tier.id}`}>
-                          Get Started
+                          {t("get_started")}
                         </Link>
                       </Button>
                     )}
@@ -377,20 +360,19 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            All plans include a {PLATFORM_BOOKING_FEE_PERCENT}% platform commission on each booking, invoiced monthly.
-            All paid plans require a 12-month commitment, billed monthly.
+            {t("commission_note", { percent: PLATFORM_BOOKING_FEE_PERCENT })}
           </p>
 
           {/* Free Profile Note */}
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Not ready to commit?{" "}
+            {t("free_note_prefix")}{" "}
             <Link
               href="/register-doctor?tier=free"
               className="font-medium text-primary hover:underline"
             >
-              Create a free doctor profile
+              {t("free_note_link")}
             </Link>{" "}
-            — a basic listing to get started.
+            {t("free_note_suffix")}
           </p>
         </div>
       </section>
@@ -401,14 +383,13 @@ export default function PricingPage() {
           <div className="text-center">
             <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/15 border-primary/20">
               <FlaskConical className="mr-1.5 h-3 w-3" />
-              Medical Testing
+              {t("testing_badge")}
             </Badge>
             <h2 className="text-2xl font-bold md:text-3xl">
-              Medical Testing Services
+              {t("testing_title")}
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              List in-person diagnostic services and set your own prices.
-              Choose the plan that fits your practice.
+              {t("testing_subtitle")}
             </p>
           </div>
 
@@ -438,9 +419,9 @@ export default function PricingPage() {
                         locale
                       )}
                     </span>
-                    <span className="text-muted-foreground"> / month</span>
+                    <span className="text-muted-foreground"> {t("per_month")}</span>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Standalone
+                      {t("standalone")}
                     </p>
                   </div>
 
@@ -448,7 +429,7 @@ export default function PricingPage() {
                   {testingModule && (
                     <div className="relative rounded-xl border border-sky-400 bg-sky-50/50 p-4 text-center dark:border-sky-800 dark:bg-sky-950/20">
                       <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-sky-500 text-white shadow-sm hover:bg-sky-500">
-                        Save 50%
+                        {t("save_50")}
                       </Badge>
                       <span className="text-3xl font-bold">
                         {formatPriceForLocale(
@@ -456,16 +437,16 @@ export default function PricingPage() {
                           locale
                         )}
                       </span>
-                      <span className="text-muted-foreground"> / month</span>
+                      <span className="text-muted-foreground"> {t("per_month")}</span>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Add-on for Starter or Professional
+                        {t("addon_note")}
                       </p>
                     </div>
                   )}
                 </div>
 
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  + {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
+                  {t("commission_suffix", { percent: PLATFORM_BOOKING_FEE_PERCENT })}
                 </p>
 
                 {/* Features */}
@@ -488,7 +469,7 @@ export default function PricingPage() {
                     asChild
                   >
                     <Link href="/register-testing-service">
-                      Register as Testing Service
+                      {t("register_testing")}
                     </Link>
                   </Button>
                   <Button
@@ -497,12 +478,12 @@ export default function PricingPage() {
                     asChild
                   >
                     <Link href="/register-doctor?tier=starter">
-                      Register as Doctor <ArrowRight className="ml-2 h-4 w-4" />
+                      {t("register_doctor")} <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
                 <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Already a doctor? Add from your billing dashboard.
+                  {t("already_doctor")}
                 </p>
               </CardContent>
             </Card>
@@ -514,21 +495,21 @@ export default function PricingPage() {
       <section className="bg-muted/30 px-4 py-12 md:py-20">
         <div className="container mx-auto">
           <h2 className="text-center text-2xl font-bold md:text-3xl">
-            Everything You Need to Run Your Practice
+            {t("features_title")}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-muted-foreground">
-            Our platform gives you the tools to attract patients, manage bookings, and grow your revenue.
+            {t("features_subtitle")}
           </p>
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {platformFeatures.map((feature) => (
-              <Card key={feature.title}>
+              <Card key={feature.key}>
                 <CardContent className="p-5">
                   <div className={`rounded-xl ${feature.bg} p-2.5 w-fit`}>
                     <feature.icon className={`h-5 w-5 ${feature.text}`} />
                   </div>
-                  <h3 className="mt-3 font-semibold">{feature.title}</h3>
+                  <h3 className="mt-3 font-semibold">{t(`${feature.key}_title`)}</h3>
                   <p className="mt-1.5 text-sm text-muted-foreground">
-                    {feature.description}
+                    {t(`${feature.key}_desc`)}
                   </p>
                 </CardContent>
               </Card>
@@ -541,47 +522,10 @@ export default function PricingPage() {
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-3xl">
           <h2 className="text-center text-2xl font-bold md:text-3xl">
-            Getting Started is Easy
+            {t("steps_title")}
           </h2>
           <div className="mt-12 space-y-8">
-            {[
-              {
-                step: "1",
-                icon: Stethoscope,
-                title: "Create Your Profile",
-                desc: "Sign up and complete your doctor profile with credentials, specialties, and consultation fees.",
-                bg: "bg-teal-50 dark:bg-teal-950/30",
-                text: "text-teal-600",
-                ring: "ring-teal-200 dark:ring-teal-800",
-              },
-              {
-                step: "2",
-                icon: Shield,
-                title: "Get Verified",
-                desc: "Upload your medical license and certifications. Our team reviews and verifies within 24-48 hours.",
-                bg: "bg-blue-50 dark:bg-blue-950/30",
-                text: "text-blue-600",
-                ring: "ring-blue-200 dark:ring-blue-800",
-              },
-              {
-                step: "3",
-                icon: CreditCard,
-                title: "Choose Your Plan",
-                desc: "Select a plan that fits your practice. All paid plans include a 12-month commitment billed monthly.",
-                bg: "bg-violet-50 dark:bg-violet-950/30",
-                text: "text-violet-600",
-                ring: "ring-violet-200 dark:ring-violet-800",
-              },
-              {
-                step: "4",
-                icon: Zap,
-                title: "Start Receiving Patients",
-                desc: "Your profile goes live and patients can discover, book, and pay for appointments instantly.",
-                bg: "bg-amber-50 dark:bg-amber-950/30",
-                text: "text-amber-600",
-                ring: "ring-amber-200 dark:ring-amber-800",
-              },
-            ].map((item) => (
+            {gettingStartedSteps.map((item) => (
               <div key={item.step} className="flex gap-4">
                 <div
                   className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${item.bg} ring-1 ${item.ring}`}
@@ -591,12 +535,12 @@ export default function PricingPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold ${item.text}`}>
-                      Step {item.step}
+                      {t("step_label", { step: item.step })}
                     </span>
                   </div>
-                  <h3 className="font-semibold">{item.title}</h3>
+                  <h3 className="font-semibold">{t(`${item.key}_title`)}</h3>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {item.desc}
+                    {t(`${item.key}_desc`)}
                   </p>
                 </div>
               </div>
@@ -615,49 +559,17 @@ export default function PricingPage() {
                   <Stethoscope className="h-7 w-7 text-white" />
                 </div>
                 <h2 className="mt-5 text-2xl font-bold text-white md:text-3xl">
-                  Ready to Grow Your Practice?
+                  {t("cta_title")}
                 </h2>
                 <p className="mx-auto mt-3 max-w-xl text-white/80">
-                  Join hundreds of doctors already using MyDoctors360 to reach new
-                  patients and streamline their practice.
+                  {t("cta_subtitle")}
                 </p>
 
                 {/* USP Feature Grid */}
                 <div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-3">
-                  {[
-                    {
-                      icon: Calendar,
-                      title: "Smart Booking",
-                      desc: "Real-time calendar with instant patient booking",
-                    },
-                    {
-                      icon: Bell,
-                      title: "Auto Reminders",
-                      desc: "Reduce no-shows with email, SMS & WhatsApp",
-                    },
-                    {
-                      icon: BarChart3,
-                      title: "Revenue Analytics",
-                      desc: "Track earnings, bookings & growth metrics",
-                    },
-                    {
-                      icon: Shield,
-                      title: "Verified Profile",
-                      desc: "Build trust with a credential-verified badge",
-                    },
-                    {
-                      icon: CreditCard,
-                      title: "Secure Payments",
-                      desc: "Stripe-powered payouts directly to your bank",
-                    },
-                    {
-                      icon: Globe,
-                      title: "Multi-Language",
-                      desc: "Reach patients across Europe in 4 languages",
-                    },
-                  ].map((feature) => (
+                  {uspFeatures.map((feature) => (
                     <div
-                      key={feature.title}
+                      key={feature.key}
                       className="flex items-start gap-3 rounded-xl bg-white/10 p-4 text-left backdrop-blur-sm transition-colors hover:bg-white/15"
                     >
                       <feature.icon
@@ -665,10 +577,10 @@ export default function PricingPage() {
                       />
                       <div>
                         <p className="text-sm font-semibold text-white">
-                          {feature.title}
+                          {t(`${feature.key}_title`)}
                         </p>
                         <p className="mt-0.5 text-xs leading-relaxed text-white/70">
-                          {feature.desc}
+                          {t(`${feature.key}_desc`)}
                         </p>
                       </div>
                     </div>
@@ -681,7 +593,7 @@ export default function PricingPage() {
                   asChild
                 >
                   <Link href="/register-doctor?tier=professional">
-                    Join as a Doctor <ArrowRight className="ml-2 h-4 w-4" />
+                    {t("cta_join")} <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </div>
