@@ -1,10 +1,12 @@
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { Logo } from "@/components/brand/logo";
 import { PaymentIcons } from "@/components/brand/payment-icons";
 
-export function Footer() {
-  const t = useTranslations("footer");
+// Server component: takes the route locale explicitly — the implicit
+// useTranslations/getTranslations forms resolve to the default locale here.
+export async function Footer({ locale }: { locale: string }) {
+  const t = await getTranslations({ locale, namespace: "footer" });
 
   return (
     <footer className="border-t bg-muted/30">

@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/accordion";
 import { Link } from "@/i18n/navigation";
 import { Mail, FileText, MessageCircle, HelpCircle, BookOpen, ArrowRight } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
@@ -64,8 +63,13 @@ export async function generateMetadata({
   });
 }
 
-export default function SupportPage() {
-  const t = useTranslations("helpCenter");
+export default async function SupportPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "helpCenter" });
   return (
     <>
       {/* Hero */}

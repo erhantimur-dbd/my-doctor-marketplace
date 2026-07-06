@@ -325,7 +325,7 @@ export default async function HomePage({
         </div>
       </section>
 
-      <Footer />
+      <Footer locale={locale} />
       <ChatWidget />
     </div>
   );
