@@ -641,7 +641,11 @@
     "guest_phone": "Telefon",
     "guest_terms": "Ich stimme den AGB und der Datenschutzrichtlinie zu",
     "sign_in_instead": "Bereits registriert? Anmelden",
-    "change_type": "Besuchsart ändern"
+    "change_type": "Besuchsart ändern",
+    "reason_for_visit": "Besuchsgrund",
+    "reason_for_visit_desc": "Wählen Sie die Art des Termins. Das bestimmt Gebühr und Dauer.",
+    "reason_new_patient": "Erstvorstellung",
+    "reason_follow_up": "Folgetermin"
   },
   "doctor": {
     "verified": "Verifizierter Arzt",

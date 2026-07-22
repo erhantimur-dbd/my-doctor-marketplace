@@ -14,8 +14,6 @@ import {
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useChatStore } from "@/stores/chat-store";
-import { useUser } from "@/hooks/use-user";
-import { getAuthedHref } from "@/lib/chat/booking-href";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
 
@@ -41,8 +39,6 @@ export function ChatCompareView({
   const tCard = useTranslations("chat.card");
   const shortlist = useChatStore((s) => s.shortlist);
   const removeFromShortlist = useChatStore((s) => s.removeFromShortlist);
-  const { user } = useUser();
-  const isAuthenticated = !!user;
 
   if (shortlist.length < 2) {
     return (
@@ -206,10 +202,7 @@ export function ChatCompareView({
                 </div>
 
                 <Link
-                  href={getAuthedHref(`/doctors/${doctor.slug}/book`, {
-                    isAuthenticated,
-                    locale,
-                  })}
+                  href={`/doctors/${doctor.slug}/book`}
                   onClick={onBook}
                   className="m-3 inline-flex items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90"
                 >

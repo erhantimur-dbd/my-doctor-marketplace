@@ -475,46 +475,64 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Doctor's custom services */}
+                {/* Doctor's custom services — Book deep-links with ?service= */}
                 {doctorServices && doctorServices.length > 0 && (
                   <div className="space-y-2">
-                    {doctorServices.map((svc: any) => (
-                      <div
-                        key={svc.id}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-sm">
-                              {svc.name}
-                            </span>
-                            <Badge variant="secondary" className="text-xs">
-                              <Clock className="mr-1 h-3 w-3" />
-                              {svc.duration_minutes} min
-                            </Badge>
-                            <Badge variant="outline" className="text-xs">
-                              {svc.consultation_type === "both"
-                                ? "In-Person & Video"
-                                : svc.consultation_type === "video"
-                                  ? "Video"
-                                  : "In-Person"}
-                            </Badge>
+                    {doctorServices.map((svc: any) => {
+                      const typeParam =
+                        svc.consultation_type === "video"
+                          ? "video"
+                          : svc.consultation_type === "in_person"
+                            ? "in_person"
+                            : doctor.consultation_types?.includes("in_person")
+                              ? "in_person"
+                              : "video";
+                      const bookHref = `/doctors/${doctor.slug}/book?service=${encodeURIComponent(svc.id)}&type=${typeParam}`;
+                      return (
+                        <div
+                          key={svc.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border p-3"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm">
+                                {svc.name}
+                              </span>
+                              <Badge variant="secondary" className="text-xs">
+                                <Clock className="mr-1 h-3 w-3" />
+                                {svc.duration_minutes} min
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {svc.consultation_type === "both"
+                                  ? "In-Person & Video"
+                                  : svc.consultation_type === "video"
+                                    ? "Video"
+                                    : "In-Person"}
+                              </Badge>
+                            </div>
+                            {svc.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {svc.description}
+                              </p>
+                            )}
                           </div>
-                          {svc.description && (
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {svc.description}
-                            </p>
-                          )}
+                          <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+                            <span className="text-sm font-semibold">
+                              {formatCurrency(
+                                svc.price_cents,
+                                doctor.base_currency,
+                                locale
+                              )}
+                            </span>
+                            {hasActiveSubscription && (
+                              <Button size="sm" variant="outline" asChild>
+                                <Link href={bookHref}>Book</Link>
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-sm font-semibold shrink-0 ml-4">
-                          {formatCurrency(
-                            svc.price_cents,
-                            doctor.base_currency,
-                            locale
-                          )}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

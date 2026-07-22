@@ -348,7 +348,11 @@
     "guest_phone": "Phone",
     "guest_terms": "I agree to the Terms of Service and Privacy Policy",
     "sign_in_instead": "Already have an account? Sign in",
-    "change_type": "Change visit type"
+    "change_type": "Change visit type",
+    "reason_for_visit": "Reason for visit",
+    "reason_for_visit_desc": "Choose the type of appointment you need. This sets the fee and duration.",
+    "reason_new_patient": "New patient consultation",
+    "reason_follow_up": "Follow-up appointment"
   },
   "auth": {
     "login_title": "Welcome Back",

@@ -328,7 +328,11 @@
     "guest_phone": "Phone",
     "guest_terms": "I agree to the Terms of Service and Privacy Policy",
     "sign_in_instead": "Already have an account? Sign in",
-    "change_type": "Change visit type"
+    "change_type": "Change visit type",
+    "reason_for_visit": "受診理由",
+    "reason_for_visit_desc": "必要な予約の種類を選んでください。料金と時間が決まります。",
+    "reason_new_patient": "初診",
+    "reason_follow_up": "再診・フォローアップ"
   },
   "auth": {
     "login_title": "おかえりなさい",

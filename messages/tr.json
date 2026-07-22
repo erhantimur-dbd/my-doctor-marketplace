@@ -402,7 +402,11 @@
     "guest_phone": "Phone",
     "guest_terms": "I agree to the Terms of Service and Privacy Policy",
     "sign_in_instead": "Already have an account? Sign in",
-    "change_type": "Change visit type"
+    "change_type": "Change visit type",
+    "reason_for_visit": "Ziyaret nedeni",
+    "reason_for_visit_desc": "İhtiyacınız olan randevu türünü seçin. Ücret ve süre buna göre belirlenir.",
+    "reason_new_patient": "Yeni hasta muayenesi",
+    "reason_follow_up": "Kontrol randevusu"
   },
   "dashboard": {
     "welcome": "Tekrar hos geldiniz, {name}",

@@ -402,7 +402,11 @@
     "guest_phone": "Phone",
     "guest_terms": "I agree to the Terms of Service and Privacy Policy",
     "sign_in_instead": "Already have an account? Sign in",
-    "change_type": "Change visit type"
+    "change_type": "Change visit type",
+    "reason_for_visit": "Motif de consultation",
+    "reason_for_visit_desc": "Choisissez le type de rendez-vous. Cela définit le tarif et la durée.",
+    "reason_new_patient": "Première consultation",
+    "reason_follow_up": "Consultation de suivi"
   },
   "dashboard": {
     "welcome": "Bienvenue, {name}",

@@ -28,6 +28,8 @@ export interface BookRedirectContext {
   date?: string;
   time?: string;
   type?: string;
+  /** doctor_services.id when deep-linked as reason-for-visit */
+  service?: string;
   /** Full relative redirect path including query (safe for post-login). */
   redirectPath: string;
 }
@@ -72,6 +74,7 @@ export function parseBookRedirect(
     const date = url.searchParams.get("date") || undefined;
     const time = url.searchParams.get("time") || undefined;
     const type = url.searchParams.get("type") || undefined;
+    const service = url.searchParams.get("service") || undefined;
 
     return {
       locale,
@@ -79,6 +82,7 @@ export function parseBookRedirect(
       date,
       time,
       type,
+      service,
       redirectPath: redirectTo,
     };
   } catch {

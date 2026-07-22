@@ -20,13 +20,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { createBookingAndCheckout } from "@/actions/booking";
 import { formatCurrency, calculateDepositCents } from "@/lib/utils/currency";
@@ -114,6 +107,7 @@ interface SlotSelection {
 }
 
 const FOLLOWUP_SERVICE_ID = "__followup__";
+const NEW_PATIENT_SERVICE_ID = "__new_patient__";
 
 export function BookingWizard({
   doctor,
@@ -127,6 +121,7 @@ export function BookingWizard({
   const initialDate = searchParams.get("date"); // e.g. "2026-03-05" from availability chip
   const initialType = searchParams.get("type") as ConsultationType | null; // e.g. "in_person" or "video"
   const initialTime = searchParams.get("time"); // e.g. "07:00:00" from selected time slot
+  const initialServiceId = searchParams.get("service"); // optional service_id deep-link
 
   // Auto-select consultation type and skip to step 2 if valid type provided via URL
   const validInitialType =
@@ -155,11 +150,8 @@ export function BookingWizard({
   const [patientNotes, setPatientNotes] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  // Service selection state — default first visit when deep-linked with type
-  // so one-tap book from card/chat can proceed without re-answering.
-  const [isFirstVisit, setIsFirstVisit] = useState<boolean | null>(
-    validInitialType ? true : null
-  );
+  // Reason-for-visit (service) — prefilled when type is deep-linked so one-tap
+  // book from card/chat can proceed without an extra answer.
   const [selectedService, setSelectedService] = useState<ServiceOption | null>(
     null
   );
@@ -198,26 +190,74 @@ export function BookingWizard({
       )
     : [];
 
-  // Built-in follow-up option using doctor's default fee
+  const defaultFeeCents =
+    consultationType === "video" && doctor.video_consultation_fee_cents
+      ? doctor.video_consultation_fee_cents
+      : doctor.consultation_fee_cents;
+
+  // Reason-for-visit options: always include new patient + follow-up defaults
+  // plus any doctor-configured services (never an empty silent catalog).
+  const newPatientReason: ServiceOption = {
+    id: NEW_PATIENT_SERVICE_ID,
+    name: t("reason_new_patient"),
+    price_cents: defaultFeeCents,
+    duration_minutes: 30,
+    consultation_type: consultationType || "in_person",
+  };
   const followUpService: ServiceOption = {
     id: FOLLOWUP_SERVICE_ID,
-    name: "Follow-up Appointment",
-    price_cents:
-      consultationType === "video" && doctor.video_consultation_fee_cents
-        ? doctor.video_consultation_fee_cents
-        : doctor.consultation_fee_cents,
+    name: t("reason_follow_up"),
+    price_cents: defaultFeeCents,
     duration_minutes: 30,
     consultation_type: consultationType || "in_person",
   };
 
-  const allServiceOptions = [...filteredServices, followUpService];
+  const reasonOptions: ServiceOption[] = [
+    newPatientReason,
+    ...filteredServices,
+    followUpService,
+  ];
+
+  // Prefill reason: URL ?service=, else default new-patient when type is set
+  // (one-tap deep links must not block on missing reason).
+  useEffect(() => {
+    if (!consultationType) return;
+    if (selectedService) return;
+
+    if (initialServiceId) {
+      const match = services.find(
+        (s) =>
+          s.id === initialServiceId &&
+          (s.consultation_type === consultationType ||
+            s.consultation_type === "both")
+      );
+      if (match) {
+        setSelectedService(match);
+        return;
+      }
+    }
+
+    // Default reason so type step / one-tap review can proceed
+    setSelectedService({
+      id: NEW_PATIENT_SERVICE_ID,
+      name: t("reason_new_patient"),
+      price_cents: defaultFeeCents,
+      duration_minutes: 30,
+      consultation_type: consultationType,
+    });
+  }, [
+    consultationType,
+    initialServiceId,
+    services,
+    selectedService,
+    defaultFeeCents,
+    t,
+  ]);
 
   // Fee calculations — service-aware
   const consultationFeeCents = selectedService
     ? selectedService.price_cents
-    : consultationType === "video" && doctor.video_consultation_fee_cents
-      ? doctor.video_consultation_fee_cents
-      : doctor.consultation_fee_cents;
+    : defaultFeeCents;
 
   const totalAmountCents = consultationFeeCents;
 
@@ -268,9 +308,9 @@ export function BookingWizard({
   function canProceed(): boolean {
     if (currentStep === "patient") return true; // default is "self", always valid
     if (currentStep === "type") {
+      // Need type + a reason-for-visit (always selectedService after Phase 5)
       if (!consultationType) return false;
-      if (isFirstVisit === null) return false;
-      if (isFirstVisit === false && !selectedService) return false;
+      if (!selectedService) return false;
       return true;
     }
     if (currentStep === "schedule") return slotSelection !== null;
@@ -300,23 +340,38 @@ export function BookingWizard({
 
   function handleConsultationTypeChange(val: string) {
     setConsultationType(val as ConsultationType);
-    // Reset service selection when consultation type changes
-    setIsFirstVisit(null);
+    // Reset reason when consultation type changes (fees/durations differ)
     setSelectedService(null);
     setSlotSelection(null);
   }
 
-  function handleFirstVisitChange(val: string) {
-    const isFirst = val === "yes";
-    setIsFirstVisit(isFirst);
-    setSelectedService(null);
-    setSlotSelection(null);
+  function handleReasonSelect(reasonId: string) {
+    const reason = reasonOptions.find((s) => s.id === reasonId) || null;
+    setSelectedService(reason);
+    setSlotSelection(null); // duration may change
   }
 
-  function handleServiceSelect(serviceId: string) {
-    const svc = allServiceOptions.find((s) => s.id === serviceId) || null;
-    setSelectedService(svc);
-    setSlotSelection(null); // Reset slot since duration may change
+  /** Real doctor_services row id (not synthetic new-patient / follow-up). */
+  const realServiceId =
+    selectedService?.id &&
+    selectedService.id !== FOLLOWUP_SERVICE_ID &&
+    selectedService.id !== NEW_PATIENT_SERVICE_ID
+      ? selectedService.id
+      : undefined;
+
+  function bookPathWithContext(opts?: {
+    date?: string;
+    time?: string;
+    type?: ConsultationType | null;
+  }): string {
+    const params = new URLSearchParams();
+    const type = opts?.type ?? consultationType;
+    if (type) params.set("type", type);
+    if (opts?.date) params.set("date", opts.date);
+    if (opts?.time) params.set("time", opts.time);
+    if (realServiceId) params.set("service", realServiceId);
+    const qs = params.toString();
+    return `/doctors/${doctor.slug}/book${qs ? `?${qs}` : ""}`;
   }
 
   const handleSlotSelect = useCallback((date: string, startTime: string, endTime: string) => {
@@ -357,9 +412,7 @@ export function BookingWizard({
         end_time: slotSelection.endTime,
         consultation_type: consultationType,
         patient_notes: patientNotes || undefined,
-        service_id: selectedService?.id && selectedService.id !== FOLLOWUP_SERVICE_ID
-          ? selectedService.id
-          : undefined,
+        service_id: realServiceId,
         duration_minutes: selectedService?.duration_minutes || undefined,
         dependent_id: selectedDependent?.id || undefined,
         dependent_name: selectedDependent
@@ -382,7 +435,11 @@ export function BookingWizard({
           const q = new URLSearchParams();
           q.set(
             "redirect",
-            `/${locale}/doctors/${doctor.slug}/book?date=${slotSelection.date}&type=${consultationType}&time=${encodeURIComponent(slotSelection.startTime)}`
+            `/${locale}${bookPathWithContext({
+              date: slotSelection.date,
+              time: slotSelection.startTime,
+              type: consultationType,
+            })}`
           );
           window.location.href = `/${locale}/login?${q.toString()}`;
         }
@@ -621,116 +678,67 @@ export function BookingWizard({
               )}
             </RadioGroup>
 
-            {/* First-visit question */}
+            {/* Reason for visit — always required (defaults when doctor has no services) */}
             {consultationType && (
               <>
                 <Separator />
                 <div className="space-y-3">
-                  <Label className="text-base font-medium">
-                    Is this your first visit with this doctor?
-                  </Label>
+                  <div>
+                    <Label className="text-base font-medium">
+                      {t("reason_for_visit")}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {t("reason_for_visit_desc")}
+                    </p>
+                  </div>
                   <RadioGroup
-                    value={
-                      isFirstVisit === null
-                        ? ""
-                        : isFirstVisit
-                          ? "yes"
-                          : "no"
-                    }
-                    onValueChange={handleFirstVisitChange}
-                    className="grid gap-3 md:grid-cols-2"
+                    value={selectedService?.id || ""}
+                    onValueChange={handleReasonSelect}
+                    className="grid gap-3"
                   >
-                    <Label
-                      htmlFor="first-visit-yes"
-                      className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-accent ${
-                        isFirstVisit === true
-                          ? "border-primary bg-primary/5"
-                          : ""
-                      }`}
-                    >
-                      <RadioGroupItem value="yes" id="first-visit-yes" />
-                      <div>
-                        <span className="font-medium text-sm">Yes, first visit</span>
-                        <p className="text-xs text-muted-foreground">
-                          Standard consultation at the default fee
+                    {reasonOptions.map((reason) => (
+                      <Label
+                        key={reason.id}
+                        htmlFor={`reason-${reason.id}`}
+                        className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-accent ${
+                          selectedService?.id === reason.id
+                            ? "border-primary bg-primary/5"
+                            : ""
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <RadioGroupItem
+                            value={reason.id}
+                            id={`reason-${reason.id}`}
+                          />
+                          <div className="min-w-0">
+                            <span className="font-medium text-sm">
+                              {reason.name}
+                            </span>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Clock className="h-3 w-3" />
+                              {t("service_duration_label", {
+                                minutes: reason.duration_minutes,
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="shrink-0 text-sm font-semibold">
+                          {formatCurrency(
+                            reason.price_cents,
+                            doctor.base_currency
+                          )}
                         </p>
-                      </div>
-                    </Label>
-                    <Label
-                      htmlFor="first-visit-no"
-                      className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-accent ${
-                        isFirstVisit === false
-                          ? "border-primary bg-primary/5"
-                          : ""
-                      }`}
-                    >
-                      <RadioGroupItem value="no" id="first-visit-no" />
-                      <div>
-                        <span className="font-medium text-sm">No, I&apos;ve visited before</span>
-                        <p className="text-xs text-muted-foreground">
-                          Select a specific service below
-                        </p>
-                      </div>
-                    </Label>
+                      </Label>
+                    ))}
                   </RadioGroup>
                 </div>
-
-                {/* Service selection — for returning patients */}
-                {isFirstVisit === false && (
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">
-                      Select a service
-                    </Label>
-                    <Select
-                      value={selectedService?.id || ""}
-                      onValueChange={handleServiceSelect}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choose the service you need..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allServiceOptions.map((svc) => (
-                          <SelectItem key={svc.id} value={svc.id}>
-                            <div className="flex items-center gap-2">
-                              <span>{svc.name}</span>
-                              <span className="text-muted-foreground">
-                                — {formatCurrency(svc.price_cents, doctor.base_currency)}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                ({svc.duration_minutes} min)
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedService && (
-                      <div className="rounded-md bg-primary/5 p-3 mt-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">{selectedService.name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <Badge variant="secondary" className="text-xs">
-                                <Clock className="mr-1 h-3 w-3" />
-                                {selectedService.duration_minutes} min
-                              </Badge>
-                            </div>
-                          </div>
-                          <p className="text-lg font-semibold">
-                            {formatCurrency(selectedService.price_cents, doctor.base_currency)}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
               </>
             )}
           </CardContent>
           <CardFooter className="justify-end">
             <Button onClick={handleNext} disabled={!canProceed()}>
-              Next
+              {t("next")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
@@ -861,7 +869,13 @@ export function BookingWizard({
                 </div>
                 <p className="text-sm">
                   <Link
-                    href={`/login?redirect=${encodeURIComponent(`/${locale}/doctors/${doctor.slug}/book?date=${slotSelection.date}&type=${consultationType}&time=${encodeURIComponent(slotSelection.startTime)}`)}`}
+                    href={`/login?redirect=${encodeURIComponent(
+                      `/${locale}${bookPathWithContext({
+                        date: slotSelection.date,
+                        time: slotSelection.startTime,
+                        type: consultationType,
+                      })}`
+                    )}`}
                     className="text-primary hover:underline"
                   >
                     {t("sign_in_instead")}
@@ -951,19 +965,23 @@ export function BookingWizard({
                   </Badge>
                 </div>
 
-                {/* Selected Service */}
+                {/* Reason for visit */}
                 {selectedService && (
                   <>
                     <Separator />
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm">
                         <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Service</span>
+                        <span className="text-muted-foreground">
+                          {t("reason_for_visit")}
+                        </span>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">{selectedService.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {selectedService.duration_minutes} min
+                          {t("service_duration_label", {
+                            minutes: selectedService.duration_minutes,
+                          })}
                         </p>
                       </div>
                     </div>

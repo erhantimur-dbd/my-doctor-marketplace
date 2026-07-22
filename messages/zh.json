@@ -334,7 +334,11 @@
     "guest_phone": "Phone",
     "guest_terms": "I agree to the Terms of Service and Privacy Policy",
     "sign_in_instead": "Already have an account? Sign in",
-    "change_type": "Change visit type"
+    "change_type": "Change visit type",
+    "reason_for_visit": "就诊原因",
+    "reason_for_visit_desc": "选择预约类型，将决定费用与时长。",
+    "reason_new_patient": "新患者问诊",
+    "reason_follow_up": "复诊"
   },
   "auth": {
     "login_title": "欢迎回来",

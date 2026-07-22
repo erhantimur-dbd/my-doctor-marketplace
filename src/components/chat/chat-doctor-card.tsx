@@ -16,8 +16,6 @@ import { StarRating } from "@/components/shared/star-rating";
 import { formatCurrency } from "@/lib/utils/currency";
 import { cn } from "@/lib/utils";
 import { useChatStore, SHORTLIST_LIMIT } from "@/stores/chat-store";
-import { useUser } from "@/hooks/use-user";
-import { getAuthedHref } from "@/lib/chat/booking-href";
 import type { ChatDoctor, ChatDoctorSlot } from "@/lib/chat/tools";
 
 interface ChatDoctorCardProps {
@@ -32,12 +30,8 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
   const toggleShortlist = useChatStore((s) => s.toggleShortlist);
   const saved = shortlist.some((d) => d.id === doctor.id);
   const atLimit = !saved && shortlist.length >= SHORTLIST_LIMIT;
-  const { user } = useUser();
-  const isAuthenticated = !!user;
-  const bookHref = getAuthedHref(`/doctors/${doctor.slug}/book`, {
-    isAuthenticated,
-    locale,
-  });
+  // Progressive guest checkout: go straight to book wizard (no login wall)
+  const bookHref = `/doctors/${doctor.slug}/book`;
   // Defensive fallbacks for doctor objects rehydrated from an older cached
   // session that pre-dates allSpecialties / allSkills / slotsByType fields.
   const allSpecialties =
@@ -210,7 +204,6 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
               slots={inPersonSlots}
               doctorSlug={doctor.slug}
               locale={locale}
-              isAuthenticated={isAuthenticated}
               onBook={onBook}
             />
           )}
@@ -223,7 +216,6 @@ export function ChatDoctorCard({ doctor, locale, onBook }: ChatDoctorCardProps) 
               slots={videoSlots}
               doctorSlug={doctor.slug}
               locale={locale}
-              isAuthenticated={isAuthenticated}
               onBook={onBook}
               variant="video"
             />
@@ -276,8 +268,6 @@ function SlotRow({
   label,
   slots,
   doctorSlug,
-  locale,
-  isAuthenticated,
   onBook,
   variant = "in_person",
 }: {
@@ -286,7 +276,6 @@ function SlotRow({
   slots: ChatDoctorSlot[];
   doctorSlug: string;
   locale: string;
-  isAuthenticated: boolean;
   onBook?: () => void;
   variant?: "in_person" | "video";
 }) {
@@ -302,8 +291,6 @@ function SlotRow({
             key={`${slot.date}-${slot.start}`}
             doctorSlug={doctorSlug}
             slot={slot}
-            locale={locale}
-            isAuthenticated={isAuthenticated}
             onBook={onBook}
             variant={variant}
           />
@@ -316,21 +303,17 @@ function SlotRow({
 function SlotPill({
   doctorSlug,
   slot,
-  locale,
-  isAuthenticated,
   onBook,
   variant = "in_person",
 }: {
   doctorSlug: string;
   slot: ChatDoctorSlot;
-  locale: string;
-  isAuthenticated: boolean;
   onBook?: () => void;
   variant?: "in_person" | "video";
 }) {
   const startTime = slot.start.slice(11, 16);
-  const slotPath = `/doctors/${doctorSlug}/book?date=${slot.date}&time=${encodeURIComponent(slot.start)}&type=${slot.consultationType}`;
-  const href = getAuthedHref(slotPath, { isAuthenticated, locale });
+  // Guest checkout: deep-link straight into wizard with slot prefilled
+  const href = `/doctors/${doctorSlug}/book?date=${slot.date}&time=${encodeURIComponent(slot.start)}&type=${slot.consultationType}`;
   return (
     <Link
       href={href}

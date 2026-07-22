@@ -328,7 +328,11 @@
     "guest_phone": "Phone",
     "guest_terms": "I agree to the Terms of Service and Privacy Policy",
     "sign_in_instead": "Already have an account? Sign in",
-    "change_type": "Change visit type"
+    "change_type": "Change visit type",
+    "reason_for_visit": "Motivo de la visita",
+    "reason_for_visit_desc": "Elige el tipo de cita. Esto define la tarifa y la duración.",
+    "reason_new_patient": "Consulta de nuevo paciente",
+    "reason_follow_up": "Cita de seguimiento"
   },
   "auth": {
     "login_title": "Bienvenido de Nuevo",

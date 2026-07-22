@@ -328,7 +328,11 @@
     "guest_phone": "Phone",
     "guest_terms": "I agree to the Terms of Service and Privacy Policy",
     "sign_in_instead": "Already have an account? Sign in",
-    "change_type": "Change visit type"
+    "change_type": "Change visit type",
+    "reason_for_visit": "Motivo della visita",
+    "reason_for_visit_desc": "Scegli il tipo di appuntamento. Determina tariffa e durata.",
+    "reason_new_patient": "Prima visita",
+    "reason_follow_up": "Visita di controllo"
   },
   "auth": {
     "login_title": "Bentornato",

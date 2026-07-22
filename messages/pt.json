@@ -328,7 +328,11 @@
     "guest_phone": "Phone",
     "guest_terms": "I agree to the Terms of Service and Privacy Policy",
     "sign_in_instead": "Already have an account? Sign in",
-    "change_type": "Change visit type"
+    "change_type": "Change visit type",
+    "reason_for_visit": "Motivo da consulta",
+    "reason_for_visit_desc": "Escolha o tipo de consulta. Isto define o preço e a duração.",
+    "reason_new_patient": "Consulta de novo paciente",
+    "reason_follow_up": "Consulta de seguimento"
   },
   "auth": {
     "login_title": "Bem-vindo de Volta",
