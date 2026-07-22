@@ -129,18 +129,32 @@ export function useGrokStt(
     chunksRef.current = [];
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+      });
       streamRef.current = stream;
 
-      const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : MediaRecorder.isTypeSupported("audio/webm")
-          ? "audio/webm"
-          : "";
+      // Prefer webm; fall back for Safari (often mp4 / no explicit type)
+      const mimeCandidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/aac",
+      ];
+      const mime =
+        mimeCandidates.find((t) => MediaRecorder.isTypeSupported(t)) || "";
 
-      const recorder = mime
-        ? new MediaRecorder(stream, { mimeType: mime })
-        : new MediaRecorder(stream);
+      let recorder: MediaRecorder;
+      try {
+        recorder = mime
+          ? new MediaRecorder(stream, { mimeType: mime })
+          : new MediaRecorder(stream);
+      } catch {
+        recorder = new MediaRecorder(stream);
+      }
 
       mediaRecorderRef.current = recorder;
 
@@ -148,9 +162,16 @@ export function useGrokStt(
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
+      recorder.onerror = () => {
+        setError("stt-failed");
+        setStatus("error");
+        onErrorRef.current?.("stt-failed");
+        cleanupStream();
+      };
+
       recorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
+          type: recorder.mimeType || mime || "audio/webm",
         });
         cleanupStream();
         if (blob.size === 0) {
@@ -162,7 +183,12 @@ export function useGrokStt(
         await transcribe(blob);
       };
 
-      recorder.start(250);
+      // Some browsers require timeslice; others only emit data on stop
+      try {
+        recorder.start(250);
+      } catch {
+        recorder.start();
+      }
       setStatus("recording");
       maxTimerRef.current = setTimeout(() => stop(), maxMs);
     } catch {

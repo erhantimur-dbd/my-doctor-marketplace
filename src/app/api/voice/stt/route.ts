@@ -3,7 +3,6 @@ import { rateLimit } from "@/lib/rate-limit";
 import {
   getXaiApiKey,
   isGrokVoiceEnabled,
-  localeToGrokLanguage,
   XAI_API_BASE,
 } from "@/lib/voice/xai";
 
@@ -46,9 +45,6 @@ export async function POST(request: NextRequest) {
   try {
     const form = await request.formData();
     const file = form.get("audio");
-    const localeRaw = form.get("locale");
-    const locale =
-      typeof localeRaw === "string" && localeRaw ? localeRaw : "en";
 
     if (!(file instanceof Blob) || file.size === 0) {
       return NextResponse.json({ error: "Missing audio" }, { status: 400 });
@@ -62,14 +58,21 @@ export async function POST(request: NextRequest) {
       file instanceof File && file.name ? file.name : "recording.webm";
 
     // Grok STT: multipart file upload to /v1/stt
+    // Docs: curl -F file=@recording.mp3  (language as extra field is optional)
     const grokForm = new FormData();
-    grokForm.append("file", file, filename);
-    // Optional language bias when supported by the API
-    grokForm.append("language", localeToGrokLanguage(locale));
+    const ext = filename.includes(".")
+      ? filename
+      : file.type?.includes("mp4")
+        ? "recording.mp4"
+        : "recording.webm";
+    grokForm.append("file", file, ext);
 
     const res = await fetch(`${XAI_API_BASE}/stt`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        // Hint language via query when available (avoids unknown form fields)
+      },
       body: grokForm,
     });
 

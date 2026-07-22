@@ -64,10 +64,14 @@ export function FloatingMic() {
   const ensurePrivacyThen = useCallback(
     (action: () => void) => {
       if (typeof window === "undefined") return;
-      const raw = localStorage.getItem(VOICE_PRIVACY_STORAGE_KEY);
-      if (hasAcceptedVoicePrivacy(raw)) {
-        action();
-        return;
+      try {
+        const raw = localStorage.getItem(VOICE_PRIVACY_STORAGE_KEY);
+        if (hasAcceptedVoicePrivacy(raw)) {
+          action();
+          return;
+        }
+      } catch {
+        // private mode / blocked storage — still show notice once per session
       }
       setPendingStart(true);
       setShowPrivacy(true);
@@ -76,14 +80,19 @@ export function FloatingMic() {
   );
 
   const handleAcceptPrivacy = () => {
-    const consent = buildVoicePrivacyConsent(true);
-    localStorage.setItem(
-      VOICE_PRIVACY_STORAGE_KEY,
-      serializeVoicePrivacyConsent(consent)
-    );
+    try {
+      const consent = buildVoicePrivacyConsent(true);
+      localStorage.setItem(
+        VOICE_PRIVACY_STORAGE_KEY,
+        serializeVoicePrivacyConsent(consent)
+      );
+    } catch {
+      // ignore storage failures; still proceed this session
+    }
     setShowPrivacy(false);
     if (pendingStart) {
       setPendingStart(false);
+      toast.message(t("mic_listening"));
       void stt.start();
     }
   };
@@ -96,10 +105,16 @@ export function FloatingMic() {
   const handleMicClick = () => {
     if (stt.isRecording) {
       stt.stop();
+      toast.message(t("mic_processing"));
       return;
     }
     if (stt.isProcessing) return;
+    if (!stt.isSupported) {
+      toast.error(t("error_unsupported"));
+      return;
+    }
     ensurePrivacyThen(() => {
+      toast.message(t("mic_listening"));
       void stt.start();
     });
   };

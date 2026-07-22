@@ -25,12 +25,13 @@ export function VoicePrivacyNotice({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      // Above cookie banner (9999) and floating mic (10050)
+      className="fixed inset-0 z-[10060] flex items-end justify-center bg-black/50 p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-labelledby="voice-privacy-title"
     >
-      <Card className="w-full max-w-md shadow-lg">
+      <Card className="w-full max-w-md shadow-2xl">
         <CardHeader>
           <CardTitle
             id="voice-privacy-title"
@@ -42,7 +43,6 @@ export function VoicePrivacyNotice({
           <CardDescription>{t("privacy_body")}</CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          {/* Reinforces GDPR: process, do not store */}
           <p>{t("privacy_body")}</p>
         </CardContent>
         <CardFooter className="flex justify-end gap-2">
