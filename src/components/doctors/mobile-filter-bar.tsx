@@ -165,13 +165,16 @@ export function MobileFilterBar({
         {t("wheelchair_accessible")}
       </button>
 
-      {/* Sort dropdown */}
+      {/* Sort dropdown — labelled for discoverability */}
       <Select
         value={currentFilters.sort || "featured"}
         onValueChange={(v) => updateFilter("sort", v)}
       >
-        <SelectTrigger className="h-8 w-auto shrink-0 gap-1 rounded-full border px-3 text-sm font-medium [&>svg]:h-3.5 [&>svg]:w-3.5">
-          <SelectValue />
+        <SelectTrigger
+          className="h-8 w-auto min-w-[9.5rem] shrink-0 gap-1 rounded-full border px-3 text-sm font-medium [&>svg]:h-3.5 [&>svg]:w-3.5"
+          aria-label={t("sort_by")}
+        >
+          <SelectValue placeholder={t("sort_by")} />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="soonest">{t("sort_soonest")}</SelectItem>

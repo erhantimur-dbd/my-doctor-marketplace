@@ -23,6 +23,7 @@ import { SpecialtyMarquee } from "@/components/shared/specialty-marquee";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { HowItWorksSection } from "@/components/home/how-it-works-section";
 import { ChatWidget } from "@/components/chat/chat-widget";
+import { CONDITION_HUBS } from "@/lib/constants/condition-hubs";
 
 const allSpecialties = [
   { slug: "general-practice", icon: "Stethoscope", key: "general_practice" },
@@ -105,6 +106,46 @@ export default async function HomePage() {
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 drop-shadow-sm" />
               <span>{t("trusted_by")}</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Browse by condition — conversion discovery hubs */}
+      <section className="px-4 py-12 md:py-16">
+        <div className="container mx-auto">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold md:text-3xl">
+                Browse by condition
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground md:text-base">
+                Start with a concern — we&apos;ll match you to the right specialists
+              </p>
+            </div>
+            <Button variant="ghost" asChild className="shrink-0">
+              <Link href="/conditions" className="gap-1">
+                View all <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+          <div className="mt-6 grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+            {CONDITION_HUBS.slice(0, 8).map((hub) => (
+              <Link
+                key={hub.slug}
+                href={`/conditions/${hub.slug}`}
+                className="rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:shadow-md"
+              >
+                <span className="text-xl" aria-hidden>
+                  {hub.emoji}
+                </span>
+                <p className="mt-2 text-sm font-semibold leading-snug">
+                  {hub.title}
+                </p>
+                <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                  {hub.description}
+                </p>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

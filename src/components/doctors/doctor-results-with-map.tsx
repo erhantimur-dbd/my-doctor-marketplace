@@ -32,6 +32,7 @@ interface DoctorResultsWithMapProps {
   matchScores?: Record<string, { score: number; reasons: string[] }>;
   distances?: Record<string, number>;
   liveAvailability?: Record<string, boolean>;
+  topEndorsements?: Record<string, { label: string; count: number }[]>;
 }
 
 export function DoctorResultsWithMap({
@@ -42,6 +43,7 @@ export function DoctorResultsWithMap({
   matchScores,
   distances,
   liveAvailability = {},
+  topEndorsements = {},
 }: DoctorResultsWithMapProps) {
   const [hoveredDoctorId, setHoveredDoctorId] = useState<string | null>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -140,6 +142,7 @@ export function DoctorResultsWithMap({
               matchReasons={matchScores?.[doctor.id]?.reasons}
               distanceKm={distances?.[doctor.id]}
               liveAvailable={!!liveAvailability[doctor.id]}
+              topEndorsements={topEndorsements[doctor.id]}
             />
           </div>
         ))}

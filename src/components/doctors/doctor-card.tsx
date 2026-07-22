@@ -77,10 +77,12 @@ interface DoctorCardProps {
   distanceKm?: number;
   /** Show "Available Now" live badge inside the card */
   liveAvailable?: boolean;
+  /** Top patient skill endorsements (Doctify-style trust) */
+  topEndorsements?: { label: string; count: number }[];
 }
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
-  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact, distanceKm, liveAvailable }, ref) {
+  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact, distanceKm, liveAvailable, topEndorsements }, ref) {
     const router = useRouter();
     const { currency: displayCurrency, convert } = useCurrency();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -321,6 +323,23 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                               +{hiddenSkillCount}
                             </Badge>
                           )}
+                        </div>
+                      )}
+
+                      {/* Peer / patient endorsements */}
+                      {topEndorsements && topEndorsements.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {topEndorsements.map((e) => (
+                            <span
+                              key={e.label}
+                              className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200"
+                            >
+                              ★ {e.label}
+                              <span className="text-amber-600/80 dark:text-amber-300/80">
+                                · {e.count}
+                              </span>
+                            </span>
+                          ))}
                         </div>
                       )}
 

@@ -677,18 +677,23 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                       No skill endorsements yet. Patients can endorse skills when they leave a review.
                     </p>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {endorsements.map((e) => (
-                        <div
-                          key={e.slug}
-                          className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-sm"
-                        >
-                          <span>{e.label}</span>
-                          <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
-                            {e.count}
-                          </span>
-                        </div>
-                      ))}
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Recommended by patients for:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {endorsements.map((e) => (
+                          <div
+                            key={e.slug}
+                            className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-sm dark:border-amber-900/50 dark:bg-amber-950/40"
+                          >
+                            <span className="font-medium">{e.label}</span>
+                            <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
+                              {e.count}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </TabsContent>

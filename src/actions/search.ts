@@ -497,10 +497,10 @@ export async function searchDoctors(filters: SearchFilters) {
   // "Soonest" sort: order by earliest bookable slot (next-available RPC), then page.
   // Doctors with no slots in the window sink to the end.
   if (filters.sort === "soonest") {
-    const { data: idRows, count: soonestCount, error: idError } = await query.select(
-      "id",
-      { count: "exact" }
-    );
+    // Replace projection to IDs only (builder already has count:exact from initial select).
+    // Do not pass a second options arg — TS builder type after chained filters
+    // only accepts 0–1 select arguments and that broke the Phase 3 production build.
+    const { data: idRows, error: idError } = await query.select("id");
 
     if (idError) {
       log.error("Soonest sort ID query error:", { err: idError });
@@ -508,7 +508,7 @@ export async function searchDoctors(filters: SearchFilters) {
     }
 
     const allIds = (idRows || []).map((r: { id: string }) => r.id);
-    const total = soonestCount ?? allIds.length;
+    const total = allIds.length;
 
     if (allIds.length === 0) {
       return { doctors: [], total: 0, page, perPage };

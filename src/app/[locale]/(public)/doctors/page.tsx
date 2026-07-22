@@ -7,6 +7,7 @@ import {
   getFeaturedDoctors,
 } from "@/actions/search";
 import { getLiveDoctorAvailability } from "@/actions/live-availability";
+import { getTopEndorsementsBatch } from "@/actions/reviews";
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
@@ -89,11 +90,12 @@ export default async function DoctorsPage({
   >[0]["doctor"][];
   const matchScores = result.matchScores;
 
-  // Fetch multi-day availability + live status for all returned doctors
+  // Fetch multi-day availability + live status + endorsements for all returned doctors
   const doctorIds = typedDoctors.map((d) => d.id);
-  const [availability, liveStatus] = await Promise.all([
+  const [availability, liveStatus, topEndorsements] = await Promise.all([
     getMultiDayAvailabilityBatch(doctorIds, sp.consultationType),
     getLiveDoctorAvailability(doctorIds),
+    getTopEndorsementsBatch(doctorIds, 2),
   ]);
 
   const distances = result.distances;
@@ -313,6 +315,7 @@ export default async function DoctorsPage({
               matchScores={matchScores}
               distances={distances}
               liveAvailability={liveStatus}
+              topEndorsements={topEndorsements}
             />
           )}
 

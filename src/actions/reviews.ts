@@ -81,6 +81,44 @@ export async function getDoctorEndorsementCounts(
     .sort((a, b) => b.count - a.count);
 }
 
+/**
+ * Batch top endorsement labels for doctor cards (single query).
+ * Returns map of doctorId → top N labels by count.
+ */
+export async function getTopEndorsementsBatch(
+  doctorIds: string[],
+  topN: number = 2
+): Promise<Record<string, { label: string; count: number }[]>> {
+  if (doctorIds.length === 0) return {};
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("review_endorsements")
+    .select("doctor_id, skill_slug")
+    .in("doctor_id", doctorIds);
+
+  if (error || !data) return {};
+
+  const perDoctor = new Map<string, Map<string, number>>();
+  for (const row of data as { doctor_id: string; skill_slug: string }[]) {
+    if (!perDoctor.has(row.doctor_id)) perDoctor.set(row.doctor_id, new Map());
+    const m = perDoctor.get(row.doctor_id)!;
+    m.set(row.skill_slug, (m.get(row.skill_slug) ?? 0) + 1);
+  }
+
+  const result: Record<string, { label: string; count: number }[]> = {};
+  for (const [doctorId, counts] of perDoctor) {
+    result[doctorId] = Array.from(counts.entries())
+      .map(([slug, count]) => ({
+        label: getSkill(slug)?.label ?? slug,
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, topN);
+  }
+  return result;
+}
+
 export async function submitReview(formData: FormData) {
   const supabase = await createClient();
   const {
