@@ -123,7 +123,11 @@ export function FloatingMic() {
           onDecline={handleDeclinePrivacy}
         />
       )}
-      <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-2 sm:bottom-6">
+      {/* Bottom-left so it never sits under the AI chat launcher (bottom-right, z 9998). */}
+      <div
+        className="fixed bottom-6 left-4 z-[9990] flex flex-col items-start gap-2 pb-[env(safe-area-inset-bottom)]"
+        data-testid="floating-mic"
+      >
         {lastText && (
           <Button
             type="button"
