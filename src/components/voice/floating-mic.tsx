@@ -45,10 +45,22 @@ export function FloatingMic() {
   const stt = useGrokStt({
     locale,
     onResult: (text) => {
-      setLastText(text);
-      // Navigate to search — user still picks a doctor and confirms booking
-      const q = encodeURIComponent(text);
-      router.push(`/doctors?q=${q}`);
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      setLastText(trimmed);
+      // Find a Doctor uses ?query= (not q) — always land on search results.
+      // Preserve existing filters when already on /doctors.
+      const params = new URLSearchParams(
+        typeof window !== "undefined" &&
+          (pathname === "/doctors" || pathname?.startsWith("/doctors"))
+          ? window.location.search
+          : ""
+      );
+      params.delete("page");
+      params.set("query", trimmed);
+      const qs = params.toString();
+      router.push(`/doctors?${qs}`);
+      // TTS is opt-in via the speaker button (lastText), not auto-play
     },
     onError: (code) => {
       if (code === "not-allowed") toast.error(t("error_permission"));
@@ -146,8 +158,7 @@ export function FloatingMic() {
         - Chat launcher owns bottom-right (z 9998).
         - Cookie banner is full-width bottom at z 9999 — sit above it (z 10050)
           and lift off the bottom edge so it is not covered.
-        - Soft-launch: homepage is static coming-soon (no React). Mic only on
-          real app routes e.g. /pricing, /about, /how-it-works, /contact.
+        - Primary targets: homepage + /doctors (soft-launch allowlisted).
       */}
       <div
         className="pointer-events-none fixed inset-x-0 bottom-0 z-[10050] flex justify-start p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-5"

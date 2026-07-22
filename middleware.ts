@@ -51,6 +51,11 @@ const COMING_SOON_HOSTS = [
 // as a prefix that ends with "/" (e.g. "/doctor-dashboard/" matches all
 // sub-routes).
 const COMING_SOON_ALLOWED_PREFIXES = [
+  // Patient discovery (voice AI + search) — homepage and Find a Doctor
+  // Exact "/" only (see isAllowedOnComingSoon); not a prefix of all paths.
+  "/",
+  "/doctors",
+  "/doctors/",
   // Auth flow
   "/login",
   "/register",
@@ -89,9 +94,18 @@ function isAllowedOnComingSoon(pathname: string): boolean {
   if (COMING_SOON_ROOT_ALLOWED.has(pathname)) return true;
   // Strip the locale prefix so the allowlist stays locale-agnostic.
   const withoutLocale = getPathnameWithoutLocale(pathname);
-  return COMING_SOON_ALLOWED_PREFIXES.some(
-    (entry) => withoutLocale === entry || withoutLocale.startsWith(entry + "/")
-  );
+  // Normalize trailing slash except for root
+  const path =
+    withoutLocale.length > 1 && withoutLocale.endsWith("/")
+      ? withoutLocale.slice(0, -1)
+      : withoutLocale || "/";
+  return COMING_SOON_ALLOWED_PREFIXES.some((entry) => {
+    if (entry === "/") return path === "/";
+    if (entry.endsWith("/")) {
+      return path === entry.slice(0, -1) || path.startsWith(entry);
+    }
+    return path === entry || path.startsWith(entry + "/");
+  });
 }
 
 export async function middleware(request: NextRequest) {

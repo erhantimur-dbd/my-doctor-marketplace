@@ -11,6 +11,7 @@ import { AnalyticsScripts } from "@/components/shared/analytics-scripts";
 import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { NavigationProgress } from "@/components/shared/navigation-progress";
+import { FloatingMic } from "@/components/voice/floating-mic";
 import { organizationJsonLd } from "@/lib/seo/json-ld";
 
 const geistSans = Geist({
@@ -101,6 +102,8 @@ export default async function LocaleLayout({
               <CookieConsentBanner />
               <PwaInstallPrompt />
               <CommandPalette />
+              {/* Grok Voice — homepage + Find a Doctor (and other public shells) */}
+              <FloatingMic />
             </AuthProvider>
           </CurrencyProvider>
         </NextIntlClientProvider>
