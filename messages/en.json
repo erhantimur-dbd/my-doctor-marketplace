@@ -125,7 +125,12 @@
     "suggestions_specialists": "Specialists",
     "same_day_title": "Same-Day Appointments Available",
     "same_day_subtitle": "{count, plural, one {# doctor is} other {# doctors are}} available for appointments today",
-    "same_day_cta": "Book for Today"
+    "same_day_cta": "Book for Today",
+    "voice_search": "Voice search",
+    "voice_stop": "Stop listening",
+    "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
+    "voice_search_applied": "Searching with your voice…",
+    "voice_error_generic": "Voice search failed. Please try again."
   },
   "doctor": {
     "verified": "Verified Doctor",

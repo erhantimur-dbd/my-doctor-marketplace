@@ -123,7 +123,12 @@
     "suggestions_specialists": "専門医",
     "same_day_title": "本日予約可能",
     "same_day_subtitle": "{count}人の医師が本日予約可能です",
-    "same_day_cta": "本日の予約をする"
+    "same_day_cta": "本日の予約をする",
+    "voice_search": "Voice search",
+    "voice_stop": "Stop listening",
+    "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
+    "voice_search_applied": "Searching with your voice…",
+    "voice_error_generic": "Voice search failed. Please try again."
   },
   "doctor": {
     "verified": "認証済み医師",

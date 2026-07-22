@@ -125,7 +125,12 @@
     "suggestions_goes_to": "→ {specialty}",
     "same_day_title": "Termine noch heute verfügbar",
     "same_day_subtitle": "{count, plural, one {# Arzt ist} other {# Ärzte sind}} heute noch für Termine verfügbar",
-    "same_day_cta": "Heute buchen"
+    "same_day_cta": "Heute buchen",
+    "voice_search": "Sprachsuche",
+    "voice_stop": "Aufnahme stoppen",
+    "voice_search_hint": "Sprechen zum Suchen (Grok). Für den Sprachassistenten den Chat-Mic nutzen.",
+    "voice_search_applied": "Suche mit Ihrer Stimme…",
+    "voice_error_generic": "Sprachsuche fehlgeschlagen. Bitte erneut versuchen."
   },
   "auth": {
     "login_title": "Willkommen zuruck",

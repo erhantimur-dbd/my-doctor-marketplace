@@ -123,7 +123,12 @@
     "suggestions_specialists": "专科医生",
     "same_day_title": "今日可预约",
     "same_day_subtitle": "{count} 位医生今日有空余预约时段",
-    "same_day_cta": "预约今日就诊"
+    "same_day_cta": "预约今日就诊",
+    "voice_search": "Voice search",
+    "voice_stop": "Stop listening",
+    "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
+    "voice_search_applied": "Searching with your voice…",
+    "voice_error_generic": "Voice search failed. Please try again."
   },
   "doctor": {
     "verified": "认证医生",

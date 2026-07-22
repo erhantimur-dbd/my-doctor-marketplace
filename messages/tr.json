@@ -125,7 +125,12 @@
     "suggestions_goes_to": "→ {specialty}",
     "same_day_title": "Bugün İçin Randevu Mevcut",
     "same_day_subtitle": "{count, plural, one {# doktor} other {# doktor}} bugün randevu için müsait",
-    "same_day_cta": "Bugün İçin Randevu Al"
+    "same_day_cta": "Bugün İçin Randevu Al",
+    "voice_search": "Sesli arama",
+    "voice_stop": "Dinlemeyi durdur",
+    "voice_search_hint": "Aramak için konuşun (Grok). Konuşan asistan için sohbet mikrofounu kullanın.",
+    "voice_search_applied": "Sesinizle aranıyor…",
+    "voice_error_generic": "Sesli arama başarısız. Lütfen tekrar deneyin."
   },
   "auth": {
     "login_title": "Tekrar Hos Geldiniz",

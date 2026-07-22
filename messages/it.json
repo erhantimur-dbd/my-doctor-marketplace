@@ -123,7 +123,12 @@
     "suggestions_specialists": "Specialisti",
     "same_day_title": "Appuntamenti disponibili oggi",
     "same_day_subtitle": "{count, plural, one {# medico è} other {# medici sono}} disponibili per appuntamenti oggi",
-    "same_day_cta": "Prenota per oggi"
+    "same_day_cta": "Prenota per oggi",
+    "voice_search": "Voice search",
+    "voice_stop": "Stop listening",
+    "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
+    "voice_search_applied": "Searching with your voice…",
+    "voice_error_generic": "Voice search failed. Please try again."
   },
   "doctor": {
     "verified": "Medico Verificato",

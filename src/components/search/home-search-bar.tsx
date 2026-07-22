@@ -208,33 +208,50 @@ export function HomeSearchBar({
   const geo = useGeolocation("auto");
   const { searches: recentSearches, addSearch, removeOne: removeRecentSearch, clearAll: clearRecentSearches } = useRecentSearches();
 
-  // Voice search — Grok Voice STT (MediaRecorder → /api/voice/stt)
+  // Voice search — Grok STT fills the bar and runs Find a Doctor search
   const [showVoicePrivacy, setShowVoicePrivacy] = useState(false);
+  const runSearchWithQueryRef = useRef<(q: string) => void>(() => {});
+
   const speech = useGrokStt({
     locale,
     onResult: (text) => {
-      setQuery(text);
-      setShowSuggestions(true);
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      setQuery(trimmed);
+      setShowSuggestions(false);
+      inputRef.current?.focus();
       mobileInputRef.current?.focus();
+      // Navigate to results with the spoken query (structured filters still via AI chat)
+      runSearchWithQueryRef.current(trimmed);
+      toast.success(t("voice_search_applied") || "Searching…");
     },
     onError: (code) => {
       if (code === "not-allowed") toast.error(t("voice_error_permission"));
       else if (code === "no-speech") toast.error(t("voice_error_no_speech"));
       else if (code === "not-supported")
         toast.error(t("voice_error_not_supported"));
-      else toast.error(t("voice_error_not_supported"));
+      else toast.error(t("voice_error_generic") || t("voice_error_not_supported"));
     },
   });
 
   const startVoiceWithPrivacy = useCallback(() => {
     if (typeof window === "undefined") return;
-    const raw = localStorage.getItem(VOICE_PRIVACY_STORAGE_KEY);
-    if (hasAcceptedVoicePrivacy(raw)) {
-      void speech.start();
+    if (!speech.isSupported) {
+      toast.error(t("voice_error_not_supported"));
       return;
     }
+    try {
+      const raw = localStorage.getItem(VOICE_PRIVACY_STORAGE_KEY);
+      if (hasAcceptedVoicePrivacy(raw)) {
+        toast.message(t("voice_listening"));
+        void speech.start();
+        return;
+      }
+    } catch {
+      /* show privacy */
+    }
     setShowVoicePrivacy(true);
-  }, [speech]);
+  }, [speech, t]);
 
   // Auto-select nearest location when GPS coords arrive
   useEffect(() => {
@@ -396,50 +413,66 @@ export function HomeSearchBar({
     geo.requestPosition();
   };
 
-  const handleSearch = useCallback(() => {
-    setShowSuggestions(false);
-    const params = new URLSearchParams();
-    if (query.trim()) {
-      // Check if query matches a specialty name → use specialty filter instead of free-text
-      const term = query.trim().toLowerCase();
-      const matchedSpec = specialties.find((s) => {
-        const display = s.name_key
-          .replace("specialty.", "")
-          .replace(/_/g, " ")
-          .toLowerCase();
-        return display === term || s.slug === term || s.slug === term.replace(/\s+/g, "-");
-      });
-      if (matchedSpec) {
-        params.set("specialty", matchedSpec.slug);
-      } else {
-        params.set("query", query.trim());
+  const runSearchWithQuery = useCallback(
+    (rawQuery: string) => {
+      setShowSuggestions(false);
+      const q = rawQuery.trim();
+      const params = new URLSearchParams();
+      if (q) {
+        // Specialty name match → specialty filter; else free-text query
+        const term = q.toLowerCase();
+        const matchedSpec = specialties.find((s) => {
+          const display = s.name_key
+            .replace("specialty.", "")
+            .replace(/_/g, " ")
+            .toLowerCase();
+          return (
+            display === term ||
+            s.slug === term ||
+            s.slug === term.replace(/\s+/g, "-")
+          );
+        });
+        if (matchedSpec) {
+          params.set("specialty", matchedSpec.slug);
+        } else {
+          params.set("query", q);
+        }
       }
-    }
-    if (placeData) {
-      // Place-based search (borough, street, etc.)
-      params.set("placeLat", placeData.lat.toFixed(6));
-      params.set("placeLng", placeData.lng.toFixed(6));
-      params.set("placeName", placeData.name);
-      params.set("radius", "25");
-    } else if (location && location !== "all") {
-      params.set("location", location);
-    }
-    if (consultationType !== "all") params.set("consultationType", consultationType);
+      if (placeData) {
+        params.set("placeLat", placeData.lat.toFixed(6));
+        params.set("placeLng", placeData.lng.toFixed(6));
+        params.set("placeName", placeData.name);
+        params.set("radius", "25");
+      } else if (location && location !== "all") {
+        params.set("location", location);
+      }
+      if (consultationType !== "all") {
+        params.set("consultationType", consultationType);
+      }
 
-    // Track this search for "Recent Searches"
-    if (query.trim()) {
-      addSearch({
-        query: query.trim(),
-        specialty: params.get("specialty") || undefined,
-        location: placeData?.name || (location && location !== "all" ? location : undefined),
-        placeLat: placeData?.lat,
-        placeLng: placeData?.lng,
-      });
-    }
+      if (q) {
+        addSearch({
+          query: q,
+          specialty: params.get("specialty") || undefined,
+          location:
+            placeData?.name ||
+            (location && location !== "all" ? location : undefined),
+          placeLat: placeData?.lat,
+          placeLng: placeData?.lng,
+        });
+      }
 
-    const qs = params.toString();
-    router.push(`/doctors${qs ? `?${qs}` : ""}`);
-  }, [query, location, consultationType, router, specialties, placeData, addSearch]);
+      const qs = params.toString();
+      router.push(`/doctors${qs ? `?${qs}` : ""}`);
+    },
+    [location, consultationType, router, specialties, placeData, addSearch]
+  );
+
+  runSearchWithQueryRef.current = runSearchWithQuery;
+
+  const handleSearch = useCallback(() => {
+    runSearchWithQuery(query);
+  }, [query, runSearchWithQuery]);
 
   const navigateToSpecialty = useCallback(
     (slug: string) => {
@@ -1094,7 +1127,7 @@ export function HomeSearchBar({
               ? "border-white/40"
               : "border-white/40 ring-white/10"
         )}>
-          {/* What field */}
+          {/* What field + Grok voice mic */}
           <label
             htmlFor="home-search-what"
             className={cn(
@@ -1108,21 +1141,59 @@ export function HomeSearchBar({
             )}>
               {t("search_what_label")}
             </span>
-            <input
-              id="home-search-what"
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setShowSuggestions(true)}
-              onKeyDown={handleKeyDown}
-              placeholder={t("search_name_placeholder")}
-              className={cn(
-                "bg-transparent text-sm outline-none placeholder:text-muted-foreground",
-                compact ? "h-5" : "h-6"
-              )}
-              autoComplete="off"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                id="home-search-what"
+                ref={inputRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={handleKeyDown}
+                placeholder={
+                  speech.isRecording || speech.isProcessing
+                    ? t("voice_listening")
+                    : t("search_name_placeholder")
+                }
+                className={cn(
+                  "min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground",
+                  compact ? "h-5" : "h-6"
+                )}
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (speech.isRecording) speech.stop();
+                  else if (!speech.isProcessing) startVoiceWithPrivacy();
+                }}
+                className={cn(
+                  "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
+                  speech.isRecording
+                    ? "bg-red-100 text-red-600"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                aria-label={
+                  speech.isRecording
+                    ? t("voice_stop") || "Stop listening"
+                    : t("voice_search") || "Voice search"
+                }
+                title={t("voice_search_hint") || "Search by voice (Grok)"}
+                disabled={speech.isProcessing}
+              >
+                <Mic
+                  className={cn(
+                    "h-4 w-4",
+                    speech.isRecording && "animate-pulse"
+                  )}
+                />
+                {speech.isRecording && (
+                  <span className="absolute inset-0 animate-ping rounded-full bg-red-400/30" />
+                )}
+              </button>
+            </div>
           </label>
 
           {/* Divider */}
@@ -1250,42 +1321,51 @@ export function HomeSearchBar({
               className={cn("flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground", compact ? "h-11" : "h-7")}
               autoComplete="off"
             />
-          {/* Voice search mic — Grok Voice STT + privacy notice */}
-          {speech.isSupported && (
-            <button
-              type="button"
-              onClick={() => {
-                if (speech.isRecording) {
-                  speech.stop();
-                } else if (!speech.isProcessing) {
-                  startVoiceWithPrivacy();
-                }
-              }}
-              className={cn(
-                "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
-                speech.isRecording
-                  ? "bg-red-100 text-red-600"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-              aria-label={speech.isRecording ? "Stop listening" : "Voice search"}
-              disabled={speech.isProcessing}
-            >
-              <Mic className={cn("h-4 w-4", speech.isRecording && "animate-pulse")} />
-              {speech.isRecording && (
-                <span className="absolute inset-0 animate-ping rounded-full bg-red-400/30" />
-              )}
-            </button>
-          )}
+          {/* Voice search mic — Grok STT → fill + run search */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (speech.isRecording) speech.stop();
+              else if (!speech.isProcessing) startVoiceWithPrivacy();
+            }}
+            className={cn(
+              "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
+              speech.isRecording
+                ? "bg-red-100 text-red-600"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+            aria-label={
+              speech.isRecording
+                ? t("voice_stop") || "Stop listening"
+                : t("voice_search") || "Voice search"
+            }
+            title={t("voice_search_hint") || "Search by voice (Grok)"}
+            disabled={speech.isProcessing}
+          >
+            <Mic
+              className={cn("h-4 w-4", speech.isRecording && "animate-pulse")}
+            />
+            {speech.isRecording && (
+              <span className="absolute inset-0 animate-ping rounded-full bg-red-400/30" />
+            )}
+          </button>
           </div>
         </label>
         {showVoicePrivacy && (
           <VoicePrivacyNotice
             onAccept={() => {
-              localStorage.setItem(
-                VOICE_PRIVACY_STORAGE_KEY,
-                serializeVoicePrivacyConsent(buildVoicePrivacyConsent(true))
-              );
+              try {
+                localStorage.setItem(
+                  VOICE_PRIVACY_STORAGE_KEY,
+                  serializeVoicePrivacyConsent(buildVoicePrivacyConsent(true))
+                );
+              } catch {
+                /* ignore */
+              }
               setShowVoicePrivacy(false);
+              toast.message(t("voice_listening"));
               void speech.start();
             }}
             onDecline={() => setShowVoicePrivacy(false)}

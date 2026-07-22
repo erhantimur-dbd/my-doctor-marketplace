@@ -123,7 +123,12 @@
     "suggestions_specialists": "Especialistas",
     "same_day_title": "Citas disponibles hoy",
     "same_day_subtitle": "{count, plural, one {# médico está} other {# médicos están}} disponibles para citas hoy",
-    "same_day_cta": "Reservar para hoy"
+    "same_day_cta": "Reservar para hoy",
+    "voice_search": "Voice search",
+    "voice_stop": "Stop listening",
+    "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
+    "voice_search_applied": "Searching with your voice…",
+    "voice_error_generic": "Voice search failed. Please try again."
   },
   "doctor": {
     "verified": "Médico Verificado",
