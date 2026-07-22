@@ -1084,7 +1084,9 @@
       "error": "Something went wrong. Please try again.",
       "expand": "Expand",
       "shrink": "Shrink",
-      "close": "Close chat"
+      "close": "Close chat",
+      "voice_replies_on": "音声返信オン",
+      "voice_replies_off": "音声返信オフ"
     },
     "gdpr": {
       "title": "Before we start",
@@ -1094,7 +1096,9 @@
     },
     "composer": {
       "placeholder": "Type a message…",
-      "send": "Send"
+      "send": "Send",
+      "voice_input": "音声メッセージ",
+      "voice_no_speech": "音声が検出されませんでした。もう一度お試しください。"
     },
     "suggestions": {
       "try": "Try asking:",

@@ -1,14 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { AnimatePresence, motion } from "framer-motion";
-import { Maximize2, Minimize2, X, Loader2, ShieldCheck } from "lucide-react";
+import {
+  Maximize2,
+  Minimize2,
+  X,
+  Loader2,
+  ShieldCheck,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { useChatStore } from "@/stores/chat-store";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
+import { useTts } from "@/hooks/use-tts";
+import { extractAssistantText } from "@/lib/voice/search-url";
 import { ChatMessage } from "./chat-message";
 import { ChatComposer } from "./chat-composer";
 import { ChatSuggestions } from "./chat-suggestions";
@@ -29,12 +40,15 @@ import { ChatCompareView } from "./chat-compare-view";
 export function ChatWindow() {
   const locale = useLocale();
   const t = useTranslations("chat.window");
+  const tVoice = useTranslations("voice");
+  const router = useRouter();
   const {
     size,
     hasAcceptedGdpr,
     hasAutoExpanded,
     messages: storedMessages,
     compareOpen,
+    pendingVoiceStart,
     close,
     toggleSize,
     setSize,
@@ -42,6 +56,7 @@ export function ChatWindow() {
     acceptGdpr,
     setMessages,
     setCompareOpen,
+    clearPendingVoiceStart,
   } = useChatStore();
 
   const { messages, sendMessage, status, error } = useChat({
@@ -52,9 +67,59 @@ export function ChatWindow() {
     messages: storedMessages as UIMessage[],
   });
 
+  const tts = useTts({ locale });
+  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
+  const spokenMsgIdsRef = useRef<Set<string>>(new Set());
+  const appliedSearchPathsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     setMessages(messages as UIMessage[]);
   }, [messages, setMessages]);
+
+  // Sync Find a Doctor page when tools return a search path
+  useEffect(() => {
+    for (const msg of messages) {
+      if (msg.role !== "assistant") continue;
+      for (const part of msg.parts || []) {
+        const p = part as {
+          type?: string;
+          state?: string;
+          toolCallId?: string;
+          output?: {
+            ok?: boolean;
+            path?: string;
+            searchPath?: string;
+          };
+        };
+        if (p.state !== "output-available" || !p.output?.ok) continue;
+        const path =
+          p.type === "tool-applySearchFilters"
+            ? p.output.path
+            : p.type === "tool-searchDoctors"
+              ? p.output.searchPath
+              : undefined;
+        if (!path || !path.startsWith("/doctors")) continue;
+        const key = p.toolCallId || path;
+        if (appliedSearchPathsRef.current.has(key)) continue;
+        appliedSearchPathsRef.current.add(key);
+        router.push(path);
+      }
+    }
+  }, [messages, router]);
+
+  // Speak assistant replies (talking agent) when voice replies enabled
+  useEffect(() => {
+    if (!voiceReplyEnabled) return;
+    if (status !== "ready") return;
+    const last = [...messages].reverse().find((m) => m.role === "assistant");
+    if (!last || spokenMsgIdsRef.current.has(last.id)) return;
+    const text = extractAssistantText(
+      last.parts as Array<{ type: string; text?: string }>
+    );
+    if (!text || text.length < 2) return;
+    spokenMsgIdsRef.current.add(last.id);
+    void tts.speak(text.slice(0, 800));
+  }, [messages, status, voiceReplyEnabled, tts]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -237,6 +302,28 @@ export function ChatWindow() {
           <div className="flex items-center gap-1">
             <button
               type="button"
+              onClick={() => {
+                if (tts.isPlaying) tts.stop();
+                setVoiceReplyEnabled((v) => !v);
+              }}
+              aria-label={
+                voiceReplyEnabled ? tVoice("tts_stop") : tVoice("tts_play")
+              }
+              title={
+                voiceReplyEnabled
+                  ? t("voice_replies_on")
+                  : t("voice_replies_off")
+              }
+              className="rounded-full p-1.5 hover:bg-white/15"
+            >
+              {voiceReplyEnabled ? (
+                <Volume2 className="h-4 w-4" />
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
+            </button>
+            <button
+              type="button"
               onClick={toggleSize}
               aria-label={toggleLabel}
               title={toggleLabel}
@@ -358,7 +445,12 @@ export function ChatWindow() {
               </div>
             )}
 
-            <ChatComposer onSend={handleSend} disabled={isBusy} />
+            <ChatComposer
+              onSend={handleSend}
+              disabled={isBusy}
+              autoStartVoice={pendingVoiceStart && hasAcceptedGdpr}
+              onAutoStartVoiceConsumed={clearPendingVoiceStart}
+            />
           </>
         )}
       </motion.div>

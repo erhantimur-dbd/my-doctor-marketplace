@@ -1090,7 +1090,9 @@
       "error": "Something went wrong. Please try again.",
       "expand": "Expand",
       "shrink": "Shrink",
-      "close": "Close chat"
+      "close": "Close chat",
+      "voice_replies_on": "语音回复已开",
+      "voice_replies_off": "语音回复已关"
     },
     "gdpr": {
       "title": "Before we start",
@@ -1100,7 +1102,9 @@
     },
     "composer": {
       "placeholder": "Type a message…",
-      "send": "Send"
+      "send": "Send",
+      "voice_input": "语音消息",
+      "voice_no_speech": "未检测到语音，请重试。"
     },
     "suggestions": {
       "try": "Try asking:",

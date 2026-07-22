@@ -1308,7 +1308,9 @@
       "error": "Something went wrong. Please try again.",
       "expand": "Expand",
       "shrink": "Shrink",
-      "close": "Close chat"
+      "close": "Close chat",
+      "voice_replies_on": "Sesli yanıt açık",
+      "voice_replies_off": "Sesli yanıt kapalı"
     },
     "gdpr": {
       "title": "Before we start",
@@ -1318,7 +1320,9 @@
     },
     "composer": {
       "placeholder": "Type a message…",
-      "send": "Send"
+      "send": "Send",
+      "voice_input": "Sesli mesaj",
+      "voice_no_speech": "Konuşma algılanmadı. Tekrar deneyin."
     },
     "suggestions": {
       "try": "Try asking:",

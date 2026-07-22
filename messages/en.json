@@ -1309,7 +1309,9 @@
       "error": "Something went wrong. Please try again.",
       "expand": "Expand",
       "shrink": "Shrink",
-      "close": "Close chat"
+      "close": "Close chat",
+      "voice_replies_on": "Voice replies on (tap to mute)",
+      "voice_replies_off": "Voice replies off (tap to enable)"
     },
     "gdpr": {
       "title": "Before we start",
@@ -1319,7 +1321,9 @@
     },
     "composer": {
       "placeholder": "Type a message…",
-      "send": "Send"
+      "send": "Send",
+      "voice_input": "Voice message",
+      "voice_no_speech": "No speech detected. Try again."
     },
     "suggestions": {
       "try": "Try asking:",

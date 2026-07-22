@@ -17,8 +17,11 @@ interface ChatState {
   messages: UIMessage[];
   shortlist: ChatDoctor[];
   compareOpen: boolean;
+  /** When true, composer auto-starts Grok voice once after open */
+  pendingVoiceStart: boolean;
   // actions
   open: () => void;
+  openWithVoice: () => void;
   close: () => void;
   toggleSize: () => void;
   setSize: (size: ChatSize) => void;
@@ -29,6 +32,7 @@ interface ChatState {
   removeFromShortlist: (doctorId: string) => void;
   clearShortlist: () => void;
   setCompareOpen: (open: boolean) => void;
+  clearPendingVoiceStart: () => void;
   reset: () => void;
 }
 
@@ -57,8 +61,12 @@ export const useChatStore = create<ChatState>()(
       messages: [],
       shortlist: [],
       compareOpen: false,
+      pendingVoiceStart: false,
       open: () => set({ isOpen: true }),
-      close: () => set({ isOpen: false, compareOpen: false }),
+      openWithVoice: () =>
+        set({ isOpen: true, pendingVoiceStart: true, size: "fullscreen" }),
+      close: () =>
+        set({ isOpen: false, compareOpen: false, pendingVoiceStart: false }),
       setSize: (size) => set({ size }),
       toggleSize: () =>
         set((s) => ({ size: s.size === "compact" ? "fullscreen" : "compact" })),
@@ -80,6 +88,7 @@ export const useChatStore = create<ChatState>()(
         set((s) => ({ shortlist: s.shortlist.filter((d) => d.id !== doctorId) })),
       clearShortlist: () => set({ shortlist: [], compareOpen: false }),
       setCompareOpen: (open) => set({ compareOpen: open }),
+      clearPendingVoiceStart: () => set({ pendingVoiceStart: false }),
       reset: () =>
         set({
           messages: [],
@@ -88,6 +97,7 @@ export const useChatStore = create<ChatState>()(
           hasAutoExpanded: false,
           shortlist: [],
           compareOpen: false,
+          pendingVoiceStart: false,
         }),
     }),
     {

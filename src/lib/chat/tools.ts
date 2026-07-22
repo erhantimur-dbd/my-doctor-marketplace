@@ -27,6 +27,7 @@ import { formatSpecialtyName } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { searchArticlesByTags } from "@/components/help-center/help-center-data";
 import { getSkill } from "@/lib/constants/skills";
+import { buildDoctorsSearchPath } from "@/lib/voice/search-url";
 
 export interface ChatDoctorSlot {
   date: string;
@@ -94,13 +95,19 @@ export function buildChatTools(locale: string) {
 
     searchDoctors: tool({
       description:
-        "Search MyDoctors360 for verified private doctors matching the given specialty, location, language, consultation type, or specific skill. Returns up to 5 doctors as rich cards that the client renders inline in the chat. Call this once you know what specialty the user needs — either after analyzeSymptoms or when the user asked directly (e.g. 'dermatologist in London'). If the result urgency was 'emergency', do NOT call this tool.",
+        "Search MyDoctors360 for verified private doctors. Supports full Find a Doctor filters: specialty, free-text query, location, language, in-person/video, skill, price range, rating, available today, sort (featured|soonest|price_asc|price_desc|rating). Returns up to 5 doctors as rich cards. Also returns a searchPath the client applies to the Find a Doctor page. Call after analyzeSymptoms or when the user names care needs. If urgency was emergency, do NOT call this tool.",
       inputSchema: z.object({
         specialty: z
           .string()
           .nullable()
           .describe(
             "Specialty slug such as 'dermatology', 'cardiology', 'general-practice'. Use the slug returned by analyzeSymptoms when available."
+          ),
+        query: z
+          .string()
+          .nullable()
+          .describe(
+            "Free-text search (symptoms, doctor name, or condition words) when no clean specialty slug is known."
           ),
         locationSlug: z
           .string()
@@ -126,16 +133,75 @@ export function buildChatTools(locale: string) {
           .describe(
             "A specific procedure or condition slug from the skills taxonomy (e.g. 'mole-check', 'botox', 'knee-surgery', 'ibs-treatment', 'migraine-management', 'fertility-care'). Use this when the user asks about a specific procedure or condition, not just a broad specialty. Null if the user only named a broad specialty."
           ),
+        minPrice: z
+          .number()
+          .nullable()
+          .describe("Minimum consultation fee in major currency units (e.g. 50 for £50). Null if not specified."),
+        maxPrice: z
+          .number()
+          .nullable()
+          .describe("Maximum consultation fee in major currency units. Null if not specified."),
+        minRating: z
+          .number()
+          .nullable()
+          .describe("Minimum average rating 1-5. Null if not specified."),
+        availableToday: z
+          .boolean()
+          .nullable()
+          .describe("True if user wants someone available today."),
+        sort: z
+          .enum(["featured", "soonest", "price_asc", "price_desc", "rating"])
+          .nullable()
+          .describe("Result sort order. Prefer soonest when user wants earliest appointment."),
+        providerType: z
+          .enum(["doctor", "testing_service"])
+          .nullable()
+          .describe("Filter provider type. Null for all."),
       }),
-      execute: async ({ specialty, locationSlug, language, consultationType, skill }) => {
-        const result = await searchDoctorsAction({
+      execute: async ({
+        specialty,
+        query,
+        locationSlug,
+        language,
+        consultationType,
+        skill,
+        minPrice,
+        maxPrice,
+        minRating,
+        availableToday,
+        sort,
+        providerType,
+      }) => {
+        // minPrice/maxPrice are major currency units; searchDoctors multiplies by 100.
+        const filters = {
           specialty: specialty || undefined,
+          query: query || undefined,
           location: locationSlug || undefined,
           language: language || undefined,
           consultationType: consultationType || undefined,
           skill: skill || undefined,
-          sort: "featured",
+          minPrice: minPrice ?? undefined,
+          maxPrice: maxPrice ?? undefined,
+          minRating: minRating ?? undefined,
+          availableToday: availableToday === true ? true : undefined,
+          sort: sort || (availableToday ? "soonest" : "featured"),
+          providerType: providerType || undefined,
           page: 1,
+        };
+        const result = await searchDoctorsAction(filters);
+        const searchPath = buildDoctorsSearchPath({
+          specialty,
+          query,
+          locationSlug,
+          language,
+          consultationType,
+          skill,
+          minPrice: minPrice ?? null,
+          maxPrice: maxPrice ?? null,
+          minRating: minRating ?? null,
+          availableToday: availableToday === true,
+          sort: filters.sort,
+          providerType,
         });
 
         const rawDoctors = (result.doctors || []).slice(0, 5);
@@ -264,9 +330,57 @@ export function buildChatTools(locale: string) {
           ok: true as const,
           doctors,
           total: result.total ?? doctors.length,
+          searchPath,
           fallbackApplied: ("fallbackApplied" in result
             ? (result as { fallbackApplied?: string | null }).fallbackApplied
             : null) || null,
+        };
+      },
+    }),
+
+    applySearchFilters: tool({
+      description:
+        "Update the Find a Doctor page URL/filters so the main search UI matches the conversation. Call whenever you have structured filters (even alongside searchDoctors). Never books appointments.",
+      inputSchema: z.object({
+        query: z.string().nullable(),
+        specialty: z.string().nullable(),
+        locationSlug: z.string().nullable(),
+        language: z.string().nullable(),
+        consultationType: z.enum(["in_person", "video"]).nullable(),
+        skill: z.string().nullable(),
+        minPrice: z.number().nullable(),
+        maxPrice: z.number().nullable(),
+        minRating: z.number().nullable(),
+        availableToday: z.boolean().nullable(),
+        sort: z
+          .enum(["featured", "soonest", "price_asc", "price_desc", "rating"])
+          .nullable(),
+        providerType: z.enum(["doctor", "testing_service"]).nullable(),
+        spokenSummary: z
+          .string()
+          .describe(
+            "One short sentence describing filters applied, for voice readback."
+          ),
+      }),
+      execute: async (input) => {
+        const path = buildDoctorsSearchPath({
+          query: input.query,
+          specialty: input.specialty,
+          locationSlug: input.locationSlug,
+          language: input.language,
+          consultationType: input.consultationType,
+          skill: input.skill,
+          minPrice: input.minPrice,
+          maxPrice: input.maxPrice,
+          minRating: input.minRating,
+          availableToday: input.availableToday === true,
+          sort: input.sort,
+          providerType: input.providerType,
+        });
+        return {
+          ok: true as const,
+          path,
+          spokenSummary: input.spokenSummary,
         };
       },
     }),
