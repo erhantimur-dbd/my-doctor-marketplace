@@ -1131,7 +1131,8 @@
       "emergency_title": "This may be a medical emergency",
       "emergency_default_reason": "Your symptoms could need urgent care. Please seek immediate help.",
       "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now.",
-      "view_full_results": "在地图上查看全部结果"
+      "view_full_results": "在地图上查看全部结果",
+      "checking_availability": "正在查询最近可约时段…"
     },
     "card": {
       "expert_in": "Expert in:",

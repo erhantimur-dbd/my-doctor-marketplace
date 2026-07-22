@@ -142,13 +142,18 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
           }
 
           // ── Tool: searchDoctors ───────────────────
-          if (part.type === "tool-searchDoctors") {
+          if (
+            part.type === "tool-searchDoctors" ||
+            part.type === "tool-refineSearch"
+          ) {
             const tp = part as {
               state: string;
               output?: {
                 ok?: boolean;
                 doctors?: ChatDoctor[];
                 total?: number;
+                searchPath?: string;
+                spokenSummary?: string;
                 fallbackApplied?: string | null;
               };
             };
@@ -167,8 +172,7 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
 
             if (tp.state === "output-available" && tp.output?.ok) {
               const doctors = tp.output.doctors ?? [];
-              const searchPath = (tp.output as { searchPath?: string })
-                .searchPath;
+              const searchPath = tp.output.searchPath;
               if (doctors.length === 0) {
                 return (
                   <div
@@ -189,6 +193,11 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
                   {tp.output.fallbackApplied && (
                     <p className="text-[11px] italic text-muted-foreground">
                       {tp.output.fallbackApplied}
+                    </p>
+                  )}
+                  {tp.output.spokenSummary && (
+                    <p className="text-[11px] text-muted-foreground px-0.5">
+                      {tp.output.spokenSummary}
                     </p>
                   )}
                   {searchPath && (
@@ -220,6 +229,58 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
                   className="rounded-2xl bg-muted px-4 py-2.5 text-xs text-muted-foreground"
                 >
                   {t("search_error")}
+                </div>
+              );
+            }
+            return null;
+          }
+
+          // ── Tool: findSoonestAvailability ─────────
+          if (part.type === "tool-findSoonestAvailability") {
+            const tp = part as {
+              state: string;
+              output?: {
+                ok?: boolean;
+                spokenSummary?: string;
+                searchPath?: string;
+                soonest?: {
+                  name: string;
+                  slug: string;
+                  date: string | null;
+                  firstSlot: string | null;
+                }[];
+              };
+            };
+            if (tp.state === "input-streaming" || tp.state === "input-available") {
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-xs text-muted-foreground"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {t("checking_availability") || "Checking availability…"}
+                </div>
+              );
+            }
+            if (tp.state === "output-available" && tp.output?.ok) {
+              return (
+                <div
+                  key={idx}
+                  className="flex w-full flex-col gap-2 rounded-2xl border bg-muted/40 px-3 py-2.5"
+                >
+                  <p className="text-sm text-foreground">
+                    {tp.output.spokenSummary}
+                  </p>
+                  {tp.output.searchPath && (
+                    <button
+                      type="button"
+                      onClick={() => applyListingPath(tp.output!.searchPath)}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10"
+                    >
+                      <Map className="h-3.5 w-3.5" />
+                      {t("view_full_results") || "View full results on map"}
+                    </button>
+                  )}
                 </div>
               );
             }

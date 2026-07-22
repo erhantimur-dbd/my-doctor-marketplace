@@ -1125,7 +1125,8 @@
       "emergency_title": "This may be a medical emergency",
       "emergency_default_reason": "Your symptoms could need urgent care. Please seek immediate help.",
       "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now.",
-      "view_full_results": "地図で結果をすべて見る"
+      "view_full_results": "地図で結果をすべて見る",
+      "checking_availability": "最短の空き状況を確認中…"
     },
     "card": {
       "expert_in": "Expert in:",

@@ -14,11 +14,16 @@ import {
   VolumeX,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { useChatStore } from "@/stores/chat-store";
+import { useSearchIntentStore } from "@/stores/search-intent-store";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { useTts } from "@/hooks/use-tts";
-import { extractAssistantText } from "@/lib/voice/search-url";
+import {
+  extractAssistantText,
+  parseDoctorsSearchPath,
+} from "@/lib/voice/search-url";
 import {
   buildVoiceWelcomeBrief,
   shouldSpeakVoiceWelcome,
@@ -45,6 +50,11 @@ export function ChatWindow() {
   const locale = useLocale();
   const t = useTranslations("chat.window");
   const tVoice = useTranslations("voice");
+  const pathname = usePathname();
+  const router = useRouter();
+  const intentFilters = useSearchIntentStore((s) => s.filters);
+  const prepareApply = useSearchIntentStore((s) => s.prepareApply);
+  const markApplied = useSearchIntentStore((s) => s.markApplied);
   const {
     size,
     hasAcceptedGdpr,
@@ -62,10 +72,27 @@ export function ChatWindow() {
     clearPendingVoiceStart,
   } = useChatStore();
 
+  const resolveCurrentFilters = useCallback(() => {
+    if (typeof window === "undefined") return intentFilters;
+    const path = window.location.pathname + window.location.search;
+    if (path.includes("/doctors")) {
+      return { ...parseDoctorsSearchPath(path), ...intentFilters };
+    }
+    return intentFilters;
+  }, [intentFilters]);
+
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      body: { locale },
+      prepareSendMessagesRequest: ({ messages: msgs, id, body }) => ({
+        body: {
+          ...(body || {}),
+          id,
+          messages: msgs,
+          locale,
+          currentFilters: resolveCurrentFilters(),
+        },
+      }),
     }),
     messages: storedMessages as UIMessage[],
   });
@@ -77,6 +104,8 @@ export function ChatWindow() {
   const spokenMsgIdsRef = useRef<Set<string>>(new Set());
   const lastSpokenTextRef = useRef<string>("");
   const welcomeTriggeredRef = useRef(false);
+  const appliedToolIdsRef = useRef<Set<string>>(new Set());
+  const spokenSummaryKeysRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (pendingVoiceStart) setVoiceReplyEnabled(true);
@@ -130,14 +159,75 @@ export function ChatWindow() {
   ]);
 
   /**
-   * DO NOT auto-router.push from tool searchPath/applySearchFilters.
-   * Chat keeps results in-widget; search bar owns full-page navigation.
+   * V2: controlled listing apply when tools request it (refine / soonest).
+   * Only when user is already on Find a Doctor; once per toolCallId.
+   * Initial search still uses in-chat cards + "View full results" button.
    */
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (!pathname?.includes("/doctors")) return;
 
-  // Speak assistant replies only when voice mode is on and turn is finished
+    for (const msg of messages) {
+      if (msg.role !== "assistant") continue;
+      for (const part of msg.parts || []) {
+        const p = part as {
+          type?: string;
+          state?: string;
+          toolCallId?: string;
+          output?: {
+            ok?: boolean;
+            autoApplyListing?: boolean;
+            searchPath?: string;
+            path?: string;
+            filters?: Record<string, unknown>;
+            spokenSummary?: string;
+          };
+        };
+        if (p.state !== "output-available" || !p.output?.ok) continue;
+        if (!p.output.autoApplyListing) continue;
+        const id = p.toolCallId || `${msg.id}-${p.type}`;
+        if (appliedToolIdsRef.current.has(id)) continue;
+        const path = p.output.searchPath || p.output.path;
+        if (!path?.startsWith("/doctors")) continue;
+        appliedToolIdsRef.current.add(id);
+        const filters = parseDoctorsSearchPath(path);
+        const next = prepareApply(filters);
+        if (next) {
+          markApplied(next);
+          router.replace(next);
+        }
+      }
+    }
+  }, [messages, status, pathname, prepareApply, markApplied, router]);
+
+  // Speak "why these doctors" summary from tools, else assistant text
   useEffect(() => {
     if (!voiceReplyEnabled) return;
     if (status !== "ready") return;
+
+    // Prefer tool spokenSummary (search / refine / soonest)
+    for (const msg of [...messages].reverse()) {
+      if (msg.role !== "assistant") continue;
+      for (const part of msg.parts || []) {
+        const p = part as {
+          type?: string;
+          state?: string;
+          toolCallId?: string;
+          output?: { ok?: boolean; spokenSummary?: string };
+        };
+        if (p.state !== "output-available" || !p.output?.ok) continue;
+        const summary = p.output.spokenSummary?.trim();
+        if (!summary) continue;
+        const key = p.toolCallId || summary;
+        if (spokenSummaryKeysRef.current.has(key)) continue;
+        spokenSummaryKeysRef.current.add(key);
+        if (summary === lastSpokenTextRef.current) return;
+        lastSpokenTextRef.current = summary;
+        void tts.speak(summary.slice(0, 800));
+        return;
+      }
+    }
+
     const last = [...messages].reverse().find((m) => m.role === "assistant");
     if (!last || spokenMsgIdsRef.current.has(last.id)) return;
     const text = extractAssistantText(
@@ -145,7 +235,6 @@ export function ChatWindow() {
     );
     if (!text || text.length < 2) return;
     if (text === lastSpokenTextRef.current) return;
-    // Don't re-speak the welcome banner as an "assistant message"
     if (welcomeBanner && text === welcomeBanner) return;
     spokenMsgIdsRef.current.add(last.id);
     lastSpokenTextRef.current = text;

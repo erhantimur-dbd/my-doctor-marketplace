@@ -27,7 +27,14 @@ import { formatSpecialtyName } from "@/lib/utils";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { searchArticlesByTags } from "@/components/help-center/help-center-data";
 import { getSkill } from "@/lib/constants/skills";
-import { buildDoctorsSearchPath } from "@/lib/voice/search-url";
+import {
+  buildDoctorsSearchPath,
+  type DoctorsSearchFilters,
+} from "@/lib/voice/search-url";
+import {
+  buildSearchResultsSpokenSummary,
+  mergeSearchFilters,
+} from "@/lib/voice/merge-filters";
 
 export interface ChatDoctorSlot {
   date: string;
@@ -61,7 +68,12 @@ export interface ChatDoctor {
   };
 }
 
-export function buildChatTools(locale: string) {
+export type ChatToolsContext = {
+  /** Current Find a Doctor filters (from client intent store / URL) */
+  currentFilters?: DoctorsSearchFilters;
+};
+
+export function buildChatTools(locale: string, context: ChatToolsContext = {}) {
   return {
     analyzeSymptoms: tool({
       description:
@@ -326,11 +338,42 @@ export function buildChatTools(locale: string) {
           })
           .then(() => {}, () => {});
 
+        const total = result.total ?? doctors.length;
+        const soonestNote = buildSoonestNote(doctors);
+        const spokenSummary = buildSearchResultsSpokenSummary({
+          total,
+          specialtyLabel: specialty
+            ? formatSpecialtyName(`specialty.${specialty.replace(/-/g, "_")}`)
+            : null,
+          locationLabel: locationSlug || null,
+          consultationType,
+          availableToday: availableToday === true,
+          sort: filters.sort,
+          language,
+          sampleNames: doctors.slice(0, 2).map((d) => d.name),
+          soonestNote,
+        });
+
         return {
           ok: true as const,
           doctors,
-          total: result.total ?? doctors.length,
+          total,
           searchPath,
+          spokenSummary,
+          filters: {
+            specialty,
+            query,
+            location: locationSlug,
+            language,
+            consultationType,
+            skill,
+            minPrice,
+            maxPrice,
+            minRating,
+            availableToday: availableToday === true,
+            sort: filters.sort,
+            providerType,
+          },
           fallbackApplied: ("fallbackApplied" in result
             ? (result as { fallbackApplied?: string | null }).fallbackApplied
             : null) || null,
@@ -338,9 +381,276 @@ export function buildChatTools(locale: string) {
       },
     }),
 
+    /**
+     * Refine current listing filters (voice: "only video", "sooner", "under £150").
+     * Merges with context.currentFilters so the user does not restate specialty/city.
+     */
+    refineSearch: tool({
+      description:
+        "Refine the CURRENT search while the user is browsing results. Use when they say things like 'only video', 'sooner', 'under 200', 'speaks Turkish', 'available today'. Merges with existing filters. Returns updated cards, searchPath, and spokenSummary. Prefer this over searchDoctors when a search is already in progress.",
+      inputSchema: z.object({
+        consultationType: z.enum(["in_person", "video"]).nullable(),
+        language: z.string().nullable(),
+        minPrice: z.number().nullable(),
+        maxPrice: z.number().nullable(),
+        minRating: z.number().nullable(),
+        availableToday: z.boolean().nullable(),
+        sort: z
+          .enum(["featured", "soonest", "price_asc", "price_desc", "rating"])
+          .nullable(),
+        locationSlug: z.string().nullable(),
+        specialty: z.string().nullable(),
+        skill: z.string().nullable(),
+        query: z.string().nullable(),
+        clearConsultationType: z
+          .boolean()
+          .nullable()
+          .describe("True to remove video/in-person filter."),
+      }),
+      execute: async (patch) => {
+        const base = context.currentFilters || {};
+        const mergePatch: DoctorsSearchFilters = {};
+        if (patch.consultationType)
+          mergePatch.consultationType = patch.consultationType;
+        if (patch.clearConsultationType) mergePatch.consultationType = null;
+        if (patch.language) mergePatch.language = patch.language;
+        if (patch.minPrice != null) mergePatch.minPrice = patch.minPrice;
+        if (patch.maxPrice != null) mergePatch.maxPrice = patch.maxPrice;
+        if (patch.minRating != null) mergePatch.minRating = patch.minRating;
+        if (patch.availableToday === true) {
+          mergePatch.availableToday = true;
+          mergePatch.sort = patch.sort || "soonest";
+        }
+        if (patch.sort) mergePatch.sort = patch.sort;
+        if (patch.locationSlug) mergePatch.location = patch.locationSlug;
+        if (patch.specialty) mergePatch.specialty = patch.specialty;
+        if (patch.skill) mergePatch.skill = patch.skill;
+        if (patch.query) mergePatch.query = patch.query;
+
+        const merged = mergeSearchFilters(base, mergePatch);
+        const searchPath = buildDoctorsSearchPath(merged);
+        const result = await searchDoctorsAction({
+          specialty: merged.specialty || undefined,
+          query: merged.query || undefined,
+          location: merged.location || undefined,
+          language: merged.language || undefined,
+          consultationType: merged.consultationType || undefined,
+          skill: merged.skill || undefined,
+          minPrice: merged.minPrice ?? undefined,
+          maxPrice: merged.maxPrice ?? undefined,
+          minRating: merged.minRating ?? undefined,
+          availableToday: merged.availableToday === true ? true : undefined,
+          sort: merged.sort || "featured",
+          page: 1,
+        });
+        const rawDoctors = (result.doctors || []).slice(0, 5);
+        const doctorIds = rawDoctors
+          .map((d) => (d as { id?: string }).id)
+          .filter((id): id is string => !!id);
+        const ctype =
+          merged.consultationType === "video" ? "video" : "in_person";
+        const avail = doctorIds.length
+          ? await getNextAvailabilityBatch(doctorIds, ctype)
+          : {};
+
+        const doctors: ChatDoctor[] = rawDoctors.map((raw: Record<string, unknown>) => {
+          const d = raw as {
+            id: string;
+            slug: string;
+            title: string | null;
+            avg_rating: number | null;
+            total_reviews: number | null;
+            consultation_fee_cents: number;
+            base_currency: string;
+            consultation_types: string[] | null;
+            languages: string[] | null;
+            verification_status: string;
+            profile?: {
+              first_name?: string;
+              last_name?: string;
+              avatar_url?: string | null;
+            };
+            location?: { city?: string; country_code?: string } | null;
+            specialties?: {
+              is_primary: boolean;
+              specialty: { name_key: string; slug: string };
+            }[];
+          };
+          const primary =
+            d.specialties?.find((s) => s.is_primary)?.specialty ||
+            d.specialties?.[0]?.specialty ||
+            null;
+          const next = avail[d.id];
+          const slots = next
+            ? next.slots.slice(0, 3).map((s) => ({
+                date: next.date,
+                start: s.start,
+                end: s.end,
+                consultationType: next.consultationType,
+              }))
+            : [];
+          return {
+            id: d.id,
+            slug: d.slug,
+            name: `${d.title || "Dr."} ${d.profile?.first_name || ""} ${
+              d.profile?.last_name || ""
+            }`
+              .replace(/\s+/g, " ")
+              .trim(),
+            avatarUrl: d.profile?.avatar_url || null,
+            specialtyDisplay: primary
+              ? formatSpecialtyName(primary.name_key)
+              : null,
+            allSpecialties: primary
+              ? [formatSpecialtyName(primary.name_key)]
+              : [],
+            allSkills: [],
+            city: d.location?.city || null,
+            countryCode: d.location?.country_code || null,
+            rating: Number(d.avg_rating) || 0,
+            reviewCount: d.total_reviews || 0,
+            consultationFeeCents: d.consultation_fee_cents,
+            currency: d.base_currency,
+            consultationTypes: d.consultation_types || [],
+            languages: d.languages || [],
+            isVerified: d.verification_status === "verified",
+            slotsByType: {
+              in_person: ctype === "in_person" ? slots : [],
+              video: ctype === "video" ? slots : [],
+            },
+          };
+        });
+
+        const total = result.total ?? doctors.length;
+        const spokenSummary = buildSearchResultsSpokenSummary({
+          total,
+          specialtyLabel: merged.specialty || null,
+          locationLabel: merged.location || null,
+          consultationType: merged.consultationType,
+          availableToday: merged.availableToday === true,
+          sort: merged.sort,
+          language: merged.language,
+          sampleNames: doctors.slice(0, 2).map((d) => d.name),
+          soonestNote: buildSoonestNote(doctors),
+        });
+
+        return {
+          ok: true as const,
+          doctors,
+          total,
+          searchPath,
+          spokenSummary,
+          filters: merged,
+          autoApplyListing: true,
+        };
+      },
+    }),
+
+    /**
+     * Slot-aware: who among current matches (or a fresh search) has the soonest slots.
+     */
+    findSoonestAvailability: tool({
+      description:
+        "Answer 'who is free this week / soonest available' for the current specialty/location filters. Uses live availability slots. Does not book.",
+      inputSchema: z.object({
+        consultationType: z.enum(["in_person", "video"]).nullable(),
+        specialty: z.string().nullable(),
+        locationSlug: z.string().nullable(),
+      }),
+      execute: async ({ consultationType, specialty, locationSlug }) => {
+        const base = context.currentFilters || {};
+        const merged = mergeSearchFilters(base, {
+          specialty: specialty || undefined,
+          location: locationSlug || undefined,
+          consultationType: consultationType || undefined,
+          sort: "soonest",
+          availableToday: null,
+        });
+        const ctype =
+          merged.consultationType === "video" ? "video" : "in_person";
+        const result = await searchDoctorsAction({
+          specialty: merged.specialty || undefined,
+          location: merged.location || undefined,
+          language: merged.language || undefined,
+          consultationType: ctype,
+          skill: merged.skill || undefined,
+          sort: "soonest",
+          page: 1,
+        });
+        const rawDoctors = (result.doctors || []).slice(0, 8);
+        const doctorIds = rawDoctors
+          .map((d) => (d as { id?: string }).id)
+          .filter((id): id is string => !!id);
+        const avail = await getNextAvailabilityBatch(doctorIds, ctype);
+
+        type Row = {
+          name: string;
+          slug: string;
+          date: string | null;
+          firstSlot: string | null;
+        };
+        const rows: Row[] = [];
+        for (const raw of rawDoctors) {
+          const d = raw as {
+            id: string;
+            slug: string;
+            title?: string | null;
+            profile?: { first_name?: string; last_name?: string };
+          };
+          const a = avail[d.id];
+          const name = `${d.title || "Dr."} ${d.profile?.first_name || ""} ${
+            d.profile?.last_name || ""
+          }`
+            .replace(/\s+/g, " ")
+            .trim();
+          rows.push({
+            name,
+            slug: d.slug,
+            date: a?.date || null,
+            firstSlot: a?.slots?.[0]?.start || null,
+          });
+        }
+        rows.sort((a, b) => {
+          if (!a.date && !b.date) return 0;
+          if (!a.date) return 1;
+          if (!b.date) return -1;
+          return a.date.localeCompare(b.date);
+        });
+
+        const withSlots = rows.filter((r) => r.date);
+        const top = withSlots.slice(0, 3);
+        const spokenSummary =
+          top.length === 0
+            ? "I could not find open slots for these doctors in the next two weeks. Try video visits or a wider area."
+            : `Soonest openings: ${top
+                .map(
+                  (r) =>
+                    `${r.name} on ${r.date}${
+                      r.firstSlot ? ` around ${r.firstSlot.slice(0, 5)}` : ""
+                    }`
+                )
+                .join("; ")}.`;
+
+        const searchPath = buildDoctorsSearchPath({
+          ...merged,
+          sort: "soonest",
+          consultationType: ctype,
+        });
+
+        return {
+          ok: true as const,
+          soonest: top,
+          spokenSummary,
+          searchPath,
+          filters: { ...merged, sort: "soonest", consultationType: ctype },
+          autoApplyListing: true,
+        };
+      },
+    }),
+
     applySearchFilters: tool({
       description:
-        "Update the Find a Doctor page URL/filters so the main search UI matches the conversation. Call whenever you have structured filters (even alongside searchDoctors). Never books appointments.",
+        "Build a Find a Doctor URL from full filters (does not book). Prefer refineSearch when refining an existing search.",
       inputSchema: z.object({
         query: z.string().nullable(),
         specialty: z.string().nullable(),
@@ -380,7 +690,9 @@ export function buildChatTools(locale: string) {
         return {
           ok: true as const,
           path,
+          searchPath: path,
           spokenSummary: input.spokenSummary,
+          autoApplyListing: true,
         };
       },
     }),
@@ -419,6 +731,20 @@ export function buildChatTools(locale: string) {
       },
     }),
   };
+}
+
+function buildSoonestNote(doctors: ChatDoctor[]): string | null {
+  for (const d of doctors) {
+    const slot =
+      d.slotsByType.video[0] || d.slotsByType.in_person[0] || null;
+    if (slot?.date) {
+      const time = slot.start?.slice(0, 5) || "";
+      return `Earliest opening among these is ${d.name} on ${slot.date}${
+        time ? ` around ${time}` : ""
+      }.`;
+    }
+  }
+  return null;
 }
 
 /**

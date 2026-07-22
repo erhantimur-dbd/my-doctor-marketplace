@@ -1125,7 +1125,8 @@
       "emergency_title": "This may be a medical emergency",
       "emergency_default_reason": "Your symptoms could need urgent care. Please seek immediate help.",
       "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now.",
-      "view_full_results": "Vedi tutti i risultati sulla mappa"
+      "view_full_results": "Vedi tutti i risultati sulla mappa",
+      "checking_availability": "Controllo disponibilità più vicine…"
     },
     "card": {
       "expert_in": "Expert in:",

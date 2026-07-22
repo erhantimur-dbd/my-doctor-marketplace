@@ -1352,7 +1352,8 @@
       "emergency_default_reason": "Your symptoms could need urgent care. Please seek immediate help.",
       "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now.",
       "looking_up": "Looking that up…",
-      "view_full_results": "View full results on map"
+      "view_full_results": "View full results on map",
+      "checking_availability": "Checking soonest availability…"
     },
     "card": {
       "expert_in": "Expert in:",

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
 import { aiModel, isAIEnabled } from "@/lib/ai/provider";
-import { buildChatTools } from "@/lib/chat/tools";
+import { buildChatTools, type ChatToolsContext } from "@/lib/chat/tools";
 import { buildSystemPrompt } from "@/lib/chat/system-prompt";
+import type { DoctorsSearchFilters } from "@/lib/voice/search-url";
 import { rateLimit } from "@/lib/rate-limit";
 import { log } from "@/lib/utils/logger";
 
@@ -42,14 +43,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { messages?: UIMessage[]; locale?: string };
+  let body: {
+    messages?: UIMessage[];
+    locale?: string;
+    /** Current Find a Doctor filters for refineSearch merge */
+    currentFilters?: Record<string, unknown>;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { messages, locale = "en" } = body;
+  const { messages, locale = "en", currentFilters } = body;
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json(
@@ -64,9 +70,12 @@ export async function POST(request: NextRequest) {
       model: aiModel,
       system: buildSystemPrompt(locale),
       messages: modelMessages,
-      tools: buildChatTools(locale),
-      // Multi-step: allow analyzeSymptoms → searchDoctors → final text in one turn.
-      stopWhen: stepCountIs(5),
+      tools: buildChatTools(locale, {
+        currentFilters: (currentFilters ||
+          {}) as DoctorsSearchFilters,
+      } satisfies ChatToolsContext),
+      // Multi-step: allow analyzeSymptoms → searchDoctors → refine in one turn.
+      stopWhen: stepCountIs(6),
     });
 
     return result.toUIMessageStreamResponse();
