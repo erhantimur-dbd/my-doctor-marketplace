@@ -1300,7 +1300,8 @@
     "launcher": {
       "tagline": "The AI that finds the perfect doctor for you",
       "cta": "Find specialist",
-      "open": "Open chat assistant"
+      "open": "Open chat assistant",
+      "open_voice": "Ouvrir l'assistant vocal"
     },
     "window": {
       "title": "MyDoctors360 Assistant",
@@ -1411,6 +1412,9 @@
     "error_tts": "Could not play audio.",
     "confirm_action": "Confirm",
     "confirm_booking_title": "Confirm booking action",
-    "confirm_booking_body": "Voice will never book automatically. Confirm to continue."
+    "confirm_booking_body": "Voice will never book automatically. Confirm to continue.",
+    "welcome_greeting": "Bienvenue sur MyDoctors360.",
+    "welcome_brief": "Je peux vous aider à trouver un médecin privé par spécialité, lieu, langue, ou vidéo versus en présentiel. Dites-moi ce dont vous avez besoin et je chercherai avec vous.",
+    "welcome_banner": "Assistant vocal prêt — parlez ou tapez pour rechercher."
   }
 }

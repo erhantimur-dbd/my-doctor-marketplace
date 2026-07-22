@@ -19,6 +19,11 @@ import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { useTts } from "@/hooks/use-tts";
 import { extractAssistantText } from "@/lib/voice/search-url";
+import {
+  buildVoiceWelcomeBrief,
+  shouldSpeakVoiceWelcome,
+  VOICE_WELCOME_SESSION_KEY,
+} from "@/lib/voice/welcome";
 import { ChatMessage } from "./chat-message";
 import { ChatComposer } from "./chat-composer";
 import { ChatSuggestions } from "./chat-suggestions";
@@ -66,10 +71,12 @@ export function ChatWindow() {
   });
 
   const tts = useTts({ locale });
-  // Voice replies only when user opened chat via voice FAB (not for typed chat)
+  // Voice replies when user opened via voice entry or enabled speaker
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(false);
+  const [welcomeBanner, setWelcomeBanner] = useState<string | null>(null);
   const spokenMsgIdsRef = useRef<Set<string>>(new Set());
   const lastSpokenTextRef = useRef<string>("");
+  const welcomeTriggeredRef = useRef(false);
 
   useEffect(() => {
     if (pendingVoiceStart) setVoiceReplyEnabled(true);
@@ -80,10 +87,51 @@ export function ChatWindow() {
   }, [messages, setMessages]);
 
   /**
+   * Voice session welcome: when user starts voice (launcher mic / pendingVoiceStart)
+   * after GDPR, show + speak MyDoctors360 search brief once per session.
+   * Text still appears if TTS fails. Never books.
+   */
+  useEffect(() => {
+    if (!hasAcceptedGdpr) return;
+    if (!pendingVoiceStart && !voiceReplyEnabled) return;
+    if (welcomeTriggeredRef.current) return;
+    if (typeof window === "undefined") return;
+
+    let already: string | null = null;
+    try {
+      already = sessionStorage.getItem(VOICE_WELCOME_SESSION_KEY);
+    } catch {
+      already = null;
+    }
+    if (!shouldSpeakVoiceWelcome(already)) {
+      welcomeTriggeredRef.current = true;
+      return;
+    }
+
+    const text = buildVoiceWelcomeBrief({
+      greeting: tVoice("welcome_greeting"),
+      brief: tVoice("welcome_brief"),
+    });
+    welcomeTriggeredRef.current = true;
+    setWelcomeBanner(text);
+    try {
+      sessionStorage.setItem(VOICE_WELCOME_SESSION_KEY, "1");
+    } catch {
+      /* ignore */
+    }
+    setVoiceReplyEnabled(true);
+    void tts.speak(text);
+  }, [
+    hasAcceptedGdpr,
+    pendingVoiceStart,
+    voiceReplyEnabled,
+    tVoice,
+    tts,
+  ]);
+
+  /**
    * DO NOT auto-router.push from tool searchPath/applySearchFilters.
-   * That caused infinite remount loops (ref reset → push → remount → push)
-   * and fought the main Find a Doctor page. Chat keeps results in-widget;
-   * the search bar owns full-page navigation.
+   * Chat keeps results in-widget; search bar owns full-page navigation.
    */
 
   // Speak assistant replies only when voice mode is on and turn is finished
@@ -97,10 +145,12 @@ export function ChatWindow() {
     );
     if (!text || text.length < 2) return;
     if (text === lastSpokenTextRef.current) return;
+    // Don't re-speak the welcome banner as an "assistant message"
+    if (welcomeBanner && text === welcomeBanner) return;
     spokenMsgIdsRef.current.add(last.id);
     lastSpokenTextRef.current = text;
     void tts.speak(text.slice(0, 800));
-  }, [messages, status, voiceReplyEnabled, tts]);
+  }, [messages, status, voiceReplyEnabled, tts, welcomeBanner]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -367,8 +417,13 @@ export function ChatWindow() {
                         : "px-3 py-2 text-[13px] mb-2"
                     )}
                   >
-                    {t("greeting")}
+                    {welcomeBanner || t("greeting")}
                   </div>
+                  {welcomeBanner && (
+                    <p className="text-[11px] text-muted-foreground px-1">
+                      {tVoice("welcome_banner")}
+                    </p>
+                  )}
                   {isFullscreen && (
                     <div className="flex items-start gap-2.5 rounded-xl border border-border bg-background px-4 py-3 text-xs leading-relaxed text-muted-foreground">
                       <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -431,6 +486,7 @@ export function ChatWindow() {
               disabled={isBusy}
               autoStartVoice={pendingVoiceStart && hasAcceptedGdpr}
               onAutoStartVoiceConsumed={clearPendingVoiceStart}
+              onVoiceSessionStart={() => setVoiceReplyEnabled(true)}
             />
           </>
         )}

@@ -22,7 +22,6 @@ import {
 import { SpecialtyMarquee } from "@/components/shared/specialty-marquee";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { HowItWorksSection } from "@/components/home/how-it-works-section";
-import { ChatWidget } from "@/components/chat/chat-widget";
 import { CONDITION_HUBS } from "@/lib/constants/condition-hubs";
 
 const allSpecialties = [
@@ -362,7 +361,6 @@ export default async function HomePage() {
       </section>
 
       <Footer />
-      <ChatWidget />
     </div>
   );
 }

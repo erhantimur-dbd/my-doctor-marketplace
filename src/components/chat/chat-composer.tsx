@@ -27,6 +27,8 @@ interface ChatComposerProps {
   /** When true, start listening as soon as mounted (e.g. floating mic → chat) */
   autoStartVoice?: boolean;
   onAutoStartVoiceConsumed?: () => void;
+  /** Fired when user begins a voice session (privacy accepted / listen start) */
+  onVoiceSessionStart?: () => void;
 }
 
 export function ChatComposer({
@@ -34,6 +36,7 @@ export function ChatComposer({
   disabled,
   autoStartVoice,
   onAutoStartVoiceConsumed,
+  onVoiceSessionStart,
 }: ChatComposerProps) {
   const t = useTranslations("chat.composer");
   const tVoice = useTranslations("voice");
@@ -65,6 +68,7 @@ export function ChatComposer({
 
   const startVoice = useCallback(() => {
     if (disabled || stt.isProcessing) return;
+    onVoiceSessionStart?.();
     try {
       const raw = localStorage.getItem(VOICE_PRIVACY_STORAGE_KEY);
       if (hasAcceptedVoicePrivacy(raw)) {
@@ -76,7 +80,7 @@ export function ChatComposer({
       // fall through to privacy
     }
     setShowPrivacy(true);
-  }, [disabled, stt, tVoice]);
+  }, [disabled, stt, tVoice, onVoiceSessionStart]);
 
   useEffect(() => {
     if (!autoStartVoice) return;

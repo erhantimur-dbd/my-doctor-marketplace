@@ -1300,7 +1300,8 @@
     "launcher": {
       "tagline": "The AI that finds the perfect doctor for you",
       "cta": "Find specialist",
-      "open": "Open chat assistant"
+      "open": "Open chat assistant",
+      "open_voice": "Sesli asistanı aç"
     },
     "window": {
       "title": "MyDoctors360 Assistant",
@@ -1411,6 +1412,9 @@
     "error_tts": "Ses çalınamadı.",
     "confirm_action": "Onayla",
     "confirm_booking_title": "Randevu eylemini onayla",
-    "confirm_booking_body": "Ses asla otomatik randevu almaz. Devam etmek için onaylayın."
+    "confirm_booking_body": "Ses asla otomatik randevu almaz. Devam etmek için onaylayın.",
+    "welcome_greeting": "MyDoctors360'a hoş geldiniz.",
+    "welcome_brief": "Uzmanlık, konum, dil veya görüntülü/yüz yüze seçenekleriyle özel doktor bulmanıza yardımcı olabilirim. İhtiyacınızı söyleyin; arama ve sonuçları birlikte netleştirelim.",
+    "welcome_banner": "Sesli asistan hazır — aramak için konuşun veya yazın."
   }
 }

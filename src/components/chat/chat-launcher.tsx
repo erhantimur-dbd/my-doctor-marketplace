@@ -1,22 +1,21 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronRight, Sparkles } from "lucide-react";
+import { ChevronRight, Mic, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Logo } from "@/components/brand/logo";
 
 interface ChatLauncherProps {
   onOpen: () => void;
+  /** Opens the same widget and starts the Grok voice session + welcome */
+  onOpenVoice?: () => void;
 }
 
 /**
- * Closed-state floating launcher shown in the bottom-right corner of every
- * public page.
- *
- * Mobile (<640px): compact 56×56 pulsing logo circle with green online dot.
- * Desktop (≥640px): full 290px gradient card with tagline + CTA button.
+ * Closed-state floating launcher — single patient AI entry (chat + voice).
+ * Bottom-right; no separate voice FAB.
  */
-export function ChatLauncher({ onOpen }: ChatLauncherProps) {
+export function ChatLauncher({ onOpen, onOpenVoice }: ChatLauncherProps) {
   const t = useTranslations("chat.launcher");
 
   return (
@@ -26,6 +25,7 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
       transition={{ duration: 0.3, delay: 0.5 }}
       className="fixed bottom-4 right-4"
       style={{ zIndex: 9998 }}
+      data-testid="unified-ai-launcher"
     >
       {/* Responsive toggle styles */}
       <style>{`
@@ -37,8 +37,19 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
         }
       `}</style>
 
-      {/* ── Mobile: compact circular logo button ── */}
-      <div className="chat-launcher-mobile p-4 -m-4">
+      {/* ── Mobile: logo + voice ── */}
+      <div className="chat-launcher-mobile flex items-end gap-2 p-4 -m-4">
+        {onOpenVoice && (
+          <button
+            type="button"
+            onClick={onOpenVoice}
+            aria-label={t("open_voice")}
+            title={t("open_voice")}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-background text-primary shadow-lg ring-2 ring-primary/30"
+          >
+            <Mic className="h-5 w-5" />
+          </button>
+        )}
         <button
           type="button"
           onClick={onOpen}
@@ -70,12 +81,9 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
         </button>
       </div>
 
-      {/* ── Desktop: full gradient card ── */}
+      {/* ── Desktop: full gradient card (chat + voice open same widget) ── */}
       <div className="chat-launcher-desktop">
-        <button
-          type="button"
-          onClick={onOpen}
-          aria-label={t("open")}
+        <div
           style={{
             width: "290px",
             boxShadow:
@@ -138,12 +146,30 @@ export function ChatLauncher({ onOpen }: ChatLauncherProps) {
             </div>
           </div>
 
-          {/* CTA pill with subtle arrow */}
-          <span className="relative mt-3.5 flex w-full items-center justify-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-center text-[13px] font-semibold text-primary shadow-md transition-all group-hover:gap-2 group-hover:shadow-lg">
-            {t("cta")}
-            <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-          </span>
-        </button>
+          {/* CTA row: chat + voice (same widget) */}
+          <div className="relative mt-3.5 flex w-full gap-2">
+            <button
+              type="button"
+              onClick={onOpen}
+              aria-label={t("open")}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2.5 text-center text-[13px] font-semibold text-primary shadow-md transition-all hover:shadow-lg"
+            >
+              {t("cta")}
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+            {onOpenVoice && (
+              <button
+                type="button"
+                onClick={onOpenVoice}
+                aria-label={t("open_voice")}
+                title={t("open_voice")}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 text-white ring-1 ring-white/40 backdrop-blur hover:bg-white/30"
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </motion.div>
   );
