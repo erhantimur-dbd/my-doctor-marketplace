@@ -186,6 +186,7 @@ export function DesktopFilterBar({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem value="soonest">{t("sort_soonest")}</SelectItem>
           <SelectItem value="best_match">Best Match</SelectItem>
           <SelectItem value="featured">{t("sort_featured")}</SelectItem>
           <SelectItem value="nearest">{t("sort_nearest")}</SelectItem>

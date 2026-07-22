@@ -261,11 +261,25 @@ export function DoctorSearchFilters({
     (key: string, value: string | undefined) => {
       if (key === "sort") {
         handleSortChange(value || "featured");
-      } else {
-        updateFilter(key, value);
+        return;
       }
+      // Conversion: "Available today" implies soonest-first ranking
+      if (key === "availableToday" && value === "true") {
+        const params = new URLSearchParams();
+        Object.entries(currentFilters).forEach(([k, v]) => {
+          if (v && k !== "page") params.set(k, v);
+        });
+        params.set("availableToday", "true");
+        if (!currentFilters.sort || currentFilters.sort === "featured") {
+          params.set("sort", "soonest");
+        }
+        params.delete("page");
+        router.push(`${pathname}?${params.toString()}`);
+        return;
+      }
+      updateFilter(key, value);
     },
-    [handleSortChange, updateFilter]
+    [handleSortChange, updateFilter, currentFilters, pathname, router]
   );
 
   // Build NL search indicator data when AI parsed the search

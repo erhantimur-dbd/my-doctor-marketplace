@@ -213,7 +213,9 @@
     "notify_me": "Notify Me",
     "your_name": "Your name",
     "your_email": "Your email",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "sort_soonest": "最早可约",
+    "book_next_slot": "预约 {time}"
   },
   "booking": {
     "select_date": "选择日期",

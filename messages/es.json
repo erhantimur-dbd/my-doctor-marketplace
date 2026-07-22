@@ -207,7 +207,9 @@
     "notify_me": "Notify Me",
     "your_name": "Your name",
     "your_email": "Your email",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "sort_soonest": "Más pronto disponible",
+    "book_next_slot": "Reservar {time}"
   },
   "booking": {
     "select_date": "Seleccionar Fecha",

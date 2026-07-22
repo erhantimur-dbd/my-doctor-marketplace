@@ -405,10 +405,25 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          router.push(`/doctors/${doctor.slug}/book`);
+                          // Conversion: one-tap to first available slot when known
+                          const firstDay = cardAvailability?.days?.[0];
+                          const firstSlot = firstDay?.slots?.[0];
+                          if (firstDay && firstSlot) {
+                            router.push(
+                              `/doctors/${doctor.slug}/book?date=${firstDay.date}&type=${activeConsultationType}&time=${encodeURIComponent(firstSlot.start)}`
+                            );
+                          } else {
+                            router.push(`/doctors/${doctor.slug}/book`);
+                          }
                         }}
                       >
-                        Book Now
+                        {(() => {
+                          const firstSlot = cardAvailability?.days?.[0]?.slots?.[0];
+                          if (firstSlot) {
+                            return `Book ${formatSlotTime(firstSlot.start)}`;
+                          }
+                          return "Book Now";
+                        })()}
                       </Button>
                     </div>
                   </div>
@@ -726,7 +741,6 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       <span className="text-sm text-muted-foreground">
                         {" "}/ {isTestingService ? "test" : "session"}
                       </span>
-                      <p className="text-xs text-muted-foreground/70 mt-0.5">+ booking fee</p>
                     </div>
 
                     {/* View profile link */}

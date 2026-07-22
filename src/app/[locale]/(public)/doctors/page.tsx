@@ -63,7 +63,10 @@ export default async function DoctorsPage({
       language: sp.language,
       consultationType: sp.consultationType,
       query: sp.query,
-      sort: sp.sort || "featured",
+      // Conversion: when filtering "available today", default to soonest-first
+      sort:
+        sp.sort ||
+        (sp.availableToday === "true" ? "soonest" : "featured"),
       page: sp.page ? Number(sp.page) : 1,
       availableToday: sp.availableToday === "true",
       wheelchairAccessible: sp.wheelchairAccessible === "true",

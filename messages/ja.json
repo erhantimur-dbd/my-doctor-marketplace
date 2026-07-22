@@ -207,7 +207,9 @@
     "notify_me": "Notify Me",
     "your_name": "Your name",
     "your_email": "Your email",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "sort_soonest": "最短で予約可能",
+    "book_next_slot": "{time} を予約"
   },
   "booking": {
     "select_date": "日付を選択",

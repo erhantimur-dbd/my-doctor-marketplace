@@ -10,7 +10,15 @@ export const searchSchema = z.object({
   consultationType: z.enum(["in_person", "video"]).optional(),
   query: z.string().optional(),
   sort: z
-    .enum(["rating", "price_asc", "price_desc", "featured"])
+    .enum([
+      "rating",
+      "price_asc",
+      "price_desc",
+      "featured",
+      "soonest",
+      "nearest",
+      "best_match",
+    ])
     .optional()
     .default("featured"),
   page: z.coerce.number().min(1).optional().default(1),

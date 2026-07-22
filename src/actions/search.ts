@@ -494,6 +494,89 @@ export async function searchDoctors(filters: SearchFilters) {
   const page = filters.page || 1;
   const perPage = 12;
 
+  // "Soonest" sort: order by earliest bookable slot (next-available RPC), then page.
+  // Doctors with no slots in the window sink to the end.
+  if (filters.sort === "soonest") {
+    const { data: idRows, count: soonestCount, error: idError } = await query.select(
+      "id",
+      { count: "exact" }
+    );
+
+    if (idError) {
+      log.error("Soonest sort ID query error:", { err: idError });
+      return { doctors: [], total: 0, page, perPage };
+    }
+
+    const allIds = (idRows || []).map((r: { id: string }) => r.id);
+    const total = soonestCount ?? allIds.length;
+
+    if (allIds.length === 0) {
+      return { doctors: [], total: 0, page, perPage };
+    }
+
+    const ctype =
+      filters.consultationType === "video" || filters.consultationType === "in_person"
+        ? filters.consultationType
+        : "in_person";
+
+    // Prefer requested type; if "all", also check video and take the earlier first slot
+    const [availPrimary, availVideo] = await Promise.all([
+      getNextAvailabilityBatch(allIds, ctype),
+      filters.consultationType
+        ? Promise.resolve({} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>)
+        : getNextAvailabilityBatch(allIds, "video"),
+    ]);
+
+    const earliestMs = (id: string): number => {
+      const a = availPrimary[id]?.slots?.[0]?.start;
+      const b = availVideo[id]?.slots?.[0]?.start;
+      const ta = a ? new Date(a).getTime() : Infinity;
+      const tb = b ? new Date(b).getTime() : Infinity;
+      return Math.min(ta, tb);
+    };
+
+    const orderedIds = [...allIds].sort((a, b) => earliestMs(a) - earliestMs(b));
+    const pageIds = orderedIds.slice((page - 1) * perPage, page * perPage);
+
+    if (pageIds.length === 0) {
+      return { doctors: [], total, page, perPage };
+    }
+
+    // Re-fetch full rows for the page (id-only select already consumed the builder)
+    const { data: pageData, error: pageError } = await supabase
+      .from("doctors")
+      .select(
+        `
+        *,
+        profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+        location:locations(city, country_code, slug, latitude, longitude),
+        specialties:doctor_specialties(
+          specialty:specialties(id, name_key, slug),
+          is_primary
+        ),
+        skills:doctor_skills(skill_slug),
+        photos:doctor_photos(storage_path, alt_text, is_primary)
+      `
+      )
+      .in("id", pageIds)
+      .eq("is_active", true)
+      .eq("verification_status", "verified");
+
+    if (pageError) {
+      log.error("Soonest sort page fetch error:", { err: pageError });
+      return { doctors: [], total: 0, page, perPage };
+    }
+
+    const idIndexMap = new Map(pageIds.map((id, i) => [id, i]));
+    const sorted = (pageData || []).sort(
+      (a: Record<string, unknown>, b: Record<string, unknown>) =>
+        (idIndexMap.get(a.id as string) ?? Infinity) -
+        (idIndexMap.get(b.id as string) ?? Infinity)
+    );
+
+    return { doctors: sorted, total, page, perPage };
+  }
+
   // "Nearest" sort uses a two-pass approach: RPC for ordered IDs, then fetch page slice
   if (
     filters.sort === "nearest" &&

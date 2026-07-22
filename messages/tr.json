@@ -271,7 +271,9 @@
     "notify_me": "Notify Me",
     "your_name": "Your name",
     "your_email": "Your email",
-    "submitting": "Submitting..."
+    "submitting": "Submitting...",
+    "sort_soonest": "En yakın müsait",
+    "book_next_slot": "Rezerve et {time}"
   },
   "booking": {
     "select_date": "Tarih Secin",
