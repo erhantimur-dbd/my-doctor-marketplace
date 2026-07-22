@@ -14,7 +14,6 @@ import {
   VolumeX,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
 import { useChatStore } from "@/stores/chat-store";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
@@ -41,7 +40,6 @@ export function ChatWindow() {
   const locale = useLocale();
   const t = useTranslations("chat.window");
   const tVoice = useTranslations("voice");
-  const router = useRouter();
   const {
     size,
     hasAcceptedGdpr,
@@ -68,46 +66,27 @@ export function ChatWindow() {
   });
 
   const tts = useTts({ locale });
-  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(true);
+  // Voice replies only when user opened chat via voice FAB (not for typed chat)
+  const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(false);
   const spokenMsgIdsRef = useRef<Set<string>>(new Set());
-  const appliedSearchPathsRef = useRef<Set<string>>(new Set());
+  const lastSpokenTextRef = useRef<string>("");
+
+  useEffect(() => {
+    if (pendingVoiceStart) setVoiceReplyEnabled(true);
+  }, [pendingVoiceStart]);
 
   useEffect(() => {
     setMessages(messages as UIMessage[]);
   }, [messages, setMessages]);
 
-  // Sync Find a Doctor page when tools return a search path
-  useEffect(() => {
-    for (const msg of messages) {
-      if (msg.role !== "assistant") continue;
-      for (const part of msg.parts || []) {
-        const p = part as {
-          type?: string;
-          state?: string;
-          toolCallId?: string;
-          output?: {
-            ok?: boolean;
-            path?: string;
-            searchPath?: string;
-          };
-        };
-        if (p.state !== "output-available" || !p.output?.ok) continue;
-        const path =
-          p.type === "tool-applySearchFilters"
-            ? p.output.path
-            : p.type === "tool-searchDoctors"
-              ? p.output.searchPath
-              : undefined;
-        if (!path || !path.startsWith("/doctors")) continue;
-        const key = p.toolCallId || path;
-        if (appliedSearchPathsRef.current.has(key)) continue;
-        appliedSearchPathsRef.current.add(key);
-        router.push(path);
-      }
-    }
-  }, [messages, router]);
+  /**
+   * DO NOT auto-router.push from tool searchPath/applySearchFilters.
+   * That caused infinite remount loops (ref reset → push → remount → push)
+   * and fought the main Find a Doctor page. Chat keeps results in-widget;
+   * the search bar owns full-page navigation.
+   */
 
-  // Speak assistant replies (talking agent) when voice replies enabled
+  // Speak assistant replies only when voice mode is on and turn is finished
   useEffect(() => {
     if (!voiceReplyEnabled) return;
     if (status !== "ready") return;
@@ -117,7 +96,9 @@ export function ChatWindow() {
       last.parts as Array<{ type: string; text?: string }>
     );
     if (!text || text.length < 2) return;
+    if (text === lastSpokenTextRef.current) return;
     spokenMsgIdsRef.current.add(last.id);
+    lastSpokenTextRef.current = text;
     void tts.speak(text.slice(0, 800));
   }, [messages, status, voiceReplyEnabled, tts]);
 

@@ -54,6 +54,7 @@ import {
   serializeVoicePrivacyConsent,
 } from "@/lib/voice/privacy";
 import { VoicePrivacyNotice } from "@/components/voice/voice-privacy-notice";
+import { useChatStore } from "@/stores/chat-store";
 import { toast } from "sonner";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
@@ -208,9 +209,10 @@ export function HomeSearchBar({
   const geo = useGeolocation("auto");
   const { searches: recentSearches, addSearch, removeOne: removeRecentSearch, clearAll: clearRecentSearches } = useRecentSearches();
 
-  // Voice search — Grok STT fills the bar and runs Find a Doctor search
+  // Voice search — Grok STT → smart/NL parse → Find a Doctor page (not chat)
   const [showVoicePrivacy, setShowVoicePrivacy] = useState(false);
-  const runSearchWithQueryRef = useRef<(q: string) => void>(() => {});
+  const runVoiceSearchRef = useRef<(q: string) => void>(() => {});
+  const closeChat = useChatStore((s) => s.close);
 
   const speech = useGrokStt({
     locale,
@@ -219,11 +221,10 @@ export function HomeSearchBar({
       if (!trimmed) return;
       setQuery(trimmed);
       setShowSuggestions(false);
-      inputRef.current?.focus();
-      mobileInputRef.current?.focus();
-      // Navigate to results with the spoken query (structured filters still via AI chat)
-      runSearchWithQueryRef.current(trimmed);
-      toast.success(t("voice_search_applied") || "Searching…");
+      // Do not compete with chat cards / navigation loops
+      closeChat();
+      toast.message(t("voice_search_applied"));
+      runVoiceSearchRef.current(trimmed);
     },
     onError: (code) => {
       if (code === "not-allowed") toast.error(t("voice_error_permission"));
@@ -468,8 +469,6 @@ export function HomeSearchBar({
     [location, consultationType, router, specialties, placeData, addSearch]
   );
 
-  runSearchWithQueryRef.current = runSearchWithQuery;
-
   const handleSearch = useCallback(() => {
     runSearchWithQuery(query);
   }, [query, runSearchWithQuery]);
@@ -509,28 +508,96 @@ export function HomeSearchBar({
     }
   };
 
-  // Handle Natural Language Search
-  const handleNLSearch = useCallback(async () => {
-    setAiLoading(true);
-    try {
-      const result = await parseNaturalLanguageSearch(query.trim(), locale);
-      if (result.data) {
-        const params = new URLSearchParams();
-        if (result.data.specialty) params.set("specialty", result.data.specialty);
-        if (result.data.language) params.set("language", result.data.language);
-        if (result.data.maxPrice) params.set("maxPrice", String(result.data.maxPrice / 100));
-        if (result.data.minRating) params.set("minRating", String(result.data.minRating));
-        if (result.data.consultationType) params.set("consultationType", result.data.consultationType);
-        // Only pass query if it adds value beyond the extracted specialty.
-        // When the AI echoes the symptom text (e.g. "I have a headache") as query
-        // AND already extracted a specialty, the bio search produces 0 results.
-        if (result.data.query && !result.data.specialty) {
-          params.set("query", result.data.query);
-        }
+  // Natural language search (accepts spoken/typed override)
+  const handleNLSearch = useCallback(
+    async (rawOverride?: string) => {
+      const text = (rawOverride ?? query).trim();
+      if (!text) return;
+      setAiLoading(true);
+      try {
+        const result = await parseNaturalLanguageSearch(text, locale);
+        if (result.data) {
+          const params = new URLSearchParams();
+          if (result.data.specialty)
+            params.set("specialty", result.data.specialty);
+          if (result.data.language)
+            params.set("language", result.data.language);
+          if (result.data.maxPrice)
+            params.set("maxPrice", String(result.data.maxPrice / 100));
+          if (result.data.minRating)
+            params.set("minRating", String(result.data.minRating));
+          if (result.data.consultationType)
+            params.set("consultationType", result.data.consultationType);
+          // Avoid dumping the full spoken sentence into bio search when specialty known
+          if (result.data.query && !result.data.specialty) {
+            params.set("query", result.data.query);
+          }
 
-        // Location priority: user's explicit selection always wins over AI-parsed location.
-        // This prevents the AI from overriding a manually selected location (e.g., London)
-        // with a hallucinated one (e.g., Berlin from "pain in my neck").
+          if (placeData) {
+            params.set("placeLat", placeData.lat.toFixed(6));
+            params.set("placeLng", placeData.lng.toFixed(6));
+            params.set("placeName", placeData.name);
+            params.set("radius", "25");
+          } else if (location && location !== "all") {
+            params.set("location", location);
+          } else if (result.data.location) {
+            params.set("location", result.data.location);
+          }
+          params.set("aiParsed", "true");
+
+          addSearch({
+            query: text,
+            specialty: result.data.specialty || undefined,
+            location:
+              placeData?.name ||
+              (location && location !== "all" ? location : undefined),
+            placeLat: placeData?.lat,
+            placeLng: placeData?.lng,
+          });
+
+          router.push(`/doctors?${params.toString()}`);
+        } else {
+          runSearchWithQuery(text);
+        }
+      } catch {
+        runSearchWithQuery(text);
+      } finally {
+        setAiLoading(false);
+      }
+    },
+    [query, locale, location, placeData, router, runSearchWithQuery, addSearch]
+  );
+
+  // Smart search: AI-powered by default; optional spoken override
+  const handleSmartSearch = useCallback(
+    (rawOverride?: string) => {
+      const trimmed = (rawOverride ?? query).trim();
+      if (!trimmed) {
+        setMissingInputWarning(true);
+        setShowSuggestions(true);
+        (inputRef.current || mobileInputRef.current)?.focus();
+        return;
+      }
+      setMissingInputWarning(false);
+      if (rawOverride) setQuery(trimmed);
+      setAiLoading(true);
+
+      const term = trimmed.toLowerCase();
+      const matchedSpec = specialties.find((s) => {
+        const display = s.name_key
+          .replace("specialty.", "")
+          .replace(/_/g, " ")
+          .toLowerCase();
+        return (
+          display === term ||
+          s.slug === term ||
+          s.slug === term.replace(/\s+/g, "-")
+        );
+      });
+
+      if (matchedSpec) {
+        const params = new URLSearchParams();
+        params.set("specialty", matchedSpec.slug);
         if (placeData) {
           params.set("placeLat", placeData.lat.toFixed(6));
           params.set("placeLng", placeData.lng.toFixed(6));
@@ -538,62 +605,43 @@ export function HomeSearchBar({
           params.set("radius", "25");
         } else if (location && location !== "all") {
           params.set("location", location);
-        } else if (result.data.location) {
-          params.set("location", result.data.location);
         }
-        params.set("aiParsed", "true");
-
-        // Track this search for "Recent Searches"
+        if (consultationType !== "all") {
+          params.set("consultationType", consultationType);
+        }
         addSearch({
-          query: query.trim(),
-          specialty: result.data.specialty || undefined,
-          location: placeData?.name || (location && location !== "all" ? location : undefined),
+          query: trimmed,
+          specialty: matchedSpec.slug,
+          location:
+            placeData?.name ||
+            (location && location !== "all" ? location : undefined),
           placeLat: placeData?.lat,
           placeLng: placeData?.lng,
         });
-
         router.push(`/doctors?${params.toString()}`);
-      } else {
-        // Fallback to regular search
-        handleSearch();
+        setAiLoading(false);
+        return;
       }
-    } catch {
-      handleSearch();
-    } finally {
-      setAiLoading(false);
-    }
-  }, [query, locale, location, placeData, router, handleSearch, addSearch]);
 
-  // Smart search: AI-powered by default, instant for exact specialty matches
-  const handleSmartSearch = useCallback(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      // Block empty searches — prompt the user to pick a suggestion instead
-      setMissingInputWarning(true);
-      setShowSuggestions(true);
-      (inputRef.current || mobileInputRef.current)?.focus();
-      return;
-    }
-    // Clear any lingering warning when we do have input
-    setMissingInputWarning(false);
-    // Show spinner immediately so the user knows we're working. The spinner
-    // stays until navigation replaces the page (or handleNLSearch clears it).
-    setAiLoading(true);
-    // Fast path: if query exactly matches a specialty name/slug, skip AI
-    const term = trimmed.toLowerCase();
-    const matchedSpec = specialties.find((s) => {
-      const display = s.name_key
-        .replace("specialty.", "")
-        .replace(/_/g, " ")
-        .toLowerCase();
-      return display === term || s.slug === term || s.slug === term.replace(/\s+/g, "-");
-    });
-    if (matchedSpec) {
-      handleSearch(); // instant specialty search, no AI
-    } else {
-      handleNLSearch(); // everything else: symptoms, preferences, complex queries
-    }
-  }, [query, specialties, handleNLSearch, handleSearch]);
+      // Conversational / voice sentences → NL parse (specialty + location)
+      void handleNLSearch(trimmed);
+    },
+    [
+      query,
+      specialties,
+      handleNLSearch,
+      placeData,
+      location,
+      consultationType,
+      router,
+      addSearch,
+    ]
+  );
+
+  // Voice always uses smart/NL path (never dump full sentence as raw query alone)
+  runVoiceSearchRef.current = (q: string) => {
+    handleSmartSearch(q);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showSuggestions || allSuggestions.length === 0) {
@@ -1236,7 +1284,7 @@ export function HomeSearchBar({
                 "rounded-full shadow-lg",
                 compact ? "h-11 w-11" : "h-14 w-14"
               )}
-              onClick={handleSmartSearch}
+              onClick={() => handleSmartSearch()}
               disabled={aiLoading}
             >
               {aiLoading ? (
@@ -1615,7 +1663,7 @@ export function HomeSearchBar({
         )}
 
         {/* Search button — AI-powered */}
-        <Button className="h-11 w-full rounded-lg" onClick={handleSmartSearch} disabled={aiLoading}>
+        <Button className="h-11 w-full rounded-lg" onClick={() => handleSmartSearch()} disabled={aiLoading}>
           {aiLoading ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
