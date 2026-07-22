@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDoctorsSearchPath,
+  doctorsSearchPathsEqual,
   extractAssistantText,
+  parseDoctorsSearchPath,
 } from "@/lib/voice/search-url";
 
 describe("buildDoctorsSearchPath", () => {
@@ -59,5 +61,20 @@ describe("extractAssistantText", () => {
         { type: "tool-searchDoctors" },
       ])
     ).toBe("Found 3 cardiologists.");
+  });
+});
+
+describe("parseDoctorsSearchPath + equality", () => {
+  it("round-trips specialty and location", () => {
+    const path = buildDoctorsSearchPath({
+      specialty: "general-practice",
+      location: "birmingham-uk",
+    });
+    const parsed = parseDoctorsSearchPath(path);
+    expect(parsed.specialty).toBe("general-practice");
+    expect(parsed.location).toBe("birmingham-uk");
+    expect(doctorsSearchPathsEqual(path, buildDoctorsSearchPath(parsed))).toBe(
+      true
+    );
   });
 });

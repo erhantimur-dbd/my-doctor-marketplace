@@ -59,6 +59,7 @@ import {
   matchLocationFromSearchText,
   resolveLocationSlug,
 } from "@/lib/location/match-location";
+import { useSearchIntentStore } from "@/stores/search-intent-store";
 import { toast } from "sonner";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
@@ -229,6 +230,15 @@ export function HomeSearchBar({
   const [showVoicePrivacy, setShowVoicePrivacy] = useState(false);
   const runVoiceSearchRef = useRef<(q: string) => void>(() => {});
   const closeChat = useChatStore((s) => s.close);
+  const setIntentFilters = useSearchIntentStore((s) => s.setFilters);
+  const markIntentApplied = useSearchIntentStore((s) => s.markApplied);
+  const hydrateIntent = useSearchIntentStore((s) => s.hydrateFromPath);
+
+  // Listing page: keep intent store aligned with URL (SoR)
+  useEffect(() => {
+    if (!compact || typeof window === "undefined") return;
+    hydrateIntent(window.location.pathname + window.location.search);
+  }, [compact, initialLocation, initialQuery, hydrateIntent]);
 
   const speech = useGrokStt({
     locale,
@@ -600,7 +610,21 @@ export function HomeSearchBar({
             placeLng: placeData?.lng,
           });
 
-          router.push(`/doctors?${params.toString()}`);
+          const path = `/doctors?${params.toString()}`;
+          setIntentFilters({
+            specialty: result.data.specialty,
+            location: resolvedLoc,
+            query: result.data.query && !result.data.specialty
+              ? result.data.query
+              : null,
+            language: result.data.language,
+            consultationType: result.data.consultationType,
+            placeLat: placeData?.lat ?? null,
+            placeLng: placeData?.lng ?? null,
+            placeName: placeData?.name ?? null,
+          });
+          markIntentApplied(path);
+          router.push(path);
         } else {
           // AI unavailable: still map city in phrase → Where + URL
           const locFromText = matchLocationFromSearchText(text, locations);
@@ -654,6 +678,8 @@ export function HomeSearchBar({
       locations,
       specialties,
       consultationType,
+      setIntentFilters,
+      markIntentApplied,
     ]
   );
 

@@ -1348,7 +1348,8 @@
       "search_error": "Could not load doctors right now. Please try again.",
       "emergency_title": "This may be a medical emergency",
       "emergency_default_reason": "Your symptoms could need urgent care. Please seek immediate help.",
-      "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now."
+      "emergency_numbers": "Call 999 (UK/Ireland), 112 (EU), or 911 (US) now.",
+      "view_full_results": "Tüm sonuçları haritada gör"
     },
     "card": {
       "expert_in": "Expert in:",

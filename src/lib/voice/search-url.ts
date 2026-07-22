@@ -85,3 +85,58 @@ export function extractAssistantText(
     .join(" ")
     .trim();
 }
+
+/** Parse `/doctors?...` or query string into filter object. */
+export function parseDoctorsSearchPath(
+  pathOrSearch: string
+): DoctorsSearchFilters {
+  let search = pathOrSearch;
+  try {
+    if (pathOrSearch.includes("?")) {
+      search = pathOrSearch.slice(pathOrSearch.indexOf("?"));
+    } else if (!pathOrSearch.startsWith("?")) {
+      search = pathOrSearch.startsWith("/") ? "" : `?${pathOrSearch}`;
+    }
+    const url = new URL(search || "?", "http://local.invalid");
+    const g = (k: string) => url.searchParams.get(k);
+    const num = (k: string) => {
+      const v = g(k);
+      if (v == null || v === "") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    return {
+      query: g("query"),
+      specialty: g("specialty"),
+      location: g("location"),
+      language: g("language"),
+      consultationType: g("consultationType"),
+      skill: g("skill"),
+      minPrice: num("minPrice"),
+      maxPrice: num("maxPrice"),
+      minRating: num("minRating"),
+      availableToday: g("availableToday") === "true" ? true : null,
+      sort: g("sort"),
+      providerType: g("providerType"),
+      placeLat: num("placeLat"),
+      placeLng: num("placeLng"),
+      placeName: g("placeName"),
+      radius: num("radius"),
+      acceptedPayment: g("acceptedPayment"),
+      wheelchairAccessible:
+        g("wheelchairAccessible") === "true" ? true : null,
+      page: num("page"),
+    };
+  } catch {
+    return {};
+  }
+}
+
+/** Compare two doctors paths ignoring param order. */
+export function doctorsSearchPathsEqual(a: string, b: string): boolean {
+  const fa = parseDoctorsSearchPath(a);
+  const fb = parseDoctorsSearchPath(b);
+  const pathA = buildDoctorsSearchPath(fa);
+  const pathB = buildDoctorsSearchPath(fb);
+  return pathA === pathB;
+}

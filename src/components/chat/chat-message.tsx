@@ -1,10 +1,12 @@
 "use client";
 
 import type { UIMessage } from "ai";
-import { AlertTriangle, BookOpen, Loader2 } from "lucide-react";
+import { AlertTriangle, BookOpen, Loader2, Map } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { useSearchIntentStore } from "@/stores/search-intent-store";
+import { parseDoctorsSearchPath } from "@/lib/voice/search-url";
 import { ChatDoctorCard } from "./chat-doctor-card";
 import type { ChatDoctor } from "@/lib/chat/tools";
 
@@ -28,7 +30,19 @@ interface ChatMessageProps {
  */
 export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
   const t = useTranslations("chat.message");
+  const router = useRouter();
+  const prepareApply = useSearchIntentStore((s) => s.prepareApply);
+  const markApplied = useSearchIntentStore((s) => s.markApplied);
   const isUser = message.role === "user";
+
+  function applyListingPath(path: string | undefined) {
+    if (!path?.startsWith("/doctors")) return;
+    const filters = parseDoctorsSearchPath(path);
+    const next = prepareApply(filters);
+    if (!next) return; // already on this search
+    markApplied(next);
+    router.replace(next);
+  }
 
   // If the model ran a successful doctor search and rendered cards, the LLM
   // sometimes ALSO enumerates the doctors in markdown text. That's redundant
@@ -153,6 +167,8 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
 
             if (tp.state === "output-available" && tp.output?.ok) {
               const doctors = tp.output.doctors ?? [];
+              const searchPath = (tp.output as { searchPath?: string })
+                .searchPath;
               if (doctors.length === 0) {
                 return (
                   <div
@@ -174,6 +190,16 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
                     <p className="text-[11px] italic text-muted-foreground">
                       {tp.output.fallbackApplied}
                     </p>
+                  )}
+                  {searchPath && (
+                    <button
+                      type="button"
+                      onClick={() => applyListingPath(searchPath)}
+                      className="flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/10"
+                    >
+                      <Map className="h-3.5 w-3.5" />
+                      {t("view_full_results") || "View full results on map"}
+                    </button>
                   )}
                   {doctors.map((doctor) => (
                     <ChatDoctorCard
