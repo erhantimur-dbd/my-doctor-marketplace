@@ -68,68 +68,71 @@ export function BookingAuthSummary({
     <div
       data-booking-auth
       className={cn(
-        "mb-4 overflow-hidden rounded-xl border border-primary/20 bg-background shadow-sm",
+        "mb-4 overflow-hidden rounded-xl border border-primary/20 bg-background shadow-sm md:mb-0",
         className
       )}
     >
-      <div className="bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary">
+      <div className="bg-primary/10 px-4 py-3 text-sm font-medium text-primary">
         {mode === "sign-up"
           ? t("booking_banner_sign_up")
           : t("booking_banner_sign_in")}
       </div>
 
-      <div className="flex gap-3 p-4">
-        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-background">
-          {doctor.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={doctor.avatarUrl}
-              alt={doctor.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-muted-foreground">
-              {initials || <User className="h-5 w-5" />}
+      {/* Column-friendly layout: avatar + identity stacked on wide sidebar */}
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start md:flex-col">
+        <div className="flex gap-3">
+          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-background">
+            {doctor.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={doctor.avatarUrl}
+                alt={doctor.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-muted-foreground">
+                {initials || <User className="h-5 w-5" />}
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-foreground">{doctor.name}</p>
+            {doctor.specialtyDisplay && (
+              <p className="text-sm text-muted-foreground">
+                {doctor.specialtyDisplay}
+              </p>
+            )}
+            {locationStr && (
+              <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3 shrink-0" />
+                <span>{locationStr}</span>
+              </p>
+            )}
+
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {doctor.isVerified && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                  <Shield className="h-2.5 w-2.5" />
+                  {t("booking_verified")}
+                </span>
+              )}
+              {doctor.consultationTypes?.includes("video") && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+                  <Video className="h-2.5 w-2.5" />
+                  {t("booking_type_video")}
+                </span>
+              )}
             </div>
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-foreground">{doctor.name}</p>
-          {doctor.specialtyDisplay && (
-            <p className="truncate text-sm text-muted-foreground">
-              {doctor.specialtyDisplay}
-            </p>
-          )}
-          {locationStr && (
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">{locationStr}</span>
-            </p>
-          )}
-
-          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {doctor.isVerified && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <Shield className="h-2.5 w-2.5" />
-                {t("booking_verified")}
-              </span>
-            )}
-            {doctor.consultationTypes?.includes("video") && (
-              <span className="inline-flex items-center gap-0.5 rounded-full bg-purple-50 px-1.5 py-0.5 text-[10px] font-medium text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
-                <Video className="h-2.5 w-2.5" />
-                {t("booking_type_video")}
-              </span>
-            )}
           </div>
         </div>
 
         {doctor.consultationFeeCents > 0 && (
-          <div className="shrink-0 text-right">
+          <div className="rounded-lg bg-muted/50 px-3 py-2 sm:ml-auto sm:text-right md:ml-0 md:text-left">
             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
               {t("booking_from")}
             </p>
-            <p className="text-sm font-semibold tabular-nums text-foreground">
+            <p className="text-lg font-semibold tabular-nums text-foreground">
               {formatCurrency(
                 doctor.consultationFeeCents,
                 doctor.currency,
@@ -141,7 +144,7 @@ export function BookingAuthSummary({
       </div>
 
       {(dateLabel || timeLabel || typeLabel) && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t bg-muted/40 px-4 py-2.5 text-xs text-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t bg-muted/40 px-5 py-3 text-xs text-foreground">
           {typeLabel && (
             <span className="inline-flex items-center gap-1 font-medium">
               {book.type === "video" ? (

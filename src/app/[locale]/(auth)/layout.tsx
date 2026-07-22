@@ -7,12 +7,13 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 px-4 py-10">
       <Link href="/" className="mb-8 flex items-center gap-2">
         <Logo className="h-8 w-8 text-primary" />
         <span className="text-2xl font-bold tracking-tight">MyDoctors360</span>
       </Link>
-      <div className="w-full max-w-md sm:max-w-lg">{children}</div>
+      {/* Wide enough for side-by-side booking summary + form; children constrain when solo */}
+      <div className="w-full max-w-md md:max-w-4xl">{children}</div>
     </div>
   );
 }

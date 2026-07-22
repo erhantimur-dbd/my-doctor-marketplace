@@ -5,13 +5,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email/client";
 import { welcomeEmail } from "@/lib/email/templates";
 import { passwordSchema } from "@/lib/validators/password";
 import { safeError } from "@/lib/utils/safe-error";
 import { log } from "@/lib/utils/logger";
+import {
+  AUTH_RETURN_COOKIE,
+  isSafeRelativePath,
+} from "@/lib/auth/return-cookie";
+
+async function setAuthReturnCookie(redirectTo: string | null | undefined) {
+  if (!redirectTo || !isSafeRelativePath(redirectTo)) return;
+  const jar = await cookies();
+  jar.set(AUTH_RETURN_COOKIE, redirectTo, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60, // 1 hour — enough for email verify
+  });
+}
 
 /** Derive the app origin from incoming request headers (works on localhost,
  *  Vercel preview deploys, and production). Falls back to env var. */
@@ -128,6 +144,13 @@ export async function register(formData: FormData) {
     return { error: pwResult.error.issues[0]?.message || "Password too weak." };
   }
 
+  // Keep emailRedirectTo on the allowlisted base callback only. Long
+  // ?next= book URLs can make Supabase reject the confirm-email send
+  // ("Error sending confirmation email"). Resume destination via cookie.
+  if (redirectTo) {
+    await setAuthReturnCookie(redirectTo);
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -137,12 +160,12 @@ export async function register(formData: FormData) {
         last_name: lastName,
         role: "patient",
       },
-      // Preserve post-verify destination (e.g. doctor book URL with slot params)
-      emailRedirectTo: buildOAuthCallback(origin, locale, redirectTo || undefined),
+      emailRedirectTo: `${origin}/${locale}/callback`,
     },
   });
 
   if (error) {
+    log.error("[Auth] signUp failed:", { err: error, message: error.message });
     return { error: safeError(error) };
   }
 

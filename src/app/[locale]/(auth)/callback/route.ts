@@ -1,5 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import {
+  AUTH_RETURN_COOKIE,
+  isSafeRelativePath,
+} from "@/lib/auth/return-cookie";
+
+function safeRelative(path: string | null | undefined, fallback: string): string {
+  if (path && isSafeRelativePath(path)) return path;
+  return fallback;
+}
 
 export async function GET(
   request: NextRequest,
@@ -10,9 +19,12 @@ export async function GET(
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");
-  const rawNext = searchParams.get("next") ?? `/${locale}`;
-  // Only allow relative paths to prevent open redirect attacks
-  const next = (rawNext.startsWith("/") && !rawNext.startsWith("//")) ? rawNext : `/${locale}`;
+  // Prefer explicit ?next= (OAuth); fall back to cookie set at signup (email confirm)
+  const rawNext =
+    searchParams.get("next") ||
+    request.cookies.get(AUTH_RETURN_COOKIE)?.value ||
+    `/${locale}`;
+  const next = safeRelative(rawNext, `/${locale}`);
 
   // Helper: create a redirect response and copy all auth cookies onto it.
   // This is critical — using `cookies()` from next/headers sets cookies on
@@ -25,6 +37,11 @@ export async function GET(
     for (const cookie of pendingCookies) {
       response.cookies.set(cookie.name, cookie.value, cookie.options);
     }
+    // One-shot resume destination
+    response.cookies.set(AUTH_RETURN_COOKIE, "", {
+      path: "/",
+      maxAge: 0,
+    });
     return response;
   }
 

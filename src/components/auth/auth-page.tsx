@@ -168,9 +168,19 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   const summaryMode = activeTab === "sign-up" ? "sign-up" : "sign-in";
 
   return (
-    <div className="w-full">
+    <div
+      className={
+        bookingContext
+          ? "grid w-full grid-cols-1 items-start gap-6 md:grid-cols-2 md:gap-8"
+          : "mx-auto w-full max-w-md"
+      }
+    >
       {bookingContext && (
-        <BookingAuthSummary context={bookingContext} mode={summaryMode} />
+        <BookingAuthSummary
+          context={bookingContext}
+          mode={summaryMode}
+          className="md:sticky md:top-8 md:mb-0"
+        />
       )}
 
     <Card className="overflow-hidden">

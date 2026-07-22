@@ -13,6 +13,8 @@ const SAFE_PATTERNS: [RegExp, string][] = [
   [/email not confirmed/i, "Please verify your email before signing in."],
   [/user already registered/i, "An account with this email already exists."],
   [/email rate limit exceeded/i, "Too many requests. Please try again later."],
+  [/error sending confirmation email/i, "We couldn't send a verification email. Please check your address and try again in a few minutes."],
+  [/confirmation email/i, "We couldn't send a verification email. Please try again in a few minutes."],
   [/password should be at least/i, "Password does not meet minimum requirements."],
   // Supabase DB
   [/duplicate key.*unique/i, "This record already exists."],
