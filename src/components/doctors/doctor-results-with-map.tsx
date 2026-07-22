@@ -125,8 +125,8 @@ export function DoctorResultsWithMap({
           : ""
       }
     >
-      {/* Doctor list — left side */}
-      <div className="min-w-0 space-y-3">
+      {/* Doctor list — full width on mobile; left column on desktop */}
+      <div className="min-w-0 space-y-3 lg:space-y-3">
         {doctors.map((doctor) => (
           <div key={doctor.id}>
             <DoctorCard
@@ -145,7 +145,7 @@ export function DoctorResultsWithMap({
         ))}
       </div>
 
-      {/* Map — right side (only if we have location data) */}
+      {/* Map — sticky split pane on desktop only */}
       {hasMapData && (
         <div className="hidden min-w-0 lg:block">
           <div className="sticky top-20 h-[calc(100vh-6rem)] overflow-hidden rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.08)] relative">
@@ -156,7 +156,6 @@ export function DoctorResultsWithMap({
               onClickDoctor={handleClickDoctor}
               centerLocation={centerLocation}
             />
-            {/* Expand to full-screen map dialog */}
             <div className="absolute top-3 left-3 z-10">
               <MapViewButton
                 doctors={doctors}
@@ -167,6 +166,20 @@ export function DoctorResultsWithMap({
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Mobile / tablet: floating map entry → full-screen dialog */}
+      {hasMapData && (
+        <div className="fixed bottom-20 right-4 z-40 lg:hidden safe-area-pb">
+          <MapViewButton
+            doctors={doctors}
+            locale={locale}
+            availability={availability}
+            centerLocation={centerLocation}
+            liveAvailability={liveAvailability}
+            variant="fab"
+          />
         </div>
       )}
     </div>

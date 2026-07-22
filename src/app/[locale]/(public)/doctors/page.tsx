@@ -206,8 +206,8 @@ export default async function DoctorsPage({
           {/* Recently viewed doctors carousel */}
           <RecentlyViewedCarousel />
 
-          {/* AI-powered search bar – desktop only */}
-          <div className="hidden lg:block">
+          {/* Search bar — all viewports (conversion: mobile parity) */}
+          <div className="w-full">
             <HomeSearchBar
               specialties={specialties}
               locations={locations}
@@ -301,37 +301,16 @@ export default async function DoctorsPage({
               </p>
             </div>
           ) : (
-            <>
-              {/* Desktop: list + map split view */}
-              <div className="hidden lg:block">
-                <DoctorResultsWithMap
-                  doctors={typedDoctors}
-                  locale={locale}
-                  availability={availability}
-                  centerLocation={centerLocation}
-                  matchScores={matchScores}
-                  distances={distances}
-                  liveAvailability={liveStatus}
-                />
-              </div>
-
-              {/* Mobile / tablet: stacked cards (no map) */}
-              <div className="space-y-5 lg:hidden">
-                {typedDoctors.map((doctor) => (
-                  <div key={doctor.id}>
-                    <DoctorCard
-                      doctor={doctor}
-                      locale={locale}
-                      availability={availability[doctor.id] || null}
-                      matchScore={matchScores?.[doctor.id]?.score}
-                      matchReasons={matchScores?.[doctor.id]?.reasons}
-                      distanceKm={distances?.[doctor.id]}
-                      liveAvailable={!!liveStatus[doctor.id]}
-                    />
-                  </div>
-                ))}
-              </div>
-            </>
+            /* Single results tree: list on all sizes; sticky map lg+; FAB map on mobile */
+            <DoctorResultsWithMap
+              doctors={typedDoctors}
+              locale={locale}
+              availability={availability}
+              centerLocation={centerLocation}
+              matchScores={matchScores}
+              distances={distances}
+              liveAvailability={liveStatus}
+            />
           )}
 
           {/* Pagination */}
