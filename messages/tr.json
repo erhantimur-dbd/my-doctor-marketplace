@@ -406,7 +406,23 @@
     "reason_for_visit": "Ziyaret nedeni",
     "reason_for_visit_desc": "İhtiyacınız olan randevu türünü seçin. Ücret ve süre buna göre belirlenir.",
     "reason_new_patient": "Yeni hasta muayenesi",
-    "reason_follow_up": "Kontrol randevusu"
+    "reason_follow_up": "Kontrol randevusu",
+    "who_for_desc": "Randevuya kimin katılacağını seçin",
+    "choose_type_desc": "{name} ile nasıl görüşmek istediğinizi seçin",
+    "review_desc": "Doktor için not ekleyin ve randevu detaylarını kontrol edin",
+    "characters_count": "{current}/{max} karakter",
+    "datetime_at": "{date} saat {time}",
+    "cancel_policy_flexible_detail": "Esnek iptal: Randevudan 24 saatten fazla önce iptalde tam iade.",
+    "cancel_policy_moderate_detail": "Orta iptal: 48 saatten fazla önce tam iade, 24–48 saat arası %50 iade.",
+    "cancel_policy_strict_detail": "Katı iptal: Randevudan 72 saatten fazla önce iptalde tam iade.",
+    "deposit_secures_info": "{deposit} randevunuzu güvence altına alır. Kalan {remainder} günü doktora ödenir. İptal süresi içinde depozito tam iade edilir.",
+    "payment_deposit_paying": "Randevuyu güvence altına almak için {deposit} ödüyorsunuz. Kalan {remainder} günü doktora ödenir.",
+    "payment_confirm_note": "Ödeme tamamlandığında randevunuz onaylanır. Tüm detayları içeren bir e-posta alırsınız.",
+    "doctors_nav": "Doktorlar",
+    "book_nav": "Randevu Al",
+    "meta_book_title": "Randevu Al - {name}",
+    "meta_book_description": "{name} ile randevu alın. Görüşme türü, tarih ve saati seçin.",
+    "deposit_label": "Depozito"
   },
   "dashboard": {
     "welcome": "Tekrar hos geldiniz, {name}",
@@ -1368,5 +1384,24 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "voice": {
+    "mic_label": "Sesli arama",
+    "mic_listening": "Dinleniyor…",
+    "mic_processing": "Yazıya dökülüyor…",
+    "mic_speak": "Aramanızı söyleyin",
+    "privacy_title": "Ses gizliliği",
+    "privacy_body": "Sesiniz metne dönüştürmek için işlenir ve saklanmaz. İstediğiniz zaman durdurabilirsiniz.",
+    "privacy_accept": "Devam",
+    "privacy_decline": "Şimdi değil",
+    "tts_play": "Sonuçları sesli oku",
+    "tts_stop": "Okumayı durdur",
+    "error_permission": "Mikrofon izni reddedildi",
+    "error_unsupported": "Bu tarayıcıda sesli giriş desteklenmiyor",
+    "error_stt": "Ses yazıya dökülemedi. Lütfen tekrar deneyin.",
+    "error_tts": "Ses çalınamadı.",
+    "confirm_action": "Onayla",
+    "confirm_booking_title": "Randevu eylemini onayla",
+    "confirm_booking_body": "Ses asla otomatik randevu almaz. Devam etmek için onaylayın."
   }
 }

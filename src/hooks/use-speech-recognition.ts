@@ -2,7 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 
-/** Map next-intl locale to BCP-47 language tag for SpeechRecognition */
+import { localeToBcp47 } from "@/lib/voice/locale";
+
+/** @deprecated Prefer localeToBcp47 from @/lib/voice/locale — kept for legacy Web Speech fallback */
 const LOCALE_TO_LANG: Record<string, string> = {
   en: "en-GB",
   de: "de-DE",
@@ -134,7 +136,7 @@ export function useSpeechRecognition(
     setTranscript("");
 
     const recognition = new SpeechRecognitionCtor();
-    recognition.lang = LOCALE_TO_LANG[locale] || "en-GB";
+    recognition.lang = LOCALE_TO_LANG[locale] || localeToBcp47(locale);
     recognition.continuous = false; // Single utterance mode
     recognition.interimResults = true; // Show real-time partial results
     recognition.maxAlternatives = 1;

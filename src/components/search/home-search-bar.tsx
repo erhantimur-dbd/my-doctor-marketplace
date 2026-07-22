@@ -46,7 +46,14 @@ import { SYMPTOMS } from "@/lib/constants/symptoms";
 import { MEDICAL_TESTS } from "@/lib/constants/medical-tests";
 import { matchSymptoms, matchTests } from "@/lib/utils/search-matcher";
 import type { SearchMatch } from "@/lib/utils/search-matcher";
-import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
+import { useWhisperStt } from "@/hooks/use-whisper-stt";
+import {
+  VOICE_PRIVACY_STORAGE_KEY,
+  buildVoicePrivacyConsent,
+  hasAcceptedVoicePrivacy,
+  serializeVoicePrivacyConsent,
+} from "@/lib/voice/privacy";
+import { VoicePrivacyNotice } from "@/components/voice/voice-privacy-notice";
 import { toast } from "sonner";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
@@ -201,35 +208,33 @@ export function HomeSearchBar({
   const geo = useGeolocation("auto");
   const { searches: recentSearches, addSearch, removeOne: removeRecentSearch, clearAll: clearRecentSearches } = useRecentSearches();
 
-  // Voice search (mobile only)
-  const speech = useSpeechRecognition({
+  // Voice search — Whisper STT (MediaRecorder → /api/voice/stt)
+  const [showVoicePrivacy, setShowVoicePrivacy] = useState(false);
+  const speech = useWhisperStt({
     locale,
     onResult: (text) => {
       setQuery(text);
       setShowSuggestions(true);
-      // Focus the mobile input so autocomplete flows naturally
       mobileInputRef.current?.focus();
+    },
+    onError: (code) => {
+      if (code === "not-allowed") toast.error(t("voice_error_permission"));
+      else if (code === "no-speech") toast.error(t("voice_error_no_speech"));
+      else if (code === "not-supported")
+        toast.error(t("voice_error_not_supported"));
+      else toast.error(t("voice_error_not_supported"));
     },
   });
 
-  // Show toast on speech recognition error
-  useEffect(() => {
-    if (!speech.error) return;
-    if (speech.error === "not-allowed") {
-      toast.error(t("voice_error_permission"));
-    } else if (speech.error === "no-speech") {
-      toast.error(t("voice_error_no_speech"));
-    } else if (speech.error === "not-supported") {
-      toast.error(t("voice_error_not_supported"));
+  const startVoiceWithPrivacy = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const raw = localStorage.getItem(VOICE_PRIVACY_STORAGE_KEY);
+    if (hasAcceptedVoicePrivacy(raw)) {
+      void speech.start();
+      return;
     }
-  }, [speech.error, t]);
-
-  // Update query with interim transcript while listening
-  useEffect(() => {
-    if (speech.isListening && speech.transcript) {
-      setQuery(speech.transcript);
-    }
-  }, [speech.isListening, speech.transcript]);
+    setShowVoicePrivacy(true);
+  }, [speech]);
 
   // Auto-select nearest location when GPS coords arrive
   useEffect(() => {
@@ -1237,37 +1242,55 @@ export function HomeSearchBar({
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setShowSuggestions(true)}
               onKeyDown={handleKeyDown}
-              placeholder={speech.isListening ? t("voice_listening") : t("search_name_placeholder_mobile")}
+              placeholder={
+                speech.isRecording || speech.isProcessing
+                  ? t("voice_listening")
+                  : t("search_name_placeholder_mobile")
+              }
               className={cn("flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground", compact ? "h-11" : "h-7")}
               autoComplete="off"
             />
-          {/* Voice search mic button (mobile only, feature-detected) */}
+          {/* Voice search mic — Whisper STT + privacy notice */}
           {speech.isSupported && (
             <button
               type="button"
               onClick={() => {
-                if (speech.isListening) {
+                if (speech.isRecording) {
                   speech.stop();
-                } else {
-                  speech.start();
+                } else if (!speech.isProcessing) {
+                  startVoiceWithPrivacy();
                 }
               }}
               className={cn(
                 "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
-                speech.isListening
+                speech.isRecording
                   ? "bg-red-100 text-red-600"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
-              aria-label={speech.isListening ? "Stop listening" : "Voice search"}
+              aria-label={speech.isRecording ? "Stop listening" : "Voice search"}
+              disabled={speech.isProcessing}
             >
-              <Mic className={cn("h-4 w-4", speech.isListening && "animate-pulse")} />
-              {speech.isListening && (
+              <Mic className={cn("h-4 w-4", speech.isRecording && "animate-pulse")} />
+              {speech.isRecording && (
                 <span className="absolute inset-0 animate-ping rounded-full bg-red-400/30" />
               )}
             </button>
           )}
           </div>
         </label>
+        {showVoicePrivacy && (
+          <VoicePrivacyNotice
+            onAccept={() => {
+              localStorage.setItem(
+                VOICE_PRIVACY_STORAGE_KEY,
+                serializeVoicePrivacyConsent(buildVoicePrivacyConsent(true))
+              );
+              setShowVoicePrivacy(false);
+              void speech.start();
+            }}
+            onDecline={() => setShowVoicePrivacy(false)}
+          />
+        )}
 
         {/* Autocomplete dropdown — mobile (positioned inside the card) */}
         {hasSuggestions && (

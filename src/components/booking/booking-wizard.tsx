@@ -25,6 +25,7 @@ import { createBookingAndCheckout } from "@/actions/booking";
 import { formatCurrency, calculateDepositCents } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import { formatSlotTime } from "@/lib/utils/availability";
+import { localeToBcp47 } from "@/lib/voice/locale";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -296,9 +297,10 @@ export function BookingWizard({
     : totalAmountCents;
 
   // Deposit label for display
-  const depositLabel = resolvedDepositType === "percentage" && resolvedDepositValue
-    ? `${resolvedDepositValue}% Deposit`
-    : "Deposit";
+  const depositLabel =
+    resolvedDepositType === "percentage" && resolvedDepositValue
+      ? t("deposit_percentage", { value: resolvedDepositValue })
+      : t("deposit_label");
 
   // Slot duration override when service is selected
   const slotDurationOverride = selectedService
@@ -456,7 +458,7 @@ export function BookingWizard({
 
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr + "T00:00:00");
-    return date.toLocaleDateString(locale === "en" ? "en-GB" : locale, {
+    return date.toLocaleDateString(localeToBcp47(locale), {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -518,10 +520,10 @@ export function BookingWizard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Who is this appointment for?
+              {t("who_for")}
             </CardTitle>
             <CardDescription>
-              Select who will be attending this appointment
+              {t("who_for_desc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -539,9 +541,9 @@ export function BookingWizard({
               >
                 <RadioGroupItem value="self" id="patient-self" />
                 <div className="flex-1">
-                  <span className="font-medium">Myself</span>
+                  <span className="font-medium">{t("myself")}</span>
                   <p className="text-sm text-muted-foreground">
-                    Book this appointment for yourself
+                    {t("myself_desc")}
                   </p>
                 </div>
               </Label>
@@ -567,10 +569,11 @@ export function BookingWizard({
                     </div>
                     {dep.date_of_birth && (
                       <p className="text-sm text-muted-foreground">
-                        Born {new Date(dep.date_of_birth).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
+                        {t("born", {
+                          date: new Date(dep.date_of_birth + "T00:00:00").toLocaleDateString(
+                            localeToBcp47(locale),
+                            { day: "numeric", month: "long", year: "numeric" }
+                          ),
                         })}
                       </p>
                     )}
@@ -581,7 +584,7 @@ export function BookingWizard({
           </CardContent>
           <CardFooter className="justify-end">
             <Button onClick={handleNext}>
-              Next
+              {t("next")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
@@ -594,10 +597,10 @@ export function BookingWizard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Stethoscope className="h-5 w-5" />
-              Choose Consultation Type
+              {t("choose_type")}
             </CardTitle>
             <CardDescription>
-              Select how you would like to consult with {fullName}
+              {t("choose_type_desc", { name: fullName })}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -619,15 +622,15 @@ export function BookingWizard({
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-primary" />
-                      <span className="font-medium">In-Person Visit</span>
+                      <span className="font-medium">{t("in_person")}</span>
                       {doctor.in_person_deposit_type && doctor.in_person_deposit_type !== "none" && (
                         <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                          Deposit Required
+                          {t("deposit_required_badge")}
                         </Badge>
                       )}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Visit the doctor at their clinic
+                      {t("in_person_desc")}
                     </p>
                     {doctor.clinic_name && (
                       <p className="mt-2 text-sm text-muted-foreground">
@@ -636,7 +639,7 @@ export function BookingWizard({
                       </p>
                     )}
                     <p className="mt-1 text-xs italic text-muted-foreground">
-                      Full address provided after booking
+                      {t("address_after_booking")}
                     </p>
                     <p className="mt-2 text-lg font-semibold">
                       {formatCurrency(
@@ -661,10 +664,10 @@ export function BookingWizard({
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <Video className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Video Consultation</span>
+                      <span className="font-medium">{t("video")}</span>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Consult via a secure video call
+                      {t("video_desc")}
                     </p>
                     <p className="mt-2 text-lg font-semibold">
                       {formatCurrency(
@@ -751,10 +754,10 @@ export function BookingWizard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Pick Date & Time
+              {t("pick_date_time")}
             </CardTitle>
             <CardDescription>
-              Choose your preferred appointment date and time
+              {t("pick_date_time_desc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -769,11 +772,12 @@ export function BookingWizard({
 
             {slotSelection && (
               <div className="mt-4 rounded-md bg-primary/5 p-3">
-                <p className="text-sm font-medium">Selected Appointment</p>
+                <p className="text-sm font-medium">{t("selected_appointment")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatDate(slotSelection.date)} at{" "}
-                  {formatSlotTime(slotSelection.startTime)} -{" "}
-                  {formatSlotTime(slotSelection.endTime)}
+                  {t("datetime_at", {
+                    date: formatDate(slotSelection.date),
+                    time: `${formatSlotTime(slotSelection.startTime, locale)} - ${formatSlotTime(slotSelection.endTime, locale)}`,
+                  })}
                 </p>
               </div>
             )}
@@ -782,10 +786,10 @@ export function BookingWizard({
           <CardFooter className="justify-between">
             <Button variant="outline" onClick={handleBack}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t("back")}
             </Button>
             <Button onClick={handleNext} disabled={!canProceed()}>
-              Next
+              {t("next")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
@@ -798,10 +802,10 @@ export function BookingWizard({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              Review & Notes
+              {t("review_title")}
             </CardTitle>
             <CardDescription>
-              Add any notes for the doctor and review your booking details
+              {t("review_desc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -898,7 +902,7 @@ export function BookingWizard({
                 rows={4}
               />
               <p className="text-xs text-muted-foreground">
-                {patientNotes.length}/1000 characters
+                {t("characters_count", { current: patientNotes.length, max: 1000 })}
               </p>
             </div>
 
@@ -913,7 +917,7 @@ export function BookingWizard({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
                     <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Doctor</span>
+                    <span className="text-muted-foreground">{t("doctor")}</span>
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">{fullName}</p>
@@ -933,7 +937,7 @@ export function BookingWizard({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm">
                         <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Patient</span>
+                        <span className="text-muted-foreground">{t("patient")}</span>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
@@ -956,12 +960,12 @@ export function BookingWizard({
                     ) : (
                       <MapPin className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <span className="text-muted-foreground">Type</span>
+                    <span className="text-muted-foreground">{t("type")}</span>
                   </div>
                   <Badge variant="secondary">
                     {consultationType === "video"
-                      ? "Video Consultation"
-                      : "In-Person Visit"}
+                      ? t("video")
+                      : t("in_person")}
                   </Badge>
                 </div>
 
@@ -994,7 +998,7 @@ export function BookingWizard({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Date</span>
+                    <span className="text-muted-foreground">{t("date")}</span>
                   </div>
                   <p className="text-sm font-medium">
                     {formatDate(slotSelection.date)}
@@ -1006,11 +1010,11 @@ export function BookingWizard({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">Time</span>
+                    <span className="text-muted-foreground">{t("time")}</span>
                   </div>
                   <p className="text-sm font-medium">
-                    {formatSlotTime(slotSelection.startTime)} -{" "}
-                    {formatSlotTime(slotSelection.endTime)}
+                    {formatSlotTime(slotSelection.startTime, locale)} -{" "}
+                    {formatSlotTime(slotSelection.endTime, locale)}
                   </p>
                 </div>
 
@@ -1020,7 +1024,7 @@ export function BookingWizard({
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
-                      {selectedService ? selectedService.name : "Consultation Fee"}
+                      {selectedService ? selectedService.name : t("consultation_fee")}
                     </span>
                     <span>
                       {formatCurrency(
@@ -1041,14 +1045,14 @@ export function BookingWizard({
                   )}
                   <Separator />
                   <div className="flex items-center justify-between font-semibold">
-                    <span>{isDepositMode ? "Charge Now" : "Total"}</span>
+                    <span>{isDepositMode ? t("charge_now") : t("total")}</span>
                     <span className="text-lg">
                       {formatCurrency(chargeNowCents, doctor.base_currency)}
                     </span>
                   </div>
                   {isDepositMode && remainderDueCents != null && (
                     <div className="flex items-center justify-between text-sm text-amber-700 dark:text-amber-400">
-                      <span>Due on the Day</span>
+                      <span>{t("due_on_day")}</span>
                       <span className="font-medium">
                         {formatCurrency(remainderDueCents, doctor.base_currency)}
                       </span>
@@ -1061,10 +1065,10 @@ export function BookingWizard({
               {isDepositMode && remainderDueCents != null && (
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/50">
                   <p className="text-xs text-amber-700 dark:text-amber-300">
-                    A {depositLabel.toLowerCase()} secures your appointment. The remaining{" "}
-                    {formatCurrency(remainderDueCents, doctor.base_currency)} is payable
-                    directly to the doctor on the day. Deposits are fully refundable if
-                    cancelled within the cancellation period.
+                    {t("deposit_secures_info", {
+                      deposit: depositLabel,
+                      remainder: formatCurrency(remainderDueCents, doctor.base_currency),
+                    })}
                   </p>
                 </div>
               )}
@@ -1072,17 +1076,17 @@ export function BookingWizard({
               {/* Cancellation Policy */}
               <p className="text-xs text-muted-foreground">
                 {doctor.cancellation_policy === "flexible"
-                  ? "Flexible cancellation: Full refund if cancelled more than 24 hours before the appointment."
+                  ? t("cancel_policy_flexible_detail")
                   : doctor.cancellation_policy === "moderate"
-                    ? "Moderate cancellation: Full refund if cancelled more than 48 hours before, 50% refund between 24-48 hours."
-                    : "Strict cancellation: Full refund if cancelled more than 72 hours before the appointment."}
+                    ? t("cancel_policy_moderate_detail")
+                    : t("cancel_policy_strict_detail")}
               </p>
             </div>
           </CardContent>
           <CardFooter className="justify-between">
             <Button variant="outline" onClick={handleBack}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t("back")}
             </Button>
             <Button onClick={handleNext} disabled={!canProceed()}>
               {t("continue_to_payment")}
@@ -1117,8 +1121,10 @@ export function BookingWizard({
                       </p>
                     )}
                     <p className="text-sm text-muted-foreground">
-                      {formatDate(slotSelection.date)} at{" "}
-                      {formatSlotTime(slotSelection.startTime)}
+                      {t("datetime_at", {
+                        date: formatDate(slotSelection.date),
+                        time: formatSlotTime(slotSelection.startTime, locale),
+                      })}
                     </p>
                   </div>
                   <div className="text-right">
@@ -1137,18 +1143,17 @@ export function BookingWizard({
               {isDepositMode && remainderDueCents != null && (
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/50">
                   <p className="text-sm text-amber-700 dark:text-amber-300">
-                    You are paying a {depositLabel.toLowerCase()} to secure your appointment.
-                    The remaining{" "}
-                    <strong>{formatCurrency(remainderDueCents, doctor.base_currency)}</strong>{" "}
-                    is payable directly to the doctor on the day.
+                    {t("payment_deposit_paying", {
+                      deposit: depositLabel,
+                      remainder: formatCurrency(remainderDueCents, doctor.base_currency),
+                    })}
                   </p>
                 </div>
               )}
 
               <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50">
                 <p className="text-sm text-blue-700 dark:text-blue-300">
-                  Your appointment will be confirmed once payment is completed.
-                  You will receive a confirmation email with all the details.
+                  {t("payment_confirm_note")}
                 </p>
               </div>
             </div>
@@ -1156,7 +1161,7 @@ export function BookingWizard({
           <CardFooter className="justify-between">
             <Button variant="outline" onClick={handleBack} disabled={isPending}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+              {t("back")}
             </Button>
             <Button
               size="lg"
@@ -1166,12 +1171,12 @@ export function BookingWizard({
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  {t("processing")}
                 </>
               ) : (
                 <>
                   <CreditCard className="mr-2 h-4 w-4" />
-                  Proceed to Payment
+                  {t("proceed_to_payment")}
                 </>
               )}
             </Button>

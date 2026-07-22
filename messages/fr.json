@@ -406,7 +406,23 @@
     "reason_for_visit": "Motif de consultation",
     "reason_for_visit_desc": "Choisissez le type de rendez-vous. Cela définit le tarif et la durée.",
     "reason_new_patient": "Première consultation",
-    "reason_follow_up": "Consultation de suivi"
+    "reason_follow_up": "Consultation de suivi",
+    "who_for_desc": "Sélectionnez qui assistera au rendez-vous",
+    "choose_type_desc": "Choisissez comment consulter {name}",
+    "review_desc": "Ajoutez des notes pour le médecin et vérifiez votre réservation",
+    "characters_count": "{current}/{max} caractères",
+    "datetime_at": "{date} à {time}",
+    "cancel_policy_flexible_detail": "Annulation flexible : remboursement intégral si annulé plus de 24 heures avant le rendez-vous.",
+    "cancel_policy_moderate_detail": "Annulation modérée : remboursement intégral si plus de 48 h avant, 50 % entre 24 et 48 h.",
+    "cancel_policy_strict_detail": "Annulation stricte : remboursement intégral si plus de 72 heures avant le rendez-vous.",
+    "deposit_secures_info": "Un {deposit} sécurise votre rendez-vous. Le reste {remainder} est payable au médecin le jour même. Les acomptes sont entièrement remboursables dans le délai d'annulation.",
+    "payment_deposit_paying": "Vous payez un {deposit} pour sécuriser le rendez-vous. Le reste {remainder} est payable au médecin le jour même.",
+    "payment_confirm_note": "Votre rendez-vous sera confirmé une fois le paiement effectué. Vous recevrez un e-mail de confirmation.",
+    "doctors_nav": "Médecins",
+    "book_nav": "Prendre rendez-vous",
+    "meta_book_title": "Prendre rendez-vous - {name}",
+    "meta_book_description": "Prenez rendez-vous avec {name}. Choisissez le type, la date et l'heure.",
+    "deposit_label": "Acompte"
   },
   "dashboard": {
     "welcome": "Bienvenue, {name}",
@@ -1368,5 +1384,24 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "voice": {
+    "mic_label": "Voice search",
+    "mic_listening": "Listening…",
+    "mic_processing": "Transcribing…",
+    "mic_speak": "Speak your search",
+    "privacy_title": "Voice privacy",
+    "privacy_body": "Your voice is processed to convert speech to text and is not stored. You can stop anytime.",
+    "privacy_accept": "Continue",
+    "privacy_decline": "Not now",
+    "tts_play": "Read results aloud",
+    "tts_stop": "Stop reading",
+    "error_permission": "Microphone permission denied",
+    "error_unsupported": "Voice input is not supported in this browser",
+    "error_stt": "Could not transcribe audio. Please try again.",
+    "error_tts": "Could not play audio.",
+    "confirm_action": "Confirm",
+    "confirm_booking_title": "Confirm booking action",
+    "confirm_booking_body": "Voice will never book automatically. Confirm to continue."
   }
 }

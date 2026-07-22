@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { ChevronRight } from "lucide-react";
 import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 import { Button } from "@/components/ui/button";
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 
 interface BookPageProps {
@@ -18,6 +19,7 @@ export async function generateMetadata({
   params,
 }: BookPageProps): Promise<Metadata> {
   const { slug } = await params;
+  const t = await getTranslations("booking");
   const adminDb = createAdminClient();
 
   const { data: doctorData } = await adminDb
@@ -26,20 +28,20 @@ export async function generateMetadata({
     .eq("slug", slug)
     .single();
 
-  if (!doctorData) return { title: "Book Appointment" };
+  if (!doctorData) return { title: t("book_appointment") };
 
   const doctor: any = doctorData;
   const fullName = `${doctor.title || "Dr."} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
 
   return {
-    title: `Book Appointment - ${fullName}`,
-    description: `Book an appointment with ${fullName}. Choose your preferred consultation type, date, and time.`,
+    title: t("meta_book_title", { name: fullName }),
+    description: t("meta_book_description", { name: fullName }),
   };
 }
 
-export default async function BookAppointmentPage({ params, searchParams }: BookPageProps) {
+export default async function BookAppointmentPage({ params }: BookPageProps) {
   const { slug, locale } = await params;
-  const sp = await searchParams;
+  const t = await getTranslations("booking");
   const supabase = await createClient();
 
   // Progressive checkout: allow unauthenticated guests (wizard collects contact)
@@ -93,20 +95,19 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="mx-auto max-w-md space-y-4 text-center">
-          <h1 className="text-2xl font-bold">Booking Unavailable</h1>
+          <h1 className="text-2xl font-bold">{t("booking_unavailable_title")}</h1>
           <p className="text-muted-foreground">
-            This doctor is not currently accepting appointments. Please check
-            back later or browse other doctors.
+            {t("booking_unavailable_body")}
           </p>
           <div className="flex flex-col gap-2 pt-2">
             {user && (
               <NotifyMeButton doctorId={doctor.id} />
             )}
             <Button variant="outline" asChild className="w-full">
-              <Link href={`/doctors/${doctor.slug}`}>View profile</Link>
+              <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
             </Button>
             <Button asChild className="w-full">
-              <Link href="/doctors">Browse doctors</Link>
+              <Link href="/doctors">{t("browse_doctors")}</Link>
             </Button>
           </div>
         </div>
@@ -114,7 +115,7 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     );
   }
 
-  // Fetch services for this doctor (for returning-patient flow)
+  // Fetch services for this doctor (for reason-for-visit)
   const { data: servicesData } = await adminDb
     .from("doctor_services")
     .select("id, name, price_cents, duration_minutes, consultation_type, deposit_type, deposit_value")
@@ -123,28 +124,27 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     .order("display_order", { ascending: true });
 
   // Fetch patient's family dependents for "booking for" selection
-  // Guests (unauthenticated) skip dependents — progressive checkout in 1D
+  // Guests (unauthenticated) skip dependents — progressive checkout
   const dependents = user ? await getDependents() : [];
 
   if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="mx-auto max-w-md space-y-4 text-center">
-          <h1 className="text-2xl font-bold">Payment Setup Pending</h1>
+          <h1 className="text-2xl font-bold">{t("payment_pending_title")}</h1>
           <p className="text-muted-foreground">
-            This doctor has not yet completed their payment setup. Please check
-            back later or browse other doctors.
+            {t("payment_pending_body")}
           </p>
           <div className="flex flex-col gap-2 pt-2">
             {user && <NotifyMeButton doctorId={doctor.id} />}
             <Button variant="outline" asChild className="w-full">
-              <Link href={`/doctors/${doctor.slug}`}>View profile</Link>
+              <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
             </Button>
             <Button variant="outline" asChild className="w-full">
-              <Link href="/contact">Contact support</Link>
+              <Link href="/contact">{t("contact_support")}</Link>
             </Button>
             <Button asChild className="w-full">
-              <Link href="/doctors">Browse doctors</Link>
+              <Link href="/doctors">{t("browse_doctors")}</Link>
             </Button>
           </div>
         </div>
@@ -159,21 +159,21 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-1 text-sm text-muted-foreground">
         <Link href="/doctors" className="hover:text-foreground">
-          Doctors
+          {t("doctors_nav")}
         </Link>
         <ChevronRight className="h-4 w-4" />
         <Link href={`/doctors/${doctor.slug}`} className="hover:text-foreground">
           {fullName}
         </Link>
         <ChevronRight className="h-4 w-4" />
-        <span className="text-foreground">Book Appointment</span>
+        <span className="text-foreground">{t("book_nav")}</span>
       </nav>
 
       {/* Page Title */}
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold">Book an Appointment</h1>
+        <h1 className="text-3xl font-bold">{t("book_appointment")}</h1>
         <p className="mt-2 text-muted-foreground">
-          Schedule a consultation with {fullName}
+          {t("schedule_with", { name: fullName })}
         </p>
       </div>
 

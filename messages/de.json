@@ -645,7 +645,23 @@
     "reason_for_visit": "Besuchsgrund",
     "reason_for_visit_desc": "Wählen Sie die Art des Termins. Das bestimmt Gebühr und Dauer.",
     "reason_new_patient": "Erstvorstellung",
-    "reason_follow_up": "Folgetermin"
+    "reason_follow_up": "Folgetermin",
+    "who_for_desc": "Wählen Sie, wer den Termin wahrnimmt",
+    "choose_type_desc": "Wählen Sie, wie Sie mit {name} konsultieren möchten",
+    "review_desc": "Notizen für den Arzt hinzufügen und Ihre Buchung prüfen",
+    "characters_count": "{current}/{max} Zeichen",
+    "datetime_at": "{date} um {time}",
+    "cancel_policy_flexible_detail": "Flexible Stornierung: Volle Rückerstattung bei Stornierung mehr als 24 Stunden vor dem Termin.",
+    "cancel_policy_moderate_detail": "Moderate Stornierung: Volle Rückerstattung bei Stornierung mehr als 48 Stunden vorher, 50 % zwischen 24–48 Stunden.",
+    "cancel_policy_strict_detail": "Strenge Stornierung: Volle Rückerstattung bei Stornierung mehr als 72 Stunden vor dem Termin.",
+    "deposit_secures_info": "Eine {deposit} sichert Ihren Termin. Die restlichen {remainder} zahlen Sie am Tag beim Arzt. Anzahlungen sind bei Stornierung innerhalb der Frist voll erstattbar.",
+    "payment_deposit_paying": "Sie zahlen eine {deposit}, um den Termin zu sichern. Die restlichen {remainder} zahlen Sie am Tag beim Arzt.",
+    "payment_confirm_note": "Ihr Termin wird nach Zahlung bestätigt. Sie erhalten eine Bestätigungs-E-Mail mit allen Details.",
+    "doctors_nav": "Ärzte",
+    "book_nav": "Termin buchen",
+    "meta_book_title": "Termin buchen - {name}",
+    "meta_book_description": "Buchen Sie einen Termin bei {name}. Wählen Sie Beratungsart, Datum und Uhrzeit.",
+    "deposit_label": "Anzahlung"
   },
   "doctor": {
     "verified": "Verifizierter Arzt",
@@ -1368,5 +1384,24 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "voice": {
+    "mic_label": "Sprachsuche",
+    "mic_listening": "Hört zu…",
+    "mic_processing": "Transkribieren…",
+    "mic_speak": "Sprechen Sie Ihre Suche",
+    "privacy_title": "Datenschutz Sprache",
+    "privacy_body": "Ihre Stimme wird zur Umwandlung in Text verarbeitet und nicht gespeichert. Sie können jederzeit abbrechen.",
+    "privacy_accept": "Weiter",
+    "privacy_decline": "Nicht jetzt",
+    "tts_play": "Ergebnisse vorlesen",
+    "tts_stop": "Vorlesen stoppen",
+    "error_permission": "Mikrofonzugriff verweigert",
+    "error_unsupported": "Spracheingabe wird in diesem Browser nicht unterstützt",
+    "error_stt": "Audio konnte nicht transkribiert werden. Bitte erneut versuchen.",
+    "error_tts": "Audio konnte nicht abgespielt werden.",
+    "confirm_action": "Bestätigen",
+    "confirm_booking_title": "Buchung bestätigen",
+    "confirm_booking_body": "Sprache bucht nie automatisch. Bestätigen Sie, um fortzufahren."
   }
 }

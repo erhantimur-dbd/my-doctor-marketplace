@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +29,8 @@ export function SlotPicker({
   initialTime,
   slotDurationOverride,
 }: SlotPickerProps) {
+  const t = useTranslations("booking");
+  const locale = useLocale();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     initialDate ? new Date(initialDate + "T00:00:00") : undefined
   );
@@ -107,7 +110,7 @@ export function SlotPicker({
         <div className="shrink-0 self-center md:self-start">
           <div className="mb-2 flex items-center gap-2 text-sm font-medium">
             <CalendarDays className="h-4 w-4" />
-            Select a Date
+            {t("select_date_title")}
           </div>
           <Calendar
             mode="single"
@@ -122,13 +125,13 @@ export function SlotPicker({
         <div className="flex-1">
           <div className="mb-2 flex items-center gap-2 text-sm font-medium">
             <Clock className="h-4 w-4" />
-            Available Times
+            {t("available_times")}
           </div>
 
           {!selectedDate && (
             <div className="flex h-48 items-center justify-center rounded-md border border-dashed">
               <p className="text-sm text-muted-foreground">
-                Select a date to view available time slots
+                {t("select_date_hint")}
               </p>
             </div>
           )}
@@ -152,10 +155,10 @@ export function SlotPicker({
               <div className="text-center">
                 <Clock className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
                 <p className="text-sm text-muted-foreground">
-                  No available slots for this date
+                  {t("no_slots_date")}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Try selecting a different date
+                  {t("try_different_date")}
                 </p>
               </div>
             </div>
@@ -179,7 +182,7 @@ export function SlotPicker({
                     )}
                     onClick={() => handleSlotClick(slot)}
                   >
-                    {formatSlotTime(slot.slot_start)}
+                    {formatSlotTime(slot.slot_start, locale)}
                   </Button>
                 );
               })}

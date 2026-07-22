@@ -352,7 +352,23 @@
     "reason_for_visit": "Reason for visit",
     "reason_for_visit_desc": "Choose the type of appointment you need. This sets the fee and duration.",
     "reason_new_patient": "New patient consultation",
-    "reason_follow_up": "Follow-up appointment"
+    "reason_follow_up": "Follow-up appointment",
+    "who_for_desc": "Select who will be attending this appointment",
+    "choose_type_desc": "Select how you would like to consult with {name}",
+    "review_desc": "Add any notes for the doctor and review your booking details",
+    "characters_count": "{current}/{max} characters",
+    "datetime_at": "{date} at {time}",
+    "cancel_policy_flexible_detail": "Flexible cancellation: Full refund if cancelled more than 24 hours before the appointment.",
+    "cancel_policy_moderate_detail": "Moderate cancellation: Full refund if cancelled more than 48 hours before, 50% refund between 24-48 hours.",
+    "cancel_policy_strict_detail": "Strict cancellation: Full refund if cancelled more than 72 hours before the appointment.",
+    "deposit_secures_info": "A {deposit} secures your appointment. The remaining {remainder} is payable directly to the doctor on the day. Deposits are fully refundable if cancelled within the cancellation period.",
+    "payment_deposit_paying": "You are paying a {deposit} to secure your appointment. The remaining {remainder} is payable directly to the doctor on the day.",
+    "payment_confirm_note": "Your appointment will be confirmed once payment is completed. You will receive a confirmation email with all the details.",
+    "doctors_nav": "Doctors",
+    "book_nav": "Book Appointment",
+    "meta_book_title": "Book Appointment - {name}",
+    "meta_book_description": "Book an appointment with {name}. Choose your preferred consultation type, date, and time.",
+    "deposit_label": "Deposit"
   },
   "auth": {
     "login_title": "Welcome Back",
@@ -1370,5 +1386,24 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "voice": {
+    "mic_label": "Voice search",
+    "mic_listening": "Listening…",
+    "mic_processing": "Transcribing…",
+    "mic_speak": "Speak your search",
+    "privacy_title": "Voice privacy",
+    "privacy_body": "Your voice is processed to convert speech to text and is not stored. You can stop anytime.",
+    "privacy_accept": "Continue",
+    "privacy_decline": "Not now",
+    "tts_play": "Read results aloud",
+    "tts_stop": "Stop reading",
+    "error_permission": "Microphone permission denied",
+    "error_unsupported": "Voice input is not supported in this browser",
+    "error_stt": "Could not transcribe audio. Please try again.",
+    "error_tts": "Could not play audio.",
+    "confirm_action": "Confirm",
+    "confirm_booking_title": "Confirm booking action",
+    "confirm_booking_body": "Voice will never book automatically. Confirm to continue."
   }
 }

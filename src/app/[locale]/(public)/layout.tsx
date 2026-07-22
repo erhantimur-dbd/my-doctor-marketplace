@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/dynamic-header";
 import { Footer } from "@/components/layout/footer";
 import { BackToTop } from "@/components/shared/back-to-top";
 import { ChatWidget } from "@/components/chat/chat-widget";
+import { FloatingMic } from "@/components/voice/floating-mic";
 
 export default function PublicLayout({
   children,
@@ -15,6 +16,8 @@ export default function PublicLayout({
       <Footer />
       <BackToTop />
       <ChatWidget />
+      {/* Voice AI Phase 1 — Whisper STT + privacy notice; never auto-books */}
+      <FloatingMic />
     </div>
   );
 }
