@@ -23,8 +23,7 @@ const COMING_SOON_HOSTS = new Set([
  * are not fed URLs that rewrite to founding-doctor HTML.
  */
 const SOFT_LAUNCH_PUBLIC_PAGES = [
-  "", // homepage (locale root) — voice search entry
-  "/doctors", // Find a Doctor — voice search results
+  // Soft-launch: no patient home/search until go-live
   "/pricing",
   "/how-it-works",
   "/contact",
@@ -58,11 +57,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority:
-          page === "" || page === "/doctors"
-            ? 1
-            : page === "/register-doctor" || page === "/pricing"
-              ? 0.9
-              : 0.6,
+          page === "/register-doctor" || page === "/pricing" ? 0.9 : 0.6,
       }))
     );
 

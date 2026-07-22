@@ -13,12 +13,12 @@ import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters"
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
 import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
+import { SmartEmptyStateFromParams } from "@/components/search/smart-empty-state";
 import { RecentlyViewedCarousel } from "@/components/doctors/recently-viewed-carousel";
 import { CompareProviderWrapper } from "@/components/doctors/compare-provider-wrapper";
 import { RegionNotAvailableBanner } from "@/components/search/region-not-available-banner";
 import { COUNTRIES } from "@/lib/constants/countries";
 import {
-  Search,
   Stethoscope,
   Heart,
   Brain,
@@ -294,17 +294,7 @@ export default async function DoctorsPage({
           )}
 
           {result.doctors.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted-foreground/20 py-20 text-center">
-              <div className="mb-3 rounded-full bg-muted p-4">
-                <Search className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <p className="text-lg font-medium">
-                No doctors found
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Try adjusting your filters or broadening your search
-              </p>
-            </div>
+            <SmartEmptyStateFromParams searchParams={sp} />
           ) : (
             /* Single results tree: list on all sizes; sticky map lg+; FAB map on mobile */
             <DoctorResultsWithMap

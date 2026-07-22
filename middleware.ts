@@ -51,11 +51,7 @@ const COMING_SOON_HOSTS = [
 // as a prefix that ends with "/" (e.g. "/doctor-dashboard/" matches all
 // sub-routes).
 const COMING_SOON_ALLOWED_PREFIXES = [
-  // Patient discovery (voice AI + search) — homepage and Find a Doctor
-  // Exact "/" only (see isAllowedOnComingSoon); not a prefix of all paths.
-  "/",
-  "/doctors",
-  "/doctors/",
+  // Soft-launch: patient home/search stay gated. Coming-soon is the public face.
   // Auth flow
   "/login",
   "/register",

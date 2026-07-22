@@ -624,6 +624,11 @@ export function HomeSearchBar({
             placeName: placeData?.name ?? null,
           });
           markIntentApplied(path);
+          try {
+            sessionStorage.setItem("md360_last_search_path", path);
+          } catch {
+            /* ignore */
+          }
           router.push(path);
         } else {
           // AI unavailable: still map city in phrase → Where + URL

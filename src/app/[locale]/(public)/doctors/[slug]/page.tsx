@@ -32,6 +32,7 @@ import { BackToSearchButton } from "@/components/doctors/back-to-search-button";
 import { FavoriteButton } from "@/components/doctors/favorite-button";
 import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 import { TrackDoctorView } from "@/components/doctors/track-doctor-view";
+import { ProfileFitBanner } from "@/components/doctors/profile-fit-banner";
 import { PhotoGallery } from "@/components/doctors/photo-gallery";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getDoctorEndorsementCounts } from "@/actions/reviews";
@@ -301,6 +302,36 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
+          <ProfileFitBanner
+            doctor={{
+              specialtySlugs: (doctor.specialties || [])
+                .map(
+                  (s: { specialty?: { slug?: string } }) => s.specialty?.slug
+                )
+                .filter(Boolean) as string[],
+              specialtyLabels: (doctor.specialties || [])
+                .map((s: { specialty?: { name_key?: string } }) =>
+                  s.specialty?.name_key
+                    ? formatSpecialtyName(s.specialty.name_key)
+                    : null
+                )
+                .filter(Boolean) as string[],
+              city: doctor.location?.city ?? null,
+              countryCode: doctor.location?.country_code ?? null,
+              languages: doctor.languages || [],
+              consultationTypes: doctor.consultation_types || [],
+              consultationFeeCents: doctor.consultation_fee_cents ?? null,
+              avgRating: doctor.avg_rating
+                ? Number(doctor.avg_rating)
+                : null,
+            }}
+            specialtyDisplay={
+              primarySpecialty
+                ? formatSpecialtyName(primarySpecialty.name_key)
+                : null
+            }
+          />
+
           {/* Map card (pulled up into the overlap zone) */}
           {(doctor.clinic_latitude || doctor.location?.latitude) &&
            (doctor.clinic_longitude || doctor.location?.longitude) && (
