@@ -427,7 +427,9 @@
     "find_pharmacy": "Encontrar uma Farmácia",
     "help_center": "Central de Ajuda",
     "payment_methods": "Aceitamos",
-    "copyright": "Todos os direitos reservados."
+    "copyright": "Todos os direitos reservados.",
+    "cookie_policy": "Política de cookies",
+    "cookie_preferences": "Preferências de cookies"
   },
   "helpCenter": {
     "title": "Central de Ajuda",
@@ -1065,5 +1067,8 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "cookie_consent": {
+    "cookie_policy_link": "Política de cookies"
   }
 }

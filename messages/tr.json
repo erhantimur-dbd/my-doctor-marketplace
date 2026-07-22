@@ -532,9 +532,11 @@
     "find_pharmacy": "Eczane Bul",
     "help_center": "Yardım Merkezi",
     "payment_methods": "Kabul edilen ödemeler",
-    "copyright": "Tüm hakları saklıdır."
+    "copyright": "Tüm hakları saklıdır.",
+    "cookie_policy": "Çerez Politikası",
+    "cookie_preferences": "Çerez tercihleri"
   },
-"survey": {
+  "survey": {
     "title": "Deneyiminiz nasıldı?",
     "subtitle_with_date": "<strong>Dr. {doctorName}</strong> ile {date} tarihindeki randevunuz",
     "subtitle_no_date": "<strong>Dr. {doctorName}</strong> ile randevunuz",
@@ -1136,7 +1138,8 @@
     "marketing_label": "Pazarlama",
     "marketing_desc": "İlgili reklamlar sunmak ve kampanya performansını izlemek için kullanılır.",
     "always_on": "Her zaman açık",
-    "privacy_link": "Gizlilik Politikamızı Okuyun"
+    "privacy_link": "Gizlilik Politikamızı Okuyun",
+    "cookie_policy_link": "Çerez Politikası"
   },
   "family": {
     "title": "Aile Üyeleri",

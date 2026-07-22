@@ -532,7 +532,9 @@
     "find_pharmacy": "Find a Pharmacy",
     "help_center": "Help Center",
     "payment_methods": "We accept",
-    "copyright": "All rights reserved."
+    "copyright": "All rights reserved.",
+    "cookie_policy": "Cookie Policy",
+    "cookie_preferences": "Cookie preferences"
   },
   "survey": {
     "title": "How was your experience?",
@@ -1136,7 +1138,8 @@
     "marketing_label": "Marketing",
     "marketing_desc": "Used to deliver relevant advertisements and track campaign performance.",
     "always_on": "Always on",
-    "privacy_link": "Read our Privacy Policy"
+    "privacy_link": "Read our Privacy Policy",
+    "cookie_policy_link": "Cookie Policy"
   },
   "family": {
     "title": "Family Members",

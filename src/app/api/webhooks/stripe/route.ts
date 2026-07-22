@@ -68,10 +68,18 @@ export async function POST(request: NextRequest) {
       const session = event.data.object as Stripe.Checkout.Session;
 
       // ── Wallet Top-Up ──
+      // Prefer Stripe-charged amount over client-set metadata (money integrity).
       if (session.metadata?.type === "wallet_top_up") {
         const patientId = session.metadata.patient_id;
-        const amountCents = parseInt(session.metadata.amount_cents || "0", 10);
-        const cur = session.metadata.currency || "GBP";
+        const amountCents =
+          typeof session.amount_total === "number" && session.amount_total > 0
+            ? session.amount_total
+            : parseInt(session.metadata.amount_cents || "0", 10);
+        const cur = (
+          session.currency ||
+          session.metadata.currency ||
+          "GBP"
+        ).toUpperCase();
 
         if (patientId && amountCents > 0) {
           await creditWallet({
@@ -86,23 +94,20 @@ export async function POST(request: NextRequest) {
       }
 
       // ── Gift Card Purchase ──
+      // Activate only after payment; pending cards are not redeemable.
       if (session.metadata?.type === "gift_card_purchase") {
         const giftCardId = session.metadata.gift_card_id;
         if (giftCardId) {
-          // Update gift card with payment intent
-          await supabase
-            .from("gift_cards")
-            .update({
-              stripe_payment_intent_id: session.payment_intent as string,
-            })
-            .eq("id", giftCardId);
-
-          // Send gift card email to recipient
           const { data: gc } = await supabase
             .from("gift_cards")
-            .select("*")
+            .update({
+              status: "active",
+              stripe_payment_intent_id: session.payment_intent as string,
+            })
             .eq("id", giftCardId)
-            .single();
+            .in("status", ["pending", "active"])
+            .select("*")
+            .maybeSingle();
 
           if (gc && gc.recipient_email) {
             try {

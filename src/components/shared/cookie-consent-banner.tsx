@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Cookie, Shield, ChevronDown, ChevronUp } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { saveCookieConsent } from "@/actions/consent";
 
 const CONSENT_KEY = "cookie_consent";
@@ -28,6 +29,21 @@ export function CookieConsentBanner() {
   const [marketing, setMarketing] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const openPreferences = useCallback((customize = true) => {
+    try {
+      const stored = localStorage.getItem(CONSENT_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as ConsentState;
+        setAnalytics(!!parsed.analytics);
+        setMarketing(!!parsed.marketing);
+      }
+    } catch {
+      // ignore invalid storage
+    }
+    setShowCustomize(customize);
+    setVisible(true);
+  }, []);
+
   useEffect(() => {
     // Check if consent was already given
     try {
@@ -42,6 +58,13 @@ export function CookieConsentBanner() {
       setVisible(true);
     }
   }, []);
+
+  // Allow footer / settings to reopen cookie preferences after first choice
+  useEffect(() => {
+    const handler = () => openPreferences(true);
+    window.addEventListener("open-cookie-preferences", handler);
+    return () => window.removeEventListener("open-cookie-preferences", handler);
+  }, [openPreferences]);
 
   const handleSave = useCallback(
     async (acceptAnalytics: boolean, acceptMarketing: boolean) => {
@@ -138,10 +161,17 @@ export function CookieConsentBanner() {
         <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2.5 md:px-6">
           <Cookie className="hidden h-4 w-4 shrink-0 text-muted-foreground sm:block" />
           <p className="flex-1 text-xs text-muted-foreground sm:text-sm">
-            {t("description")}
+            {t("description")}{" "}
+            <Link
+              href="/cookie-policy"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              {t("cookie_policy_link")}
+            </Link>
           </p>
           <div className="flex shrink-0 items-center gap-2">
             <button
+              type="button"
               onClick={() => setShowCustomize(!showCustomize)}
               className="flex items-center gap-0.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >

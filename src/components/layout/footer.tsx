@@ -1,3 +1,5 @@
+"use client";
+
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Logo } from "@/components/brand/logo";
@@ -108,9 +110,27 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/cookie-policy" className="hover:text-foreground">
+                  {t("cookie_policy")}
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="hover:text-foreground">
                   {t("about")}
                 </Link>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  className="hover:text-foreground text-left"
+                  onClick={() => {
+                    window.dispatchEvent(
+                      new CustomEvent("open-cookie-preferences")
+                    );
+                  }}
+                >
+                  {t("cookie_preferences")}
+                </button>
               </li>
             </ul>
 

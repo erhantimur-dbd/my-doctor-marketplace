@@ -27,6 +27,22 @@ export async function sendEmail({
   const resend = getResend();
 
   if (!resend) {
+    // Fail closed in production so misconfigured deploys never silently
+    // report success (booking confirmations, OTPs, etc.). Dev/preview may
+    // still log-and-succeed for local workflows without Resend.
+    const isProd =
+      process.env.VERCEL_ENV === "production" ||
+      process.env.NODE_ENV === "production";
+    if (isProd) {
+      log.error("[Email] RESEND_API_KEY not set — refusing to send in production", {
+        to,
+        subject,
+      });
+      return {
+        success: false,
+        error: "Email service is not configured",
+      };
+    }
     console.log(`[Email] Would send to ${to}: ${subject}`);
     return { success: true };
   }

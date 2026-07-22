@@ -532,9 +532,11 @@
     "find_pharmacy": "Trouver une pharmacie",
     "help_center": "Centre d'aide",
     "payment_methods": "Nous acceptons",
-    "copyright": "Tous droits réservés."
+    "copyright": "Tous droits réservés.",
+    "cookie_policy": "Politique de cookies",
+    "cookie_preferences": "Préférences de cookies"
   },
-"survey": {
+  "survey": {
     "title": "Comment s'est passée votre expérience ?",
     "subtitle_with_date": "Votre rendez-vous avec <strong>Dr. {doctorName}</strong> le {date}",
     "subtitle_no_date": "Votre rendez-vous avec <strong>Dr. {doctorName}</strong>",
@@ -1136,7 +1138,8 @@
     "marketing_label": "Marketing",
     "marketing_desc": "Utilisés pour diffuser des publicités pertinentes et suivre les performances des campagnes.",
     "always_on": "Toujours actif",
-    "privacy_link": "Lire notre politique de confidentialité"
+    "privacy_link": "Lire notre politique de confidentialité",
+    "cookie_policy_link": "Politique de cookies"
   },
   "family": {
     "title": "Membres de la famille",

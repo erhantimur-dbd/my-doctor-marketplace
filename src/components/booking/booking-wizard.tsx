@@ -24,7 +24,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SlotPicker } from "@/components/booking/slot-picker";
-import { RecurringOption, type RecurringConfig } from "@/components/booking/recurring-option";
 import { createBookingAndCheckout } from "@/actions/booking";
 import { formatCurrency, calculateDepositCents } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
@@ -147,9 +146,6 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
   const [selectedService, setSelectedService] = useState<ServiceOption | null>(
     null
   );
-
-  // Recurring appointment state
-  const [recurringConfig, setRecurringConfig] = useState<RecurringConfig | null>(null);
 
   // Patient selection state (for dependent booking)
   const [selectedPatient, setSelectedPatient] = useState<"self" | string>("self");
@@ -697,15 +693,6 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
               </div>
             )}
 
-            {/* Recurring option — shown after slot is selected */}
-            {slotSelection && (
-              <div className="mt-4">
-                <RecurringOption
-                  selectedDate={slotSelection.date}
-                  onRecurringChange={setRecurringConfig}
-                />
-              </div>
-            )}
           </CardContent>
           <CardFooter className="justify-between">
             <Button variant="outline" onClick={handleBack}>
@@ -859,23 +846,6 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
                   </p>
                 </div>
 
-                {/* Recurring Info */}
-                {recurringConfig && (
-                  <>
-                    <Separator />
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm">
-                        <span className="text-muted-foreground">Recurring</span>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">
-                          {recurringConfig.numWeeks} sessions ({recurringConfig.pattern === "weekly" ? "Weekly" : "Bi-weekly"})
-                        </p>
-                      </div>
-                    </div>
-                  </>
-                )}
-
                 <Separator />
 
                 {/* Price Breakdown */}
@@ -883,11 +853,10 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">
                       {selectedService ? selectedService.name : "Consultation Fee"}
-                      {recurringConfig ? ` × ${recurringConfig.numWeeks}` : ""}
                     </span>
                     <span>
                       {formatCurrency(
-                        consultationFeeCents * (recurringConfig?.numWeeks || 1),
+                        consultationFeeCents,
                         doctor.base_currency
                       )}
                     </span>

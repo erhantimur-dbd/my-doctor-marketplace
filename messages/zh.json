@@ -433,7 +433,9 @@
     "find_pharmacy": "查找药店",
     "help_center": "帮助中心",
     "payment_methods": "支付方式",
-    "copyright": "保留所有权利。"
+    "copyright": "保留所有权利。",
+    "cookie_policy": "Cookie 政策",
+    "cookie_preferences": "Cookie 偏好设置"
   },
   "helpCenter": {
     "title": "帮助中心",
@@ -1071,5 +1073,8 @@
       "yes": "Yes",
       "no": "No"
     }
+  },
+  "cookie_consent": {
+    "cookie_policy_link": "Cookie 政策"
   }
 }

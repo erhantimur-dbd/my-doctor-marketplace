@@ -197,9 +197,11 @@
     "find_pharmacy": "Apotheke finden",
     "help_center": "Hilfezentrum",
     "payment_methods": "Wir akzeptieren",
-    "copyright": "Alle Rechte vorbehalten."
+    "copyright": "Alle Rechte vorbehalten.",
+    "cookie_policy": "Cookie-Richtlinie",
+    "cookie_preferences": "Cookie-Einstellungen"
   },
-"survey": {
+  "survey": {
     "title": "Wie war Ihre Erfahrung?",
     "subtitle_with_date": "Ihr Termin bei <strong>Dr. {doctorName}</strong> am {date}",
     "subtitle_no_date": "Ihr Termin bei <strong>Dr. {doctorName}</strong>",
@@ -1136,7 +1138,8 @@
     "marketing_label": "Marketing",
     "marketing_desc": "Werden verwendet, um relevante Werbung zu liefern und die Kampagnenleistung zu verfolgen.",
     "always_on": "Immer aktiv",
-    "privacy_link": "Datenschutzerklärung lesen"
+    "privacy_link": "Datenschutzerklärung lesen",
+    "cookie_policy_link": "Cookie-Richtlinie"
   },
   "family": {
     "title": "Familienmitglieder",

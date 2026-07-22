@@ -1,9 +1,8 @@
 /**
  * Patient wallet service — manages credit balances for instant refunds.
  *
- * Uses admin client (service role) for all operations to bypass RLS,
- * ensuring atomic balance updates. All mutations are recorded in the
- * immutable wallet_transactions ledger.
+ * Uses admin client (service role) + SECURITY DEFINER RPCs for atomic
+ * balance updates. All mutations are recorded in the wallet_transactions ledger.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -99,7 +98,7 @@ export async function getAllWalletBalances(
 }
 
 /**
- * Credit a patient's wallet (add funds).
+ * Credit a patient's wallet (add funds) atomically via RPC.
  * Creates wallet row if it doesn't exist (upsert).
  * Returns the new balance.
  */
@@ -114,55 +113,31 @@ export async function creditWallet({
 }: CreditParams): Promise<{ balance_cents: number; transactionId: string }> {
   if (amountCents <= 0) throw new Error("Credit amount must be positive");
 
-  const cur = currency.toUpperCase();
   const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("credit_wallet_atomic", {
+    p_patient_id: patientId,
+    p_currency: currency,
+    p_amount_cents: amountCents,
+    p_source_type: sourceType,
+    p_source_booking_id: sourceBookingId || null,
+    p_target_booking_id: null,
+    p_description: description || null,
+    p_expires_at: expiresAt || null,
+  });
 
-  // Upsert wallet balance
-  const { data: existing } = await supabase
-    .from("patient_wallet")
-    .select("id, balance_cents")
-    .eq("patient_id", patientId)
-    .eq("currency", cur)
-    .maybeSingle();
-
-  let newBalance: number;
-
-  if (existing) {
-    newBalance = existing.balance_cents + amountCents;
-    await supabase
-      .from("patient_wallet")
-      .update({
-        balance_cents: newBalance,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", existing.id);
-  } else {
-    newBalance = amountCents;
-    await supabase.from("patient_wallet").insert({
-      patient_id: patientId,
-      currency: cur,
-      balance_cents: newBalance,
-    });
+  if (error) {
+    throw new Error(error.message || "Failed to credit wallet");
   }
 
-  // Record transaction
-  const { data: txn } = await supabase
-    .from("wallet_transactions")
-    .insert({
-      patient_id: patientId,
-      type: "credit",
-      amount_cents: amountCents,
-      currency: cur,
-      balance_after_cents: newBalance,
-      source_type: sourceType,
-      source_booking_id: sourceBookingId || null,
-      description: description || null,
-      expires_at: expiresAt || null,
-    })
-    .select("id")
-    .single();
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error("Failed to credit wallet");
+  }
 
-  return { balance_cents: newBalance, transactionId: txn!.id };
+  return {
+    balance_cents: row.balance_cents,
+    transactionId: row.transaction_id,
+  };
 }
 
 /**
@@ -200,7 +175,8 @@ export async function getEffectiveWalletBalance(
     .not("expires_at", "is", null);
 
   const expiredCents = (expiredCredits || []).reduce(
-    (sum, t) => sum + t.amount_cents, 0
+    (sum, t) => sum + t.amount_cents,
+    0
   );
 
   // Effective balance = raw balance minus expired (but floor at 0)
@@ -210,7 +186,7 @@ export async function getEffectiveWalletBalance(
 }
 
 /**
- * Debit a patient's wallet (deduct funds for a booking).
+ * Debit a patient's wallet (deduct funds for a booking) atomically via RPC.
  * Throws if insufficient balance.
  * Returns the new balance.
  */
@@ -224,49 +200,35 @@ export async function debitWallet({
 }: DebitParams): Promise<{ balance_cents: number; transactionId: string }> {
   if (amountCents <= 0) throw new Error("Debit amount must be positive");
 
-  const cur = currency.toUpperCase();
   const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc("debit_wallet_atomic", {
+    p_patient_id: patientId,
+    p_currency: currency,
+    p_amount_cents: amountCents,
+    p_source_type: sourceType,
+    p_source_booking_id: null,
+    p_target_booking_id: targetBookingId || null,
+    p_description: description || null,
+  });
 
-  const { data: wallet } = await supabase
-    .from("patient_wallet")
-    .select("id, balance_cents")
-    .eq("patient_id", patientId)
-    .eq("currency", cur)
-    .maybeSingle();
-
-  if (!wallet || wallet.balance_cents < amountCents) {
-    throw new Error(
-      `Insufficient wallet balance. Available: ${wallet?.balance_cents || 0}, required: ${amountCents}`
-    );
+  if (error) {
+    if (error.message?.includes("Insufficient wallet balance")) {
+      throw new Error(
+        `Insufficient wallet balance. Required: ${amountCents}`
+      );
+    }
+    throw new Error(error.message || "Failed to debit wallet");
   }
 
-  const newBalance = wallet.balance_cents - amountCents;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new Error("Failed to debit wallet");
+  }
 
-  await supabase
-    .from("patient_wallet")
-    .update({
-      balance_cents: newBalance,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", wallet.id);
-
-  // Record transaction
-  const { data: txn } = await supabase
-    .from("wallet_transactions")
-    .insert({
-      patient_id: patientId,
-      type: "debit",
-      amount_cents: amountCents,
-      currency: cur,
-      balance_after_cents: newBalance,
-      source_type: sourceType,
-      target_booking_id: targetBookingId || null,
-      description: description || null,
-    })
-    .select("id")
-    .single();
-
-  return { balance_cents: newBalance, transactionId: txn!.id };
+  return {
+    balance_cents: row.balance_cents,
+    transactionId: row.transaction_id,
+  };
 }
 
 /**

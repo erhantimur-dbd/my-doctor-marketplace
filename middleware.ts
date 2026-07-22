@@ -26,7 +26,9 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
-// Domains that should only serve the coming-soon page
+// Domains that should only serve the coming-soon page.
+// INTENTIONAL until go-live: keep this gate until the main homepage is opened
+// to public patient traffic. Do not remove without product sign-off.
 const COMING_SOON_HOSTS = [
   "mydoctors360.com",
   "www.mydoctors360.com",
@@ -40,6 +42,10 @@ const COMING_SOON_HOSTS = [
 // their profiles ahead of public launch. Locale prefix is stripped before
 // matching, so each entry is checked against e.g. "/login" or
 // "/doctor-dashboard/profile".
+//
+// Keep in sync with:
+//   - vercel.json rewrites (authoritative edge gate)
+//   - src/app/sitemap.ts SOFT_LAUNCH_PUBLIC_PAGES
 //
 // To allow a route, list it here as either an exact path (e.g. "/login") or
 // as a prefix that ends with "/" (e.g. "/doctor-dashboard/" matches all

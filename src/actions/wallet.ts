@@ -3,9 +3,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
-import { creditWallet } from "@/lib/wallet";
-import { sendEmail } from "@/lib/email/client";
-import { giftCardEmail } from "@/lib/email/templates";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
@@ -116,7 +113,7 @@ export async function purchaseGiftCard(input: {
   const code = generateGiftCardCode();
   const { origin, locale } = await getOriginAndLocale();
 
-  // Create gift card record (pending payment)
+  // Create gift card as pending — only activated after Stripe payment
   const adminClient = createAdminClient();
   const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year
 
@@ -131,7 +128,7 @@ export async function purchaseGiftCard(input: {
       recipient_email: input.recipientEmail,
       recipient_name: input.recipientName,
       message: input.message || null,
-      status: "active",
+      status: "pending",
       expires_at: expiresAt,
     })
     .select("id")
@@ -178,44 +175,32 @@ export async function redeemGiftCard(code: string) {
 
   const adminClient = createAdminClient();
 
-  // Find active gift card
-  const { data: giftCard } = await adminClient
-    .from("gift_cards")
-    .select("*")
-    .eq("code", code.toUpperCase().trim())
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!giftCard) return { error: "Invalid or already redeemed gift card code." };
-
-  // Check expiry
-  if (giftCard.expires_at && new Date(giftCard.expires_at) < new Date()) {
-    return { error: "This gift card has expired." };
-  }
-
-  // Credit wallet
-  await creditWallet({
-    patientId: user.id,
-    currency: giftCard.currency,
-    amountCents: giftCard.amount_cents,
-    sourceType: "gift_card",
-    description: `Gift card ${giftCard.code} redeemed`,
+  // Atomic claim + wallet credit (prevents double-redeem races)
+  const { data, error } = await adminClient.rpc("redeem_gift_card_atomic", {
+    p_code: code,
+    p_patient_id: user.id,
   });
 
-  // Mark as redeemed
-  await adminClient
-    .from("gift_cards")
-    .update({
-      status: "redeemed",
-      redeemed_by: user.id,
-      redeemed_at: new Date().toISOString(),
-    })
-    .eq("id", giftCard.id);
+  if (error) {
+    const msg = error.message || "";
+    if (msg.includes("GIFT_CARD_EXPIRED")) {
+      return { error: "This gift card has expired." };
+    }
+    if (msg.includes("GIFT_CARD_INVALID")) {
+      return { error: "Invalid or already redeemed gift card code." };
+    }
+    return { error: "Unable to redeem gift card. Please try again." };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    return { error: "Invalid or already redeemed gift card code." };
+  }
 
   revalidatePath("/dashboard/wallet");
   return {
     success: true,
-    amountCents: giftCard.amount_cents,
-    currency: giftCard.currency,
+    amountCents: row.amount_cents as number,
+    currency: row.currency as string,
   };
 }
