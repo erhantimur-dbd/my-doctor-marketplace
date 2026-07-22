@@ -32,12 +32,15 @@ export function FloatingMic() {
   const [lastText, setLastText] = useState("");
   const tts = useTts({ locale });
 
-  // Hide on doctor dashboard / admin (patient-facing only)
+  // Hide only on auth / staff shells (exact segments — not "/register-doctor")
   const hide =
-    pathname?.includes("/doctor-dashboard") ||
-    pathname?.includes("/admin") ||
-    pathname?.includes("/login") ||
-    pathname?.includes("/register");
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname?.startsWith("/login/") ||
+    pathname?.startsWith("/register/") ||
+    pathname?.startsWith("/doctor-dashboard") ||
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/verify-");
 
   const stt = useGrokStt({
     locale,
@@ -123,60 +126,70 @@ export function FloatingMic() {
           onDecline={handleDeclinePrivacy}
         />
       )}
-      {/* Bottom-left so it never sits under the AI chat launcher (bottom-right, z 9998). */}
+      {/*
+        Placement notes:
+        - Chat launcher owns bottom-right (z 9998).
+        - Cookie banner is full-width bottom at z 9999 — sit above it (z 10050)
+          and lift off the bottom edge so it is not covered.
+        - Soft-launch: homepage is static coming-soon (no React). Mic only on
+          real app routes e.g. /pricing, /about, /how-it-works, /contact.
+      */}
       <div
-        className="fixed bottom-6 left-4 z-[9990] flex flex-col items-start gap-2 pb-[env(safe-area-inset-bottom)]"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-[10050] flex justify-start p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-5"
         data-testid="floating-mic"
       >
-        {lastText && (
+        <div className="pointer-events-auto flex flex-col items-start gap-2">
+          {lastText && (
+            <Button
+              type="button"
+              size="icon"
+              variant="secondary"
+              className="h-12 w-12 rounded-full border border-border bg-background shadow-xl"
+              onClick={handleTts}
+              aria-label={tts.isPlaying ? t("tts_stop") : t("tts_play")}
+              title={tts.isPlaying ? t("tts_stop") : t("tts_play")}
+            >
+              {tts.isPlaying ? (
+                <VolumeX className="h-5 w-5" />
+              ) : (
+                <Volume2 className="h-5 w-5" />
+              )}
+            </Button>
+          )}
           <Button
             type="button"
             size="icon"
-            variant="secondary"
-            className="h-11 w-11 rounded-full shadow-md"
-            onClick={handleTts}
-            aria-label={tts.isPlaying ? t("tts_stop") : t("tts_play")}
-            title={tts.isPlaying ? t("tts_stop") : t("tts_play")}
+            className={cn(
+              "h-14 w-14 rounded-full border-2 border-white bg-primary text-primary-foreground shadow-[0_8px_28px_-6px_rgba(2,132,199,0.65)] ring-2 ring-primary/30",
+              stt.isRecording &&
+                "border-destructive bg-destructive ring-destructive/40 hover:bg-destructive/90"
+            )}
+            onClick={handleMicClick}
+            aria-label={
+              stt.isRecording
+                ? t("mic_listening")
+                : stt.isProcessing
+                  ? t("mic_processing")
+                  : t("mic_label")
+            }
+            title={
+              stt.isRecording
+                ? t("mic_listening")
+                : stt.isProcessing
+                  ? t("mic_processing")
+                  : t("mic_speak")
+            }
+            disabled={stt.isProcessing}
           >
-            {tts.isPlaying ? (
-              <VolumeX className="h-5 w-5" />
+            {stt.isProcessing ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : stt.isRecording ? (
+              <MicOff className="h-6 w-6" />
             ) : (
-              <Volume2 className="h-5 w-5" />
+              <Mic className="h-6 w-6" />
             )}
           </Button>
-        )}
-        <Button
-          type="button"
-          size="icon"
-          className={cn(
-            "h-14 w-14 rounded-full shadow-lg",
-            stt.isRecording && "bg-destructive hover:bg-destructive/90"
-          )}
-          onClick={handleMicClick}
-          aria-label={
-            stt.isRecording
-              ? t("mic_listening")
-              : stt.isProcessing
-                ? t("mic_processing")
-                : t("mic_label")
-          }
-          title={
-            stt.isRecording
-              ? t("mic_listening")
-              : stt.isProcessing
-                ? t("mic_processing")
-                : t("mic_speak")
-          }
-          disabled={stt.isProcessing}
-        >
-          {stt.isProcessing ? (
-            <Loader2 className="h-6 w-6 animate-spin" />
-          ) : stt.isRecording ? (
-            <MicOff className="h-6 w-6" />
-          ) : (
-            <Mic className="h-6 w-6" />
-          )}
-        </Button>
+        </div>
       </div>
     </>
   );
