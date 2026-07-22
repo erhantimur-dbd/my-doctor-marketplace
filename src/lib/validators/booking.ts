@@ -5,6 +5,16 @@ import { z } from "zod/v4";
 // typing on insert regardless.
 const uuidFormat = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export const guestContactSchema = z.object({
+  first_name: z.string().min(1).max(100),
+  last_name: z.string().min(1).max(100),
+  email: z.string().email().max(254),
+  phone: z.string().min(6).max(40).optional().or(z.literal("")),
+  terms_accepted: z.boolean().refine((v) => v === true, {
+    message: "You must accept the terms to continue",
+  }),
+});
+
 export const createBookingSchema = z.object({
   doctor_id: z.string().regex(uuidFormat, "Invalid doctor ID format"),
   appointment_date: z.string(),
@@ -16,6 +26,8 @@ export const createBookingSchema = z.object({
   duration_minutes: z.number().int().min(15).max(60).nullish(),
   dependent_id: z.string().regex(uuidFormat).nullish(),
   dependent_name: z.string().max(200).nullish(),
+  /** Present only for progressive/guest checkout (unauthenticated). */
+  guest: guestContactSchema.nullish(),
 });
 
 export const cancelBookingSchema = z.object({

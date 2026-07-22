@@ -5,6 +5,8 @@ import { BookingWizard } from "@/components/booking/booking-wizard";
 import { getDependents } from "@/actions/family";
 import { Link } from "@/i18n/navigation";
 import { ChevronRight } from "lucide-react";
+import { NotifyMeButton } from "@/components/doctors/notify-me-button";
+import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
 interface BookPageProps {
@@ -40,21 +42,10 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
   const sp = await searchParams;
   const supabase = await createClient();
 
-  // Check authentication
+  // Progressive checkout: allow unauthenticated guests (wizard collects contact)
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    // Preserve date & type query params through the login redirect
-    const bookPath = `/${locale}/doctors/${slug}/book`;
-    const queryParts: string[] = [];
-    if (sp.date) queryParts.push(`date=${encodeURIComponent(sp.date)}`);
-    if (sp.type) queryParts.push(`type=${encodeURIComponent(sp.type)}`);
-    if (sp.time) queryParts.push(`time=${encodeURIComponent(sp.time)}`);
-    const bookUrl = queryParts.length > 0 ? `${bookPath}?${queryParts.join("&")}` : bookPath;
-    redirect(`/${locale}/login?redirect=${encodeURIComponent(bookUrl)}`);
-  }
 
   // Use admin client for doctor data queries (RLS on doctors table blocks user-session reads)
   const adminDb = createAdminClient();
@@ -101,18 +92,23 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
   if (doctor.verification_status !== "verified" || !doctor.is_active) {
     return (
       <div className="container mx-auto px-4 py-16">
-        <div className="mx-auto max-w-md text-center">
+        <div className="mx-auto max-w-md space-y-4 text-center">
           <h1 className="text-2xl font-bold">Booking Unavailable</h1>
-          <p className="mt-4 text-muted-foreground">
+          <p className="text-muted-foreground">
             This doctor is not currently accepting appointments. Please check
             back later or browse other doctors.
           </p>
-          <Link
-            href="/doctors"
-            className="mt-6 inline-flex items-center text-primary hover:underline"
-          >
-            Browse Doctors
-          </Link>
+          <div className="flex flex-col gap-2 pt-2">
+            {user && (
+              <NotifyMeButton doctorId={doctor.id} />
+            )}
+            <Button variant="outline" asChild className="w-full">
+              <Link href={`/doctors/${doctor.slug}`}>View profile</Link>
+            </Button>
+            <Button asChild className="w-full">
+              <Link href="/doctors">Browse doctors</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -127,23 +123,30 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
     .order("display_order", { ascending: true });
 
   // Fetch patient's family dependents for "booking for" selection
-  const dependents = await getDependents();
+  // Guests (unauthenticated) skip dependents — progressive checkout in 1D
+  const dependents = user ? await getDependents() : [];
 
   if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
     return (
       <div className="container mx-auto px-4 py-16">
-        <div className="mx-auto max-w-md text-center">
+        <div className="mx-auto max-w-md space-y-4 text-center">
           <h1 className="text-2xl font-bold">Payment Setup Pending</h1>
-          <p className="mt-4 text-muted-foreground">
+          <p className="text-muted-foreground">
             This doctor has not yet completed their payment setup. Please check
             back later or browse other doctors.
           </p>
-          <Link
-            href="/doctors"
-            className="mt-6 inline-flex items-center text-primary hover:underline"
-          >
-            Browse Doctors
-          </Link>
+          <div className="flex flex-col gap-2 pt-2">
+            {user && <NotifyMeButton doctorId={doctor.id} />}
+            <Button variant="outline" asChild className="w-full">
+              <Link href={`/doctors/${doctor.slug}`}>View profile</Link>
+            </Button>
+            <Button variant="outline" asChild className="w-full">
+              <Link href="/contact">Contact support</Link>
+            </Button>
+            <Button asChild className="w-full">
+              <Link href="/doctors">Browse doctors</Link>
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -174,8 +177,14 @@ export default async function BookAppointmentPage({ params, searchParams }: Book
         </p>
       </div>
 
-      {/* Booking Wizard */}
-      <BookingWizard doctor={doctor} services={servicesData || []} dependents={dependents} />
+      {/* Booking Wizard — guests pass isGuest for progressive checkout */}
+      <BookingWizard
+        doctor={doctor}
+        services={servicesData || []}
+        dependents={dependents}
+        isGuest={!user}
+        locale={locale}
+      />
     </div>
   );
 }

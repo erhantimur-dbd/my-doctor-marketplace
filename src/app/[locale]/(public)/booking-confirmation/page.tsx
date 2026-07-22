@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { redirect } from "next/navigation";
 import {
@@ -60,13 +61,14 @@ export default async function BookingConfirmationPage({
     redirect("/en");
   }
 
-  // Fetch the booking with doctor details
+  // Fetch booking: prefer user RLS session; fall back to admin when guest
+  // (Stripe session_id already proved payment ownership above).
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { data: booking } = await supabase
-    .from("bookings")
-    .select(
-      `
+  const bookingSelect = `
       id,
       booking_number,
       appointment_date,
@@ -85,6 +87,7 @@ export default async function BookingConfirmationPage({
       remainder_due_cents,
       patient_notes,
       paid_at,
+      is_guest,
       doctor:doctors!inner(
         id,
         slug,
@@ -99,14 +102,30 @@ export default async function BookingConfirmationPage({
           is_primary
         )
       )
-    `
-    )
+    `;
+
+  let { data: booking } = await supabase
+    .from("bookings")
+    .select(bookingSelect)
     .eq("id", bookingId)
-    .single();
+    .maybeSingle();
+
+  if (!booking) {
+    const admin = createAdminClient();
+    const res = await admin
+      .from("bookings")
+      .select(bookingSelect)
+      .eq("id", bookingId)
+      .maybeSingle();
+    booking = res.data;
+  }
 
   if (!booking) {
     redirect("/en");
   }
+
+  const isGuestBooking =
+    !user || (booking as { is_guest?: boolean }).is_guest === true;
 
   const doctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
   const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
@@ -269,7 +288,7 @@ export default async function BookingConfirmationPage({
               <span className="text-lg font-bold">
                 {(booking as any).payment_mode === "deposit" && (booking as any).deposit_amount_cents != null
                   ? formatCurrency(
-                      (booking as any).deposit_amount_cents + booking.platform_fee_cents,
+                      (booking as any).deposit_amount_cents,
                       booking.currency
                     )
                   : formatCurrency(
@@ -323,12 +342,20 @@ export default async function BookingConfirmationPage({
           </CardContent>
 
           <CardFooter className="flex flex-col gap-3">
-            <Button className="w-full" asChild>
-              <Link href="/dashboard/bookings">
-                <LayoutDashboard className="mr-2 h-4 w-4" />
-                View My Bookings
-              </Link>
-            </Button>
+            {isGuestBooking && !user ? (
+              <Button className="w-full" asChild>
+                <Link href="/forgot-password">
+                  Set a password to manage bookings
+                </Link>
+              </Button>
+            ) : (
+              <Button className="w-full" asChild>
+                <Link href="/dashboard/bookings">
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  View My Bookings
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" className="w-full" asChild>
               <Link href="/">
                 <Home className="mr-2 h-4 w-4" />

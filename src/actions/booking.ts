@@ -37,6 +37,7 @@ import {
 } from "@/lib/utils/currency";
 import { createNotification } from "@/lib/notifications";
 import { log } from "@/lib/utils/logger";
+import { rateLimit } from "@/lib/rate-limit";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -61,6 +62,123 @@ const CANCELLABLE_STATUSES = [
   BOOKING_STATUSES.APPROVED,
 ];
 
+/**
+ * Resolve patient identity for booking.
+ * - Logged-in: use session user.
+ * - Guest: find-or-create shadow Auth user + profile (progressive checkout).
+ */
+async function resolvePatientForBooking(
+  guest: CreateBookingInput["guest"] | null | undefined
+): Promise<
+  | { patientId: string; isGuest: boolean; guestEmail?: string }
+  | { error: string; requiresLogin?: boolean }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    return { patientId: user.id, isGuest: false };
+  }
+
+  if (!guest) {
+    return {
+      error: "Please enter your details to complete this booking.",
+    };
+  }
+
+  const email = guest.email.trim().toLowerCase();
+  const admin = createAdminClient();
+
+  // Rate-limit guest book attempts per email
+  const { limited } = await rateLimit(`guest-book:${email}`, 5, 60 * 60 * 1000);
+  if (limited) {
+    return { error: "Too many booking attempts. Please try again later." };
+  }
+
+  // Existing profile with this email → must sign in (avoid double accounts)
+  const { data: existingProfile } = await admin
+    .from("profiles")
+    .select("id, email, role")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (existingProfile) {
+    return {
+      error:
+        "An account with this email already exists. Please sign in to complete your booking.",
+      requiresLogin: true,
+    };
+  }
+
+  const { data: authData, error: authCreateError } =
+    await admin.auth.admin.createUser({
+      email,
+      email_confirm: true,
+      user_metadata: {
+        first_name: guest.first_name.trim(),
+        last_name: guest.last_name.trim(),
+        role: "patient",
+        created_via: "guest_checkout",
+      },
+    });
+
+  if (authCreateError || !authData.user) {
+    log.error("[Booking] guest createUser failed", { err: authCreateError });
+    // Supabase may still race if user was created between checks
+    if (authCreateError?.message?.toLowerCase().includes("already")) {
+      return {
+        error:
+          "An account with this email already exists. Please sign in to complete your booking.",
+        requiresLogin: true,
+      };
+    }
+    return { error: "Could not create your booking profile. Please try again." };
+  }
+
+  const patientId = authData.user.id;
+
+  // Wait for handle_new_user trigger, then ensure profile fields
+  let profileReady = false;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("id", patientId)
+      .maybeSingle();
+    if (profile) {
+      profileReady = true;
+      break;
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+
+  if (!profileReady) {
+    await admin.from("profiles").upsert({
+      id: patientId,
+      email,
+      first_name: guest.first_name.trim(),
+      last_name: guest.last_name.trim(),
+      role: "patient",
+      phone: guest.phone || null,
+    });
+  } else {
+    await admin
+      .from("profiles")
+      .update({
+        first_name: guest.first_name.trim(),
+        last_name: guest.last_name.trim(),
+        phone: guest.phone || null,
+        terms_accepted_at: new Date().toISOString(),
+        privacy_accepted_at: new Date().toISOString(),
+      })
+      .eq("id", patientId);
+  }
+
+  return { patientId, isGuest: true, guestEmail: email };
+}
+
 export async function createBookingAndCheckout(input: CreateBookingInput) {
   try {
     const parsed = createBookingSchema.safeParse(input);
@@ -70,17 +188,22 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       return { error: "Invalid booking data. Please check your input." };
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return { error: "You must be logged in to book an appointment." };
+    const identity = await resolvePatientForBooking(parsed.data.guest);
+    if ("error" in identity) {
+      return {
+        error: identity.error,
+        requiresLogin: identity.requiresLogin,
+      };
     }
+    const { patientId, isGuest, guestEmail } = identity;
+
+    const supabase = await createClient();
+    const adminSupabase = createAdminClient();
+    // Guests must use admin client (no RLS session); authed users keep user client for insert when possible
+    const writeClient = isGuest ? adminSupabase : supabase;
 
     // Fetch doctor with profile to get pricing and Stripe account
-    const { data: doctor, error: doctorError } = await supabase
+    const { data: doctor, error: doctorError } = await adminSupabase
       .from("doctors")
       .select(
         `
@@ -120,7 +243,6 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     }
 
     // Check doctor's org has an active license (or legacy subscription)
-    const adminSupabase = createAdminClient();
     let hasActiveLicense = false;
 
     // New: check organization license
@@ -148,13 +270,16 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
-    // Validate dependent ownership if booking for a family member
+    // Validate dependent ownership if booking for a family member (auth only)
     if (parsed.data.dependent_id) {
+      if (isGuest) {
+        return { error: "Please sign in to book for a family member." };
+      }
       const { data: dep } = await supabase
         .from("dependents")
         .select("id")
         .eq("id", parsed.data.dependent_id)
-        .eq("parent_id", user.id)
+        .eq("parent_id", patientId)
         .single();
       if (!dep) {
         return { error: "Invalid dependent selected." };
@@ -172,7 +297,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     if (serviceId) {
       // Returning patient with selected service — use service price
-      const { data: service } = await supabase
+      const { data: service } = await adminSupabase
         .from("doctor_services")
         .select("*, deposit_type, deposit_value")
         .eq("id", serviceId)
@@ -243,16 +368,17 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     );
 
     // Insert booking with pending_payment status
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await writeClient
       .from("bookings")
       .insert({
-        patient_id: user.id,
+        patient_id: patientId,
         doctor_id: doctor.id,
         appointment_date: parsed.data.appointment_date,
         start_time: parsed.data.start_time,
         end_time: parsed.data.end_time,
         consultation_type: parsed.data.consultation_type,
         patient_notes: parsed.data.patient_notes || null,
+        patient_phone: isGuest && guestEmail ? parsed.data.guest?.phone || null : null,
         status: BOOKING_STATUSES.PENDING_PAYMENT,
         currency: doctor.base_currency,
         consultation_fee_cents: consultationFeeCents,
@@ -266,9 +392,10 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         deposit_value: isDeposit ? resolvedDepositValue : null,
         service_id: serviceId,
         service_name: serviceName,
-        dependent_id: parsed.data.dependent_id || null,
-        dependent_name: parsed.data.dependent_name || null,
+        dependent_id: isGuest ? null : parsed.data.dependent_id || null,
+        dependent_name: isGuest ? null : parsed.data.dependent_name || null,
         organization_id: doctor.organization_id || null,
+        is_guest: isGuest,
       })
       .select("id, booking_number")
       .single();
@@ -287,18 +414,21 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         ? "Video Consultation"
         : "In-Person Consultation";
 
-    // Check patient's wallet balance — apply credit if available
-    const { balance_cents: walletBalance } = await getWalletBalance(
-      user.id,
-      doctor.base_currency
-    );
-    const walletCreditToApply = Math.min(walletBalance, stripeChargeCents);
+    // Wallet only for authenticated non-guest sessions
+    let walletCreditToApply = 0;
+    if (!isGuest) {
+      const { balance_cents: walletBalance } = await getWalletBalance(
+        patientId,
+        doctor.base_currency
+      );
+      walletCreditToApply = Math.min(walletBalance, stripeChargeCents);
+    }
     const remainingCharge = stripeChargeCents - walletCreditToApply;
 
     // If wallet covers the full charge, confirm booking immediately (no Stripe needed)
     if (remainingCharge === 0 && walletCreditToApply > 0) {
       await debitWallet({
-        patientId: user.id,
+        patientId,
         currency: doctor.base_currency,
         amountCents: walletCreditToApply,
         sourceType: "refund",
@@ -307,7 +437,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       });
 
       // Confirm booking immediately
-      await supabase
+      await writeClient
         .from("bookings")
         .update({
           status: BOOKING_STATUSES.CONFIRMED,
@@ -326,7 +456,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     // Store wallet credit on booking for later debit on payment completion
     if (walletCreditToApply > 0) {
-      await supabase
+      await writeClient
         .from("bookings")
         .update({ wallet_credit_applied_cents: walletCreditToApply })
         .eq("id", booking.id);
@@ -342,6 +472,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
+      customer_email: guestEmail || undefined,
       line_items: [
         {
           price_data: {
@@ -369,6 +500,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         booking_id: booking.id,
         booking_number: booking.booking_number,
         payment_mode: isDeposit ? "deposit" : "full",
+        is_guest: isGuest ? "1" : "0",
+        patient_id: patientId,
         ...(walletCreditToApply > 0 ? { wallet_credit_cents: String(walletCreditToApply) } : {}),
       },
       success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,

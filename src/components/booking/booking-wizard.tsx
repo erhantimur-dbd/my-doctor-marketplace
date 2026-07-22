@@ -1,8 +1,12 @@
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
+import { useState, useTransition, useCallback, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -96,6 +100,9 @@ interface BookingWizardProps {
   };
   services?: ServiceOption[];
   dependents?: Dependent[];
+  /** Unauthenticated progressive checkout */
+  isGuest?: boolean;
+  locale?: string;
 }
 
 type ConsultationType = "in_person" | "video";
@@ -108,7 +115,14 @@ interface SlotSelection {
 
 const FOLLOWUP_SERVICE_ID = "__followup__";
 
-export function BookingWizard({ doctor, services = [], dependents = [] }: BookingWizardProps) {
+export function BookingWizard({
+  doctor,
+  services = [],
+  dependents = [],
+  isGuest = false,
+}: BookingWizardProps) {
+  const t = useTranslations("booking");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const initialDate = searchParams.get("date"); // e.g. "2026-03-05" from availability chip
   const initialType = searchParams.get("type") as ConsultationType | null; // e.g. "in_person" or "video"
@@ -141,17 +155,28 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
   const [patientNotes, setPatientNotes] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  // Service selection state
-  const [isFirstVisit, setIsFirstVisit] = useState<boolean | null>(null);
+  // Service selection state — default first visit when deep-linked with type
+  // so one-tap book from card/chat can proceed without re-answering.
+  const [isFirstVisit, setIsFirstVisit] = useState<boolean | null>(
+    validInitialType ? true : null
+  );
   const [selectedService, setSelectedService] = useState<ServiceOption | null>(
     null
   );
+  const hasAutoAdvancedFromUrl = useRef(false);
 
   // Patient selection state (for dependent booking)
   const [selectedPatient, setSelectedPatient] = useState<"self" | string>("self");
   const selectedDependent = selectedPatient !== "self"
     ? dependents.find((d) => d.id === selectedPatient) ?? null
     : null;
+
+  // Guest contact (progressive checkout)
+  const [guestFirstName, setGuestFirstName] = useState("");
+  const [guestLastName, setGuestLastName] = useState("");
+  const [guestEmail, setGuestEmail] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestTerms, setGuestTerms] = useState(false);
 
   const totalSteps = steps.length;
   const fullName = `${doctor.title || "Dr."} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
@@ -249,7 +274,15 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
       return true;
     }
     if (currentStep === "schedule") return slotSelection !== null;
-    if (currentStep === "review") return true;
+    if (currentStep === "review") {
+      if (!isGuest) return true;
+      return (
+        guestFirstName.trim().length > 0 &&
+        guestLastName.trim().length > 0 &&
+        guestEmail.includes("@") &&
+        guestTerms
+      );
+    }
     return false;
   }
 
@@ -290,8 +323,31 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
     setSlotSelection({ date, startTime, endTime });
   }, []);
 
+  // One-tap conversion: when URL prefilled type+date+time and slot resolves,
+  // skip Schedule and land on Review (once).
+  useEffect(() => {
+    if (hasAutoAdvancedFromUrl.current) return;
+    if (!validInitialType || !initialDate || !initialTime) return;
+    if (!slotSelection) return;
+    if (currentStep !== "schedule") return;
+
+    const reviewIdx = hasDependents ? 3 : 2; // patient? type schedule review payment
+    hasAutoAdvancedFromUrl.current = true;
+    setStepIndex(reviewIdx);
+  }, [
+    slotSelection,
+    currentStep,
+    validInitialType,
+    initialDate,
+    initialTime,
+    hasDependents,
+  ]);
+
   function handleProceedToPayment() {
     if (!consultationType || !slotSelection) return;
+    if (isGuest && !canProceed() && currentStep === "payment") {
+      // Ensure guest details filled on review before payment step
+    }
 
     startTransition(async () => {
       const result = await createBookingAndCheckout({
@@ -309,30 +365,57 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
         dependent_name: selectedDependent
           ? `${selectedDependent.first_name} ${selectedDependent.last_name}`
           : undefined,
+        guest: isGuest
+          ? {
+              first_name: guestFirstName.trim(),
+              last_name: guestLastName.trim(),
+              email: guestEmail.trim(),
+              phone: guestPhone.trim(),
+              terms_accepted: guestTerms,
+            }
+          : undefined,
       });
 
       if (result.error) {
         toast.error(result.error);
+        if ("requiresLogin" in result && result.requiresLogin) {
+          const q = new URLSearchParams();
+          q.set(
+            "redirect",
+            `/${locale}/doctors/${doctor.slug}/book?date=${slotSelection.date}&type=${consultationType}&time=${encodeURIComponent(slotSelection.startTime)}`
+          );
+          window.location.href = `/${locale}/login?${q.toString()}`;
+        }
         return;
       }
 
       if (result.url) {
         window.location.href = result.url;
       } else {
-        toast.error("Failed to create checkout session. Please try again.");
+        toast.error(t("checkout_failed"));
       }
     });
   }
 
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr + "T00:00:00");
-    return date.toLocaleDateString("en-GB", {
+    return date.toLocaleDateString(locale === "en" ? "en-GB" : locale, {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
     });
   }
+
+  const stepMeta: { id: StepId; label: string; icon: typeof User }[] = [
+    ...(hasDependents
+      ? [{ id: "patient" as StepId, label: t("step_patient"), icon: Users }]
+      : []),
+    { id: "type" as StepId, label: t("step_type"), icon: Stethoscope },
+    { id: "schedule" as StepId, label: t("step_schedule"), icon: Calendar },
+    { id: "review" as StepId, label: t("step_review"), icon: User },
+    { id: "payment" as StepId, label: t("step_payment"), icon: CreditCard },
+  ];
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -347,13 +430,7 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
             style={{ width: `${(stepIndex / (totalSteps - 1)) * 100}%` }}
           />
 
-          {[
-            ...(hasDependents ? [{ id: "patient" as StepId, label: "Patient", icon: Users }] : []),
-            { id: "type" as StepId, label: "Type", icon: Stethoscope },
-            { id: "schedule" as StepId, label: "Schedule", icon: Calendar },
-            { id: "review" as StepId, label: "Review", icon: User },
-            { id: "payment" as StepId, label: "Payment", icon: CreditCard },
-          ].map(({ id, label, icon: Icon }, idx) => (
+          {stepMeta.map(({ id, label, icon: Icon }, idx) => (
             <div key={id} className="relative flex flex-col items-center">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ring-4 ring-background transition-colors ${
@@ -720,14 +797,87 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Guest contact — progressive checkout */}
+            {isGuest && (
+              <div className="space-y-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <div>
+                  <h3 className="font-semibold">{t("guest_details_title")}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("guest_details_desc")}
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="guest-first">{t("guest_first_name")}</Label>
+                    <Input
+                      id="guest-first"
+                      value={guestFirstName}
+                      onChange={(e) => setGuestFirstName(e.target.value)}
+                      autoComplete="given-name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="guest-last">{t("guest_last_name")}</Label>
+                    <Input
+                      id="guest-last"
+                      value={guestLastName}
+                      onChange={(e) => setGuestLastName(e.target.value)}
+                      autoComplete="family-name"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="guest-email">{t("guest_email")}</Label>
+                  <Input
+                    id="guest-email"
+                    type="email"
+                    value={guestEmail}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="guest-phone">{t("guest_phone")}</Label>
+                  <Input
+                    id="guest-phone"
+                    type="tel"
+                    value={guestPhone}
+                    onChange={(e) => setGuestPhone(e.target.value)}
+                    autoComplete="tel"
+                  />
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="guest-terms"
+                    checked={guestTerms}
+                    onCheckedChange={(v) => setGuestTerms(v === true)}
+                  />
+                  <Label htmlFor="guest-terms" className="text-sm font-normal leading-snug">
+                    {t("guest_terms")}
+                  </Label>
+                </div>
+                <p className="text-sm">
+                  <Link
+                    href={`/login?redirect=${encodeURIComponent(`/${locale}/doctors/${doctor.slug}/book?date=${slotSelection.date}&type=${consultationType}&time=${encodeURIComponent(slotSelection.startTime)}`)}`}
+                    className="text-primary hover:underline"
+                  >
+                    {t("sign_in_instead")}
+                  </Link>
+                </p>
+              </div>
+            )}
+
             {/* Patient Notes */}
             <div className="space-y-2">
               <Label htmlFor="patient-notes">
-                Notes for the Doctor (Optional)
+                {t("patient_notes")}
               </Label>
               <Textarea
                 id="patient-notes"
-                placeholder="Describe your symptoms or reason for visit..."
+                placeholder={t("patient_notes_placeholder")}
                 value={patientNotes}
                 onChange={(e) => setPatientNotes(e.target.value)}
                 maxLength={1000}
@@ -742,7 +892,7 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
 
             {/* Booking Summary */}
             <div className="space-y-4">
-              <h3 className="font-semibold">Booking Summary</h3>
+              <h3 className="font-semibold">{t("booking_summary")}</h3>
 
               <div className="space-y-3 rounded-md border p-4">
                 {/* Doctor Info */}
@@ -916,8 +1066,8 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back
             </Button>
-            <Button onClick={handleNext}>
-              Continue to Payment
+            <Button onClick={handleNext} disabled={!canProceed()}>
+              {t("continue_to_payment")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </CardFooter>
@@ -930,11 +1080,10 @@ export function BookingWizard({ doctor, services = [], dependents = [] }: Bookin
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Payment
+              {t("payment_title")}
             </CardTitle>
             <CardDescription>
-              You will be redirected to our secure payment partner to complete
-              your booking
+              {t("payment_redirect")}
             </CardDescription>
           </CardHeader>
           <CardContent>
