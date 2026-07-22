@@ -152,8 +152,8 @@
     "or_continue_with": "veya ile devam et",
     "tab_sign_up": "Kayit Ol",
     "tab_sign_in": "Giris Yap",
-    "booking_banner_sign_up": "Randevunuzu tamamlamak icin hesap olusturun",
-    "booking_banner_sign_in": "Randevunuzu tamamlamak icin giris yapin",
+    "booking_banner_sign_up": "Bu randevuyu tamamlamak için hesap oluşturun",
+    "booking_banner_sign_in": "Bu randevuyu tamamlamak için giriş yapın",
     "continue_with_google": "Google ile Devam Et",
     "continue_with_apple": "Apple ile Devam Et",
     "continue_with_facebook": "Facebook ile Devam Et",
@@ -175,7 +175,11 @@
     "verify_resend": "Resend Verification Email",
     "verify_resent": "Verification email sent!",
     "verify_cooldown": "Resend available in {seconds}s",
-    "verify_wrong_email": "Wrong email? Sign up again"
+    "verify_wrong_email": "Wrong email? Sign up again",
+    "booking_type_video": "Görüntülü",
+    "booking_type_in_person": "Yüz yüze",
+    "booking_from": "Başlangıç",
+    "booking_verified": "Onaylı"
   },
   "doctor": {
     "verified": "Dogrulanmis Doktor",

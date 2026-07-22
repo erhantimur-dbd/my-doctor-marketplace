@@ -120,6 +120,7 @@ export async function register(formData: FormData) {
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
   const locale = (formData.get("locale") as string) || "en";
+  const redirectTo = (formData.get("redirect") as string) || "";
 
   // Server-side password strength validation
   const pwResult = passwordSchema.safeParse(password);
@@ -136,7 +137,8 @@ export async function register(formData: FormData) {
         last_name: lastName,
         role: "patient",
       },
-      emailRedirectTo: `${origin}/${locale}/callback`,
+      // Preserve post-verify destination (e.g. doctor book URL with slot params)
+      emailRedirectTo: buildOAuthCallback(origin, locale, redirectTo || undefined),
     },
   });
 
@@ -175,7 +177,11 @@ export async function register(formData: FormData) {
   );
 
   revalidatePath("/", "layout");
-  redirect(`/${locale}/verify-email?email=${encodeURIComponent(email)}`);
+  const verifyQs = new URLSearchParams({ email });
+  if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+    verifyQs.set("redirect", redirectTo);
+  }
+  redirect(`/${locale}/verify-email?${verifyQs.toString()}`);
 }
 
 // ─── Internal helper: shared doctor account creation ────────────────

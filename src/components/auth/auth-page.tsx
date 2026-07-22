@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
-import { Loader2, CalendarCheck, Stethoscope } from "lucide-react";
+import { Loader2, Stethoscope } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,9 @@ import { PasswordStrength } from "@/components/ui/password-strength";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { BookingAuthSummary } from "@/components/auth/booking-auth-summary";
+import { isBookRedirect } from "@/lib/chat/booking-href";
+import type { BookingAuthContext } from "@/lib/auth/booking-context";
 
 import {
   login,
@@ -94,9 +97,11 @@ function XIcon() {
 
 interface AuthPageProps {
   defaultTab: "sign-up" | "sign-in";
+  /** Server-loaded doctor + slot context when redirect is a book URL */
+  bookingContext?: BookingAuthContext | null;
 }
 
-export function AuthPage({ defaultTab }: AuthPageProps) {
+export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   const t = useTranslations("auth");
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "";
@@ -112,8 +117,7 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
   const [passwordValue, setPasswordValue] = useState("");
 
   // Smart default: show sign-up when coming from a booking redirect
-  const isBookingRedirect =
-    redirectTo.includes("/booking") || redirectTo.includes("/dashboard");
+  const isBookingRedirect = isBookRedirect(redirectTo) || !!bookingContext;
   const smartDefault =
     defaultTab === "sign-in" && isBookingRedirect ? "sign-up" : defaultTab;
 
@@ -140,6 +144,8 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
   async function handleRegister(formData: FormData) {
     setRegisterLoading(true);
     setError("");
+    formData.append("redirect", redirectTo);
+    formData.append("locale", locale);
     const result = await register(formData);
     if (result?.error) {
       setError(result.error);
@@ -159,7 +165,14 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
     router.replace(url, { scroll: false });
   }
 
+  const summaryMode = activeTab === "sign-up" ? "sign-up" : "sign-in";
+
   return (
+    <div className="w-full">
+      {bookingContext && (
+        <BookingAuthSummary context={bookingContext} mode={summaryMode} />
+      )}
+
     <Card className="overflow-hidden">
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         {/* ── Tab triggers ── */}
@@ -179,15 +192,12 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
         </TabsList>
 
         <CardContent className="pt-6">
-          {/* ── Booking context banner ── */}
-          {isBookingRedirect && (
-            <div className="mb-5 flex items-center gap-3 rounded-lg bg-primary/5 border border-primary/20 p-3">
-              <CalendarCheck className="h-5 w-5 shrink-0 text-primary" />
-              <p className="text-sm text-foreground">
-                {activeTab === "sign-up"
-                  ? t("booking_banner_sign_up")
-                  : t("booking_banner_sign_in")}
-              </p>
+          {/* Fallback banner when we detect book intent but doctor failed to load */}
+          {isBookingRedirect && !bookingContext && (
+            <div className="mb-5 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm text-foreground">
+              {activeTab === "sign-up"
+                ? t("booking_banner_sign_up")
+                : t("booking_banner_sign_in")}
             </div>
           )}
 
@@ -406,5 +416,6 @@ export function AuthPage({ defaultTab }: AuthPageProps) {
         </CardFooter>
       </Tabs>
     </Card>
+    </div>
   );
 }

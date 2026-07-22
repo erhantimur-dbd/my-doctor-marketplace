@@ -296,8 +296,8 @@
     "or_continue_with": "o continua con",
     "tab_sign_up": "Registrati",
     "tab_sign_in": "Accedi",
-    "booking_banner_sign_up": "Crea un account per completare la tua prenotazione",
-    "booking_banner_sign_in": "Accedi per completare la tua prenotazione",
+    "booking_banner_sign_up": "Crea un account per completare questa prenotazione",
+    "booking_banner_sign_in": "Accedi per completare questa prenotazione",
     "continue_with_google": "Continua con Google",
     "continue_with_apple": "Continua con Apple",
     "continue_with_facebook": "Continua con Facebook",
@@ -319,7 +319,11 @@
     "verify_resend": "Reinvia Email di Verifica",
     "verify_resent": "Email di verifica inviata!",
     "verify_cooldown": "Reinvio disponibile tra {seconds}s",
-    "verify_wrong_email": "Email sbagliata? Registrati di nuovo"
+    "verify_wrong_email": "Email sbagliata? Registrati di nuovo",
+    "booking_type_video": "Video",
+    "booking_type_in_person": "Di persona",
+    "booking_from": "Da",
+    "booking_verified": "Verificato"
   },
   "dashboard": {
     "welcome": "Bentornato, {name}",

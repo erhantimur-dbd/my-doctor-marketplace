@@ -296,8 +296,8 @@
     "or_continue_with": "o continuar con",
     "tab_sign_up": "Registrarse",
     "tab_sign_in": "Iniciar Sesión",
-    "booking_banner_sign_up": "Crea una cuenta para completar tu reserva",
-    "booking_banner_sign_in": "Inicia sesión para completar tu reserva",
+    "booking_banner_sign_up": "Crea una cuenta para completar esta reserva",
+    "booking_banner_sign_in": "Inicia sesión para completar esta reserva",
     "continue_with_google": "Continuar con Google",
     "continue_with_apple": "Continuar con Apple",
     "continue_with_facebook": "Continuar con Facebook",
@@ -319,7 +319,11 @@
     "verify_resend": "Reenviar Email de Verificación",
     "verify_resent": "¡Email de verificación enviado!",
     "verify_cooldown": "Reenvío disponible en {seconds}s",
-    "verify_wrong_email": "¿Correo incorrecto? Regístrate de nuevo"
+    "verify_wrong_email": "¿Correo incorrecto? Regístrate de nuevo",
+    "booking_type_video": "Vídeo",
+    "booking_type_in_person": "Presencial",
+    "booking_from": "Desde",
+    "booking_verified": "Verificado"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo, {name}",

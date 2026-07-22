@@ -134,6 +134,10 @@ export async function GET(
     });
     if (!error) {
       if (type === "signup" || type === "email") {
+        // Resume booking (or other) destination when present; otherwise success page
+        if (next && next !== `/${locale}`) {
+          return createRedirectWithCookies(next);
+        }
         return createRedirectWithCookies(`/${locale}/email-verified`);
       }
       if (type === "recovery") {

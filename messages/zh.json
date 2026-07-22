@@ -302,8 +302,8 @@
     "or_continue_with": "或继续使用",
     "tab_sign_up": "注册",
     "tab_sign_in": "登录",
-    "booking_banner_sign_up": "创建账户以完成您的预约",
-    "booking_banner_sign_in": "登录以完成您的预约",
+    "booking_banner_sign_up": "创建账户以完成此预约",
+    "booking_banner_sign_in": "登录以完成此预约",
     "continue_with_google": "使用Google继续",
     "continue_with_apple": "使用Apple继续",
     "continue_with_facebook": "使用Facebook继续",
@@ -325,7 +325,11 @@
     "verify_resend": "重新发送验证邮件",
     "verify_resent": "验证邮件已发送！",
     "verify_cooldown": "{seconds}秒后可重新发送",
-    "verify_wrong_email": "邮箱错误？重新注册"
+    "verify_wrong_email": "邮箱错误？重新注册",
+    "booking_type_video": "视频",
+    "booking_type_in_person": "面诊",
+    "booking_from": "起价",
+    "booking_verified": "已认证"
   },
   "dashboard": {
     "welcome": "欢迎回来，{name}",

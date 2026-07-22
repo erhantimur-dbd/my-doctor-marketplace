@@ -296,8 +296,8 @@
     "or_continue_with": "または次で続ける",
     "tab_sign_up": "新規登録",
     "tab_sign_in": "ログイン",
-    "booking_banner_sign_up": "予約を完了するにはアカウントを作成してください",
-    "booking_banner_sign_in": "予約を完了するにはログインしてください",
+    "booking_banner_sign_up": "この予約を完了するにはアカウントを作成してください",
+    "booking_banner_sign_in": "この予約を完了するにはサインインしてください",
     "continue_with_google": "Googleで続ける",
     "continue_with_apple": "Appleで続ける",
     "continue_with_facebook": "Facebookで続ける",
@@ -319,7 +319,11 @@
     "verify_resend": "確認メールを再送信",
     "verify_resent": "確認メールを送信しました！",
     "verify_cooldown": "{seconds}秒後に再送信可能",
-    "verify_wrong_email": "メールアドレスが違う？再度登録してください"
+    "verify_wrong_email": "メールアドレスが違う？再度登録してください",
+    "booking_type_video": "ビデオ",
+    "booking_type_in_person": "対面",
+    "booking_from": "〜から",
+    "booking_verified": "認証済み"
   },
   "dashboard": {
     "welcome": "おかえりなさい、{name}さん",

@@ -12,7 +12,7 @@ export default function AuthLayout({
         <Logo className="h-8 w-8 text-primary" />
         <span className="text-2xl font-bold tracking-tight">MyDoctors360</span>
       </Link>
-      <div className="w-full max-w-md">{children}</div>
+      <div className="w-full max-w-md sm:max-w-lg">{children}</div>
     </div>
   );
 }

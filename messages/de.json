@@ -152,8 +152,8 @@
     "or_continue_with": "oder fortfahren mit",
     "tab_sign_up": "Registrieren",
     "tab_sign_in": "Anmelden",
-    "booking_banner_sign_up": "Erstellen Sie ein Konto, um Ihre Buchung abzuschliessen",
-    "booking_banner_sign_in": "Melden Sie sich an, um Ihre Buchung abzuschliessen",
+    "booking_banner_sign_up": "Erstellen Sie ein Konto, um diese Buchung abzuschließen",
+    "booking_banner_sign_in": "Melden Sie sich an, um diese Buchung abzuschließen",
     "continue_with_google": "Mit Google fortfahren",
     "continue_with_apple": "Mit Apple fortfahren",
     "continue_with_facebook": "Mit Facebook fortfahren",
@@ -175,7 +175,11 @@
     "verify_resend": "Resend Verification Email",
     "verify_resent": "Verification email sent!",
     "verify_cooldown": "Resend available in {seconds}s",
-    "verify_wrong_email": "Wrong email? Sign up again"
+    "verify_wrong_email": "Wrong email? Sign up again",
+    "booking_type_video": "Video",
+    "booking_type_in_person": "Vor Ort",
+    "booking_from": "Ab",
+    "booking_verified": "Verifiziert"
   },
   "footer": {
     "brand_description": "Entdecken Sie verifizierte Fachärzte in ganz Europa mit transparenten Preisen und sofortiger Online-Buchung.",

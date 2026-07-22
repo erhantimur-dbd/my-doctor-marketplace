@@ -152,8 +152,8 @@
     "or_continue_with": "ou continuer avec",
     "tab_sign_up": "S'inscrire",
     "tab_sign_in": "Se connecter",
-    "booking_banner_sign_up": "Creez un compte pour finaliser votre reservation",
-    "booking_banner_sign_in": "Connectez-vous pour finaliser votre reservation",
+    "booking_banner_sign_up": "Créez un compte pour finaliser cette réservation",
+    "booking_banner_sign_in": "Connectez-vous pour finaliser cette réservation",
     "continue_with_google": "Continuer avec Google",
     "continue_with_apple": "Continuer avec Apple",
     "continue_with_facebook": "Continuer avec Facebook",
@@ -175,7 +175,11 @@
     "verify_resend": "Resend Verification Email",
     "verify_resent": "Verification email sent!",
     "verify_cooldown": "Resend available in {seconds}s",
-    "verify_wrong_email": "Wrong email? Sign up again"
+    "verify_wrong_email": "Wrong email? Sign up again",
+    "booking_type_video": "Vidéo",
+    "booking_type_in_person": "En cabinet",
+    "booking_from": "À partir de",
+    "booking_verified": "Vérifié"
   },
   "doctor": {
     "verified": "Medecin Verifie",

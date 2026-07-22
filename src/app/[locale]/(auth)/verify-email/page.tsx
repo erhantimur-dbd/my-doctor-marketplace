@@ -14,6 +14,13 @@ export default function VerifyEmailPage() {
   const locale = useLocale();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
+  const redirectTo = searchParams.get("redirect") || "";
+  const loginHref = redirectTo
+    ? `/login?redirect=${encodeURIComponent(redirectTo)}`
+    : "/login";
+  const registerHref = redirectTo
+    ? `/register?redirect=${encodeURIComponent(redirectTo)}`
+    : "/register";
 
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
@@ -111,11 +118,11 @@ export default function VerifyEmailPage() {
 
         <div className="flex w-full flex-col gap-2">
           <Button variant="ghost" asChild>
-            <Link href="/login">{t("sign_in")}</Link>
+            <Link href={loginHref}>{t("sign_in")}</Link>
           </Button>
           {email && (
             <Button variant="link" size="sm" className="text-xs text-muted-foreground" asChild>
-              <Link href="/register">{t("verify_wrong_email")}</Link>
+              <Link href={registerHref}>{t("verify_wrong_email")}</Link>
             </Button>
           )}
         </div>
