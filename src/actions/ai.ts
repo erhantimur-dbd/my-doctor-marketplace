@@ -11,6 +11,10 @@ import {
 import { detectEmergency } from "@/lib/ai/emergency-classifier";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SPECIALTIES } from "@/lib/constants/specialties";
+import {
+  matchLocationFromSearchText,
+  resolveLocationSlug,
+} from "@/lib/location/match-location";
 import crypto from "crypto";
 import { log } from "@/lib/utils/logger";
 
@@ -328,22 +332,14 @@ CRITICAL FILTER RULES:
     // Validate specialty slug if present
     const validSlugs = new Set(SPECIALTIES.map((s) => s.slug));
 
-    // Validate / normalize location slug if present
+    // Validate / normalize location slug if present (city names → slug)
     let resolvedLocation: string | null = null;
     if (object.location && locations) {
-      const locSlugs = new Set(locations.map((l) => l.slug));
-      if (locSlugs.has(object.location)) {
-        resolvedLocation = object.location;
-      } else {
-        // Fuzzy-match: AI may return city name instead of slug
-        const lower = object.location.toLowerCase();
-        const match = locations.find(
-          (l) =>
-            l.city.toLowerCase() === lower ||
-            l.slug.toLowerCase().startsWith(lower)
-        );
-        if (match) resolvedLocation = match.slug;
-      }
+      resolvedLocation = resolveLocationSlug(object.location, locations);
+    }
+    // Fallback: scan full user text for city names (e.g. "GP in Birmingham")
+    if (!resolvedLocation && locations) {
+      resolvedLocation = matchLocationFromSearchText(trimmed, locations);
     }
 
     const result: NLSearchFilters = {

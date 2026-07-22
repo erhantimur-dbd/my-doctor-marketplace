@@ -55,6 +55,10 @@ import {
 } from "@/lib/voice/privacy";
 import { VoicePrivacyNotice } from "@/components/voice/voice-privacy-notice";
 import { useChatStore } from "@/stores/chat-store";
+import {
+  matchLocationFromSearchText,
+  resolveLocationSlug,
+} from "@/lib/location/match-location";
 import { toast } from "sonner";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
@@ -154,6 +158,18 @@ export function HomeSearchBar({
   const [hasManuallySelected, setHasManuallySelected] = useState(!!initialLocation);
   // Google Place selection state (borough, street, etc.)
   const [placeData, setPlaceData] = useState<{ lat: number; lng: number; name: string } | null>(null);
+
+  // Keep What/Where in sync when URL search params change (Find a Doctor page)
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
+  useEffect(() => {
+    if (initialLocation) {
+      setLocation(initialLocation);
+      setPlaceData(null);
+      setHasManuallySelected(true);
+    }
+  }, [initialLocation]);
 
   // Autocomplete state
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -533,39 +549,112 @@ export function HomeSearchBar({
             params.set("query", result.data.query);
           }
 
+          // Resolve location for URL + Where field (AI slug or city in phrase)
+          const locFromAi = result.data.location
+            ? resolveLocationSlug(result.data.location, locations)
+            : null;
+          const locFromText = matchLocationFromSearchText(text, locations);
+          const resolvedLoc =
+            (placeData ? null : locFromAi || locFromText) ||
+            (location && location !== "all" ? location : null);
+
+          // Update Where combobox so UI matches results
+          if (resolvedLoc && !placeData) {
+            setLocation(resolvedLoc);
+            setHasManuallySelected(true);
+            setPlaceData(null);
+          }
+
+          // Clean What field when specialty was extracted
+          if (result.data.specialty) {
+            const spec = specialties.find(
+              (s) => s.slug === result.data!.specialty
+            );
+            if (spec) {
+              const label = formatSpecialtyName(spec.name_key);
+              setQuery(label);
+            }
+          }
+
           if (placeData) {
             params.set("placeLat", placeData.lat.toFixed(6));
             params.set("placeLng", placeData.lng.toFixed(6));
             params.set("placeName", placeData.name);
             params.set("radius", "25");
-          } else if (location && location !== "all") {
-            params.set("location", location);
-          } else if (result.data.location) {
-            params.set("location", result.data.location);
+          } else if (resolvedLoc) {
+            params.set("location", resolvedLoc);
           }
           params.set("aiParsed", "true");
+
+          const locLabel =
+            placeData?.name ||
+            locations.find((l) => l.slug === resolvedLoc)?.city ||
+            resolvedLoc ||
+            undefined;
 
           addSearch({
             query: text,
             specialty: result.data.specialty || undefined,
-            location:
-              placeData?.name ||
-              (location && location !== "all" ? location : undefined),
+            location: locLabel,
             placeLat: placeData?.lat,
             placeLng: placeData?.lng,
           });
 
           router.push(`/doctors?${params.toString()}`);
         } else {
-          runSearchWithQuery(text);
+          // AI unavailable: still map city in phrase → Where + URL
+          const locFromText = matchLocationFromSearchText(text, locations);
+          if (locFromText) {
+            setLocation(locFromText);
+            setHasManuallySelected(true);
+            setPlaceData(null);
+          }
+          const params = new URLSearchParams();
+          if (/\b(general practitioner|family doctor|\bgp\b)\b/i.test(text)) {
+            params.set("specialty", "general-practice");
+          } else {
+            params.set("query", text);
+          }
+          if (locFromText) params.set("location", locFromText);
+          else if (location && location !== "all")
+            params.set("location", location);
+          if (consultationType !== "all")
+            params.set("consultationType", consultationType);
+          router.push(`/doctors?${params.toString()}`);
         }
       } catch {
-        runSearchWithQuery(text);
+        const locFromText = matchLocationFromSearchText(text, locations);
+        if (locFromText) {
+          setLocation(locFromText);
+          setHasManuallySelected(true);
+          setPlaceData(null);
+          const params = new URLSearchParams();
+          if (/\b(general practitioner|family doctor|\bgp\b)\b/i.test(text)) {
+            params.set("specialty", "general-practice");
+          } else {
+            params.set("query", text);
+          }
+          params.set("location", locFromText);
+          router.push(`/doctors?${params.toString()}`);
+        } else {
+          runSearchWithQuery(text);
+        }
       } finally {
         setAiLoading(false);
       }
     },
-    [query, locale, location, placeData, router, runSearchWithQuery, addSearch]
+    [
+      query,
+      locale,
+      location,
+      placeData,
+      router,
+      runSearchWithQuery,
+      addSearch,
+      locations,
+      specialties,
+      consultationType,
+    ]
   );
 
   // Smart search: AI-powered by default; optional spoken override
