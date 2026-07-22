@@ -1,5 +1,5 @@
 /**
- * First-use voice privacy consent. Audio is processed (Whisper/TTS) and never stored.
+ * First-use voice privacy consent. Audio is processed (Grok Voice STT/TTS) and never stored.
  * Consent is client-side only (localStorage) — pure storage key + parse helpers for tests.
  */
 

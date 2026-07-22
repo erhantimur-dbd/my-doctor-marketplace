@@ -16,7 +16,7 @@ export default function PublicLayout({
       <Footer />
       <BackToTop />
       <ChatWidget />
-      {/* Voice AI Phase 1 — Whisper STT + privacy notice; never auto-books */}
+      {/* Voice AI Phase 1 — Grok Voice STT/TTS + privacy notice; never auto-books */}
       <FloatingMic />
     </div>
   );

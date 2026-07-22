@@ -46,7 +46,7 @@ import { SYMPTOMS } from "@/lib/constants/symptoms";
 import { MEDICAL_TESTS } from "@/lib/constants/medical-tests";
 import { matchSymptoms, matchTests } from "@/lib/utils/search-matcher";
 import type { SearchMatch } from "@/lib/utils/search-matcher";
-import { useWhisperStt } from "@/hooks/use-whisper-stt";
+import { useGrokStt } from "@/hooks/use-grok-stt";
 import {
   VOICE_PRIVACY_STORAGE_KEY,
   buildVoicePrivacyConsent,
@@ -208,9 +208,9 @@ export function HomeSearchBar({
   const geo = useGeolocation("auto");
   const { searches: recentSearches, addSearch, removeOne: removeRecentSearch, clearAll: clearRecentSearches } = useRecentSearches();
 
-  // Voice search — Whisper STT (MediaRecorder → /api/voice/stt)
+  // Voice search — Grok Voice STT (MediaRecorder → /api/voice/stt)
   const [showVoicePrivacy, setShowVoicePrivacy] = useState(false);
-  const speech = useWhisperStt({
+  const speech = useGrokStt({
     locale,
     onResult: (text) => {
       setQuery(text);
@@ -1250,7 +1250,7 @@ export function HomeSearchBar({
               className={cn("flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground", compact ? "h-11" : "h-7")}
               autoComplete="off"
             />
-          {/* Voice search mic — Whisper STT + privacy notice */}
+          {/* Voice search mic — Grok Voice STT + privacy notice */}
           {speech.isSupported && (
             <button
               type="button"

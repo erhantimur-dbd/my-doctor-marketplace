@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type WhisperSttStatus =
+export type GrokSttStatus =
   | "idle"
   | "recording"
   | "processing"
   | "error";
 
-interface UseWhisperSttOptions {
+interface UseGrokSttOptions {
   locale?: string;
   onResult?: (text: string) => void;
   onError?: (code: string) => void;
@@ -16,9 +16,9 @@ interface UseWhisperSttOptions {
   maxMs?: number;
 }
 
-interface UseWhisperSttReturn {
+interface UseGrokSttReturn {
   isSupported: boolean;
-  status: WhisperSttStatus;
+  status: GrokSttStatus;
   isRecording: boolean;
   isProcessing: boolean;
   transcript: string;
@@ -28,15 +28,15 @@ interface UseWhisperSttReturn {
 }
 
 /**
- * MediaRecorder → POST /api/voice/stt (Whisper). Audio never stored client-side
- * after upload (blob URL revoked; recorder tracks discarded).
+ * MediaRecorder → POST /api/voice/stt (Grok Voice / xAI STT).
+ * Audio never stored client-side after upload (recorder tracks discarded).
  */
-export function useWhisperStt(
-  options: UseWhisperSttOptions = {}
-): UseWhisperSttReturn {
+export function useGrokStt(
+  options: UseGrokSttOptions = {}
+): UseGrokSttReturn {
   const { locale = "en", onResult, onError, maxMs = 15000 } = options;
   const [isSupported, setIsSupported] = useState(false);
-  const [status, setStatus] = useState<WhisperSttStatus>("idle");
+  const [status, setStatus] = useState<GrokSttStatus>("idle");
   const [transcript, setTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -184,3 +184,6 @@ export function useWhisperStt(
     stop,
   };
 }
+
+/** @deprecated Use useGrokStt */
+export const useWhisperStt = useGrokStt;

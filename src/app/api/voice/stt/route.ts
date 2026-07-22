@@ -1,19 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAIEnabled } from "@/lib/ai/provider";
 import { rateLimit } from "@/lib/rate-limit";
-import { localeToBcp47 } from "@/lib/voice/locale";
+import {
+  getXaiApiKey,
+  isGrokVoiceEnabled,
+  localeToGrokLanguage,
+  XAI_API_BASE,
+} from "@/lib/voice/xai";
 
 export const maxDuration = 30;
 
 /**
- * OpenAI Whisper speech-to-text.
+ * Grok Speech-to-Text (xAI).
  * Accepts multipart form: audio file + optional locale.
- * Audio is processed and never stored.
+ * Audio is processed by xAI and never stored by us.
+ * @see https://docs.x.ai/developers/model-capabilities/audio/voice
  */
 export async function POST(request: NextRequest) {
-  if (!isAIEnabled()) {
+  if (!isGrokVoiceEnabled()) {
     return NextResponse.json(
-      { error: "Voice STT is not configured on this environment." },
+      {
+        error:
+          "Grok Voice STT is not configured. Set XAI_API_KEY in the environment.",
+      },
       { status: 503 }
     );
   }
@@ -45,37 +53,44 @@ export async function POST(request: NextRequest) {
     if (!(file instanceof Blob) || file.size === 0) {
       return NextResponse.json({ error: "Missing audio" }, { status: 400 });
     }
-    // Cap ~10MB
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json({ error: "Audio too large" }, { status: 413 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY!;
-    const whisperForm = new FormData();
+    const apiKey = getXaiApiKey()!;
     const filename =
       file instanceof File && file.name ? file.name : "recording.webm";
-    whisperForm.append("file", file, filename);
-    whisperForm.append("model", "whisper-1");
-    whisperForm.append("language", localeToBcp47(locale).slice(0, 2));
 
-    const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    // Grok STT: multipart file upload to /v1/stt
+    const grokForm = new FormData();
+    grokForm.append("file", file, filename);
+    // Optional language bias when supported by the API
+    grokForm.append("language", localeToGrokLanguage(locale));
+
+    const res = await fetch(`${XAI_API_BASE}/stt`, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}` },
-      body: whisperForm,
+      body: grokForm,
     });
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "");
       return NextResponse.json(
-        { error: "Transcription failed", detail: errText.slice(0, 200) },
+        {
+          error: "Grok transcription failed",
+          detail: errText.slice(0, 300),
+        },
         { status: 502 }
       );
     }
 
-    const data = (await res.json()) as { text?: string };
-    const text = (data.text || "").trim();
+    const data = (await res.json()) as {
+      text?: string;
+      transcript?: string;
+    };
+    const text = (data.text || data.transcript || "").trim();
     // Explicit: we never persist audio or transcript server-side
-    return NextResponse.json({ text, stored: false });
+    return NextResponse.json({ text, stored: false, provider: "grok" });
   } catch {
     return NextResponse.json(
       { error: "STT request failed" },

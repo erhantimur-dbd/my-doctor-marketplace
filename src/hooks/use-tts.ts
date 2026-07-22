@@ -3,10 +3,11 @@
 import { useCallback, useRef, useState } from "react";
 
 /**
- * Play OpenAI TTS for a text string via /api/voice/tts.
+ * Play Grok Voice TTS for a text string via /api/voice/tts (xAI).
  * Audio is streamed to memory and not persisted.
  */
-export function useTts() {
+export function useTts(options: { locale?: string; voiceId?: string } = {}) {
+  const { locale = "en", voiceId } = options;
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -34,7 +35,11 @@ export function useTts() {
         const res = await fetch("/api/voice/tts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: trimmed.slice(0, 2000) }),
+          body: JSON.stringify({
+            text: trimmed.slice(0, 2000),
+            locale,
+            voice_id: voiceId,
+          }),
         });
         if (!res.ok) {
           setError("tts-failed");
@@ -60,7 +65,7 @@ export function useTts() {
         stop();
       }
     },
-    [stop]
+    [stop, locale, voiceId]
   );
 
   return { speak, stop, isPlaying, error };

@@ -6,7 +6,7 @@ import { useRouter, usePathname } from "@/i18n/navigation";
 import { Mic, MicOff, Loader2, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useWhisperStt } from "@/hooks/use-whisper-stt";
+import { useGrokStt } from "@/hooks/use-grok-stt";
 import { useTts } from "@/hooks/use-tts";
 import { VoicePrivacyNotice } from "@/components/voice/voice-privacy-notice";
 import {
@@ -19,8 +19,8 @@ import { toast } from "sonner";
 
 /**
  * Floating mic on primary patient pages.
- * Records via MediaRecorder → Whisper STT → navigates to doctor search with q=.
- * Optional TTS readback of the transcript. Never auto-books.
+ * Records via MediaRecorder → Grok Voice STT → navigates to doctor search with q=.
+ * Optional Grok TTS readback of the transcript. Never auto-books.
  */
 export function FloatingMic() {
   const t = useTranslations("voice");
@@ -30,7 +30,7 @@ export function FloatingMic() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [pendingStart, setPendingStart] = useState(false);
   const [lastText, setLastText] = useState("");
-  const tts = useTts();
+  const tts = useTts({ locale });
 
   // Hide on doctor dashboard / admin (patient-facing only)
   const hide =
@@ -39,7 +39,7 @@ export function FloatingMic() {
     pathname?.includes("/login") ||
     pathname?.includes("/register");
 
-  const stt = useWhisperStt({
+  const stt = useGrokStt({
     locale,
     onResult: (text) => {
       setLastText(text);
