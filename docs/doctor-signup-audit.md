@@ -167,3 +167,8 @@ Entry
 ## URL smoke (optional evidence)
 
 See `docs/evidence-scratch/doctor-signup-url-smoke.txt` — production register-doctor/pricing serve the **app**, not coming-soon.
+
+
+## Implementation status (2026-07-23)
+
+H1–H7 shipped in commit after audit (wizard field fidelity, referral code + rewards, env Price IDs, webhook seats, resume checkout, free-tier booking block).
