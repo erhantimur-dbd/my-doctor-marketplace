@@ -1478,27 +1478,28 @@ export default function RegisterDoctorPage() {
                             <span className="text-lg font-bold">Free</span>
                           ) : billingPeriod === "annual" ? (
                             <>
-                              <span className="text-lg font-bold">
-                                {formatPriceForLocale(
-                                  annualTotalPence(tier.priceMonthlyPence),
-                                  locale
-                                )}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {tier.perUser ? " / user / yr" : " / yr"}
-                              </span>
-                              <p className="text-[10px] text-muted-foreground">
+                              <span className="text-lg font-bold tabular-nums">
                                 {formatAnnualEffectiveMonthlyForLocale(
                                   tier.priceMonthlyPence,
                                   locale
                                 )}
-                                /mo ·{" "}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {tier.perUser ? " / user / mo" : " / mo"}
+                              </span>
+                              <p className="text-[10px] text-muted-foreground">
+                                {formatPriceForLocale(
+                                  annualTotalPence(tier.priceMonthlyPence),
+                                  locale
+                                )}
+                                {tier.perUser ? "/user" : ""}
+                                /yr ·{" "}
                                 <span className="text-emerald-700">2 mo free</span>
                               </p>
                             </>
                           ) : (
                             <>
-                              <span className="text-lg font-bold">
+                              <span className="text-lg font-bold tabular-nums">
                                 {formatPriceForLocale(
                                   tier.priceMonthlyPence,
                                   locale

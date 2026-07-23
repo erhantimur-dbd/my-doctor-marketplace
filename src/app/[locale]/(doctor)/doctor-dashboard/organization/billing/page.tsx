@@ -473,27 +473,28 @@ export default function BillingPage() {
                       <span className="text-2xl font-bold">Free</span>
                     ) : billingPeriod === "annual" && needsPaidPlan ? (
                       <>
-                        <span className="text-2xl font-bold">
-                          {formatPrice(
-                            annualTotalPence(tier.priceMonthlyPence),
-                            "GBP"
-                          )}
-                        </span>
-                        <span className="text-muted-foreground">
-                          {tier.perUser ? " / user / year" : " / year"}
-                        </span>
-                        <p className="mt-1 text-xs text-muted-foreground">
+                        <span className="text-2xl font-bold tabular-nums">
                           {formatAnnualEffectiveMonthlyForLocale(
                             tier.priceMonthlyPence,
                             "en"
                           )}
-                          /mo ·{" "}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {tier.perUser ? " / user / mo" : " / mo"}
+                        </span>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatPrice(
+                            annualTotalPence(tier.priceMonthlyPence),
+                            "GBP"
+                          )}
+                          {tier.perUser ? "/user" : ""}
+                          /yr ·{" "}
                           <span className="text-emerald-700">2 months free</span>
                         </p>
                       </>
                     ) : (
                       <>
-                        <span className="text-2xl font-bold">
+                        <span className="text-2xl font-bold tabular-nums">
                           {formatPrice(tier.priceMonthlyPence, "GBP")}
                         </span>
                         <span className="text-muted-foreground">

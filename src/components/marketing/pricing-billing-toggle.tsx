@@ -103,73 +103,100 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
     return `/register-doctor?${params.toString()}`;
   }
 
+  const perMoLabel = (perUser: boolean) =>
+    perUser ? " / user / mo" : " / mo";
+
   /** Keep feature bullets aligned with monthly vs annual display. */
   function formatFeatureLine(feature: string): string {
     const testingMo =
       AVAILABLE_MODULES.find((m) => m.key === "medical_testing")
         ?.priceMonthlyPence ?? 4900;
     if (period === "annual") {
+      const eff = formatAnnualEffectiveMonthlyForLocale(testingMo, locale);
       const yearly = formatPriceForLocale(annualTotalPence(testingMo), locale);
       return feature
-        .replace(/\+£49\/mo/gi, `+${yearly}/yr`)
-        .replace(/\+£49\/month/gi, `+${yearly}/yr`);
+        .replace(/\+£49\/mo/gi, `+${eff}/mo`)
+        .replace(/\+£49\/month/gi, `+${eff}/mo`)
+        .replace(
+          /\(optional \+£49\/mo add-on\)/gi,
+          `(optional +${eff}/mo, ${yearly}/yr)`
+        );
     }
     return feature;
   }
 
+  /**
+   * Aligned price structure for monthly and annual:
+   *   Primary = comparable monthly rate
+   *   Secondary = billing cadence + savings
+   * Fixed min-height keeps feature lists level across cards.
+   */
   function priceBlock(tier: LicenseTierConfig) {
     if (tier.isCustomPricing) {
-      return <span className="text-4xl font-bold">Custom</span>;
+      return (
+        <div className="flex h-full flex-col items-center justify-center">
+          <span className="text-4xl font-bold">Custom</span>
+          <p className="mt-1 min-h-[32px] text-xs text-muted-foreground">
+            Contact us for a quote
+          </p>
+        </div>
+      );
     }
     if (tier.isFreeTier) {
       return (
-        <>
+        <div className="flex h-full flex-col items-center justify-center">
           <span className="text-4xl font-bold">£0</span>
-          <span className="text-sm text-muted-foreground">
+          <p className="mt-1 min-h-[32px] text-xs text-muted-foreground">
             forever · upgrade anytime
-          </span>
-        </>
+          </p>
+        </div>
       );
     }
 
     if (period === "annual") {
       const yearly = annualTotalPence(tier.priceMonthlyPence);
-      const monthlyList = tier.priceMonthlyPence;
+      const list = tier.priceMonthlyPence;
       return (
-        <>
-          <div>
-            <span className="text-4xl font-bold">
-              {formatPriceForLocale(yearly, locale)}
+        <div className="flex h-full flex-col items-center justify-center">
+          <div className="flex flex-wrap items-baseline justify-center gap-x-1">
+            <span className="text-4xl font-bold tabular-nums">
+              {formatAnnualEffectiveMonthlyForLocale(list, locale)}
             </span>
             <span className="text-muted-foreground">
-              {tier.perUser ? " / user / year" : " / year"}
+              {perMoLabel(!!tier.perUser)}
             </span>
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            <span className="line-through opacity-70">
-              {formatPriceForLocale(monthlyList * 12, locale)}
-              {tier.perUser ? "/user" : ""}
+          <p className="mt-1 min-h-[32px] max-w-[14rem] text-xs leading-snug text-muted-foreground">
+            <span className="font-medium text-foreground">
+              {formatPriceForLocale(yearly, locale)}
+              {tier.perUser ? "/user" : ""}/yr
             </span>
             {" · "}
-            {formatAnnualEffectiveMonthlyForLocale(monthlyList, locale)}
-            {tier.perUser ? "/user" : ""}
-            /mo equiv.
+            <span className="line-through opacity-60">
+              {formatPriceForLocale(list, locale)}
+              {perMoLabel(!!tier.perUser).trim()}
+            </span>
             <span className="ml-1 font-medium text-emerald-600">
-              · 2 months free
+              2 mo free
             </span>
           </p>
-        </>
+        </div>
       );
     }
 
     return (
-      <div>
-        <span className="text-4xl font-bold">
-          {formatPriceForLocale(tier.priceMonthlyPence, locale)}
-        </span>
-        <span className="text-muted-foreground">
-          {tier.perUser ? " / user / mo" : " / month"}
-        </span>
+      <div className="flex h-full flex-col items-center justify-center">
+        <div className="flex flex-wrap items-baseline justify-center gap-x-1">
+          <span className="text-4xl font-bold tabular-nums">
+            {formatPriceForLocale(tier.priceMonthlyPence, locale)}
+          </span>
+          <span className="text-muted-foreground">
+            {perMoLabel(!!tier.perUser)}
+          </span>
+        </div>
+        <p className="mt-1 min-h-[32px] text-xs text-muted-foreground">
+          Billed monthly
+        </p>
       </div>
     );
   }
@@ -263,11 +290,11 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                 </p>
               </div>
 
-              <div className="flex min-h-[96px] flex-col items-center justify-center px-6 text-center">
+              <div className="flex h-[108px] flex-col items-center justify-center px-6 text-center">
                 {priceBlock(tier)}
               </div>
 
-              <div className="flex h-[48px] flex-col items-center justify-center px-6 text-center">
+              <div className="flex h-[52px] flex-col items-center justify-center px-6 text-center">
                 {isEnterprise ? (
                   <p className="text-xs text-muted-foreground">
                     Tailored to your needs
@@ -279,11 +306,10 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                 ) : (
                   <>
                     <p className="text-xs text-muted-foreground">
+                      12-month term ·{" "}
                       {period === "annual"
-                        ? "Billed annually · 12-month term"
-                        : tier.commitmentMonths > 0
-                          ? "12-month commitment, billed monthly"
-                          : "Billed monthly"}
+                        ? "billed yearly"
+                        : "billed monthly"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {tier.perUser
@@ -296,11 +322,11 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                           {" · "}
                           {period === "annual" ? (
                             <>
-                              {formatPriceForLocale(
-                                annualTotalPence(tier.extraSeatPricePence),
+                              {formatAnnualEffectiveMonthlyForLocale(
+                                tier.extraSeatPricePence,
                                 locale
                               )}
-                              /extra seat/yr
+                              /extra seat/mo
                             </>
                           ) : (
                             <>
@@ -308,7 +334,7 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                                 tier.extraSeatPricePence,
                                 locale
                               )}
-                              /extra seat
+                              /extra seat/mo
                             </>
                           )}
                         </>
