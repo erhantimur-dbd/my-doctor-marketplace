@@ -749,6 +749,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
 
   const {
     getOrCreateLicensePriceId,
+    getOrCreateTestingAddonPriceId,
   } = await import("@/lib/constants/license-tiers");
   const priceId = await getOrCreateLicensePriceId(tier, tierConfig);
 
@@ -758,6 +759,15 @@ export async function registerDoctorWithCheckout(formData: FormData) {
   const maxSeats = tierConfig.perUser
     ? quantity
     : tierConfig.includedSeats || 1;
+
+  const hasTestingAddon = formData.get("has_testing_addon") === "true";
+  const lineItems: { price: string; quantity: number }[] = [
+    { price: priceId, quantity },
+  ];
+  if (hasTestingAddon) {
+    const testingPriceId = await getOrCreateTestingAddonPriceId();
+    lineItems.push({ price: testingPriceId, quantity: 1 });
+  }
 
   // Welcome email (non-blocking) before Checkout
   try {
@@ -772,7 +782,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
   const session = await stripe.checkout.sessions.create({
     customer: customer.id,
     mode: "subscription",
-    line_items: [{ price: priceId, quantity }],
+    line_items: lineItems,
     subscription_data: {
       metadata: {
         organization_id: result.orgId,
@@ -781,6 +791,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
         type: "license",
         seat_count: String(quantity),
         max_seats: String(maxSeats),
+        has_testing_addon: hasTestingAddon ? "1" : "0",
       },
     },
     metadata: {
@@ -788,6 +799,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
       doctor_id: result.doctorId,
       tier,
       type: "license",
+      has_testing_addon: hasTestingAddon ? "1" : "0",
     },
     success_url: `${origin}/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}&checkout=success`,
     cancel_url: `${origin}/${result.locale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
@@ -1132,14 +1144,38 @@ export async function logout(locale: string = "en") {
   redirect(`/${locale}`);
 }
 
-export async function signInWithGoogle(locale: string = "en", redirectTo?: string) {
+type OAuthSignInOptions = { doctorIntent?: boolean };
+
+async function setDoctorOAuthIntentCookie(doctorIntent?: boolean) {
+  if (!doctorIntent) return;
+  const { cookies } = await import("next/headers");
+  const { DOCTOR_OAUTH_INTENT_COOKIE } = await import("@/lib/auth/return-cookie");
+  const jar = await cookies();
+  jar.set(DOCTOR_OAUTH_INTENT_COOKIE, "1", {
+    path: "/",
+    maxAge: 60 * 15,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
+export async function signInWithGoogle(
+  locale: string = "en",
+  redirectTo?: string,
+  options?: OAuthSignInOptions
+) {
+  await setDoctorOAuthIntentCookie(options?.doctorIntent);
   const supabase = await createClient();
   const origin = await getOrigin();
+  const next =
+    redirectTo ||
+    (options?.doctorIntent ? `/${locale}/doctor-dashboard` : undefined);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
+      redirectTo: buildOAuthCallback(origin, locale, next),
     },
   });
 
@@ -1154,14 +1190,22 @@ export async function signInWithGoogle(locale: string = "en", redirectTo?: strin
   redirect(data.url);
 }
 
-export async function signInWithApple(locale: string = "en", redirectTo?: string) {
+export async function signInWithApple(
+  locale: string = "en",
+  redirectTo?: string,
+  options?: OAuthSignInOptions
+) {
+  await setDoctorOAuthIntentCookie(options?.doctorIntent);
   const supabase = await createClient();
   const origin = await getOrigin();
+  const next =
+    redirectTo ||
+    (options?.doctorIntent ? `/${locale}/doctor-dashboard` : undefined);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "apple",
     options: {
-      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
+      redirectTo: buildOAuthCallback(origin, locale, next),
     },
   });
 

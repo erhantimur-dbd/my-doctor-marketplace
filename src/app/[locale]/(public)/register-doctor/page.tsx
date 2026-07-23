@@ -213,9 +213,12 @@ export default function RegisterDoctorPage() {
     }
 
     if (step === 2) {
-      if (!gmcNumber || !/^\d{7}$/.test(gmcNumber)) {
-        setError("Please enter a valid 7-digit GMC reference number");
-        return;
+      // GMC is UK-only; other markets may optionally enter a national reg number
+      if (country === "GB") {
+        if (!gmcNumber || !/^\d{7}$/.test(gmcNumber)) {
+          setError("Please enter a valid 7-digit GMC reference number");
+          return;
+        }
       }
       if (selectedSpecialties.length === 0) {
         setError("Please select at least one specialty");
@@ -535,7 +538,9 @@ export default function RegisterDoctorPage() {
               <div className="space-y-3">
                 <form
                   action={async () => {
-                    await signInWithGoogle();
+                    await signInWithGoogle(locale, `/${locale}/doctor-dashboard`, {
+                      doctorIntent: true,
+                    });
                   }}
                 >
                   <Button variant="outline" className="w-full" type="submit">
@@ -563,7 +568,9 @@ export default function RegisterDoctorPage() {
 
                 <form
                   action={async () => {
-                    await signInWithApple();
+                    await signInWithApple(locale, `/${locale}/doctor-dashboard`, {
+                      doctorIntent: true,
+                    });
                   }}
                 >
                   <Button variant="outline" className="w-full" type="submit">
@@ -744,18 +751,32 @@ export default function RegisterDoctorPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="gmcNumber">GMC Reference Number *</Label>
+                <Label htmlFor="gmcNumber">
+                  {country === "GB"
+                    ? "GMC Reference Number *"
+                    : "National regulator / licence number (optional)"}
+                </Label>
                 <Input
                   id="gmcNumber"
                   value={gmcNumber}
-                  onChange={(e) => setGmcNumber(e.target.value.replace(/\D/g, "").slice(0, 7))}
-                  placeholder="e.g. 1234567"
-                  maxLength={7}
-                  inputMode="numeric"
-                  required
+                  onChange={(e) =>
+                    setGmcNumber(
+                      country === "GB"
+                        ? e.target.value.replace(/\D/g, "").slice(0, 7)
+                        : e.target.value.slice(0, 64)
+                    )
+                  }
+                  placeholder={
+                    country === "GB" ? "e.g. 1234567" : "e.g. IMC / national ID"
+                  }
+                  maxLength={country === "GB" ? 7 : 64}
+                  inputMode={country === "GB" ? "numeric" : "text"}
+                  required={country === "GB"}
                 />
                 <p className="text-xs text-muted-foreground">
-                  Your 7-digit General Medical Council reference number. This will be verified against the GMC register before your account is approved.
+                  {country === "GB"
+                    ? "Your 7-digit General Medical Council number. Verified before your UK profile goes live."
+                    : "Optional registration number from your national medical regulator. You can add this later in Profile."}
                 </p>
               </div>
               <Separator />
@@ -1269,8 +1290,8 @@ export default function RegisterDoctorPage() {
 
               <Separator />
 
-              {/* Medical Testing Add-on */}
-              {testingAddon && (
+              {/* Medical Testing Add-on — paid plans only (Stripe line item) */}
+              {testingAddon && selectedTier !== "free" && (
                 <div
                   className={`rounded-lg border p-4 transition-colors ${
                     hasTestingAddon
@@ -1297,9 +1318,9 @@ export default function RegisterDoctorPage() {
                         </Badge>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        List in-person diagnostic services like blood testing,
-                        urine analysis, ECG, MRI scans, and more. You set your
-                        own prices for each test from your dashboard.
+                        Charged as a separate Stripe subscription line item with
+                        your plan. List blood tests, ECG, imaging, and more —
+                        you set prices in the dashboard.
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1">
                         {[

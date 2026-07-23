@@ -1,19 +1,8 @@
 /**
- * Feature flags — simple tier-based gating for organizations.
+ * Feature flags — tier-based gating for organizations.
  *
- * Flags are resolved from the org's license tier. No external service needed.
- * Add new flags here; they are immediately available via `hasFeature()`.
- *
- * Usage:
- *   import { hasFeature, FEATURES } from "@/lib/utils/feature-flags";
- *
- *   // Check in server action:
- *   if (!hasFeature("video_consultations", orgTier)) {
- *     return { error: "Upgrade to access video consultations." };
- *   }
- *
- *   // Check in component (pass tier from server):
- *   {hasFeature("treatment_plans", tier) && <TreatmentPlanSection />}
+ * Free is a deliberate GTM gateway: listing + profile only.
+ * All paid marketplace ops and AI are Starter+.
  */
 
 export type LicenseTier =
@@ -24,7 +13,9 @@ export type LicenseTier =
   | "enterprise";
 
 export type FeatureKey =
+  | "online_bookings"
   | "video_consultations"
+  | "email_reminders"
   | "treatment_plans"
   | "prescriptions"
   | "medical_testing"
@@ -38,17 +29,29 @@ export type FeatureKey =
   | "multi_location"
   | "team_management"
   | "bulk_invoicing"
-  | "whatsapp_notifications";
+  | "whatsapp_notifications"
+  | "waitlist_auto_notify"
+  | "ai_review_summaries"
+  | "ai_sentiment_tags"
+  | "stripe_connect";
 
 /**
  * Feature matrix — which tiers unlock which features.
- * A feature is available if the org's tier is listed in its array.
+ * Free intentionally has an empty set for paid product features.
  */
 const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
-  // Core features — available to all paid tiers
+  // Starter+ (core paid marketplace)
+  online_bookings: ["starter", "professional", "clinic", "enterprise"],
   video_consultations: ["starter", "professional", "clinic", "enterprise"],
+  email_reminders: ["starter", "professional", "clinic", "enterprise"],
   messaging: ["starter", "professional", "clinic", "enterprise"],
   treatment_plans: ["starter", "professional", "clinic", "enterprise"],
+  stripe_connect: ["starter", "professional", "clinic", "enterprise"],
+  // AI — never free
+  ai_review_summaries: ["starter", "professional", "clinic", "enterprise"],
+  ai_sentiment_tags: ["starter", "professional", "clinic", "enterprise"],
+  // Medical testing: Starter+ with paid addon OR included on clinic+
+  medical_testing: ["starter", "professional", "clinic", "enterprise"],
 
   // Professional+
   prescriptions: ["professional", "clinic", "enterprise"],
@@ -56,9 +59,9 @@ const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
   family_dependents: ["professional", "clinic", "enterprise"],
   analytics_dashboard: ["professional", "clinic", "enterprise"],
   whatsapp_notifications: ["professional", "clinic", "enterprise"],
+  waitlist_auto_notify: ["professional", "clinic", "enterprise"],
 
   // Clinic+
-  medical_testing: ["clinic", "enterprise"],
   multi_location: ["clinic", "enterprise"],
   team_management: ["clinic", "enterprise"],
   bulk_invoicing: ["clinic", "enterprise"],
@@ -70,27 +73,52 @@ const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
 };
 
 /**
+ * Normalize missing license to free (gateway) — do not grant paid features
+ * to unlicensed/legacy rows by default.
+ */
+export function normalizeLicenseTier(
+  tier: string | null | undefined
+): LicenseTier {
+  if (
+    tier === "starter" ||
+    tier === "professional" ||
+    tier === "clinic" ||
+    tier === "enterprise" ||
+    tier === "free"
+  ) {
+    return tier;
+  }
+  return "free";
+}
+
+/**
  * Check if a feature is available for the given tier.
- * Returns true if the tier is included in the feature's allowed tiers.
- * Returns true for null/undefined tier (graceful fallback for legacy doctors).
+ * Null/unknown tier is treated as free (deny paid features).
  */
 export function hasFeature(
   feature: FeatureKey,
   tier: string | null | undefined
 ): boolean {
-  // Legacy doctors without org/license — allow all features during transition
-  if (!tier) return true;
+  const normalized = normalizeLicenseTier(tier);
+  if (normalized === "free") return false;
 
   const allowed = FEATURE_MATRIX[feature];
   if (!allowed) return false;
 
-  return allowed.includes(tier as LicenseTier);
+  return allowed.includes(normalized);
+}
+
+/** True when org is on founding free gateway plan */
+export function isFreeLicenseTier(tier: string | null | undefined): boolean {
+  return normalizeLicenseTier(tier) === "free";
 }
 
 /** Get all features available for a tier */
 export function getFeaturesForTier(tier: string): FeatureKey[] {
+  const normalized = normalizeLicenseTier(tier);
+  if (normalized === "free") return [];
   return (Object.entries(FEATURE_MATRIX) as [FeatureKey, LicenseTier[]][])
-    .filter(([, tiers]) => tiers.includes(tier as LicenseTier))
+    .filter(([, tiers]) => tiers.includes(normalized))
     .map(([key]) => key);
 }
 

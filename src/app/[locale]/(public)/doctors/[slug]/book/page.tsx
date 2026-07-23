@@ -73,6 +73,7 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
       in_person_deposit_value,
       stripe_account_id,
       stripe_onboarding_complete,
+      organization_id,
       profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
       location:locations(city, country_code, timezone),
       specialties:doctor_specialties(
@@ -89,6 +90,41 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
   }
 
   const doctor: any = doctorData2;
+
+  // Free gateway: listed but not bookable online
+  if (doctor.organization_id) {
+    const { data: freeLic } = await adminDb
+      .from("licenses")
+      .select("tier")
+      .eq("organization_id", doctor.organization_id)
+      .eq("tier", "free")
+      .in("status", ["active", "trialing", "past_due"])
+      .maybeSingle();
+    if (freeLic) {
+      return (
+        <div className="container mx-auto px-4 py-16">
+          <div className="mx-auto max-w-md space-y-4 text-center">
+            <h1 className="text-2xl font-bold">
+              Online booking coming soon
+            </h1>
+            <p className="text-muted-foreground">
+              This doctor is building their profile on our free founding plan.
+              Online booking unlocks when they upgrade — check back soon or
+              browse other doctors.
+            </p>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button variant="outline" asChild className="w-full">
+                <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
+              </Button>
+              <Button asChild className="w-full">
+                <Link href="/doctors">{t("browse_doctors")}</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
 
   // Check if doctor is eligible for bookings
   if (doctor.verification_status !== "verified" || !doctor.is_active) {

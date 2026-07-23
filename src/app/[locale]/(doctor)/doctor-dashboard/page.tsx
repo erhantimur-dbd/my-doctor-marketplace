@@ -49,7 +49,8 @@ export default async function DoctorDashboard() {
       redirect("/en/doctor-dashboard/clinic-onboarding");
     }
   }
-  const isFreeTier = !license;
+  // Free gateway plan (or missing license treated as free for upsell UX)
+  const isFreeTier = !license || license.tier === "free";
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -78,6 +79,12 @@ export default async function DoctorDashboard() {
   const { count: priceBookCount } = await supabase
     .from("doctor_price_book")
     .select("doctor_id", { count: "exact", head: true })
+    .eq("doctor_id", doctor.id);
+
+  // Specialties live in doctor_specialties join — not doctors.specialties column
+  const { count: specialtyCount } = await supabase
+    .from("doctor_specialties")
+    .select("id", { count: "exact", head: true })
     .eq("doctor_id", doctor.id);
 
   // Get today's bookings
@@ -201,7 +208,6 @@ export default async function DoctorDashboard() {
       <ProfileCompletionCard
         doctor={{
           bio: doctor.bio,
-          specialties: doctor.specialties,
           stripe_account_id: doctor.stripe_account_id,
           consultation_types: doctor.consultation_types,
           verification_status: doctor.verification_status,
@@ -209,10 +215,12 @@ export default async function DoctorDashboard() {
           provider_type: doctor.provider_type,
         }}
         profile={{ avatar_url: profile?.avatar_url || null }}
+        hasSpecialties={(specialtyCount || 0) > 0}
         hasAvailability={(availabilityCount || 0) > 0}
         hasEducation={(educationCount || 0) > 0}
         hasServices={(servicesCount || 0) > 0}
         hasTestingServices={(priceBookCount || 0) > 0}
+        isFreeTier={isFreeTier}
       />
       </div>
 

@@ -14,7 +14,6 @@ interface CompletionItem {
 interface ProfileCompletionCardProps {
   doctor: {
     bio: string | null;
-    specialties: string[] | null;
     stripe_account_id: string | null;
     consultation_types: string[] | null;
     verification_status: string;
@@ -24,19 +23,25 @@ interface ProfileCompletionCardProps {
   profile: {
     avatar_url: string | null;
   };
+  /** True when doctor_specialties has ≥1 row (not doctors.specialties column) */
+  hasSpecialties: boolean;
   hasAvailability: boolean;
   hasEducation: boolean;
   hasServices: boolean;
   hasTestingServices: boolean;
+  /** Free gateway — Stripe Connect is paid-only upsell */
+  isFreeTier?: boolean;
 }
 
 export function ProfileCompletionCard({
   doctor,
   profile,
+  hasSpecialties,
   hasAvailability,
   hasEducation,
   hasServices,
   hasTestingServices,
+  isFreeTier = false,
 }: ProfileCompletionCardProps) {
   const isTestingProvider = doctor.provider_type === "testing_service";
 
@@ -53,7 +58,7 @@ export function ProfileCompletionCard({
     },
     {
       label: "Add specialties",
-      completed: !!doctor.specialties && doctor.specialties.length > 0,
+      completed: hasSpecialties,
       href: "/doctor-dashboard/profile",
     },
     {
@@ -72,7 +77,6 @@ export function ProfileCompletionCard({
       completed: hasServices,
       href: "/doctor-dashboard/profile",
     },
-    // Show testing services step for testing providers or doctors with the addon
     ...(isTestingProvider || doctor.has_testing_addon
       ? [
           {
@@ -87,17 +91,27 @@ export function ProfileCompletionCard({
       completed: hasAvailability,
       href: "/doctor-dashboard/calendar",
     },
-    {
-      label: "Connect Stripe for payments",
-      completed: !!doctor.stripe_account_id,
-      href: "/doctor-dashboard/subscription",
-    },
+    // Connect only when paid — free gateway should upgrade first
+    ...(isFreeTier
+      ? [
+          {
+            label: "Upgrade to accept online bookings",
+            completed: false,
+            href: "/doctor-dashboard/organization/billing",
+          },
+        ]
+      : [
+          {
+            label: "Connect Stripe for payments",
+            completed: !!doctor.stripe_account_id,
+            href: "/doctor-dashboard/organization/billing",
+          },
+        ]),
   ];
 
   const completedCount = items.filter((i) => i.completed).length;
   const percentage = Math.round((completedCount / items.length) * 100);
 
-  // Don't show if fully complete
   if (percentage === 100) return null;
 
   return (
@@ -114,7 +128,8 @@ export function ProfileCompletionCard({
         <div className="space-y-1.5">
           <Progress value={percentage} className="h-2" />
           <p className="text-xs text-muted-foreground">
-            {percentage}% complete — {items.length - completedCount} items remaining
+            {percentage}% complete — {items.length - completedCount} items
+            remaining
           </p>
         </div>
 

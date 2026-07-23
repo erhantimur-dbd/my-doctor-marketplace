@@ -728,7 +728,7 @@ export async function POST(request: NextRequest) {
           { onConflict: "stripe_subscription_id" }
         );
 
-        // Referral rewards when paid licence becomes active
+        // Referral rewards + testing addon when paid licence becomes active
         if (licenseStatus === "active" || licenseStatus === "trialing") {
           try {
             const { processReferralReward } = await import(
@@ -749,6 +749,44 @@ export async function POST(request: NextRequest) {
             }
           } catch (err) {
             console.error("Referral reward error (non-fatal):", err);
+          }
+
+          // Medical testing add-on purchased with plan
+          if (subscription.metadata?.has_testing_addon === "1") {
+            try {
+              const doctorIdMeta = subscription.metadata?.doctor_id;
+              if (doctorIdMeta) {
+                await supabase
+                  .from("doctors")
+                  .update({ has_testing_addon: true })
+                  .eq("id", doctorIdMeta);
+              } else {
+                await supabase
+                  .from("doctors")
+                  .update({ has_testing_addon: true })
+                  .eq("organization_id", orgId);
+              }
+              // Activate license_modules row if license id known
+              const { data: lic } = await supabase
+                .from("licenses")
+                .select("id")
+                .eq("stripe_subscription_id", subscription.id)
+                .maybeSingle();
+              if (lic?.id) {
+                await supabase.from("license_modules").upsert(
+                  {
+                    license_id: lic.id,
+                    module_key: "medical_testing",
+                    is_active: true,
+                    activated_at: new Date().toISOString(),
+                    deactivated_at: null,
+                  },
+                  { onConflict: "license_id,module_key" }
+                );
+              }
+            } catch (err) {
+              console.error("Testing addon activation error (non-fatal):", err);
+            }
           }
         }
       }

@@ -12,6 +12,7 @@ import {
   doctorTierHasWaitlistAutoNotify,
   getDoctorLicense,
 } from "@/lib/license/check";
+// Pro+ waitlist also aligned with hasFeature("waitlist_auto_notify")
 
 /**
  * Subscribe to notifications when a doctor has new availability.

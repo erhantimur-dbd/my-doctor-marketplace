@@ -2,8 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import {
   AUTH_RETURN_COOKIE,
+  DOCTOR_OAUTH_INTENT_COOKIE,
   isSafeRelativePath,
 } from "@/lib/auth/return-cookie";
+import { bootstrapDoctorShell } from "@/lib/auth/bootstrap-doctor";
 
 function safeRelative(path: string | null | undefined, fallback: string): string {
   if (path && isSafeRelativePath(path)) return path;
@@ -91,22 +93,21 @@ export async function GET(
             .eq("id", user.id)
             .single();
 
+          let firstName = meta.first_name || profile?.first_name || "";
+          let lastName = meta.last_name || profile?.last_name || "";
+
+          if (!firstName && meta.full_name) {
+            const parts = (meta.full_name as string).split(" ");
+            firstName = parts[0] || "";
+            lastName = parts.slice(1).join(" ") || "";
+          }
+          if (!firstName && meta.name) {
+            const parts = (meta.name as string).split(" ");
+            firstName = parts[0] || "";
+            lastName = parts.slice(1).join(" ") || "";
+          }
+
           if (profile && !profile.first_name) {
-            // Extract names from OAuth metadata
-            let firstName = meta.first_name || "";
-            let lastName = meta.last_name || "";
-
-            if (!firstName && meta.full_name) {
-              const parts = (meta.full_name as string).split(" ");
-              firstName = parts[0] || "";
-              lastName = parts.slice(1).join(" ") || "";
-            }
-            if (!firstName && meta.name) {
-              const parts = (meta.name as string).split(" ");
-              firstName = parts[0] || "";
-              lastName = parts.slice(1).join(" ") || "";
-            }
-
             const avatarUrl =
               meta.avatar_url || meta.picture || profile.avatar_url || null;
 
@@ -118,6 +119,26 @@ export async function GET(
                 ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
               })
               .eq("id", user.id);
+          }
+
+          // Doctor OAuth from /register-doctor → bootstrap shell + free license
+          const doctorIntent =
+            request.cookies.get(DOCTOR_OAUTH_INTENT_COOKIE)?.value === "1";
+          if (doctorIntent) {
+            await bootstrapDoctorShell({
+              userId: user.id,
+              email: user.email || "",
+              firstName: firstName || "Doctor",
+              lastName: lastName || "User",
+            });
+            const res = createRedirectWithCookies(
+              `/${locale}/doctor-dashboard`
+            );
+            res.cookies.set(DOCTOR_OAUTH_INTENT_COOKIE, "", {
+              path: "/",
+              maxAge: 0,
+            });
+            return res;
           }
         }
 
@@ -137,6 +158,29 @@ export async function GET(
           }
           return createRedirectWithCookies(`/${locale}/email-verified`);
         }
+      }
+
+      // Doctor intent may also apply when next is already doctor-dashboard
+      const doctorIntentLate =
+        request.cookies.get(DOCTOR_OAUTH_INTENT_COOKIE)?.value === "1";
+      if (doctorIntentLate && user) {
+        const meta = user.user_metadata || {};
+        await bootstrapDoctorShell({
+          userId: user.id,
+          email: user.email || "",
+          firstName: (meta.first_name as string) || "Doctor",
+          lastName: (meta.last_name as string) || "User",
+        });
+        const res = createRedirectWithCookies(
+          next.includes("doctor-dashboard")
+            ? next
+            : `/${locale}/doctor-dashboard`
+        );
+        res.cookies.set(DOCTOR_OAUTH_INTENT_COOKIE, "", {
+          path: "/",
+          maxAge: 0,
+        });
+        return res;
       }
 
       return createRedirectWithCookies(next);

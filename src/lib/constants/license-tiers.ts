@@ -346,6 +346,50 @@ export async function getOrCreateLicensePriceId(
 }
 
 /**
+ * Medical testing add-on price (monthly). Prefers STRIPE_PRICE_TESTING_ADDON.
+ */
+let _cachedTestingAddonPriceId: string | null = null;
+
+export async function getOrCreateTestingAddonPriceId(): Promise<string> {
+  if (process.env.STRIPE_PRICE_TESTING_ADDON?.startsWith("price_")) {
+    return process.env.STRIPE_PRICE_TESTING_ADDON;
+  }
+  if (_cachedTestingAddonPriceId) return _cachedTestingAddonPriceId;
+
+  const { getStripe } = await import("@/lib/stripe/client");
+  const stripe = getStripe();
+  const amount =
+    AVAILABLE_MODULES.find((m) => m.key === "medical_testing")
+      ?.priceMonthlyPence ?? 4900;
+
+  try {
+    const existing = await stripe.prices.search({
+      query: 'metadata["type"]:"medical_testing_addon" active:"true"',
+      limit: 1,
+    });
+    if (existing.data[0]?.id) {
+      _cachedTestingAddonPriceId = existing.data[0].id;
+      return _cachedTestingAddonPriceId;
+    }
+  } catch {
+    /* fall through */
+  }
+
+  const price = await stripe.prices.create({
+    currency: "gbp",
+    unit_amount: amount,
+    recurring: { interval: "month" },
+    product_data: {
+      name: "Medical Testing Add-on",
+      metadata: { type: "medical_testing_addon" },
+    },
+    metadata: { type: "medical_testing_addon" },
+  });
+  _cachedTestingAddonPriceId = price.id;
+  return price.id;
+}
+
+/**
  * Get or create a reusable Stripe price for extra seats.
  *
  * Uses STRIPE_PRICE_EXTRA_SEAT env var if set (recommended for production).

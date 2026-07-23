@@ -159,30 +159,28 @@ export async function createLicenseCheckout(formData: FormData) {
       .eq("id", org.id);
   }
 
-  // Determine price — always GBP as base Stripe currency
-  const currency = "gbp";
-  const unitAmount = tierConfig.priceMonthlyPence;
-  const interval = parsed.data.billing_period === "annual" ? "year" : "month";
-
-  // Create a price on-the-fly
-  const price = await stripe.prices.create({
-    currency,
-    unit_amount: unitAmount,
-    recurring: { interval },
-    product_data: {
-      name: `MyDoctors360 ${tierConfig.name} License`,
-      metadata: { tier: parsed.data.tier },
-    },
-  });
+  // Prefer env-backed Stripe Price IDs (same path as registerDoctorWithCheckout)
+  const { getOrCreateLicensePriceId } = await import(
+    "@/lib/constants/license-tiers"
+  );
+  const priceId = await getOrCreateLicensePriceId(
+    parsed.data.tier,
+    tierConfig
+  );
 
   // Per-user pricing: Professional tier quantity = seat count
   const seatCount = parsed.data.seat_count || 1;
-  const quantity = tierConfig.perUser ? Math.min(seatCount, tierConfig.maxSeats) : 1;
+  const quantity = tierConfig.perUser
+    ? Math.min(seatCount, tierConfig.maxSeats)
+    : 1;
+  const maxSeats = tierConfig.perUser
+    ? quantity
+    : tierConfig.includedSeats || 1;
 
   const sessionOptions: Record<string, unknown> = {
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: price.id, quantity }],
+    line_items: [{ price: priceId, quantity }],
     metadata: {
       organization_id: org.id,
       tier: parsed.data.tier,
@@ -192,6 +190,9 @@ export async function createLicenseCheckout(formData: FormData) {
       metadata: {
         organization_id: org.id,
         tier: parsed.data.tier,
+        type: "license",
+        seat_count: String(quantity),
+        max_seats: String(maxSeats),
       },
     },
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing?success=true`,
