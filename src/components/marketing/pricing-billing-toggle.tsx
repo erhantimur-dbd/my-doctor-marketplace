@@ -140,12 +140,13 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
 
     if (tier.isCustomPricing) {
       amount = "Custom";
-      unit = " ";
+      unit = "per org";
       detail = "Contact us for a quote";
     } else if (tier.isFreeTier) {
+      // Same 3-line skeleton as paid: amount → unit → detail
       amount = "£0";
-      unit = " ";
-      detail = "forever · upgrade anytime";
+      unit = "per mo";
+      detail = "Free forever";
     } else if (period === "annual") {
       const list = tier.priceMonthlyPence;
       const yearly = annualTotalPence(list);
@@ -174,14 +175,9 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
         <p className="w-full text-center text-3xl font-bold leading-none tracking-tight tabular-nums xl:text-[1.75rem]">
           {amount}
         </p>
-        {/* Line 2 — unit (fixed height so empty free/enterprise still reserve space) */}
-        <p
-          className={cn(
-            "h-5 w-full text-center text-xs leading-5 text-muted-foreground",
-            unit.trim() ? "" : "invisible"
-          )}
-        >
-          {unit.trim() ? unit : "placeholder"}
+        {/* Line 2 — unit (always visible text for baseline match) */}
+        <p className="h-5 w-full text-center text-xs leading-5 text-muted-foreground">
+          {unit}
         </p>
         {/* Line 3 — billing / savings */}
         <p className="mt-0.5 flex h-8 w-full items-start justify-center px-1 text-center text-[11px] leading-snug text-muted-foreground">
@@ -286,15 +282,26 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                 {priceBlock(tier)}
               </div>
 
-              <div className="flex h-[48px] shrink-0 flex-col items-center justify-center px-3 text-center sm:px-4">
+              {/* Always two meta lines so Free/Enterprise match paid height */}
+              <div className="flex h-[48px] shrink-0 flex-col items-center justify-center gap-0.5 px-3 text-center sm:px-4">
                 {isEnterprise ? (
-                  <p className="text-xs leading-snug text-muted-foreground">
-                    Tailored to your needs
-                  </p>
+                  <>
+                    <p className="text-xs leading-snug text-muted-foreground">
+                      Tailored to your needs
+                    </p>
+                    <p className="text-xs leading-snug text-muted-foreground">
+                      Custom seats &amp; SLA
+                    </p>
+                  </>
                 ) : isFree ? (
-                  <p className="text-xs leading-snug text-muted-foreground">
-                    No card required · no commitment
-                  </p>
+                  <>
+                    <p className="text-xs leading-snug text-muted-foreground">
+                      No card required · no commitment
+                    </p>
+                    <p className="text-xs leading-snug text-muted-foreground">
+                      1 user
+                    </p>
+                  </>
                 ) : (
                   <>
                     <p className="text-xs leading-snug text-muted-foreground">
