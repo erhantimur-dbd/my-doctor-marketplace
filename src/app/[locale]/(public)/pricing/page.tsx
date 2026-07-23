@@ -1,8 +1,7 @@
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   CheckCircle2,
   ArrowRight,
@@ -17,7 +16,6 @@ import {
   Shield,
   Zap,
   FlaskConical,
-  X,
   Building2,
   Crown,
   Award,
@@ -25,7 +23,18 @@ import {
   Target,
   MessageSquareHeart,
   Globe2,
+  type LucideIcon,
 } from "lucide-react";
+import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
+import { PricingBillingToggle } from "@/components/marketing/pricing-billing-toggle";
+import {
+  AVAILABLE_MODULES,
+  TESTING_STANDALONE_PLAN,
+  PLATFORM_BOOKING_FEE_PERCENT,
+  formatPriceForLocale,
+  formatPrice,
+} from "@/lib/constants/license-tiers";
+import { useLocale } from "next-intl";
 
 const BENEFITS = [
   {
@@ -54,17 +63,6 @@ const BENEFITS = [
     description: "Network and collaborate with MyDoctors360 Connect.",
   },
 ];
-import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
-import { ClinicGetStartedButton } from "@/components/shared/clinic-get-started-button";
-import {
-  LICENSE_TIERS,
-  AVAILABLE_MODULES,
-  TESTING_STANDALONE_PLAN,
-  PLATFORM_BOOKING_FEE_PERCENT,
-  formatPriceForLocale,
-  formatPrice,
-} from "@/lib/constants/license-tiers";
-import { useLocale } from "next-intl";
 
 const platformFeatures = [
   {
@@ -126,7 +124,7 @@ const platformFeatures = [
 ];
 
 /** Icon for each tier */
-function getTierIcon(tierId: string) {
+function getTierIcon(tierId: string): LucideIcon {
   switch (tierId) {
     case "free":
       return Stethoscope;
@@ -176,11 +174,6 @@ function getTierColor(tierId: string) {
 
 export default function PricingPage() {
   const locale = useLocale();
-
-  // Free gateway first, then paid (enterprise last as custom)
-  const freeTier = LICENSE_TIERS.find((t) => t.isFreeTier);
-  const paidTiers = LICENSE_TIERS.filter((t) => !t.isFreeTier);
-  const displayTiers = freeTier ? [freeTier, ...paidTiers] : paidTiers;
   const testingModule = AVAILABLE_MODULES.find((m) => m.key === "medical_testing");
 
   return (
@@ -226,183 +219,14 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Pricing Plans */}
+      {/* Pricing Plans — monthly / annual toggle (annual = 2 months free) */}
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-stretch">
-            {displayTiers.map((tier) => {
-              const TierIcon = getTierIcon(tier.id);
-              const tierColor = getTierColor(tier.id);
-              const isPopular = tier.popular;
-              const isEnterprise = tier.isCustomPricing;
-              const isFree = !!tier.isFreeTier;
-
-              return (
-                <Card
-                  key={tier.id}
-                  className={`relative flex flex-col overflow-hidden ${
-                    isPopular
-                      ? "border-foreground/20 shadow-lg"
-                      : isFree
-                        ? "border-emerald-300/80 shadow-sm ring-1 ring-emerald-100 dark:ring-emerald-900/40"
-                        : ""
-                  }`}
-                >
-                  {isPopular && (
-                    <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
-                      <Badge className="bg-foreground text-background shadow-md hover:bg-foreground">
-                        Most Popular
-                      </Badge>
-                    </div>
-                  )}
-                  {isFree && (
-                    <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
-                      <Badge className="bg-emerald-600 text-white shadow-md hover:bg-emerald-600">
-                        Start here
-                      </Badge>
-                    </div>
-                  )}
-
-                  {/* ── Fixed-height header: icon + name + description ── */}
-                  <div className="flex flex-col items-center px-6 pt-10 text-center">
-                    <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${tierColor.bg}`}>
-                      <TierIcon className={`h-5 w-5 ${tierColor.text}`} />
-                    </div>
-                    <h3 className="text-lg font-bold">{tier.name}</h3>
-                    <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
-                      {tier.description}
-                    </p>
-                  </div>
-
-                  {/* ── Fixed-height price block ── */}
-                  <div className="flex h-[80px] flex-col items-center justify-center px-6 text-center">
-                    {isEnterprise ? (
-                      <>
-                        <span className="text-4xl font-bold">Custom</span>
-                      </>
-                    ) : isFree ? (
-                      <>
-                        <span className="text-4xl font-bold">£0</span>
-                        <span className="text-sm text-muted-foreground">
-                          forever · upgrade anytime
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <span className="text-4xl font-bold">
-                            {formatPriceForLocale(tier.priceMonthlyPence, locale)}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {tier.perUser ? " / user / mo" : " / month"}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* ── Fixed-height meta: commitment + seat info ── */}
-                  <div className="flex h-[48px] flex-col items-center justify-center px-6 text-center">
-                    {isEnterprise ? (
-                      <p className="text-xs text-muted-foreground">
-                        Tailored to your needs
-                      </p>
-                    ) : isFree ? (
-                      <p className="text-xs text-muted-foreground">
-                        No card required · no commitment
-                      </p>
-                    ) : (
-                      <>
-                        {tier.commitmentMonths > 0 && (
-                          <p className="text-xs text-muted-foreground">
-                            12-month commitment, billed monthly
-                          </p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {tier.perUser
-                            ? `${tier.defaultSeats}–${tier.maxSeats} users`
-                            : tier.includedSeats > 1
-                              ? `${tier.includedSeats} users included, up to ${tier.maxSeats}`
-                              : `${tier.defaultSeats} user`}
-                          {tier.extraSeatPricePence > 0 && !tier.perUser && (
-                            <>
-                              {" · "}
-                              {formatPriceForLocale(tier.extraSeatPricePence, locale)}/extra seat
-                            </>
-                          )}
-                        </p>
-                      </>
-                    )}
-                  </div>
-
-                  {/* ── Separator ── */}
-                  <div className="px-6 pb-6 pt-2">
-                    <Separator />
-                  </div>
-
-                  {/* ── Features: included + excluded for every package ── */}
-                  <CardContent className="flex flex-1 flex-col px-6 pb-6 pt-0">
-                    <ul className="flex-1 space-y-2.5">
-                      {tier.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2 text-sm">
-                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                          {feature}
-                        </li>
-                      ))}
-                      {(tier.excludedFeatures ?? []).map((feature) => (
-                        <li
-                          key={`ex-${feature}`}
-                          className="flex items-start gap-2 text-sm text-muted-foreground"
-                        >
-                          <X className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-
-                  {/* ── CTA button ── */}
-                  <CardFooter className="p-6 pt-0">
-                    {isEnterprise ? (
-                      <Button
-                        className="w-full rounded-full"
-                        variant="outline"
-                        asChild
-                      >
-                        <Link href="/support">
-                          Get in Touch for a Demo
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
-                      </Button>
-                    ) : tier.id === "clinic" ? (
-                      <ClinicGetStartedButton locale={locale} tier={tier.id} />
-                    ) : (
-                      <Button
-                        className="w-full rounded-full"
-                        variant={isPopular || isFree ? "default" : "outline"}
-                        asChild
-                      >
-                        <Link href={`/register-doctor?tier=${tier.id}`}>
-                          {isFree ? "Start free" : "Get Started"}
-                        </Link>
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              );
-            })}
-          </div>
-
-          <p className="mt-8 text-center text-sm text-muted-foreground">
-            Paid plans include a {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
-            on each booking, invoiced monthly, and require a 12-month commitment
-            billed monthly. Founding Free never charges a card — upgrade when
-            you want online bookings and AI insights.
-          </p>
-          <p className="mt-3 text-center text-xs text-muted-foreground">
-            Platform features above (video, analytics, CRM) apply to paid plans.
-            Free is a permanent gateway: list and prepare; take bookings on Starter+.
-          </p>
+          <PricingBillingToggle
+            locale={locale}
+            getTierIcon={getTierIcon}
+            getTierColor={getTierColor}
+          />
         </div>
       </section>
 

@@ -15,15 +15,26 @@ import { Stethoscope, ShieldCheck, ArrowRight } from "lucide-react";
 interface Props {
   locale: string;
   tier?: string;
+  /** monthly | annual — passed through to registration checkout */
+  billing?: "monthly" | "annual";
 }
 
-export function ClinicGetStartedButton({ locale, tier = "clinic" }: Props) {
+export function ClinicGetStartedButton({
+  locale,
+  tier = "clinic",
+  billing = "monthly",
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
   function choose(role: "doctor" | "admin") {
     setOpen(false);
-    router.push(`/${locale}/register-doctor?tier=${tier}&owner_role=${role}`);
+    const qs = new URLSearchParams({
+      tier,
+      owner_role: role,
+      billing,
+    });
+    router.push(`/${locale}/register-doctor?${qs.toString()}`);
   }
 
   return (

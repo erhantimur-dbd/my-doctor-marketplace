@@ -30,6 +30,11 @@ import {
 } from "lucide-react";
 import { LICENSE_TIERS, AVAILABLE_MODULES, formatPrice } from "@/lib/constants/license-tiers";
 import {
+  annualEffectiveMonthlyPence,
+  annualTotalPence,
+  type BillingPeriod,
+} from "@/lib/constants/billing-period";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -46,6 +51,7 @@ import {
   toggleModule,
 } from "@/actions/license";
 import { resumeDoctorLicenseCheckout } from "@/actions/auth";
+import { cn } from "@/lib/utils";
 
 export default function BillingPage() {
   const searchParams = useSearchParams();
@@ -61,6 +67,7 @@ export default function BillingPage() {
   const [seatPreviewOpen, setSeatPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showResumeCheckout, setShowResumeCheckout] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
   const resumeTier = searchParams.get("tier") || "starter";
 
   useEffect(() => {
@@ -90,12 +97,12 @@ export default function BillingPage() {
   async function handleSubscribe(tier: string) {
     const formData = new FormData();
     formData.set("tier", tier);
-    formData.set("billing_period", "monthly");
+    formData.set("billing_period", billingPeriod);
     if (couponCode.trim()) formData.set("coupon_code", couponCode);
 
     startTransition(async () => {
       // Prefer resume path for abandoned signup accounts, else org checkout
-      const resume = await resumeDoctorLicenseCheckout(tier, 1);
+      const resume = await resumeDoctorLicenseCheckout(tier, 1, billingPeriod);
       if (resume.checkoutUrl) {
         window.location.href = resume.checkoutUrl;
         return;
@@ -112,7 +119,11 @@ export default function BillingPage() {
 
   async function handleResumeCheckout() {
     startTransition(async () => {
-      const result = await resumeDoctorLicenseCheckout(resumeTier, 1);
+      const result = await resumeDoctorLicenseCheckout(
+        resumeTier,
+        1,
+        billingPeriod
+      );
       if (result.error) {
         setErrorMsg(result.error);
         setTimeout(() => setErrorMsg(""), 5000);
@@ -383,9 +394,45 @@ export default function BillingPage() {
 
       {/* Plan Cards */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold">
-          {license ? "Available Plans" : "Choose a Plan"}
-        </h2>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold">
+            {license ? "Available Plans" : "Choose a Plan"}
+          </h2>
+          {needsPaidPlan && (
+            <div className="inline-flex items-center self-start rounded-full border bg-muted/40 p-1">
+              <button
+                type="button"
+                onClick={() => setBillingPeriod("monthly")}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                  billingPeriod === "monthly"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingPeriod("annual")}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                  billingPeriod === "annual"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Annual
+                <Badge
+                  variant="secondary"
+                  className="ml-1.5 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 text-[10px]"
+                >
+                  2 months free
+                </Badge>
+              </button>
+            </div>
+          )}
+        </div>
         <div className="grid gap-6 lg:grid-cols-4">
           {LICENSE_TIERS.map((tier) => {
             const isCurrent = currentTier === tier.id;
@@ -420,6 +467,25 @@ export default function BillingPage() {
                       <span className="text-2xl font-bold">Custom</span>
                     ) : tier.isFreeTier ? (
                       <span className="text-2xl font-bold">Free</span>
+                    ) : billingPeriod === "annual" && needsPaidPlan ? (
+                      <>
+                        <span className="text-2xl font-bold">
+                          {formatPrice(
+                            annualEffectiveMonthlyPence(tier.priceMonthlyPence),
+                            "GBP"
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {tier.perUser ? " / user / mo" : " / mo"}
+                        </span>
+                        <p className="mt-1 text-xs text-emerald-700">
+                          {formatPrice(
+                            annualTotalPence(tier.priceMonthlyPence),
+                            "GBP"
+                          )}
+                          /yr · 2 months free
+                        </p>
+                      </>
                     ) : (
                       <>
                         <span className="text-2xl font-bold">

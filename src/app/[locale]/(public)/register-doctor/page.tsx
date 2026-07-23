@@ -44,7 +44,12 @@ import {
   getLicenseTier,
   type LicenseTierConfig,
 } from "@/lib/constants/license-tiers";
-import { formatSpecialtyName } from "@/lib/utils";
+import {
+  annualEffectiveMonthlyPence,
+  annualTotalPence,
+  type BillingPeriod,
+} from "@/lib/constants/billing-period";
+import { cn, formatSpecialtyName } from "@/lib/utils";
 import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
 import type { ParsedAddress } from "@/components/shared/address-autocomplete";
 import type { LicenseTier } from "@/types";
@@ -96,6 +101,7 @@ export default function RegisterDoctorPage() {
   // Step 5: Plan selection
   const [selectedTier, setSelectedTier] = useState<LicenseTier>("free");
   const [seatCount, setSeatCount] = useState(1);
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
 
   // Step 5: Invite a colleague (optional)
   const [showInvite, setShowInvite] = useState(false);
@@ -120,6 +126,11 @@ export default function RegisterDoctorPage() {
     const tier = searchParams.get("tier");
     if (tier && LICENSE_TIERS.some((t) => t.id === tier)) {
       setSelectedTier(tier as LicenseTier);
+    }
+
+    const billing = searchParams.get("billing");
+    if (billing === "annual" || billing === "monthly") {
+      setBillingPeriod(billing);
     }
 
     // Clinic starter: store owner_role in sessionStorage for use during org creation
@@ -334,6 +345,20 @@ export default function RegisterDoctorPage() {
     return tier.priceMonthlyPence;
   }
 
+  /** Amount charged per billing cycle (monthly pence or annual total). */
+  function calculateBillingTotal(): number {
+    const monthly = calculateMonthlyTotal();
+    if (billingPeriod === "annual") return annualTotalPence(monthly);
+    return monthly;
+  }
+
+  function displayTierPricePence(tier: LicenseTierConfig): number {
+    if (billingPeriod === "annual" && !tier.isFreeTier) {
+      return annualEffectiveMonthlyPence(tier.priceMonthlyPence);
+    }
+    return tier.priceMonthlyPence;
+  }
+
   async function handleSubmit() {
     setLoading(true);
     setError("");
@@ -415,6 +440,7 @@ export default function RegisterDoctorPage() {
     // Plan selection
     formData.set("tier", selectedTier);
     formData.set("seat_count", seatCount.toString());
+    formData.set("billing_period", billingPeriod);
 
     const tierConfig = getSelectedTierConfig();
     const isFreeTier = !tierConfig || tierConfig.isFreeTier;
@@ -1314,7 +1340,17 @@ export default function RegisterDoctorPage() {
                           Add Medical Testing Services
                         </span>
                         <Badge variant="secondary" className="text-xs">
-                          +{formatPriceForLocale(testingAddon.priceMonthlyPence, locale)} / month
+                          +
+                          {formatPriceForLocale(
+                            billingPeriod === "annual"
+                              ? annualEffectiveMonthlyPence(
+                                  testingAddon.priceMonthlyPence
+                                )
+                              : testingAddon.priceMonthlyPence,
+                            locale
+                          )}{" "}
+                          / mo
+                          {billingPeriod === "annual" ? " eq." : ""}
                         </Badge>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -1350,6 +1386,47 @@ export default function RegisterDoctorPage() {
           {/* Step 5: Choose Your Plan */}
           {step === 5 && (
             <div className="space-y-6">
+              {/* Monthly / Annual billing toggle */}
+              <div className="flex flex-col items-center gap-2">
+                <div className="inline-flex items-center rounded-full border bg-muted/40 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setBillingPeriod("monthly")}
+                    className={cn(
+                      "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                      billingPeriod === "monthly"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBillingPeriod("annual")}
+                    className={cn(
+                      "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
+                      billingPeriod === "annual"
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Annual
+                    <Badge
+                      variant="secondary"
+                      className="ml-1.5 bg-emerald-100 text-emerald-800 hover:bg-emerald-100 text-[10px] px-1.5 py-0"
+                    >
+                      2 months free
+                    </Badge>
+                  </button>
+                </div>
+                {billingPeriod === "annual" && (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Pay for 10 months, get 12 — billed once a year
+                  </p>
+                )}
+              </div>
+
               {/* Plan Selection Cards */}
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Select Your Plan</h3>
@@ -1408,11 +1485,20 @@ export default function RegisterDoctorPage() {
                           ) : (
                             <>
                               <span className="text-lg font-bold">
-                                {formatPriceForLocale(tier.priceMonthlyPence, locale)}
+                                {formatPriceForLocale(displayTierPricePence(tier), locale)}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {tier.perUser ? " / user / mo" : " / mo"}
                               </span>
+                              {billingPeriod === "annual" && (
+                                <p className="text-[10px] text-emerald-700">
+                                  {formatPriceForLocale(
+                                    annualTotalPence(tier.priceMonthlyPence),
+                                    locale
+                                  )}
+                                  /yr · 2 mo free
+                                </p>
+                              )}
                             </>
                           )}
                         </div>
@@ -1500,15 +1586,28 @@ export default function RegisterDoctorPage() {
               {selectedTier !== "free" && (
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Monthly Total</span>
+                    <span className="text-sm font-medium">
+                      {billingPeriod === "annual" ? "Annual Total" : "Monthly Total"}
+                    </span>
                     <div className="text-right">
                       <span className="text-xl font-bold">
-                        {formatPriceForLocale(calculateMonthlyTotal(), locale)}
+                        {formatPriceForLocale(calculateBillingTotal(), locale)}
                       </span>
-                      <span className="text-sm text-muted-foreground"> / month</span>
+                      <span className="text-sm text-muted-foreground">
+                        {billingPeriod === "annual" ? " / year" : " / month"}
+                      </span>
                     </div>
                   </div>
-                  {getSelectedTierConfig()?.commitmentMonths ? (
+                  {billingPeriod === "annual" ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Equivalent to{" "}
+                      {formatPriceForLocale(
+                        annualEffectiveMonthlyPence(calculateMonthlyTotal()),
+                        locale
+                      )}
+                      /mo · 2 months free (pay 10, get 12)
+                    </p>
+                  ) : getSelectedTierConfig()?.commitmentMonths ? (
                     <p className="mt-1 text-xs text-muted-foreground">
                       {getSelectedTierConfig()!.commitmentMonths}-month commitment, billed monthly
                     </p>

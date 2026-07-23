@@ -257,75 +257,137 @@ export function getEnvLicensePriceId(tier: string): string | null {
 
 /**
  * Resolve Stripe Price ID for doctor licence checkout.
- * Prefers STRIPE_PRICE_* env vars; otherwise creates/reuses a monthly price.
+ * Monthly: prefers STRIPE_PRICE_* env vars.
+ * Annual: 2 months free (10× monthly, billed yearly); env STRIPE_PRICE_*_ANNUAL optional later.
  */
 const _cachedLicensePriceIds: Record<string, string> = {};
 
 export async function getOrCreateLicensePriceId(
   tier: string,
-  tierConfig: LicenseTierConfig
+  tierConfig: LicenseTierConfig,
+  billingPeriod: "monthly" | "annual" = "monthly"
 ): Promise<string> {
-  const envId = getEnvLicensePriceId(tier);
-  if (envId) return envId;
+  const { annualTotalPence } = await import(
+    "@/lib/constants/billing-period"
+  );
 
-  if (_cachedLicensePriceIds[tier]) return _cachedLicensePriceIds[tier];
+  if (billingPeriod === "monthly") {
+    const envId = getEnvLicensePriceId(tier);
+    if (envId) return envId;
+  } else {
+    const annualEnv = process.env[`STRIPE_PRICE_${tier.toUpperCase()}_ANNUAL`];
+    if (annualEnv?.startsWith("price_")) return annualEnv;
+  }
+
+  const cacheKey = `${tier}:${billingPeriod}`;
+  if (_cachedLicensePriceIds[cacheKey]) return _cachedLicensePriceIds[cacheKey];
 
   const { getStripe } = await import("@/lib/stripe/client");
   const stripe = getStripe();
+  const unitAmount =
+    billingPeriod === "annual"
+      ? annualTotalPence(tierConfig.priceMonthlyPence)
+      : tierConfig.priceMonthlyPence;
+  const interval = billingPeriod === "annual" ? "year" : "month";
 
   try {
     const existing = await stripe.prices.search({
-      query: `metadata["license_tier"]:"${tier}" active:"true"`,
+      query: `metadata["license_tier"]:"${tier}" metadata["billing_period"]:"${billingPeriod}" active:"true"`,
       limit: 1,
     });
     if (existing.data[0]?.id) {
-      _cachedLicensePriceIds[tier] = existing.data[0].id;
+      _cachedLicensePriceIds[cacheKey] = existing.data[0].id;
       return existing.data[0].id;
     }
   } catch {
     /* search may be unavailable — fall through to create */
   }
 
+  // Monthly without billing_period metadata (legacy search)
+  if (billingPeriod === "monthly") {
+    try {
+      const existing = await stripe.prices.search({
+        query: `metadata["license_tier"]:"${tier}" active:"true"`,
+        limit: 1,
+      });
+      if (
+        existing.data[0]?.id &&
+        existing.data[0].recurring?.interval === "month"
+      ) {
+        _cachedLicensePriceIds[cacheKey] = existing.data[0].id;
+        return existing.data[0].id;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
   const price = await stripe.prices.create({
     currency: "gbp",
-    unit_amount: tierConfig.priceMonthlyPence,
-    recurring: { interval: "month" },
+    unit_amount: unitAmount,
+    recurring: { interval },
     product_data: {
-      name: `MyDoctors360 ${tierConfig.name} License`,
-      metadata: { tier, license_tier: tier },
+      name: `MyDoctors360 ${tierConfig.name} License${
+        billingPeriod === "annual" ? " (Annual — 2 months free)" : ""
+      }`,
+      metadata: { tier, license_tier: tier, billing_period: billingPeriod },
     },
-    metadata: { tier, license_tier: tier },
+    metadata: {
+      tier,
+      license_tier: tier,
+      billing_period: billingPeriod,
+    },
   });
 
-  _cachedLicensePriceIds[tier] = price.id;
+  _cachedLicensePriceIds[cacheKey] = price.id;
   return price.id;
 }
 
 /**
- * Medical testing add-on price (monthly). Prefers STRIPE_PRICE_TESTING_ADDON.
+ * Medical testing add-on price. Prefers STRIPE_PRICE_TESTING_ADDON (monthly).
+ * Annual = 10× monthly (2 months free).
  */
-let _cachedTestingAddonPriceId: string | null = null;
+const _cachedTestingAddonPriceIds: Record<string, string> = {};
 
-export async function getOrCreateTestingAddonPriceId(): Promise<string> {
-  if (process.env.STRIPE_PRICE_TESTING_ADDON?.startsWith("price_")) {
+export async function getOrCreateTestingAddonPriceId(
+  billingPeriod: "monthly" | "annual" = "monthly"
+): Promise<string> {
+  const { annualTotalPence } = await import(
+    "@/lib/constants/billing-period"
+  );
+
+  if (
+    billingPeriod === "monthly" &&
+    process.env.STRIPE_PRICE_TESTING_ADDON?.startsWith("price_")
+  ) {
     return process.env.STRIPE_PRICE_TESTING_ADDON;
   }
-  if (_cachedTestingAddonPriceId) return _cachedTestingAddonPriceId;
+
+  if (_cachedTestingAddonPriceIds[billingPeriod]) {
+    return _cachedTestingAddonPriceIds[billingPeriod];
+  }
 
   const { getStripe } = await import("@/lib/stripe/client");
   const stripe = getStripe();
-  const amount =
+  const monthly =
     AVAILABLE_MODULES.find((m) => m.key === "medical_testing")
       ?.priceMonthlyPence ?? 4900;
+  const unitAmount =
+    billingPeriod === "annual" ? annualTotalPence(monthly) : monthly;
+  const interval = billingPeriod === "annual" ? "year" : "month";
+  const typeKey =
+    billingPeriod === "annual"
+      ? "medical_testing_addon_annual"
+      : "medical_testing_addon";
 
   try {
     const existing = await stripe.prices.search({
-      query: 'metadata["type"]:"medical_testing_addon" active:"true"',
+      query: `metadata["type"]:"${typeKey}" active:"true"`,
       limit: 1,
     });
     if (existing.data[0]?.id) {
-      _cachedTestingAddonPriceId = existing.data[0].id;
-      return _cachedTestingAddonPriceId;
+      _cachedTestingAddonPriceIds[billingPeriod] = existing.data[0].id;
+      return existing.data[0].id;
     }
   } catch {
     /* fall through */
@@ -333,15 +395,18 @@ export async function getOrCreateTestingAddonPriceId(): Promise<string> {
 
   const price = await stripe.prices.create({
     currency: "gbp",
-    unit_amount: amount,
-    recurring: { interval: "month" },
+    unit_amount: unitAmount,
+    recurring: { interval },
     product_data: {
-      name: "Medical Testing Add-on",
-      metadata: { type: "medical_testing_addon" },
+      name:
+        billingPeriod === "annual"
+          ? "Medical Testing Add-on (Annual — 2 months free)"
+          : "Medical Testing Add-on",
+      metadata: { type: typeKey },
     },
-    metadata: { type: "medical_testing_addon" },
+    metadata: { type: typeKey, billing_period: billingPeriod },
   });
-  _cachedTestingAddonPriceId = price.id;
+  _cachedTestingAddonPriceIds[billingPeriod] = price.id;
   return price.id;
 }
 

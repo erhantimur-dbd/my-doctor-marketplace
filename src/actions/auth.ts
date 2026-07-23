@@ -747,11 +747,19 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     .update({ stripe_customer_id: customer.id })
     .eq("id", result.orgId);
 
+  const billingPeriodRaw = (formData.get("billing_period") as string) || "monthly";
+  const billingPeriod =
+    billingPeriodRaw === "annual" ? "annual" : "monthly";
+
   const {
     getOrCreateLicensePriceId,
     getOrCreateTestingAddonPriceId,
   } = await import("@/lib/constants/license-tiers");
-  const priceId = await getOrCreateLicensePriceId(tier, tierConfig);
+  const priceId = await getOrCreateLicensePriceId(
+    tier,
+    tierConfig,
+    billingPeriod
+  );
 
   const quantity = tierConfig.perUser
     ? Math.min(Math.max(seatCount, 1), tierConfig.maxSeats)
@@ -765,7 +773,8 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     { price: priceId, quantity },
   ];
   if (hasTestingAddon) {
-    const testingPriceId = await getOrCreateTestingAddonPriceId();
+    const testingPriceId =
+      await getOrCreateTestingAddonPriceId(billingPeriod);
     lineItems.push({ price: testingPriceId, quantity: 1 });
   }
 
@@ -792,6 +801,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
         seat_count: String(quantity),
         max_seats: String(maxSeats),
         has_testing_addon: hasTestingAddon ? "1" : "0",
+        billing_period: billingPeriod,
       },
     },
     metadata: {
@@ -800,6 +810,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
       tier,
       type: "license",
       has_testing_addon: hasTestingAddon ? "1" : "0",
+      billing_period: billingPeriod,
     },
     success_url: `${origin}/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}&checkout=success`,
     cancel_url: `${origin}/${result.locale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
@@ -814,7 +825,8 @@ export async function registerDoctorWithCheckout(formData: FormData) {
  */
 export async function resumeDoctorLicenseCheckout(
   tier: string = "starter",
-  seatCount: number = 1
+  seatCount: number = 1,
+  billingPeriod: "monthly" | "annual" = "monthly"
 ): Promise<{ checkoutUrl?: string | null; error?: string }> {
   const supabase = await createClient();
   const {
@@ -877,7 +889,11 @@ export async function resumeDoctorLicenseCheckout(
       .eq("id", doctor.organization_id);
   }
 
-  const priceId = await getOrCreateLicensePriceId(tier, tierConfig);
+  const priceId = await getOrCreateLicensePriceId(
+    tier,
+    tierConfig,
+    billingPeriod
+  );
   const quantity = tierConfig.perUser
     ? Math.min(Math.max(seatCount, 1), tierConfig.maxSeats)
     : 1;
@@ -895,6 +911,7 @@ export async function resumeDoctorLicenseCheckout(
         doctor_id: doctor.id,
         tier,
         type: "license",
+        billing_period: billingPeriod,
         seat_count: String(quantity),
         max_seats: String(maxSeats),
       },
@@ -904,6 +921,7 @@ export async function resumeDoctorLicenseCheckout(
       doctor_id: doctor.id,
       tier,
       type: "license",
+      billing_period: billingPeriod,
     },
     success_url: `${origin}/en/doctor-dashboard/organization/billing?checkout=success`,
     cancel_url: `${origin}/en/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,

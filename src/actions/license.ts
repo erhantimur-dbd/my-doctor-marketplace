@@ -159,13 +159,17 @@ export async function createLicenseCheckout(formData: FormData) {
       .eq("id", org.id);
   }
 
+  const billingPeriod =
+    parsed.data.billing_period === "annual" ? "annual" : "monthly";
+
   // Prefer env-backed Stripe Price IDs (same path as registerDoctorWithCheckout)
   const { getOrCreateLicensePriceId } = await import(
     "@/lib/constants/license-tiers"
   );
   const priceId = await getOrCreateLicensePriceId(
     parsed.data.tier,
-    tierConfig
+    tierConfig,
+    billingPeriod
   );
 
   // Per-user pricing: Professional tier quantity = seat count
@@ -185,6 +189,7 @@ export async function createLicenseCheckout(formData: FormData) {
       organization_id: org.id,
       tier: parsed.data.tier,
       type: "license",
+      billing_period: billingPeriod,
     },
     subscription_data: {
       metadata: {
@@ -193,6 +198,7 @@ export async function createLicenseCheckout(formData: FormData) {
         type: "license",
         seat_count: String(quantity),
         max_seats: String(maxSeats),
+        billing_period: billingPeriod,
       },
     },
     success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing?success=true`,
