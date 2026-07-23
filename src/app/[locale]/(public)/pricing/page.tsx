@@ -340,7 +340,7 @@ export default function PricingPage() {
                     <Separator />
                   </div>
 
-                  {/* ── Features list (flex-1 fills remaining space) ── */}
+                  {/* ── Features: included + excluded for every package ── */}
                   <CardContent className="flex flex-1 flex-col px-6 pb-6 pt-0">
                     <ul className="flex-1 space-y-2.5">
                       {tier.features.map((feature) => (
@@ -349,16 +349,15 @@ export default function PricingPage() {
                           {feature}
                         </li>
                       ))}
-                      {isFree &&
-                        tier.excludedFeatures?.map((feature) => (
-                          <li
-                            key={feature}
-                            className="flex items-start gap-2 text-sm text-muted-foreground"
-                          >
-                            <X className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
-                            {feature}
-                          </li>
-                        ))}
+                      {(tier.excludedFeatures ?? []).map((feature) => (
+                        <li
+                          key={`ex-${feature}`}
+                          className="flex items-start gap-2 text-sm text-muted-foreground"
+                        >
+                          <X className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
+                          {feature}
+                        </li>
+                      ))}
                     </ul>
                   </CardContent>
 

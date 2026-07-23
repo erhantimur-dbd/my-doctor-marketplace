@@ -2,7 +2,10 @@
  * Feature flags — tier-based gating for organizations.
  *
  * Free is a deliberate GTM gateway: listing + profile only.
- * All paid marketplace ops and AI are Starter+.
+ * All paid marketplace ops and AI are Starter+ (or Pro+ as noted).
+ *
+ * Keep in sync with PACKAGE_MARKETING in package-features.ts
+ * (tests enforce consistency).
  */
 
 export type LicenseTier =
@@ -45,21 +48,22 @@ const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
   video_consultations: ["starter", "professional", "clinic", "enterprise"],
   email_reminders: ["starter", "professional", "clinic", "enterprise"],
   messaging: ["starter", "professional", "clinic", "enterprise"],
-  treatment_plans: ["starter", "professional", "clinic", "enterprise"],
   stripe_connect: ["starter", "professional", "clinic", "enterprise"],
   // AI — never free
   ai_review_summaries: ["starter", "professional", "clinic", "enterprise"],
   ai_sentiment_tags: ["starter", "professional", "clinic", "enterprise"],
-  // Medical testing: Starter+ with paid addon OR included on clinic+
+  // Medical testing: available on paid (addon on Starter/Pro; included Clinic+)
   medical_testing: ["starter", "professional", "clinic", "enterprise"],
 
-  // Professional+
+  // Professional+ (growth tools)
+  treatment_plans: ["professional", "clinic", "enterprise"],
   prescriptions: ["professional", "clinic", "enterprise"],
   recurring_bookings: ["professional", "clinic", "enterprise"],
   family_dependents: ["professional", "clinic", "enterprise"],
   analytics_dashboard: ["professional", "clinic", "enterprise"],
   whatsapp_notifications: ["professional", "clinic", "enterprise"],
   waitlist_auto_notify: ["professional", "clinic", "enterprise"],
+  priority_support: ["professional", "clinic", "enterprise"],
 
   // Clinic+
   multi_location: ["clinic", "enterprise"],
@@ -69,7 +73,6 @@ const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
   // Enterprise only
   custom_branding: ["enterprise"],
   api_access: ["enterprise"],
-  priority_support: ["enterprise"],
 };
 
 /**

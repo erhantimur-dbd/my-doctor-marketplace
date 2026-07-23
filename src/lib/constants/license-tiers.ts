@@ -1,4 +1,5 @@
 import type { LicenseTier } from "@/types";
+import { PACKAGE_MARKETING } from "@/lib/constants/package-features";
 
 // ─── Currency & Exchange Rates ─────────────────────────────
 export const BASE_CURRENCY = "GBP";
@@ -106,26 +107,14 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     includedSeats: 1,
     extraSeatPricePence: 0,
     commitmentMonths: 0, // no commitment on free
-    features: [
-      "Public profile after verification",
-      "Practice profile, specialties & languages",
-      "Doctor dashboard & completion checklist",
-      "Free forever until you upgrade",
-    ],
-    excludedFeatures: [
-      "Online bookings & payments",
-      "Video consultations",
-      "AI practice insights (review summaries)",
-      "Email / SMS / WhatsApp reminders",
-      "Analytics & waitlist auto-notify",
-      "Patient CRM & care plans",
-    ],
+    features: PACKAGE_MARKETING.free.features,
+    excludedFeatures: PACKAGE_MARKETING.free.excludedFeatures,
     isFreeTier: true,
   },
   {
     id: "starter",
     name: "Starter",
-    description: "Full booking & video for solo practitioners",
+    description: "Accept paid bookings, video and AI insights for solo practitioners",
     priceMonthlyPence: 19900, // £199
     perUser: false,
     defaultSeats: 1,
@@ -133,25 +122,13 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     includedSeats: 1,
     extraSeatPricePence: 0, // no add-on seats — must upgrade
     commitmentMonths: 12,
-    features: [
-      "1 doctor profile",
-      "Online booking calendar",
-      "Unlimited bookings",
-      "Email reminders",
-      "Video consultations",
-      "SMS & WhatsApp reminders",
-    ],
-    excludedFeatures: [
-      "Advanced analytics",
-      "Patient CRM",
-      "Care plans",
-      "Priority support",
-    ],
+    features: PACKAGE_MARKETING.starter.features,
+    excludedFeatures: PACKAGE_MARKETING.starter.excludedFeatures,
   },
   {
     id: "professional",
     name: "Professional",
-    description: "Advanced tools for growing practices",
+    description: "Growth tools: analytics, CRM, waitlist and multi-channel reminders",
     priceMonthlyPence: 29900, // £299 per user
     perUser: true,
     defaultSeats: 1,
@@ -159,20 +136,14 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     includedSeats: 1,
     extraSeatPricePence: 29900, // £299 per additional user
     commitmentMonths: 12,
-    features: [
-      "1–4 doctor profiles",
-      "Advanced analytics",
-      "Patient CRM",
-      "Care plans",
-      "Waitlist auto-notify",
-      "Priority support",
-    ],
+    features: PACKAGE_MARKETING.professional.features,
+    excludedFeatures: PACKAGE_MARKETING.professional.excludedFeatures,
     popular: true,
   },
   {
     id: "clinic",
     name: "Clinic Starter Pack",
-    description: "Everything you need to launch your clinic online",
+    description: "Multi-location clinic with seats, testing and team tools",
     priceMonthlyPence: 149500, // £1,495
     perUser: false,
     defaultSeats: 5,
@@ -180,18 +151,8 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     includedSeats: 5,
     extraSeatPricePence: 29900, // £299 per extra seat
     commitmentMonths: 12,
-    features: [
-      "Multi-location clinic",
-      "5 doctor profiles included",
-      "Add up to 10 extra seats (15 total)",
-      "3 hours of dedicated onboarding",
-      "Custom branding on your profile",
-      "Centralized clinic dashboard",
-      "Multi-doctor scheduling",
-      "Team performance analytics",
-      "Dedicated account manager",
-      "Priority support",
-    ],
+    features: PACKAGE_MARKETING.clinic.features,
+    excludedFeatures: PACKAGE_MARKETING.clinic.excludedFeatures,
   },
   {
     id: "enterprise",
@@ -204,15 +165,8 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     includedSeats: 999,
     extraSeatPricePence: 0,
     commitmentMonths: 12,
-    features: [
-      "15+ doctor profiles",
-      "Multiple locations",
-      "Custom branding",
-      "Medical testing services included",
-      "Custom integrations & API access",
-      "SLA guarantee",
-      "Dedicated account manager",
-    ],
+    features: PACKAGE_MARKETING.enterprise.features,
+    excludedFeatures: PACKAGE_MARKETING.enterprise.excludedFeatures,
     isCustomPricing: true,
   },
 ];
