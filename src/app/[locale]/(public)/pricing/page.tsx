@@ -19,6 +19,8 @@ import {
   Target,
   MessageSquareHeart,
   Globe2,
+  Stethoscope,
+  Zap,
 } from "lucide-react";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { PricingBillingToggle } from "@/components/marketing/pricing-billing-toggle";
