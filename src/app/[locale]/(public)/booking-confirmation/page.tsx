@@ -29,6 +29,8 @@ import {
   BookingSuccessAnimation,
   AnimatedSuccessIcon,
 } from "@/components/shared/booking-success-animation";
+import { resolveConfirmationLookup } from "@/lib/booking/confirmation-params";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Booking Confirmed",
@@ -36,39 +38,15 @@ export const metadata: Metadata = {
 };
 
 interface BookingConfirmationPageProps {
-  searchParams: Promise<{ session_id?: string }>;
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{
+    session_id?: string;
+    booking_id?: string;
+    wallet?: string;
+  }>;
 }
 
-export default async function BookingConfirmationPage({
-  searchParams,
-}: BookingConfirmationPageProps) {
-  const { session_id } = await searchParams;
-
-  if (!session_id) {
-    redirect("/en");
-  }
-
-  // Retrieve the Stripe Checkout Session to get the booking_id
-  let stripeSession;
-  try {
-    stripeSession = await getStripe().checkout.sessions.retrieve(session_id);
-  } catch {
-    redirect("/en");
-  }
-
-  const bookingId = stripeSession.metadata?.booking_id;
-  if (!bookingId) {
-    redirect("/en");
-  }
-
-  // Fetch booking: prefer user RLS session; fall back to admin when guest
-  // (Stripe session_id already proved payment ownership above).
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const bookingSelect = `
+const bookingSelect = `
       id,
       booking_number,
       appointment_date,
@@ -88,6 +66,7 @@ export default async function BookingConfirmationPage({
       patient_notes,
       paid_at,
       is_guest,
+      patient_id,
       doctor:doctors!inner(
         id,
         slug,
@@ -104,13 +83,58 @@ export default async function BookingConfirmationPage({
       )
     `;
 
+export default async function BookingConfirmationPage({
+  params,
+  searchParams,
+}: BookingConfirmationPageProps) {
+  const { locale } = await params;
+  const sp = await searchParams;
+  const t = await getTranslations("booking");
+  const lookup = resolveConfirmationLookup(sp);
+
+  if (lookup.mode === "invalid") {
+    redirect(`/${locale}`);
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let bookingId: string | null = null;
+  let allowAdminGuestFallback = false;
+
+  if (lookup.mode === "stripe_session") {
+    let stripeSession;
+    try {
+      stripeSession = await getStripe().checkout.sessions.retrieve(
+        lookup.sessionId
+      );
+    } catch {
+      redirect(`/${locale}`);
+    }
+    bookingId = stripeSession.metadata?.booking_id ?? null;
+    if (!bookingId) {
+      redirect(`/${locale}`);
+    }
+    // Stripe session_id proves payment ownership for guest shadow accounts.
+    allowAdminGuestFallback = true;
+  } else {
+    // Wallet-only path — patient must be signed in and own the booking (RLS).
+    bookingId = lookup.bookingId;
+    if (!user) {
+      redirect(`/${locale}/login`);
+    }
+    allowAdminGuestFallback = false;
+  }
+
   let { data: booking } = await supabase
     .from("bookings")
     .select(bookingSelect)
     .eq("id", bookingId)
     .maybeSingle();
 
-  if (!booking) {
+  if (!booking && allowAdminGuestFallback) {
     const admin = createAdminClient();
     const res = await admin
       .from("bookings")
@@ -121,20 +145,34 @@ export default async function BookingConfirmationPage({
   }
 
   if (!booking) {
-    redirect("/en");
+    redirect(`/${locale}`);
+  }
+
+  // Wallet path: enforce ownership even if RLS misconfigured
+  if (
+    lookup.mode === "wallet_booking" &&
+    user &&
+    (booking as { patient_id?: string }).patient_id &&
+    (booking as { patient_id: string }).patient_id !== user.id
+  ) {
+    redirect(`/${locale}`);
   }
 
   const isGuestBooking =
     !user || (booking as { is_guest?: boolean }).is_guest === true;
 
-  const doctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
-  const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
-  const fullName = `${doctor.title || "Dr."} ${profile.first_name} ${profile.last_name}`.trim();
+  const doctor: any = Array.isArray(booking.doctor)
+    ? booking.doctor[0]
+    : booking.doctor;
+  const profile: any = Array.isArray(doctor.profile)
+    ? doctor.profile[0]
+    : doctor.profile;
+  const fullName =
+    `${doctor.title || "Dr."} ${profile.first_name} ${profile.last_name}`.trim();
 
   const primarySpecialty =
-    doctor.specialties?.find(
-      (s: any) => s.is_primary
-    )?.specialty || doctor.specialties?.[0]?.specialty;
+    doctor.specialties?.find((s: any) => s.is_primary)?.specialty ||
+    doctor.specialties?.[0]?.specialty;
 
   const specialtyName = primarySpecialty
     ? formatSpecialtyName(primarySpecialty.name_key)
@@ -142,7 +180,7 @@ export default async function BookingConfirmationPage({
 
   function formatDate(dateStr: string): string {
     const date = new Date(dateStr + "T00:00:00");
-    return date.toLocaleDateString("en-GB", {
+    return date.toLocaleDateString(locale === "en" ? "en-GB" : locale, {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -155,216 +193,213 @@ export default async function BookingConfirmationPage({
     return `${parts[0]}:${parts[1]}`;
   }
 
+  const policyKey =
+    doctor.cancellation_policy === "flexible"
+      ? "flexible_policy"
+      : doctor.cancellation_policy === "moderate"
+        ? "moderate_policy"
+        : "strict_policy";
+
   return (
     <div className="container mx-auto px-4 py-12">
       <BookingSuccessAnimation>
-      <div className="mx-auto max-w-lg">
-        <Card>
-          <CardHeader className="text-center">
-            {/* Success Icon */}
-            <AnimatedSuccessIcon>
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
-            </div>
-            </AnimatedSuccessIcon>
+        <div className="mx-auto max-w-lg">
+          <Card>
+            <CardHeader className="text-center">
+              <AnimatedSuccessIcon>
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                  <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+                </div>
+              </AnimatedSuccessIcon>
 
-            <h1 className="text-2xl font-bold">Booking Confirmed!</h1>
-            <p className="text-muted-foreground">
-              Your appointment has been successfully booked. You will receive a
-              confirmation email shortly.
-            </p>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            {/* Booking Number */}
-            <div className="rounded-md bg-muted/50 p-3 text-center">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                Booking Reference
+              <h1 className="text-2xl font-bold">{t("booking_confirmed")}</h1>
+              <p className="text-muted-foreground">
+                {t("payment_confirm_note")}
               </p>
-              <p className="mt-1 text-lg font-bold tracking-wider">
-                {booking.booking_number}
-              </p>
-            </div>
+            </CardHeader>
 
-            <Separator />
-
-            {/* Doctor Info */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <Stethoscope className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Doctor</span>
+            <CardContent className="space-y-4">
+              <div className="rounded-md bg-muted/50 p-3 text-center">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {t("booking_number")}
+                </p>
+                <p className="mt-1 text-lg font-bold tracking-wider">
+                  {booking.booking_number}
+                </p>
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium">{fullName}</p>
-                {specialtyName && (
-                  <p className="text-xs text-muted-foreground">
-                    {specialtyName}
-                  </p>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  <Stethoscope className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Doctor</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium">{fullName}</p>
+                  {specialtyName && (
+                    <p className="text-xs text-muted-foreground">
+                      {specialtyName}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  {booking.consultation_type === "video" ? (
+                    <Video className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span className="text-muted-foreground">Consultation</span>
+                </div>
+                <Badge variant="secondary">
+                  {booking.consultation_type === "video"
+                    ? "Video Call"
+                    : "In-Person"}
+                </Badge>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Date</span>
+                </div>
+                <p className="text-sm font-medium">
+                  {formatDate(booking.appointment_date)}
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-muted-foreground">Time</span>
+                </div>
+                <p className="text-sm font-medium">
+                  {formatTime(booking.start_time)} -{" "}
+                  {formatTime(booking.end_time)}
+                </p>
+              </div>
+
+              {booking.consultation_type === "in_person" &&
+                (doctor.clinic_name || doctor.address) && (
+                  <>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Location</span>
+                      </div>
+                      <div className="text-right text-sm">
+                        {doctor.clinic_name && (
+                          <p className="font-medium">{doctor.clinic_name}</p>
+                        )}
+                        {doctor.address && (
+                          <p className="text-muted-foreground">
+                            {doctor.address}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
+
+              <Separator />
+
+              <div className="flex items-center justify-between">
+                <span className="font-semibold">
+                  {(booking as { payment_mode?: string }).payment_mode ===
+                  "deposit"
+                    ? t("deposit_paid")
+                    : t("total")}
+                </span>
+                <span className="text-lg font-bold">
+                  {(booking as { payment_mode?: string }).payment_mode ===
+                    "deposit" &&
+                  (booking as { deposit_amount_cents?: number })
+                    .deposit_amount_cents != null
+                    ? formatCurrency(
+                        (booking as { deposit_amount_cents: number })
+                          .deposit_amount_cents,
+                        booking.currency
+                      )
+                    : formatCurrency(
+                        booking.total_amount_cents,
+                        booking.currency
+                      )}
+                </span>
               </div>
-            </div>
 
-            <Separator />
+              {(booking as { payment_mode?: string }).payment_mode ===
+                "deposit" &&
+                (booking as { remainder_due_cents?: number })
+                  .remainder_due_cents != null && (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-amber-700 dark:text-amber-400">
+                        {t("due_on_day")}
+                      </span>
+                      <span className="font-medium text-amber-700 dark:text-amber-400">
+                        {formatCurrency(
+                          (booking as { remainder_due_cents: number })
+                            .remainder_due_cents,
+                          booking.currency
+                        )}
+                      </span>
+                    </div>
 
-            {/* Consultation Type */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                {booking.consultation_type === "video" ? (
-                  <Video className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/50">
+                      <p className="text-xs text-amber-700 dark:text-amber-300">
+                        {t("deposit_info")}
+                      </p>
+                    </div>
+                  </>
                 )}
-                <span className="text-muted-foreground">Consultation</span>
+
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50">
+                <p className="text-xs text-blue-700 dark:text-blue-300">
+                  {t(policyKey)}
+                </p>
               </div>
-              <Badge variant="secondary">
-                {booking.consultation_type === "video"
-                  ? "Video Call"
-                  : "In-Person"}
-              </Badge>
-            </div>
+            </CardContent>
 
-            <Separator />
-
-            {/* Date */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Date</span>
-              </div>
-              <p className="text-sm font-medium">
-                {formatDate(booking.appointment_date)}
-              </p>
-            </div>
-
-            <Separator />
-
-            {/* Time */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Time</span>
-              </div>
-              <p className="text-sm font-medium">
-                {formatTime(booking.start_time)} -{" "}
-                {formatTime(booking.end_time)}
-              </p>
-            </div>
-
-            {/* Location for in-person */}
-            {booking.consultation_type === "in_person" &&
-              (doctor.clinic_name || doctor.address) && (
+            <CardFooter className="flex flex-col gap-3">
+              {isGuestBooking && !user ? (
                 <>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Location</span>
-                    </div>
-                    <div className="text-right text-sm">
-                      {doctor.clinic_name && (
-                        <p className="font-medium">{doctor.clinic_name}</p>
-                      )}
-                      {doctor.address && (
-                        <p className="text-muted-foreground">
-                          {doctor.address}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-
-            <Separator />
-
-            {/* Amount Paid */}
-            <div className="flex items-center justify-between">
-              <span className="font-semibold">
-                {(booking as any).payment_mode === "deposit"
-                  ? (booking as any).deposit_type === "percentage" && (booking as any).deposit_value
-                    ? `${(booking as any).deposit_value}% Deposit Paid`
-                    : "Deposit Paid"
-                  : "Amount Paid"}
-              </span>
-              <span className="text-lg font-bold">
-                {(booking as any).payment_mode === "deposit" && (booking as any).deposit_amount_cents != null
-                  ? formatCurrency(
-                      (booking as any).deposit_amount_cents,
-                      booking.currency
-                    )
-                  : formatCurrency(
-                      booking.total_amount_cents,
-                      booking.currency
-                    )}
-              </span>
-            </div>
-
-            {/* Deposit remainder due on the day */}
-            {(booking as any).payment_mode === "deposit" && (booking as any).remainder_due_cents != null && (
-              <>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-amber-700 dark:text-amber-400">Due on the Day</span>
-                  <span className="font-medium text-amber-700 dark:text-amber-400">
-                    {formatCurrency(
-                      (booking as any).remainder_due_cents,
-                      booking.currency
-                    )}
-                  </span>
-                </div>
-
-                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/50">
-                  <p className="text-xs text-amber-700 dark:text-amber-300">
-                    You paid a{" "}
-                    {(booking as any).deposit_type === "percentage" && (booking as any).deposit_value
-                      ? `${(booking as any).deposit_value}% deposit`
-                      : "deposit"}{" "}
-                    to secure your appointment. The remaining{" "}
-                    {formatCurrency(
-                      (booking as any).remainder_due_cents,
-                      booking.currency
-                    )}{" "}
-                    is payable directly to the doctor on the day. Deposits are fully refundable if
-                    cancelled within the cancellation period.
+                  <Button className="w-full" asChild>
+                    <Link href="/forgot-password">
+                      Set a password to manage bookings
+                    </Link>
+                  </Button>
+                  <p className="text-center text-xs text-muted-foreground">
+                    Use the email from your booking confirmation to claim your
+                    account.
                   </p>
-                </div>
-              </>
-            )}
-
-            {/* Cancellation Policy Note */}
-            <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50">
-              <p className="text-xs text-blue-700 dark:text-blue-300">
-                {doctor.cancellation_policy === "flexible"
-                  ? "Flexible cancellation: Free cancellation up to 24 hours before the appointment."
-                  : doctor.cancellation_policy === "moderate"
-                    ? "Moderate cancellation: Full refund if cancelled 48+ hours before, 50% between 24-48 hours."
-                    : "Strict cancellation: Full refund only if cancelled more than 72 hours before the appointment."}
-              </p>
-            </div>
-          </CardContent>
-
-          <CardFooter className="flex flex-col gap-3">
-            {isGuestBooking && !user ? (
-              <Button className="w-full" asChild>
-                <Link href="/forgot-password">
-                  Set a password to manage bookings
+                </>
+              ) : (
+                <Button className="w-full" asChild>
+                  <Link href="/dashboard/bookings">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    View My Bookings
+                  </Link>
+                </Button>
+              )}
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/">
+                  <Home className="mr-2 h-4 w-4" />
+                  Back to Home
                 </Link>
               </Button>
-            ) : (
-              <Button className="w-full" asChild>
-                <Link href="/dashboard/bookings">
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  View My Bookings
-                </Link>
-              </Button>
-            )}
-            <Button variant="outline" className="w-full" asChild>
-              <Link href="/">
-                <Home className="mr-2 h-4 w-4" />
-                Back to Home
-              </Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
+            </CardFooter>
+          </Card>
+        </div>
       </BookingSuccessAnimation>
     </div>
   );
