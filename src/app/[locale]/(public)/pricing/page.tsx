@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   CheckCircle2,
   ArrowRight,
-  Stethoscope,
   Calendar,
   BarChart3,
   CreditCard,
@@ -14,16 +13,12 @@ import {
   Globe,
   Bell,
   Shield,
-  Zap,
   FlaskConical,
-  Building2,
-  Crown,
   Award,
   TrendingUp,
   Target,
   MessageSquareHeart,
   Globe2,
-  type LucideIcon,
 } from "lucide-react";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { PricingBillingToggle } from "@/components/marketing/pricing-billing-toggle";
@@ -34,7 +29,7 @@ import {
   formatPriceForLocale,
   formatPrice,
 } from "@/lib/constants/license-tiers";
-import { useLocale } from "next-intl";
+import { getLocale } from "next-intl/server";
 
 const BENEFITS = [
   {
@@ -123,57 +118,8 @@ const platformFeatures = [
   },
 ];
 
-/** Icon for each tier */
-function getTierIcon(tierId: string): LucideIcon {
-  switch (tierId) {
-    case "free":
-      return Stethoscope;
-    case "starter":
-      return Zap;
-    case "professional":
-      return BarChart3;
-    case "clinic":
-      return Building2;
-    case "enterprise":
-      return Crown;
-    default:
-      return Stethoscope;
-  }
-}
-
-/** Colour scheme for each tier icon */
-function getTierColor(tierId: string) {
-  switch (tierId) {
-    case "starter":
-      return {
-        bg: "bg-teal-50 dark:bg-teal-950/30",
-        text: "text-teal-600",
-      };
-    case "professional":
-      return {
-        bg: "bg-violet-50 dark:bg-violet-950/30",
-        text: "text-violet-600",
-      };
-    case "clinic":
-      return {
-        bg: "bg-blue-50 dark:bg-blue-950/30",
-        text: "text-blue-600",
-      };
-    case "enterprise":
-      return {
-        bg: "bg-amber-50 dark:bg-amber-950/30",
-        text: "text-amber-600",
-      };
-    default:
-      return {
-        bg: "bg-emerald-50 dark:bg-emerald-950/30",
-        text: "text-emerald-600",
-      };
-  }
-}
-
-export default function PricingPage() {
-  const locale = useLocale();
+export default async function PricingPage() {
+  const locale = await getLocale();
   const testingModule = AVAILABLE_MODULES.find((m) => m.key === "medical_testing");
 
   return (
@@ -222,11 +168,7 @@ export default function PricingPage() {
       {/* Pricing Plans — monthly / annual toggle (annual = 2 months free) */}
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-6xl">
-          <PricingBillingToggle
-            locale={locale}
-            getTierIcon={getTierIcon}
-            getTierColor={getTierColor}
-          />
+          <PricingBillingToggle locale={locale} />
         </div>
       </section>
 

@@ -10,6 +10,11 @@ import {
   CheckCircle2,
   ArrowRight,
   X,
+  Stethoscope,
+  Zap,
+  BarChart3,
+  Building2,
+  Crown,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -27,23 +32,59 @@ import {
 import { ClinicGetStartedButton } from "@/components/shared/clinic-get-started-button";
 import { cn } from "@/lib/utils";
 
-type TierVisual = {
-  icon: LucideIcon;
-  bg: string;
-  text: string;
-};
+/** Kept inside the client component — functions cannot be passed from Server Components. */
+function getTierIcon(tierId: string): LucideIcon {
+  switch (tierId) {
+    case "free":
+      return Stethoscope;
+    case "starter":
+      return Zap;
+    case "professional":
+      return BarChart3;
+    case "clinic":
+      return Building2;
+    case "enterprise":
+      return Crown;
+    default:
+      return Stethoscope;
+  }
+}
+
+function getTierColor(tierId: string) {
+  switch (tierId) {
+    case "starter":
+      return {
+        bg: "bg-teal-50 dark:bg-teal-950/30",
+        text: "text-teal-600",
+      };
+    case "professional":
+      return {
+        bg: "bg-violet-50 dark:bg-violet-950/30",
+        text: "text-violet-600",
+      };
+    case "clinic":
+      return {
+        bg: "bg-blue-50 dark:bg-blue-950/30",
+        text: "text-blue-600",
+      };
+    case "enterprise":
+      return {
+        bg: "bg-amber-50 dark:bg-amber-950/30",
+        text: "text-amber-600",
+      };
+    default:
+      return {
+        bg: "bg-emerald-50 dark:bg-emerald-950/30",
+        text: "text-emerald-600",
+      };
+  }
+}
 
 interface PricingBillingToggleProps {
   locale: string;
-  getTierIcon: (tierId: string) => LucideIcon;
-  getTierColor: (tierId: string) => { bg: string; text: string };
 }
 
-export function PricingBillingToggle({
-  locale,
-  getTierIcon,
-  getTierColor,
-}: PricingBillingToggleProps) {
+export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
   const [period, setPeriod] = useState<BillingPeriod>("monthly");
   const discount = annualDiscountPercent();
 
