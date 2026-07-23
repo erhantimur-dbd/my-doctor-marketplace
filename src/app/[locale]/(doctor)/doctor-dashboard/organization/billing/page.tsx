@@ -28,9 +28,13 @@ import {
   Tag,
   X,
 } from "lucide-react";
-import { LICENSE_TIERS, AVAILABLE_MODULES, formatPrice } from "@/lib/constants/license-tiers";
 import {
-  annualEffectiveMonthlyPence,
+  LICENSE_TIERS,
+  AVAILABLE_MODULES,
+  formatPrice,
+  formatAnnualEffectiveMonthlyForLocale,
+} from "@/lib/constants/license-tiers";
+import {
   annualTotalPence,
   type BillingPeriod,
 } from "@/lib/constants/billing-period";
@@ -471,19 +475,20 @@ export default function BillingPage() {
                       <>
                         <span className="text-2xl font-bold">
                           {formatPrice(
-                            annualEffectiveMonthlyPence(tier.priceMonthlyPence),
+                            annualTotalPence(tier.priceMonthlyPence),
                             "GBP"
                           )}
                         </span>
                         <span className="text-muted-foreground">
-                          {tier.perUser ? " / user / mo" : " / mo"}
+                          {tier.perUser ? " / user / year" : " / year"}
                         </span>
-                        <p className="mt-1 text-xs text-emerald-700">
-                          {formatPrice(
-                            annualTotalPence(tier.priceMonthlyPence),
-                            "GBP"
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {formatAnnualEffectiveMonthlyForLocale(
+                            tier.priceMonthlyPence,
+                            "en"
                           )}
-                          /yr · 2 months free
+                          /mo ·{" "}
+                          <span className="text-emerald-700">2 months free</span>
                         </p>
                       </>
                     ) : (

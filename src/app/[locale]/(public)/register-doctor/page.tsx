@@ -41,11 +41,11 @@ import {
   LICENSE_TIERS,
   AVAILABLE_MODULES,
   formatPriceForLocale,
+  formatAnnualEffectiveMonthlyForLocale,
   getLicenseTier,
   type LicenseTierConfig,
 } from "@/lib/constants/license-tiers";
 import {
-  annualEffectiveMonthlyPence,
   annualTotalPence,
   type BillingPeriod,
 } from "@/lib/constants/billing-period";
@@ -350,13 +350,6 @@ export default function RegisterDoctorPage() {
     const monthly = calculateMonthlyTotal();
     if (billingPeriod === "annual") return annualTotalPence(monthly);
     return monthly;
-  }
-
-  function displayTierPricePence(tier: LicenseTierConfig): number {
-    if (billingPeriod === "annual" && !tier.isFreeTier) {
-      return annualEffectiveMonthlyPence(tier.priceMonthlyPence);
-    }
-    return tier.priceMonthlyPence;
   }
 
   async function handleSubmit() {
@@ -1341,16 +1334,17 @@ export default function RegisterDoctorPage() {
                         </span>
                         <Badge variant="secondary" className="text-xs">
                           +
-                          {formatPriceForLocale(
-                            billingPeriod === "annual"
-                              ? annualEffectiveMonthlyPence(
+                          {billingPeriod === "annual"
+                            ? `${formatPriceForLocale(
+                                annualTotalPence(
                                   testingAddon.priceMonthlyPence
-                                )
-                              : testingAddon.priceMonthlyPence,
-                            locale
-                          )}{" "}
-                          / mo
-                          {billingPeriod === "annual" ? " eq." : ""}
+                                ),
+                                locale
+                              )}/yr`
+                            : `${formatPriceForLocale(
+                                testingAddon.priceMonthlyPence,
+                                locale
+                              )}/mo`}
                         </Badge>
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
@@ -1482,23 +1476,37 @@ export default function RegisterDoctorPage() {
                         <div className="mt-3">
                           {tier.isFreeTier ? (
                             <span className="text-lg font-bold">Free</span>
+                          ) : billingPeriod === "annual" ? (
+                            <>
+                              <span className="text-lg font-bold">
+                                {formatPriceForLocale(
+                                  annualTotalPence(tier.priceMonthlyPence),
+                                  locale
+                                )}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {tier.perUser ? " / user / yr" : " / yr"}
+                              </span>
+                              <p className="text-[10px] text-muted-foreground">
+                                {formatAnnualEffectiveMonthlyForLocale(
+                                  tier.priceMonthlyPence,
+                                  locale
+                                )}
+                                /mo ·{" "}
+                                <span className="text-emerald-700">2 mo free</span>
+                              </p>
+                            </>
                           ) : (
                             <>
                               <span className="text-lg font-bold">
-                                {formatPriceForLocale(displayTierPricePence(tier), locale)}
+                                {formatPriceForLocale(
+                                  tier.priceMonthlyPence,
+                                  locale
+                                )}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {tier.perUser ? " / user / mo" : " / mo"}
                               </span>
-                              {billingPeriod === "annual" && (
-                                <p className="text-[10px] text-emerald-700">
-                                  {formatPriceForLocale(
-                                    annualTotalPence(tier.priceMonthlyPence),
-                                    locale
-                                  )}
-                                  /yr · 2 mo free
-                                </p>
-                              )}
                             </>
                           )}
                         </div>
@@ -1601,8 +1609,8 @@ export default function RegisterDoctorPage() {
                   {billingPeriod === "annual" ? (
                     <p className="mt-1 text-xs text-muted-foreground">
                       Equivalent to{" "}
-                      {formatPriceForLocale(
-                        annualEffectiveMonthlyPence(calculateMonthlyTotal()),
+                      {formatAnnualEffectiveMonthlyForLocale(
+                        calculateMonthlyTotal(),
                         locale
                       )}
                       /mo · 2 months free (pay 10, get 12)

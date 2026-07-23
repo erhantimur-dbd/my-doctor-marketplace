@@ -39,9 +39,11 @@ export function getDisplayCurrency(locale: string): string {
 /** Format a price in minor units for display */
 export function formatPrice(
   minorUnits: number,
-  currency: string
+  currency: string,
+  options?: { fractionDigits?: number }
 ): string {
   const majorUnits = minorUnits / 100;
+  const digits = options?.fractionDigits ?? 0;
   const localeMap: Record<string, string> = {
     GBP: "en-GB",
     EUR: "de-DE",
@@ -51,19 +53,47 @@ export function formatPrice(
   return new Intl.NumberFormat(localeMap[currency] ?? "en-GB", {
     style: "currency",
     currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(majorUnits);
 }
 
 /** Format price in the locale's currency, converting from GBP pence */
 export function formatPriceForLocale(
   penceGBP: number,
-  locale: string
+  locale: string,
+  options?: { fractionDigits?: number }
 ): string {
   const currency = getDisplayCurrency(locale);
   const converted = convertPrice(penceGBP, currency);
-  return formatPrice(converted, currency);
+  return formatPrice(converted, currency, options);
+}
+
+/**
+ * Annual effective monthly with 2 decimal places.
+ * Uses (10 × monthly) / 12 so e.g. £1,990/yr → £165.83/mo (not rounded £166).
+ */
+export function formatAnnualEffectiveMonthlyForLocale(
+  monthlyPenceGBP: number,
+  locale: string
+): string {
+  // Inline 10× rule to avoid circular imports with billing-period
+  const yearlyPence = monthlyPenceGBP <= 0 ? 0 : monthlyPenceGBP * 10;
+  const currency = getDisplayCurrency(locale);
+  const yearlyMinor = convertPrice(yearlyPence, currency);
+  const effectiveMajor = yearlyMinor / 12 / 100;
+  const localeMap: Record<string, string> = {
+    GBP: "en-GB",
+    EUR: "de-DE",
+    USD: "en-US",
+    TRY: "tr-TR",
+  };
+  return new Intl.NumberFormat(localeMap[currency] ?? "en-GB", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(effectiveMajor);
 }
 
 // ─── Tier Config ───────────────────────────────────────────

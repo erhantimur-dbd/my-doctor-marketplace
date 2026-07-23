@@ -21,11 +21,11 @@ import {
   LICENSE_TIERS,
   PLATFORM_BOOKING_FEE_PERCENT,
   formatPriceForLocale,
+  formatAnnualEffectiveMonthlyForLocale,
   type LicenseTierConfig,
 } from "@/lib/constants/license-tiers";
 import {
   annualDiscountPercent,
-  annualEffectiveMonthlyPence,
   annualTotalPence,
   type BillingPeriod,
 } from "@/lib/constants/billing-period";
@@ -118,21 +118,27 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
     }
 
     if (period === "annual") {
-      const effective = annualEffectiveMonthlyPence(tier.priceMonthlyPence);
       const yearly = annualTotalPence(tier.priceMonthlyPence);
+      const monthlyList = tier.priceMonthlyPence;
       return (
         <>
           <div>
             <span className="text-4xl font-bold">
-              {formatPriceForLocale(effective, locale)}
+              {formatPriceForLocale(yearly, locale)}
             </span>
             <span className="text-muted-foreground">
-              {tier.perUser ? " / user / mo" : " / mo"}
+              {tier.perUser ? " / user / year" : " / year"}
             </span>
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            {formatPriceForLocale(yearly, locale)}
-            {tier.perUser ? "/user" : ""} billed yearly
+            <span className="line-through opacity-70">
+              {formatPriceForLocale(monthlyList * 12, locale)}
+              {tier.perUser ? "/user" : ""}
+            </span>
+            {" · "}
+            {formatAnnualEffectiveMonthlyForLocale(monthlyList, locale)}
+            {tier.perUser ? "/user" : ""}
+            /mo equiv.
             <span className="ml-1 font-medium text-emerald-600">
               · 2 months free
             </span>
@@ -273,16 +279,23 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                       {tier.extraSeatPricePence > 0 && !tier.perUser && (
                         <>
                           {" · "}
-                          {formatPriceForLocale(
-                            period === "annual"
-                              ? annualEffectiveMonthlyPence(
-                                  tier.extraSeatPricePence
-                                )
-                              : tier.extraSeatPricePence,
-                            locale
+                          {period === "annual" ? (
+                            <>
+                              {formatPriceForLocale(
+                                annualTotalPence(tier.extraSeatPricePence),
+                                locale
+                              )}
+                              /extra seat/yr
+                            </>
+                          ) : (
+                            <>
+                              {formatPriceForLocale(
+                                tier.extraSeatPricePence,
+                                locale
+                              )}
+                              /extra seat
+                            </>
                           )}
-                          /extra seat
-                          {period === "annual" ? " eq." : ""}
                         </>
                       )}
                     </p>

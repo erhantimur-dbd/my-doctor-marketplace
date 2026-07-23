@@ -6,6 +6,7 @@ import {
   annualEffectiveMonthlyPence,
   annualTotalPence,
 } from "@/lib/constants/billing-period";
+import { formatAnnualEffectiveMonthlyForLocale } from "@/lib/constants/license-tiers";
 
 describe("annual billing (2 months free)", () => {
   it("charges 10 months for a year", () => {
@@ -25,5 +26,14 @@ describe("annual billing (2 months free)", () => {
 
   it("discount is ~16.7%", () => {
     expect(annualDiscountPercent()).toBe(16.7);
+  });
+
+  it("display effective monthly keeps 2dp so 12× matches yearly intent", () => {
+    // £1,990 / 12 = £165.83 (not whole-pound £166)
+    expect(formatAnnualEffectiveMonthlyForLocale(19900, "en")).toBe("£165.83");
+    expect(formatAnnualEffectiveMonthlyForLocale(29900, "en")).toBe("£249.17");
+    expect(formatAnnualEffectiveMonthlyForLocale(149500, "en")).toBe(
+      "£1,245.83"
+    );
   });
 });
