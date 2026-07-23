@@ -34,3 +34,10 @@ Code: `hasFeature` treats null tier as free; free has empty feature set; booking
 - License checkout uses `getOrCreateLicensePriceId` (env `STRIPE_PRICE_*` preferred).
 - Testing addon: `STRIPE_PRICE_TESTING_ADDON` + metadata `has_testing_addon=1`.
 - Monthly is the sold cadence in code; annual is not the primary SKU yet.
+
+## Marketing surfaces (aligned)
+
+- `LICENSE_TIERS.free` → **Founding Free** features/exclusions drive pricing cards.
+- `/en/pricing` — free is first-class card (£0, Start free, exclude list).
+- `public/coming-soon/index.html` — free vs paid FAQ + CTA to `?tier=free`.
+- Register-doctor free notice matches gateway copy.

@@ -96,8 +96,9 @@ export interface LicenseTierConfig {
 export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "free",
-    name: "Free",
-    description: "Get started with a basic doctor profile",
+    name: "Founding Free",
+    description:
+      "List your profile and get ready for launch — upgrade when you want to accept bookings",
     priceMonthlyPence: 0,
     perUser: false,
     defaultSeats: 1,
@@ -106,17 +107,18 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     extraSeatPricePence: 0,
     commitmentMonths: 0, // no commitment on free
     features: [
-      "Doctor profile listing",
+      "Public profile after verification",
+      "Practice profile, specialties & languages",
+      "Doctor dashboard & completion checklist",
+      "Free forever until you upgrade",
     ],
     excludedFeatures: [
-      "Online bookings",
-      "Email reminders",
+      "Online bookings & payments",
       "Video consultations",
-      "SMS & WhatsApp reminders",
-      "Analytics",
-      "Patient CRM",
-      "Care plans",
-      "Priority support",
+      "AI practice insights (review summaries)",
+      "Email / SMS / WhatsApp reminders",
+      "Analytics & waitlist auto-notify",
+      "Patient CRM & care plans",
     ],
     isFreeTier: true,
   },

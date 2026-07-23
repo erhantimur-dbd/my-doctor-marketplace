@@ -177,8 +177,10 @@ function getTierColor(tierId: string) {
 export default function PricingPage() {
   const locale = useLocale();
 
-  // Get paid tiers for the main grid (exclude free, it's shown separately)
+  // Free gateway first, then paid (enterprise last as custom)
+  const freeTier = LICENSE_TIERS.find((t) => t.isFreeTier);
   const paidTiers = LICENSE_TIERS.filter((t) => !t.isFreeTier);
+  const displayTiers = freeTier ? [freeTier, ...paidTiers] : paidTiers;
   const testingModule = AVAILABLE_MODULES.find((m) => m.key === "medical_testing");
 
   return (
@@ -194,7 +196,9 @@ export default function PricingPage() {
             Build trust, grow your practice with MyDoctors360
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Strengthen your online presence with a comprehensive profile, verified reviews and professional connections that drive practice growth.
+            Start free with a founding profile. Upgrade when you&apos;re ready to
+            accept online bookings — paid plans unlock video, reminders and AI
+            insights.
           </p>
         </div>
       </section>
@@ -225,12 +229,13 @@ export default function PricingPage() {
       {/* Pricing Plans */}
       <section className="px-4 py-12 md:py-20">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
-            {paidTiers.map((tier) => {
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 lg:items-stretch">
+            {displayTiers.map((tier) => {
               const TierIcon = getTierIcon(tier.id);
               const tierColor = getTierColor(tier.id);
               const isPopular = tier.popular;
               const isEnterprise = tier.isCustomPricing;
+              const isFree = !!tier.isFreeTier;
 
               return (
                 <Card
@@ -238,13 +243,22 @@ export default function PricingPage() {
                   className={`relative flex flex-col overflow-hidden ${
                     isPopular
                       ? "border-foreground/20 shadow-lg"
-                      : ""
+                      : isFree
+                        ? "border-emerald-300/80 shadow-sm ring-1 ring-emerald-100 dark:ring-emerald-900/40"
+                        : ""
                   }`}
                 >
                   {isPopular && (
                     <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
                       <Badge className="bg-foreground text-background shadow-md hover:bg-foreground">
                         Most Popular
+                      </Badge>
+                    </div>
+                  )}
+                  {isFree && (
+                    <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
+                      <Badge className="bg-emerald-600 text-white shadow-md hover:bg-emerald-600">
+                        Start here
                       </Badge>
                     </div>
                   )}
@@ -255,7 +269,7 @@ export default function PricingPage() {
                       <TierIcon className={`h-5 w-5 ${tierColor.text}`} />
                     </div>
                     <h3 className="text-lg font-bold">{tier.name}</h3>
-                    <p className="mt-1 h-[40px] text-sm text-muted-foreground">
+                    <p className="mt-1 min-h-[40px] text-sm text-muted-foreground">
                       {tier.description}
                     </p>
                   </div>
@@ -265,6 +279,13 @@ export default function PricingPage() {
                     {isEnterprise ? (
                       <>
                         <span className="text-4xl font-bold">Custom</span>
+                      </>
+                    ) : isFree ? (
+                      <>
+                        <span className="text-4xl font-bold">£0</span>
+                        <span className="text-sm text-muted-foreground">
+                          forever · upgrade anytime
+                        </span>
                       </>
                     ) : (
                       <>
@@ -285,6 +306,10 @@ export default function PricingPage() {
                     {isEnterprise ? (
                       <p className="text-xs text-muted-foreground">
                         Tailored to your needs
+                      </p>
+                    ) : isFree ? (
+                      <p className="text-xs text-muted-foreground">
+                        No card required · no commitment
                       </p>
                     ) : (
                       <>
@@ -324,6 +349,16 @@ export default function PricingPage() {
                           {feature}
                         </li>
                       ))}
+                      {isFree &&
+                        tier.excludedFeatures?.map((feature) => (
+                          <li
+                            key={feature}
+                            className="flex items-start gap-2 text-sm text-muted-foreground"
+                          >
+                            <X className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
+                            {feature}
+                          </li>
+                        ))}
                     </ul>
                   </CardContent>
 
@@ -345,11 +380,11 @@ export default function PricingPage() {
                     ) : (
                       <Button
                         className="w-full rounded-full"
-                        variant={isPopular ? "default" : "outline"}
+                        variant={isPopular || isFree ? "default" : "outline"}
                         asChild
                       >
                         <Link href={`/register-doctor?tier=${tier.id}`}>
-                          Get Started
+                          {isFree ? "Start free" : "Get Started"}
                         </Link>
                       </Button>
                     )}
@@ -360,20 +395,14 @@ export default function PricingPage() {
           </div>
 
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            All plans include a {PLATFORM_BOOKING_FEE_PERCENT}% platform commission on each booking, invoiced monthly.
-            All paid plans require a 12-month commitment, billed monthly.
+            Paid plans include a {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
+            on each booking, invoiced monthly, and require a 12-month commitment
+            billed monthly. Founding Free never charges a card — upgrade when
+            you want online bookings and AI insights.
           </p>
-
-          {/* Free Profile Note */}
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Not ready to commit?{" "}
-            <Link
-              href="/register-doctor?tier=free"
-              className="font-medium text-primary hover:underline"
-            >
-              Create a free doctor profile
-            </Link>{" "}
-            — a basic listing to get started.
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Platform features above (video, analytics, CRM) apply to paid plans.
+            Free is a permanent gateway: list and prepare; take bookings on Starter+.
           </p>
         </div>
       </section>

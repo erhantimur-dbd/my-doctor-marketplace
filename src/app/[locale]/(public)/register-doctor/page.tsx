@@ -1582,10 +1582,14 @@ export default function RegisterDoctorPage() {
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                     <div className="text-sm text-emerald-800">
-                      <p className="font-medium">You&apos;re starting on the Free Plan</p>
+                      <p className="font-medium">
+                        You&apos;re starting on Founding Free
+                      </p>
                       <p className="mt-1">
-                        Your GMC registration will be verified by our team before your profile goes live.
-                        You can upgrade to a paid plan anytime from your dashboard.
+                        Build your profile, get verified and list publicly —
+                        free forever. Online bookings, video, reminders and AI
+                        unlock when you upgrade to Starter or higher from your
+                        dashboard. UK doctors: GMC is verified before go-live.
                       </p>
                     </div>
                   </div>
