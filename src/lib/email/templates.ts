@@ -1656,26 +1656,51 @@ interface GuestAccountClaimParams {
   patientName: string;
   claimUrl: string;
   bookingNumber?: string;
+  /** Optional recovery link for setting a password later */
+  setPasswordUrl?: string;
+  /** When true, primary CTA opens a signed-in session (no password first) */
+  magicSession?: boolean;
 }
 
 export function guestAccountClaimEmail({
   patientName,
   claimUrl,
   bookingNumber,
+  setPasswordUrl,
+  magicSession = true,
 }: GuestAccountClaimParams): { subject: string; html: string } {
-  const subject = "Set a password to manage your MyDoctors360 booking";
+  const subject = magicSession
+    ? "Open your MyDoctors360 booking (one-click sign-in)"
+    : "Set a password to manage your MyDoctors360 booking";
+
+  const primaryCta = magicSession
+    ? "Open my bookings — sign me in"
+    : "Set my password";
+
+  const intro = magicSession
+    ? `Click once to sign in securely and view your appointment — no password needed.`
+    : `Click below to set a password. This link is personal and expires after a short time.`;
+
+  const secondary =
+    magicSession && setPasswordUrl
+      ? `<p style="margin: 16px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      Prefer a password for next time?
+      <a href="${setPasswordUrl}" style="color: ${BRAND_COLOR}; text-decoration: underline;">Set a password</a>
+    </p>`
+      : "";
 
   const html = baseLayout(`
-    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Claim your account</h2>
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Your booking is ready</h2>
     <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
       Hi ${patientName}, thanks for booking with MyDoctors360
       ${bookingNumber ? ` (ref <strong>${bookingNumber}</strong>)` : ""}.
-      We created a secure account for you so you can manage appointments, join video visits, and message your doctor.
+      We created a secure account so you can manage appointments, join video visits, and message your doctor.
     </p>
     <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
-      Click below to set a password. This link is personal and expires after a short time.
+      ${intro}
     </p>
-    ${button("Set my password", claimUrl)}
+    ${button(primaryCta, claimUrl)}
+    ${secondary}
     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       If you did not book an appointment, you can ignore this email.
     </p>

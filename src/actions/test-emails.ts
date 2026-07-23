@@ -220,8 +220,10 @@ const SAMPLE_DATA = {
   guestAccountClaim: () =>
     templates.guestAccountClaimEmail({
       patientName: "John",
-      claimUrl: `${APP_URL}/en/callback?next=/en/reset-password`,
+      claimUrl: `${APP_URL}/en/callback?next=/en/dashboard/bookings`,
+      setPasswordUrl: `${APP_URL}/en/callback?next=/en/reset-password`,
       bookingNumber: "BK-TEST-001",
+      magicSession: true,
     }),
 };
 

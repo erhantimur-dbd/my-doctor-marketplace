@@ -44,4 +44,18 @@ describe("patient booking Stripe Checkout shape (source contract)", () => {
     });
     expect(lookup.mode).toBe("stripe_session");
   });
+
+  it("webhook guest claim uses sendGuestAccountClaimEmail (magic path)", () => {
+    const webhook = readFileSync(
+      join(process.cwd(), "src/app/api/webhooks/stripe/route.ts"),
+      "utf8"
+    );
+    expect(webhook).toContain("sendGuestAccountClaimEmail");
+    const claim = readFileSync(
+      join(process.cwd(), "src/lib/auth/guest-claim.ts"),
+      "utf8"
+    );
+    expect(claim).toContain('selectGuestClaimLinkType("magiclink")');
+    expect(claim).toContain("magiclink");
+  });
 });

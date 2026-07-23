@@ -28,6 +28,7 @@ import {
   ScrollText,
   Building2,
   Wallet,
+  ThumbsUp,
 } from "lucide-react";
 
 export interface SidebarLink {
@@ -233,6 +234,8 @@ export const adminSidebarLinks: SidebarLink[] = [
   { href: "/admin/patients", icon: Users, label: "Patients" },
   { href: "/admin/bookings", icon: Calendar, label: "Bookings" },
   { href: "/admin/reviews", icon: Star, label: "Reviews" },
+  { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/admin/nps", icon: ThumbsUp, label: "NPS" },
   { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
   { href: "/admin/organizations", icon: Building2, label: "Organizations" },
   { href: "/admin/licenses", icon: Crown, label: "Licenses" },

@@ -379,9 +379,10 @@ export default async function BookingConfirmationPage({
                     </Link>
                   </Button>
                   <p className="text-center text-xs text-muted-foreground">
-                    We also emailed you a secure claim link — open it to set
-                    your password and manage this booking. Prefer not to wait?
-                    Use the button above with the same email you booked with.
+                    We emailed a one-click sign-in link — open it to access your
+                    bookings without a password. You can set a password later
+                    from that email. Prefer not to wait? Use the button above
+                    with the same email you booked with.
                   </p>
                 </>
               ) : (

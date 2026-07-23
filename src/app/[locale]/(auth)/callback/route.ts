@@ -143,21 +143,37 @@ export async function GET(
     }
   }
 
-  // Handle email verification with token_hash (non-PKCE / magic link flow)
+  // Handle email verification with token_hash (magic link / recovery / invite)
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash,
-      type: type as "signup" | "email" | "recovery" | "invite",
+      type: type as
+        | "signup"
+        | "email"
+        | "recovery"
+        | "invite"
+        | "magiclink",
     });
     if (!error) {
-      if (type === "signup" || type === "email") {
-        // Resume booking (or other) destination when present; otherwise success page
+      // One-click guest claim / magic session — signed in without password
+      if (type === "magiclink" || type === "email") {
+        if (next && next !== `/${locale}`) {
+          return createRedirectWithCookies(next);
+        }
+        // Default: patient bookings (guest claim) or email-verified for generic
+        return createRedirectWithCookies(`/${locale}/dashboard/bookings`);
+      }
+      if (type === "signup") {
         if (next && next !== `/${locale}`) {
           return createRedirectWithCookies(next);
         }
         return createRedirectWithCookies(`/${locale}/email-verified`);
       }
       if (type === "recovery") {
+        // Prefer explicit next (e.g. reset-password); otherwise force set-password
+        if (next && next.includes("reset-password")) {
+          return createRedirectWithCookies(next);
+        }
         return createRedirectWithCookies(`/${locale}/reset-password`);
       }
       return createRedirectWithCookies(next);

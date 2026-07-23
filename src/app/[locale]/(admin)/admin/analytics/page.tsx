@@ -8,8 +8,15 @@ import {
   Calendar,
   DollarSign,
   BarChart3,
+  ThumbsUp,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { Link } from "@/i18n/navigation";
+import {
+  aggregateNpsMetrics,
+  sortRecentSurveyResponses,
+} from "@/lib/analytics/nps";
+import { Button } from "@/components/ui/button";
 
 export default async function AdminAnalyticsPage() {
   const supabase = await createClient();
@@ -83,11 +90,29 @@ export default async function AdminAnalyticsPage() {
 
   const totalTypeBookings = (videoBookings || 0) + (inPersonBookings || 0);
 
+  // NPS / satisfaction surveys (submitted only)
+  const { data: surveyRows } = await supabase
+    .from("satisfaction_surveys")
+    .select(
+      "id, nps_score, would_recommend, feedback_text, submitted_at, token"
+    )
+    .not("submitted_at", "is", null)
+    .order("submitted_at", { ascending: false })
+    .limit(100);
+
+  const nps = aggregateNpsMetrics(surveyRows || []);
+  const recentSurveys = sortRecentSurveyResponses(surveyRows || [], 8);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <BarChart3 className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">Platform Analytics</h1>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">Platform Analytics</h1>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/admin/nps">NPS deep dive</Link>
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -245,6 +270,107 @@ export default async function AdminAnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* NPS breakdown + recent responses */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <ThumbsUp className="h-5 w-5 text-primary" />
+            Patient NPS
+          </CardTitle>
+          <Button variant="link" size="sm" className="px-0" asChild>
+            <Link href="/admin/nps">View all responses</Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">NPS score</p>
+              <p
+                className={`text-3xl font-bold ${
+                  nps.npsScore == null
+                    ? ""
+                    : nps.npsScore >= 50
+                      ? "text-green-600"
+                      : nps.npsScore >= 0
+                        ? "text-amber-600"
+                        : "text-red-600"
+                }`}
+              >
+                {nps.npsScore ?? "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {nps.responseCount} responses
+              </p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">Promoters (9–10)</p>
+              <p className="text-2xl font-bold text-green-600">
+                {nps.promoters}
+              </p>
+              <p className="text-xs text-muted-foreground">{nps.promoterRate}%</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">Passives (7–8)</p>
+              <p className="text-2xl font-bold text-amber-600">{nps.passives}</p>
+              <p className="text-xs text-muted-foreground">{nps.passiveRate}%</p>
+            </div>
+            <div className="rounded-lg border p-4">
+              <p className="text-xs text-muted-foreground">Detractors (0–6)</p>
+              <p className="text-2xl font-bold text-red-600">{nps.detractors}</p>
+              <p className="text-xs text-muted-foreground">{nps.detractorRate}%</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="mb-2 text-sm font-semibold">Recent feedback</h3>
+            {recentSurveys.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No submitted surveys yet.
+              </p>
+            ) : (
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 text-left">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">Score</th>
+                      <th className="px-3 py-2 font-medium">Recommend</th>
+                      <th className="px-3 py-2 font-medium">Feedback</th>
+                      <th className="px-3 py-2 font-medium">Submitted</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentSurveys.map((row) => (
+                      <tr key={row.id || row.token || row.submitted_at} className="border-t">
+                        <td className="px-3 py-2 font-semibold">
+                          {row.nps_score}
+                        </td>
+                        <td className="px-3 py-2">
+                          {row.would_recommend === true
+                            ? "Yes"
+                            : row.would_recommend === false
+                              ? "No"
+                              : "—"}
+                        </td>
+                        <td className="max-w-xs truncate px-3 py-2 text-muted-foreground">
+                          {row.feedback_text || "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
+                          {row.submitted_at
+                            ? new Date(row.submitted_at).toLocaleDateString(
+                                "en-GB"
+                              )
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
