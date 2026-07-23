@@ -36,18 +36,18 @@ function getRecommendationReason(
   answers: Answers
 ): string {
   if (tierId === "professional") {
-    return "Professional gives you advanced analytics, patient CRM, care plans, and priority support — maximising your visibility and patient engagement.";
+    return "Professional includes everything in Starter plus advanced analytics, patient CRM, care plans, waitlist auto-notify, SMS & WhatsApp reminders, and priority support.";
   }
   if (tierId === "starter") {
     if (answers.needsVideo === "yes" && answers.patientsPerWeek === "over_30") {
-      return "With high patient volume and video consultations, Starter gives you unlimited bookings, telemedicine tools, and SMS/WhatsApp reminders to manage your growing practice.";
+      return "With high patient volume and video demand, Starter unlocks unlimited online bookings, video consultations, email reminders, and AI review insights — upgrade to Professional later for SMS/WhatsApp and analytics.";
     }
     if (answers.needsVideo === "yes") {
-      return "Video consultations are included in Starter, along with unlimited bookings and automated reminders to grow your practice.";
+      return "Video consultations and online bookings are on Starter, with email reminders and AI review summaries. SMS & WhatsApp come with Professional.";
     }
-    return "With your high patient volume, Starter gives you unlimited bookings, video consultations, and SMS/WhatsApp reminders to keep things running smoothly.";
+    return "With your high patient volume, Starter gives unlimited online bookings, video, email reminders, and AI insights. SMS/WhatsApp and analytics unlock on Professional.";
   }
-  return "Free is perfect for getting started — you'll have a public doctor profile listing to build your presence on the platform.";
+  return "Founding Free is ideal to start — public listing after verification and a full dashboard, with no online bookings or AI until you upgrade to Starter.";
 }
 
 interface OptionCardProps {

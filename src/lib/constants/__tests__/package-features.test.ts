@@ -58,6 +58,59 @@ describe("hasFeature matrix (enforcement)", () => {
   });
 });
 
+describe("public packaging copy does not contradict matrix", () => {
+  it("package-recommender does not put WhatsApp on Starter", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const src = readFileSync(
+      join(process.cwd(), "src/app/[locale]/(public)/contact/package-recommender.tsx"),
+      "utf8"
+    );
+    // Extract starter-reason strings only (between starter branch returns)
+    const starterBlock = src.slice(
+      src.indexOf('if (tierId === "starter")'),
+      src.indexOf('return "Founding Free')
+    );
+    // Must not claim SMS/WhatsApp as included benefits for Starter
+    expect(starterBlock).not.toMatch(
+      /Starter gives you[^\n]*SMS\/WhatsApp|unlimited bookings[^\n]*SMS\/WhatsApp reminders to (manage|keep)/i
+    );
+    // If WhatsApp is mentioned, it must be as a later-tier unlock
+    if (/whatsapp/i.test(starterBlock)) {
+      expect(starterBlock).toMatch(/Professional|later for SMS|come with Professional/i);
+    }
+  });
+
+  it("EN FAQ doctor-subscription matches package matrix (no Starter WhatsApp, no Clinic branding)", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const en = JSON.parse(
+      readFileSync(join(process.cwd(), "messages/en.json"), "utf8")
+    ) as {
+      helpArticles: { "doctor-subscription": { answer: string } };
+    };
+    const answer = en.helpArticles["doctor-subscription"].answer;
+    // Starter section must not claim SMS & WhatsApp as included
+    const starterSection = answer.match(
+      /<strong>Starter[\s\S]*?(?=<strong>Professional|$)/i
+    )?.[0];
+    expect(starterSection).toBeTruthy();
+    expect(starterSection!).toMatch(/email reminders/i);
+    expect(starterSection!).toMatch(/SMS &amp; WhatsApp/i);
+    expect(starterSection!).toMatch(/not included/i);
+    // Must not say Starter "includes" SMS & WhatsApp without negation nearby
+    expect(starterSection!).not.toMatch(
+      /and SMS &amp; WhatsApp reminders\./i
+    );
+    // Clinic must not claim custom branding as included
+    const clinicSection = answer.match(
+      /<strong>Clinic[\s\S]*?(?=<strong>Enterprise|$)/i
+    )?.[0];
+    expect(clinicSection).toBeTruthy();
+    expect(clinicSection!.toLowerCase()).toMatch(/custom branding[\s\S]{0,40}enterprise|enterprise[\s\S]{0,20}custom branding/);
+  });
+});
+
 describe("package marketing lists", () => {
   it("every sellable tier has marketing include/exclude lists", () => {
     for (const tier of TIERS) {

@@ -641,7 +641,7 @@ export function doctorReferralInvitationEmail({
     {
       icon: "&#x1F514;",
       title: "Smart Reminders",
-      desc: "Reduce no-shows with automated email, SMS &amp; WhatsApp alerts",
+      desc: "Email reminders on Starter; SMS &amp; WhatsApp on Professional+",
     },
     {
       icon: "&#x1F4B3;",
