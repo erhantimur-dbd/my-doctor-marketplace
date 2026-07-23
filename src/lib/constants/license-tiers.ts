@@ -285,6 +285,67 @@ export function getCheckoutTiers(): LicenseTierConfig[] {
 }
 
 /**
+ * Env-backed Stripe Price ID for a licence tier (preferred for production).
+ * Returns null when unset so callers can fall back to create-on-the-fly.
+ */
+export function getEnvLicensePriceId(tier: string): string | null {
+  const map: Record<string, string | undefined> = {
+    starter: process.env.STRIPE_PRICE_STARTER,
+    professional: process.env.STRIPE_PRICE_PROFESSIONAL,
+    clinic: process.env.STRIPE_PRICE_CLINIC,
+  };
+  const id = map[tier]?.trim();
+  if (id && id.startsWith("price_")) return id;
+  return null;
+}
+
+/**
+ * Resolve Stripe Price ID for doctor licence checkout.
+ * Prefers STRIPE_PRICE_* env vars; otherwise creates/reuses a monthly price.
+ */
+const _cachedLicensePriceIds: Record<string, string> = {};
+
+export async function getOrCreateLicensePriceId(
+  tier: string,
+  tierConfig: LicenseTierConfig
+): Promise<string> {
+  const envId = getEnvLicensePriceId(tier);
+  if (envId) return envId;
+
+  if (_cachedLicensePriceIds[tier]) return _cachedLicensePriceIds[tier];
+
+  const { getStripe } = await import("@/lib/stripe/client");
+  const stripe = getStripe();
+
+  try {
+    const existing = await stripe.prices.search({
+      query: `metadata["license_tier"]:"${tier}" active:"true"`,
+      limit: 1,
+    });
+    if (existing.data[0]?.id) {
+      _cachedLicensePriceIds[tier] = existing.data[0].id;
+      return existing.data[0].id;
+    }
+  } catch {
+    /* search may be unavailable — fall through to create */
+  }
+
+  const price = await stripe.prices.create({
+    currency: "gbp",
+    unit_amount: tierConfig.priceMonthlyPence,
+    recurring: { interval: "month" },
+    product_data: {
+      name: `MyDoctors360 ${tierConfig.name} License`,
+      metadata: { tier, license_tier: tier },
+    },
+    metadata: { tier, license_tier: tier },
+  });
+
+  _cachedLicensePriceIds[tier] = price.id;
+  return price.id;
+}
+
+/**
  * Get or create a reusable Stripe price for extra seats.
  *
  * Uses STRIPE_PRICE_EXTRA_SEAT env var if set (recommended for production).

@@ -420,12 +420,68 @@ async function createDoctorAccount(formData: FormData): Promise<
     if (location) locationId = location.id;
   }
 
+  // Professional / pricing fields from wizard (were previously UI-only)
+  const titleRaw = ((formData.get("title") as string) || "Dr.").trim();
+  const title = titleRaw.slice(0, 32) || "Dr.";
+  const yearsRaw = (formData.get("years_of_experience") as string) || "";
+  const yearsOfExperience = yearsRaw
+    ? Math.min(80, Math.max(0, parseInt(yearsRaw, 10) || 0))
+    : null;
+  let consultationTypes: string[] = ["in_person"];
+  try {
+    const raw = formData.get("consultation_types") as string | null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        consultationTypes = parsed.filter(
+          (t): t is string => t === "in_person" || t === "video"
+        );
+        if (consultationTypes.length === 0) consultationTypes = ["in_person"];
+      }
+    }
+  } catch {
+    /* keep default */
+  }
+  let languages: string[] = ["en"];
+  try {
+    const raw = formData.get("languages") as string | null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        languages = parsed.filter((l): l is string => typeof l === "string");
+      }
+    }
+  } catch {
+    /* keep default */
+  }
+  const feeMajor = parseFloat(String(formData.get("consultation_fee") || "0"));
+  const videoFeeMajor = parseFloat(String(formData.get("video_fee") || "0"));
+  const consultationFeeCents =
+    Number.isFinite(feeMajor) && feeMajor > 0
+      ? Math.round(feeMajor * 100)
+      : 0;
+  const videoFeeCents =
+    Number.isFinite(videoFeeMajor) && videoFeeMajor > 0
+      ? Math.round(videoFeeMajor * 100)
+      : null;
+  const baseCurrency = (
+    ((formData.get("currency") as string) || "GBP").trim() || "GBP"
+  ).toUpperCase();
+
   const { error: doctorError, data: newDoctor } = await adminSupabase
     .from("doctors")
     .insert({
       profile_id: data.user.id,
       slug,
-      consultation_fee_cents: 0,
+      title,
+      consultation_fee_cents: consultationFeeCents,
+      video_consultation_fee_cents: videoFeeCents,
+      base_currency: baseCurrency,
+      consultation_types: consultationTypes,
+      languages,
+      ...(yearsOfExperience != null && yearsOfExperience > 0
+        ? { years_of_experience: yearsOfExperience }
+        : {}),
       referral_code: newReferralCode,
       has_testing_addon: hasTestingAddon,
       in_person_deposit_type: (() => {
@@ -546,10 +602,14 @@ async function createDoctorAccount(formData: FormData): Promise<
     }
   }
 
-  // Process referral code if provided (link this doctor as a referred signup)
-  if (referralCode && newDoctor) {
+  // Process referral code / prior invite (link this doctor as a referred signup)
+  if (newDoctor) {
     const { processReferralSignup } = await import("@/actions/referral");
-    await processReferralSignup(newDoctor.id, email);
+    await processReferralSignup(
+      newDoctor.id,
+      email,
+      referralCode || undefined
+    );
   }
 
   // Send colleague invitation if provided
@@ -635,6 +695,16 @@ export async function registerDoctor(formData: FormData) {
     });
   }
 
+  // Welcome email (non-blocking) — patient path already has this
+  try {
+    const firstName = (formData.get("first_name") as string) || "there";
+    const { subject, html } = welcomeEmail({ name: firstName });
+    const { sendEmail } = await import("@/lib/email/client");
+    sendEmail({ to: result.email, subject, html }).catch(() => {});
+  } catch {
+    /* ignore */
+  }
+
   revalidatePath("/", "layout");
   redirect(`/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}`);
 }
@@ -664,7 +734,10 @@ export async function registerDoctorWithCheckout(formData: FormData) {
   // Create Stripe customer for the org
   const customer = await stripe.customers.create({
     email: result.email,
-    metadata: { organization_id: result.orgId },
+    metadata: {
+      organization_id: result.orgId,
+      doctor_id: result.doctorId,
+    },
   });
 
   // Store Stripe customer ID on org
@@ -674,32 +747,154 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     .update({ stripe_customer_id: customer.id })
     .eq("id", result.orgId);
 
-  // Create price on-the-fly in GBP
-  const price = await stripe.prices.create({
-    currency: "gbp",
-    unit_amount: tierConfig.priceMonthlyPence,
-    recurring: { interval: "month" },
-    product_data: {
-      name: `MyDoctors360 ${tierConfig.name} License`,
-      metadata: { tier },
-    },
-  });
+  const {
+    getOrCreateLicensePriceId,
+  } = await import("@/lib/constants/license-tiers");
+  const priceId = await getOrCreateLicensePriceId(tier, tierConfig);
 
-  const quantity = tierConfig.perUser ? Math.min(seatCount, tierConfig.maxSeats) : 1;
+  const quantity = tierConfig.perUser
+    ? Math.min(Math.max(seatCount, 1), tierConfig.maxSeats)
+    : 1;
+  const maxSeats = tierConfig.perUser
+    ? quantity
+    : tierConfig.includedSeats || 1;
+
+  // Welcome email (non-blocking) before Checkout
+  try {
+    const firstName = (formData.get("first_name") as string) || "there";
+    const { subject, html } = welcomeEmail({ name: firstName });
+    const { sendEmail } = await import("@/lib/email/client");
+    sendEmail({ to: result.email, subject, html }).catch(() => {});
+  } catch {
+    /* ignore */
+  }
 
   const session = await stripe.checkout.sessions.create({
     customer: customer.id,
     mode: "subscription",
-    line_items: [{ price: price.id, quantity }],
+    line_items: [{ price: priceId, quantity }],
     subscription_data: {
       metadata: {
         organization_id: result.orgId,
+        doctor_id: result.doctorId,
         tier,
         type: "license",
+        seat_count: String(quantity),
+        max_seats: String(maxSeats),
       },
     },
+    metadata: {
+      organization_id: result.orgId,
+      doctor_id: result.doctorId,
+      tier,
+      type: "license",
+    },
     success_url: `${origin}/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}&checkout=success`,
-    cancel_url: `${origin}/${result.locale}/register-doctor?tier=${tier}&checkout=cancelled`,
+    cancel_url: `${origin}/${result.locale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
+  });
+
+  return { checkoutUrl: session.url };
+}
+
+/**
+ * Resume licence Checkout for a doctor who abandoned paid signup
+ * (account exists, org has customer, no active paid license).
+ */
+export async function resumeDoctorLicenseCheckout(
+  tier: string = "starter",
+  seatCount: number = 1
+): Promise<{ checkoutUrl?: string | null; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const adminSupabase = createAdminClient();
+  const { data: doctor } = await adminSupabase
+    .from("doctors")
+    .select("id, organization_id")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+
+  if (!doctor?.organization_id) {
+    return { error: "No practice organization found. Please complete registration." };
+  }
+
+  const { getLicenseTier, getOrCreateLicensePriceId } = await import(
+    "@/lib/constants/license-tiers"
+  );
+  const tierConfig = getLicenseTier(tier);
+  if (!tierConfig || tierConfig.isFreeTier || tierConfig.isCustomPricing) {
+    return { error: "Invalid plan for checkout." };
+  }
+
+  // Already licensed on a paid plan?
+  const { data: existing } = await adminSupabase
+    .from("licenses")
+    .select("id, tier, status")
+    .eq("organization_id", doctor.organization_id)
+    .in("status", ["active", "trialing", "past_due"])
+    .neq("tier", "free")
+    .maybeSingle();
+  if (existing) {
+    return { error: "You already have an active paid licence." };
+  }
+
+  const { data: org } = await adminSupabase
+    .from("organizations")
+    .select("stripe_customer_id, email")
+    .eq("id", doctor.organization_id)
+    .single();
+
+  const stripe = getStripe();
+  const origin = await getOrigin();
+  let customerId = org?.stripe_customer_id as string | null;
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: (org?.email as string) || user.email || undefined,
+      metadata: {
+        organization_id: doctor.organization_id,
+        doctor_id: doctor.id,
+      },
+    });
+    customerId = customer.id;
+    await adminSupabase
+      .from("organizations")
+      .update({ stripe_customer_id: customerId })
+      .eq("id", doctor.organization_id);
+  }
+
+  const priceId = await getOrCreateLicensePriceId(tier, tierConfig);
+  const quantity = tierConfig.perUser
+    ? Math.min(Math.max(seatCount, 1), tierConfig.maxSeats)
+    : 1;
+  const maxSeats = tierConfig.perUser
+    ? quantity
+    : tierConfig.includedSeats || 1;
+
+  const session = await stripe.checkout.sessions.create({
+    customer: customerId,
+    mode: "subscription",
+    line_items: [{ price: priceId, quantity }],
+    subscription_data: {
+      metadata: {
+        organization_id: doctor.organization_id,
+        doctor_id: doctor.id,
+        tier,
+        type: "license",
+        seat_count: String(quantity),
+        max_seats: String(maxSeats),
+      },
+    },
+    metadata: {
+      organization_id: doctor.organization_id,
+      doctor_id: doctor.id,
+      tier,
+      type: "license",
+    },
+    success_url: `${origin}/en/doctor-dashboard/organization/billing?checkout=success`,
+    cancel_url: `${origin}/en/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
   });
 
   return { checkoutUrl: session.url };

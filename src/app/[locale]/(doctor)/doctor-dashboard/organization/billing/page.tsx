@@ -45,6 +45,7 @@ import {
   previewSeatCost,
   toggleModule,
 } from "@/actions/license";
+import { resumeDoctorLicenseCheckout } from "@/actions/auth";
 
 export default function BillingPage() {
   const searchParams = useSearchParams();
@@ -59,12 +60,23 @@ export default function BillingPage() {
   const [seatPreview, setSeatPreview] = useState<any>(null);
   const [seatPreviewOpen, setSeatPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [showResumeCheckout, setShowResumeCheckout] = useState(false);
+  const resumeTier = searchParams.get("tier") || "starter";
 
   useEffect(() => {
     loadData();
-    if (searchParams.get("success") === "true") {
+    if (
+      searchParams.get("success") === "true" ||
+      searchParams.get("checkout") === "success"
+    ) {
       setSuccessMsg("Subscription activated! Thank you.");
       setTimeout(() => setSuccessMsg(""), 5000);
+    }
+    if (searchParams.get("checkout") === "cancelled") {
+      setShowResumeCheckout(true);
+      setErrorMsg(
+        "Checkout was cancelled. You can resume your paid plan below when ready."
+      );
     }
   }, [searchParams]);
 
@@ -82,12 +94,30 @@ export default function BillingPage() {
     if (couponCode.trim()) formData.set("coupon_code", couponCode);
 
     startTransition(async () => {
+      // Prefer resume path for abandoned signup accounts, else org checkout
+      const resume = await resumeDoctorLicenseCheckout(tier, 1);
+      if (resume.checkoutUrl) {
+        window.location.href = resume.checkoutUrl;
+        return;
+      }
       const result = await createLicenseCheckout(formData);
       if (result.error) {
-        setErrorMsg(result.error);
+        setErrorMsg(result.error || resume.error || "Checkout failed");
         setTimeout(() => setErrorMsg(""), 4000);
       } else if (result.url) {
         window.location.href = result.url;
+      }
+    });
+  }
+
+  async function handleResumeCheckout() {
+    startTransition(async () => {
+      const result = await resumeDoctorLicenseCheckout(resumeTier, 1);
+      if (result.error) {
+        setErrorMsg(result.error);
+        setTimeout(() => setErrorMsg(""), 5000);
+      } else if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
       }
     });
   }
@@ -165,6 +195,10 @@ export default function BillingPage() {
   }
 
   const currentTier = license?.tier || null;
+  const needsPaidPlan =
+    !license ||
+    license.tier === "free" ||
+    !["active", "trialing", "past_due"].includes(license.status);
 
   return (
     <div className="space-y-6">
@@ -185,6 +219,34 @@ export default function BillingPage() {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMsg}
         </div>
+      )}
+
+      {(showResumeCheckout || needsPaidPlan) && (
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-amber-900">
+                Complete your paid plan
+              </p>
+              <p className="text-sm text-amber-800/80">
+                Online bookings require a Starter or higher licence. Resume
+                Checkout if you cancelled during sign-up.
+              </p>
+            </div>
+            <Button
+              onClick={handleResumeCheckout}
+              disabled={isPending}
+              className="shrink-0"
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CreditCard className="mr-2 h-4 w-4" />
+              )}
+              Resume {resumeTier} checkout
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Current License Status */}

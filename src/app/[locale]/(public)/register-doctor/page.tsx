@@ -342,11 +342,21 @@ export default function RegisterDoctorPage() {
     formData.set("password", password);
     formData.set("locale", locale);
 
-    // Professional data
+    // Professional data (must match createDoctorAccount fields)
+    formData.set("title", title);
     formData.set("gmc_number", gmcNumber);
+    if (yearsOfExperience) {
+      formData.set("years_of_experience", yearsOfExperience);
+    }
     formData.set("selected_specialties", JSON.stringify(selectedSpecialties));
     if (selectedSkills.length > 0) {
       formData.set("selected_skills", JSON.stringify(selectedSkills));
+    }
+    if (consultationTypes.length > 0) {
+      formData.set("consultation_types", JSON.stringify(consultationTypes));
+    }
+    if (selectedLanguages.length > 0) {
+      formData.set("languages", JSON.stringify(selectedLanguages));
     }
 
     // Referral data
@@ -384,6 +394,11 @@ export default function RegisterDoctorPage() {
       if (indemnityExpiry) formData.set("indemnity_expiry", indemnityExpiry);
       if (dbsCheckDate) formData.set("dbs_check_date", dbsCheckDate);
     }
+
+    // Fees / currency (step 4) — previously collected but not submitted
+    formData.set("consultation_fee", String(consultationFee));
+    formData.set("video_fee", String(videoFee));
+    formData.set("currency", currency);
 
     // Add-on
     formData.set("has_testing_addon", hasTestingAddon ? "true" : "false");

@@ -678,13 +678,39 @@ export async function POST(request: NextRequest) {
             licenseStatus = subscription.status;
         }
 
+        const tier = subscription.metadata?.tier || "starter";
+        const seatFromMeta = parseInt(
+          subscription.metadata?.seat_count ||
+            subscription.metadata?.max_seats ||
+            "0",
+          10
+        );
+        const quantity =
+          subscription.items?.data?.[0]?.quantity &&
+          subscription.items.data[0].quantity > 0
+            ? subscription.items.data[0].quantity
+            : seatFromMeta > 0
+              ? seatFromMeta
+              : 1;
+        // Clinic-style plans: included seats from metadata max_seats when set
+        const maxSeatsMeta = parseInt(
+          subscription.metadata?.max_seats || String(quantity),
+          10
+        );
+        const maxSeats =
+          Number.isFinite(maxSeatsMeta) && maxSeatsMeta > 0
+            ? maxSeatsMeta
+            : quantity;
+
         await supabase.from("licenses").upsert(
           {
             organization_id: orgId,
-            tier: subscription.metadata?.tier || "starter",
+            tier,
             status: licenseStatus,
             stripe_subscription_id: subscription.id,
             stripe_customer_id: subscription.customer as string,
+            max_seats: maxSeats,
+            used_seats: Math.min(quantity, maxSeats),
             current_period_start: periodStart
               ? new Date(periodStart * 1000).toISOString()
               : new Date().toISOString(),
@@ -701,6 +727,30 @@ export async function POST(request: NextRequest) {
           },
           { onConflict: "stripe_subscription_id" }
         );
+
+        // Referral rewards when paid licence becomes active
+        if (licenseStatus === "active" || licenseStatus === "trialing") {
+          try {
+            const { processReferralReward } = await import(
+              "@/actions/referral"
+            );
+            let rewardDoctorId = subscription.metadata?.doctor_id;
+            if (!rewardDoctorId) {
+              const { data: orgDoctors } = await supabase
+                .from("doctors")
+                .select("id")
+                .eq("organization_id", orgId)
+                .limit(5);
+              for (const d of orgDoctors || []) {
+                await processReferralReward(d.id);
+              }
+            } else {
+              await processReferralReward(rewardDoctorId);
+            }
+          } catch (err) {
+            console.error("Referral reward error (non-fatal):", err);
+          }
+        }
       }
       break;
     }

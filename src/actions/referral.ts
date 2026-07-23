@@ -187,29 +187,60 @@ export async function sendReferralInvitationAtRegistration(
 
 export async function processReferralSignup(
   referredDoctorId: string,
-  referredEmail: string
+  referredEmail: string,
+  /** Cold link ?ref=CODE — attributes signup when no prior invite row exists */
+  referralCode?: string
 ) {
   const adminSupabase = createAdminClient();
+  const email = referredEmail.toLowerCase().trim();
 
-  // Find pending referral for this email
-  const { data: referral } = await adminSupabase
+  // 1) Prior invite email match
+  let { data: referral } = await adminSupabase
     .from("doctor_referrals")
     .select("id, referrer_doctor_id")
-    .eq("referred_email", referredEmail.toLowerCase().trim())
+    .eq("referred_email", email)
     .eq("status", "invited")
     .maybeSingle();
 
+  // 2) Cold ?ref= referral code → find referrer and upsert referral row
+  if (!referral && referralCode) {
+    const code = referralCode.trim().toUpperCase();
+    const { data: referrer } = await adminSupabase
+      .from("doctors")
+      .select("id")
+      .eq("referral_code", code)
+      .maybeSingle();
+
+    if (referrer && referrer.id !== referredDoctorId) {
+      const { data: created } = await adminSupabase
+        .from("doctor_referrals")
+        .insert({
+          referrer_doctor_id: referrer.id,
+          referred_email: email,
+          referred_doctor_id: referredDoctorId,
+          status: "signed_up",
+          signed_up_at: new Date().toISOString(),
+          invitation_sent_at: null,
+        })
+        .select("id, referrer_doctor_id")
+        .single();
+      referral = created;
+    }
+  }
+
   if (!referral) return; // No referral found — not an error
 
-  // Update referral with the new doctor's ID
-  await adminSupabase
-    .from("doctor_referrals")
-    .update({
-      referred_doctor_id: referredDoctorId,
-      status: "signed_up",
-      signed_up_at: new Date().toISOString(),
-    })
-    .eq("id", referral.id);
+  // Update invite row with the new doctor's ID (email path)
+  if (referral) {
+    await adminSupabase
+      .from("doctor_referrals")
+      .update({
+        referred_doctor_id: referredDoctorId,
+        status: "signed_up",
+        signed_up_at: new Date().toISOString(),
+      })
+      .eq("id", referral.id);
+  }
 
   // Notify the referring doctor
   const { data: referrerDoctor } = await adminSupabase

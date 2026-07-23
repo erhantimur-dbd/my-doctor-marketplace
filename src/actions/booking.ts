@@ -242,19 +242,27 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
-    // Check doctor's org has an active license (or legacy subscription)
+    // Check doctor's org has an active paid-capable license.
+    // Free tier is listing-only (marketing) — no online bookings.
     let hasActiveLicense = false;
 
-    // New: check organization license
     if (doctor.organization_id) {
       const { data: orgLicense } = await adminSupabase
         .from("licenses")
-        .select("id")
+        .select("id, tier, status")
         .eq("organization_id", doctor.organization_id)
         .in("status", ["active", "trialing", "past_due"])
         .limit(1)
         .maybeSingle();
-      hasActiveLicense = !!orgLicense;
+      if (orgLicense) {
+        if (orgLicense.tier === "free") {
+          return {
+            error:
+              "This doctor is on a free listing plan and does not accept online bookings yet.",
+          };
+        }
+        hasActiveLicense = true;
+      }
     }
 
     if (!hasActiveLicense) {

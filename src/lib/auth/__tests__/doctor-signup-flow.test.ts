@@ -38,8 +38,8 @@ describe("doctor signup flow contracts", () => {
     // Paid path creates Stripe Checkout subscription
     expect(auth).toMatch(/mode:\s*"subscription"/);
     expect(auth).toMatch(/checkoutUrl/);
-    // Paid signup creates ephemeral prices (not only env price IDs)
-    expect(auth).toMatch(/prices\.create/);
+    // Licence checkout prefers env price IDs (getOrCreateLicensePriceId)
+    expect(auth).toMatch(/getOrCreateLicensePriceId/);
   });
 
   it("register-doctor page wires free vs checkout branches and referral URL", () => {
