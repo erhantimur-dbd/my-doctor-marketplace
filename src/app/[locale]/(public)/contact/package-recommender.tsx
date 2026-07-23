@@ -36,18 +36,18 @@ function getRecommendationReason(
   answers: Answers
 ): string {
   if (tierId === "professional") {
-    return "Professional includes everything in Starter plus advanced analytics, patient CRM, care plans, waitlist auto-notify, SMS & WhatsApp reminders, and priority support.";
+    return "Professional is Starter plus 1–4 seats, SMS & WhatsApp, advanced analytics, patient CRM, care plans, waitlist auto-notify, and priority support. Multi-location and included medical testing are on Clinic.";
   }
   if (tierId === "starter") {
     if (answers.needsVideo === "yes" && answers.patientsPerWeek === "over_30") {
-      return "With high patient volume and video demand, Starter unlocks unlimited online bookings, video consultations, email reminders, and AI review insights — upgrade to Professional later for SMS/WhatsApp and analytics.";
+      return "With high patient volume and video demand, Starter unlocks online bookings, video, email reminders, messaging and AI insights — upgrade to Professional for SMS/WhatsApp, analytics and waitlist.";
     }
     if (answers.needsVideo === "yes") {
-      return "Video consultations and online bookings are on Starter, with email reminders and AI review summaries. SMS & WhatsApp come with Professional.";
+      return "Video and online bookings are on Starter (£199/mo), with email reminders, messaging and AI review summaries. SMS, WhatsApp, CRM and analytics come with Professional.";
     }
-    return "With your high patient volume, Starter gives unlimited online bookings, video, email reminders, and AI insights. SMS/WhatsApp and analytics unlock on Professional.";
+    return "With your patient volume, Starter is the right step for paid bookings, video, email and AI. SMS/WhatsApp, analytics and waitlist unlock on Professional.";
   }
-  return "Founding Free is ideal to start — public listing after verification and a full dashboard, with no online bookings or AI until you upgrade to Starter.";
+  return "Founding Free is ideal to start — public listing after verification and a dashboard, with no online bookings, video or AI until you upgrade to Starter.";
 }
 
 interface OptionCardProps {

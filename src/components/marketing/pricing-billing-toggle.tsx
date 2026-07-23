@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import {
   LICENSE_TIERS,
+  AVAILABLE_MODULES,
   PLATFORM_BOOKING_FEE_PERCENT,
   formatPriceForLocale,
   formatAnnualEffectiveMonthlyForLocale,
@@ -100,6 +101,20 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
       params.set("billing", period);
     }
     return `/register-doctor?${params.toString()}`;
+  }
+
+  /** Keep feature bullets aligned with monthly vs annual display. */
+  function formatFeatureLine(feature: string): string {
+    const testingMo =
+      AVAILABLE_MODULES.find((m) => m.key === "medical_testing")
+        ?.priceMonthlyPence ?? 4900;
+    if (period === "annual") {
+      const yearly = formatPriceForLocale(annualTotalPence(testingMo), locale);
+      return feature
+        .replace(/\+£49\/mo/gi, `+${yearly}/yr`)
+        .replace(/\+£49\/month/gi, `+${yearly}/yr`);
+    }
+    return feature;
   }
 
   function priceBlock(tier: LicenseTierConfig) {
@@ -315,7 +330,7 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                       className="flex items-start gap-2 text-sm"
                     >
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                      {feature}
+                      {formatFeatureLine(feature)}
                     </li>
                   ))}
                   {(tier.excludedFeatures ?? []).map((feature) => (
@@ -324,7 +339,7 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                       className="flex items-start gap-2 text-sm text-muted-foreground"
                     >
                       <X className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
-                      {feature}
+                      {formatFeatureLine(feature)}
                     </li>
                   ))}
                 </ul>
@@ -367,13 +382,15 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
         Paid plans include a {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
-        on each booking, invoiced monthly. Annual billing charges 10 months
-        upfront (2 months free) for a 12-month term. Founding Free never
-        charges a card — upgrade when you want online bookings and AI insights.
+        on each booking (invoiced monthly). Annual licences are charged as 10×
+        the monthly price once a year (2 months free). Seats: Starter 1 ·
+        Professional 1–4 (per user) · Clinic 5 included (to 15).
       </p>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Platform features (video, analytics, CRM) apply to paid plans. Free is
-        a permanent gateway: list and prepare; take bookings on Starter+.
+        Founding Free is a permanent gateway (list &amp; prepare). Bookings,
+        video and AI start on Starter. SMS/WhatsApp, analytics, CRM and waitlist
+        are Professional+. Multi-location, team tools and included medical
+        testing are Clinic+. Custom branding &amp; API are Enterprise.
       </p>
     </div>
   );

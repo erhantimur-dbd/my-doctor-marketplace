@@ -93,21 +93,24 @@ const platformFeatures = [
   {
     icon: Bell,
     title: "Automated Reminders",
-    description: "Reduce no-shows with automatic email, SMS, and WhatsApp appointment reminders.",
+    description:
+      "Email reminders on Starter; SMS & WhatsApp on Professional+ to cut no-shows.",
     bg: "bg-amber-50 dark:bg-amber-950/30",
     text: "text-amber-600",
   },
   {
     icon: BarChart3,
     title: "Revenue Analytics",
-    description: "Track your earnings, booking trends, and patient demographics in real-time.",
+    description:
+      "Track earnings, bookings and growth — advanced dashboard on Professional+.",
     bg: "bg-cyan-50 dark:bg-cyan-950/30",
     text: "text-cyan-600",
   },
   {
     icon: Users,
     title: "Patient CRM",
-    description: "Manage patient records, visit history, and notes in one place.",
+    description:
+      "Patient records, care plans and history — unlocked on Professional+.",
     bg: "bg-rose-50 dark:bg-rose-950/30",
     text: "text-rose-600",
   },
@@ -346,7 +349,7 @@ export default async function PricingPage() {
                 step: "3",
                 icon: CreditCard,
                 title: "Choose Your Plan",
-                desc: "Select a plan that fits your practice. All paid plans include a 12-month commitment billed monthly.",
+                desc: "Pick Founding Free or a paid plan. Paid licences are a 12-month term — bill monthly or annually (2 months free).",
                 bg: "bg-violet-50 dark:bg-violet-950/30",
                 text: "text-violet-600",
                 ring: "ring-violet-200 dark:ring-violet-800",
@@ -412,12 +415,12 @@ export default async function PricingPage() {
                     {
                       icon: Bell,
                       title: "Auto Reminders",
-                      desc: "Reduce no-shows with email, SMS & WhatsApp",
+                      desc: "Email on Starter; SMS & WhatsApp on Pro+",
                     },
                     {
                       icon: BarChart3,
                       title: "Revenue Analytics",
-                      desc: "Track earnings, bookings & growth metrics",
+                      desc: "Growth metrics on Professional and above",
                     },
                     {
                       icon: Shield,

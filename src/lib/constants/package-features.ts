@@ -2,7 +2,9 @@
  * Doctor package packaging — single source of truth for marketing include/exclude
  * lists aligned with `hasFeature` enforcement in feature-flags.ts.
  *
- * Seat counts and pricing stay on LICENSE_TIERS; capability bullets live here.
+ * Seat counts and list prices live on LICENSE_TIERS; capability bullets live here.
+ * Annual billing (2 months free) is display-only on pricing UI — do not hardcode
+ * annual totals in these strings except via dynamic formatting on the pricing page.
  */
 
 import type { FeatureKey } from "@/lib/utils/feature-flags";
@@ -15,18 +17,16 @@ export type PackageMarketing = {
 
 /**
  * Marketing strings that map to enforced FeatureKeys for consistency tests.
- * If a package lists a string matching `includePattern` as included, hasFeature
- * must be true for that tier (and inverse for excludePattern in excludedFeatures).
+ * If a package lists a string matching `pattern` as included, hasFeature must be
+ * true for that tier (and inverse when the bullet is in excludedFeatures).
  */
 export const MARKETING_CAPABILITY_CHECKS: {
-  /** Match against feature bullet text */
   pattern: RegExp;
   feature: FeatureKey;
-  /** If true, only check when bullet is in features (include); false = excludedFeatures */
   side: "include" | "exclude" | "both";
 }[] = [
   {
-    pattern: /online booking/i,
+    pattern: /online booking|stripe payout/i,
     feature: "online_bookings",
     side: "both",
   },
@@ -81,7 +81,7 @@ export const MARKETING_CAPABILITY_CHECKS: {
     side: "both",
   },
   {
-    pattern: /email reminder/i,
+    pattern: /email (appointment )?reminder/i,
     feature: "email_reminders",
     side: "both",
   },
@@ -90,11 +90,33 @@ export const MARKETING_CAPABILITY_CHECKS: {
     feature: "stripe_connect",
     side: "both",
   },
+  {
+    pattern: /patient messaging/i,
+    feature: "messaging",
+    side: "both",
+  },
+  {
+    pattern: /priority support/i,
+    feature: "priority_support",
+    side: "both",
+  },
+  {
+    pattern: /bulk invoicing/i,
+    feature: "bulk_invoicing",
+    side: "both",
+  },
 ];
 
 /**
  * Explicit marketing include/exclude per package (doctor-facing language).
  * Inheritance is written out so cards read clearly without “see Starter”.
+ *
+ * Ladder (enforced):
+ *   Free → profile/list only
+ *   Starter → bookings, video, email, messaging, AI; testing add-on optional
+ *   Professional → multi-channel reminders, analytics, CRM, waitlist, 1–4 seats
+ *   Clinic → 5–15 seats, multi-location, team, testing included
+ *   Enterprise → branding, API, SLA, dedicated AM
  */
 export const PACKAGE_MARKETING: Record<
   "free" | "starter" | "professional" | "clinic" | "enterprise",
@@ -105,18 +127,16 @@ export const PACKAGE_MARKETING: Record<
       "Public profile after verification",
       "Practice profile, specialties & languages",
       "Doctor dashboard & completion checklist",
-      "Free forever until you upgrade",
+      "Free forever — no card required",
     ],
     excludedFeatures: [
-      "Online bookings & payments",
+      "Online bookings & Stripe payouts",
       "Video consultations",
-      "AI practice insights (review summaries)",
-      "Email reminders",
-      "SMS & WhatsApp reminders",
-      "Analytics dashboard",
-      "Waitlist auto-notify",
-      "Patient CRM & care plans",
-      "Multi-location & team tools",
+      "Patient messaging",
+      "AI review summaries",
+      "Email, SMS & WhatsApp reminders",
+      "Analytics, waitlist & care plans",
+      "Medical testing, multi-location & team tools",
     ],
   },
   starter: {
@@ -131,11 +151,11 @@ export const PACKAGE_MARKETING: Record<
     ],
     excludedFeatures: [
       "SMS & WhatsApp reminders",
-      "Advanced analytics",
+      "Advanced analytics dashboard",
       "Waitlist auto-notify",
       "Patient CRM & care plans",
-      "Multi-location & team tools",
-      "Custom branding",
+      "Multi-location & team management",
+      "Custom branding & API",
     ],
   },
   professional: {
@@ -151,20 +171,19 @@ export const PACKAGE_MARKETING: Record<
     ],
     excludedFeatures: [
       "Multi-location clinic tools",
-      "Team management (5+ seats)",
-      "Medical testing included (use add-on)",
-      "Custom branding",
-      "API access",
+      "Team management (5+ seats — Clinic)",
+      "Medical testing included (optional +£49/mo add-on)",
+      "Custom branding & API (Enterprise)",
     ],
   },
   clinic: {
     features: [
       "Everything in Professional",
-      "5 doctor seats included (up to 15)",
+      "5 doctor seats included (expand to 15)",
       "Multi-location clinic",
       "Team management & multi-doctor scheduling",
-      "Medical testing services included",
-      "Centralized clinic dashboard",
+      "Medical testing included (no add-on fee)",
+      "Centralised clinic dashboard",
       "Team performance analytics",
       "Bulk invoicing",
       "3 hours dedicated onboarding",
@@ -218,14 +237,26 @@ export function validatePackageMarketingConsistency(
     );
     const allowed = hasFeature(check.feature, tier);
 
+    // "Everything in X" inheritance: included bullets may only appear as
+    // inheritance for lower tiers — still require explicit capability bullets
+    // for paid unlocks when they appear without "Everything".
     if (
       (check.side === "include" || check.side === "both") &&
       inFeatures &&
       !allowed
     ) {
-      errors.push(
-        `${tier}: marketing includes "${check.feature}" but hasFeature is false`
+      // Allow inheritance-only lines that don't claim the feature itself
+      const claimingLines = marketing.features.filter((f) =>
+        check.pattern.test(f)
       );
+      const onlyInheritance = claimingLines.every((f) =>
+        /^everything in /i.test(f)
+      );
+      if (!onlyInheritance) {
+        errors.push(
+          `${tier}: marketing includes "${check.feature}" but hasFeature is false`
+        );
+      }
     }
     if (
       (check.side === "exclude" || check.side === "both") &&
@@ -240,11 +271,8 @@ export function validatePackageMarketingConsistency(
 
   // Free must never claim bookings or AI
   if (tier === "free") {
-    if (!hasFeature("online_bookings", "free")) {
-      /* ok */
-    }
     const freeClaimsBook = marketing.features.some((f) =>
-      /online booking/i.test(f)
+      /online booking|stripe payout/i.test(f)
     );
     const freeClaimsAi = marketing.features.some((f) =>
       /\bAI\b|review summar/i.test(f)
@@ -252,7 +280,9 @@ export function validatePackageMarketingConsistency(
     if (freeClaimsBook) errors.push("free: must not include online bookings");
     if (freeClaimsAi) errors.push("free: must not include AI");
     if (
-      !marketing.excludedFeatures.some((f) => /online booking/i.test(f))
+      !marketing.excludedFeatures.some((f) =>
+        /online booking|stripe payout/i.test(f)
+      )
     ) {
       errors.push("free: must list online bookings as excluded");
     }
@@ -260,6 +290,30 @@ export function validatePackageMarketingConsistency(
       !marketing.excludedFeatures.some((f) => /\bAI\b|review summar/i.test(f))
     ) {
       errors.push("free: must list AI as excluded");
+    }
+  }
+
+  // Starter must not claim SMS/WhatsApp as included
+  if (tier === "starter") {
+    const claimsWa = marketing.features.some(
+      (f) => /whatsapp/i.test(f) && !/add-on|not included|optional/i.test(f)
+    );
+    if (claimsWa) {
+      errors.push("starter: must not include WhatsApp as a core feature");
+    }
+  }
+
+  // Clinic must include multi-location and testing included language
+  if (tier === "clinic") {
+    if (!marketing.features.some((f) => /multi-location/i.test(f))) {
+      errors.push("clinic: must list multi-location");
+    }
+    if (
+      !marketing.features.some(
+        (f) => /medical testing/i.test(f) && /included/i.test(f)
+      )
+    ) {
+      errors.push("clinic: must list medical testing as included");
     }
   }
 

@@ -340,8 +340,15 @@ export default function MedicalTestingPage() {
               Medical Testing Add-on Required
             </h2>
             <p className="mb-6 max-w-md text-sm text-muted-foreground">
-              Subscribe to the Medical Testing add-on ({formatPrice(AVAILABLE_MODULES.find((m) => m.key === "medical_testing")!.priceMonthlyPence, "GBP")}/month with a Professional or Clinic plan) to list in-person
-              diagnostic services, set your own prices, and manage service locations.
+              Medical testing is included on Clinic and Enterprise. On Starter or
+              Professional, add the Medical Testing module (
+              {formatPrice(
+                AVAILABLE_MODULES.find((m) => m.key === "medical_testing")!
+                  .priceMonthlyPence,
+                "GBP"
+              )}
+              /month, or annual with 2 months free) to list in-person diagnostic
+              services, set your own prices, and manage locations.
             </p>
             <Link href="/doctor-dashboard/subscription">
               <Button>
