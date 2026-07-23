@@ -447,6 +447,30 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         .eq("id", booking.id);
 
       const { origin, locale } = await getOriginAndLocale();
+
+      // Guest wallet path is rare (wallet requires auth) — still safe to no-op
+      if (isGuest) {
+        const { sendGuestAccountClaimEmail } = await import(
+          "@/lib/auth/guest-claim"
+        );
+        const guestEmail =
+          parsed.data.guest?.email ||
+          (await writeClient
+            .from("profiles")
+            .select("email, first_name")
+            .eq("id", patientId)
+            .maybeSingle()
+            .then((r) => r.data?.email));
+        if (guestEmail) {
+          sendGuestAccountClaimEmail({
+            email: guestEmail,
+            patientName: parsed.data.guest?.first_name || "there",
+            bookingNumber: booking.booking_number,
+            locale,
+          }).catch(() => {});
+        }
+      }
+
       return {
         url: `${origin}/${locale}/booking-confirmation?booking_id=${booking.id}&wallet=true`,
         walletOnly: true,

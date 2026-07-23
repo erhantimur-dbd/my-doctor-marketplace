@@ -287,6 +287,71 @@ export function ChatMessage({ message, locale, onBook }: ChatMessageProps) {
             return null;
           }
 
+          // ── Tool: proposeBooking (Voice Phase 3) ─
+          if (part.type === "tool-proposeBooking") {
+            const tp = part as {
+              state: string;
+              output?: {
+                ok?: boolean;
+                requiresConfirm?: boolean;
+                spokenSummary?: string;
+                draft?: {
+                  doctorSlug: string;
+                  doctorName: string;
+                  date: string;
+                  time: string;
+                  consultationType: "in_person" | "video";
+                  bookPath: string;
+                };
+              };
+            };
+            if (tp.state === "input-streaming" || tp.state === "input-available") {
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-2.5 text-xs text-muted-foreground"
+                >
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Preparing booking…
+                </div>
+              );
+            }
+            if (tp.state === "output-available" && tp.output?.ok && tp.output.draft) {
+              const draft = tp.output.draft;
+              return (
+                <div
+                  key={idx}
+                  className="flex w-full flex-col gap-2 rounded-2xl border border-primary/25 bg-primary/5 px-3 py-3"
+                >
+                  <p className="text-sm font-medium text-foreground">
+                    Confirm booking draft
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {tp.output.spokenSummary ||
+                      `${draft.doctorName} · ${draft.date} · ${draft.time.slice(0, 5)}`}
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="flex-1 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                      onClick={() => {
+                        // Explicit confirm gate — never auto-navigate from tool alone
+                        onBook?.();
+                        router.push(draft.bookPath);
+                      }}
+                    >
+                      Confirm &amp; continue
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    You will review details and pay on the next screen. Nothing is booked until you complete payment.
+                  </p>
+                </div>
+              );
+            }
+            return null;
+          }
+
           // ── Tool: answerFaq ──────────────────────
           if (part.type === "tool-answerFaq") {
             const tp = part as {

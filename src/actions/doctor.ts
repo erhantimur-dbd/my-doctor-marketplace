@@ -188,6 +188,28 @@ export async function updateAvailabilitySchedule(formData: FormData) {
     if (error) return { error: safeError(error) };
   }
 
+  // Phase 4: waitlist auto-notify when doctor adds/opens schedule (Pro+)
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("first_name, last_name")
+      .eq("id", doctor.profile_id)
+      .maybeSingle();
+    const name = profile
+      ? `Dr. ${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+      : "Your doctor";
+    const { notifyAvailabilitySubscribers } = await import(
+      "@/actions/availability-alerts"
+    );
+    notifyAvailabilitySubscribers(
+      doctor.id,
+      name,
+      doctor.slug || doctor.id
+    ).catch(() => {});
+  } catch {
+    /* non-blocking */
+  }
+
   revalidatePath("/doctor-dashboard/calendar");
   return { success: true };
 }
@@ -226,6 +248,30 @@ export async function addAvailabilityOverride(formData: FormData) {
   });
 
   if (error) return { error: safeError(error) };
+
+  // Extra open day → notify waitlist (not when blocking)
+  if (!isBlocked) {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", doctor.profile_id)
+        .maybeSingle();
+      const name = profile
+        ? `Dr. ${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+        : "Your doctor";
+      const { notifyAvailabilitySubscribers } = await import(
+        "@/actions/availability-alerts"
+      );
+      notifyAvailabilitySubscribers(
+        doctor.id,
+        name,
+        doctor.slug || doctor.id
+      ).catch(() => {});
+    } catch {
+      /* non-blocking */
+    }
+  }
 
   revalidatePath("/doctor-dashboard/calendar");
   return { success: true };

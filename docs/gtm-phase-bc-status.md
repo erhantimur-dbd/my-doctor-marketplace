@@ -38,14 +38,24 @@ Still required on production hosts: full book → live Stripe card → email →
 | `.env.example` Stripe Price IDs + support domain | **Updated** |
 | Guest checkout / wizard i18n | **Already in product** (research doc partially stale) |
 
+## Phase 4 + guest claim (2026-07-23 follow-up)
+
+| Item | Status |
+|------|--------|
+| Guest magic-link claim email | **Shipped** — recovery link via Resend after guest Stripe pay; `/reset-password` page; gate allowlist |
+| NPS surveys | **Already wired** — cron, email, `/survey/[token]`, admin NPS card |
+| Waitlist auto-notify | **Shipped Pro gate + schedule/override hooks** (cancel was already wired) |
+| Voice multi-turn tools (P2) | **Already wired** — refine/soonest/filters |
+| Voice proposeBooking (P3) | **Shipped** — tool + confirm UI; never auto-books |
+
 ## Not done (still open)
 
 1. Production gate lift (Phase A / H1)  
 2. Live Stripe keys verification in Vercel  
 3. Real card E2E on production  
-4. Magic-link claim email for guests (stronger than forgot-password)  
-5. Full confirmation page label i18n for Doctor/Date/Time rows  
-6. Phase 4 product features (NPS, waitlist auto-notify, Voice 2/3)
+4. Full confirmation page label i18n for Doctor/Date/Time rows  
+5. Guest claim email on follow-up / non-primary checkout paths if any  
+6. NPS deep-dive analytics page (homepage card exists)
 
 ## How to re-run Phase B0
 

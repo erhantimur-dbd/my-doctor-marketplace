@@ -7,6 +7,7 @@ import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
+import { sendGuestAccountClaimEmail } from "@/lib/auth/guest-claim";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
 import {
   TEMPLATE_BOOKING_CONFIRMATION,
@@ -360,6 +361,7 @@ export async function POST(request: NextRequest) {
             commission_cents,
             deposit_type,
             deposit_value,
+            is_guest,
             patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
             doctor:doctors!inner(
               id,
@@ -483,6 +485,21 @@ export async function POST(request: NextRequest) {
             sendEmail({ to: patient.email, subject, html }).catch((err) =>
               console.error("Confirmation email error:", err)
             );
+
+            // Guest checkout: magic recovery link to set a password (claim account)
+            if (
+              booking.is_guest === true ||
+              session.metadata?.is_guest === "1"
+            ) {
+              sendGuestAccountClaimEmail({
+                email: patient.email,
+                patientName: patient.first_name || "there",
+                bookingNumber: booking.booking_number,
+                locale: patient.preferred_locale || "en",
+              }).catch((err) =>
+                console.error("Guest claim email error:", err)
+              );
+            }
 
             // Send WhatsApp booking confirmation if opted in
             if (patient.notification_whatsapp && patient.phone) {

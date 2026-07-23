@@ -26,7 +26,8 @@ export type TemplateKey =
   | "referralReward"
   | "subscriptionUpgradeInvite"
   | "availabilityAlert"
-  | "satisfactionSurvey";
+  | "satisfactionSurvey"
+  | "guestAccountClaim";
 
 export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string }[] = [
   // Booking
@@ -64,4 +65,5 @@ export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string 
   // Notifications
   { key: "availabilityAlert", label: "Availability Alert", category: "Notifications" },
   { key: "satisfactionSurvey", label: "Satisfaction Survey (NPS)", category: "Notifications" },
+  { key: "guestAccountClaim", label: "Guest Account Claim", category: "Onboarding" },
 ];

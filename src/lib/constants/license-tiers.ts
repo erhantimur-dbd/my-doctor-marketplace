@@ -162,6 +162,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
       "Advanced analytics",
       "Patient CRM",
       "Care plans",
+      "Waitlist auto-notify",
       "Priority support",
     ],
     popular: true,

@@ -56,6 +56,33 @@ export async function hasActiveLicense(
 }
 
 /**
+ * Pro+ tiers that include patient waitlist auto-notify (availability alerts).
+ * Starter/free do not get the auto-notify product feature.
+ */
+export function doctorTierHasWaitlistAutoNotify(
+  tier: string | null | undefined
+): boolean {
+  if (!tier) return false;
+  return (
+    tier === "professional" ||
+    tier === "clinic" ||
+    tier === "enterprise"
+  );
+}
+
+/**
+ * True when the doctor's org license includes waitlist auto-notify.
+ */
+export async function doctorHasWaitlistAutoNotify(
+  supabase: SupabaseClient,
+  doctorId: string
+): Promise<boolean> {
+  const license = await getDoctorLicense(supabase, doctorId);
+  if (!license) return false;
+  return doctorTierHasWaitlistAutoNotify(license.tier);
+}
+
+/**
  * Get the active license for an organization directly.
  * Useful when you already have the organization_id.
  */

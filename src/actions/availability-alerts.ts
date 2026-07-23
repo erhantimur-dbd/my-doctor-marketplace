@@ -7,9 +7,15 @@ import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/email/client";
 import { availabilityAlertEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
+import {
+  doctorHasWaitlistAutoNotify,
+  doctorTierHasWaitlistAutoNotify,
+  getDoctorLicense,
+} from "@/lib/license/check";
 
 /**
  * Subscribe to notifications when a doctor has new availability.
+ * Pro+ doctor licence required (waitlist auto-notify feature).
  */
 export async function subscribeToAvailability(
   doctorId: string
@@ -30,7 +36,17 @@ export async function subscribeToAvailability(
 
   if (!doctor) return { success: false, error: "Doctor not found." };
 
-  // Insert alert (upsert to avoid duplicates)
+  // Pro plan only (Phase 4 waitlist auto-notify)
+  const eligible = await doctorHasWaitlistAutoNotify(supabase, doctorId);
+  if (!eligible) {
+    return {
+      success: false,
+      error:
+        "Waitlist alerts are available when this doctor is on a Professional or higher plan.",
+    };
+  }
+
+  // Insert alert (upsert to avoid duplicates) — re-arm by clearing notified_at
   const { error } = await supabase.from("availability_alerts").upsert(
     {
       patient_id: user.id,
@@ -111,6 +127,12 @@ export async function notifyAvailabilitySubscribers(
   doctorSlug: string
 ): Promise<{ notifiedCount: number }> {
   const admin = createAdminClient();
+
+  // Skip if doctor is not on Pro+ (feature gate)
+  const license = await getDoctorLicense(admin, doctorId);
+  if (!doctorTierHasWaitlistAutoNotify(license?.tier)) {
+    return { notifiedCount: 0 };
+  }
 
   // Fetch un-notified alerts with patient profile for email
   const { data: alerts } = await admin

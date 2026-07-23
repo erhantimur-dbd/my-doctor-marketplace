@@ -1649,6 +1649,42 @@ export function satisfactionSurveyEmail({
 }
 
 // ---------------------------------------------------------------------------
+// Guest account claim (set password after guest checkout)
+// ---------------------------------------------------------------------------
+
+interface GuestAccountClaimParams {
+  patientName: string;
+  claimUrl: string;
+  bookingNumber?: string;
+}
+
+export function guestAccountClaimEmail({
+  patientName,
+  claimUrl,
+  bookingNumber,
+}: GuestAccountClaimParams): { subject: string; html: string } {
+  const subject = "Set a password to manage your MyDoctors360 booking";
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Claim your account</h2>
+    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, thanks for booking with MyDoctors360
+      ${bookingNumber ? ` (ref <strong>${bookingNumber}</strong>)` : ""}.
+      We created a secure account for you so you can manage appointments, join video visits, and message your doctor.
+    </p>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Click below to set a password. This link is personal and expires after a short time.
+    </p>
+    ${button("Set my password", claimUrl)}
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you did not book an appointment, you can ignore this email.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
 // Reschedule Request Email (sent to doctor)
 // ---------------------------------------------------------------------------
 

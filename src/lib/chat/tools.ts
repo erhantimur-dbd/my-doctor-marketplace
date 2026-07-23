@@ -697,6 +697,63 @@ export function buildChatTools(locale: string, context: ChatToolsContext = {}) {
       },
     }),
 
+    /**
+     * Phase 3 voice/chat: propose a booking draft. NEVER creates a booking —
+     * client must show confirm UI then navigate to book wizard.
+     */
+    proposeBooking: tool({
+      description:
+        "Propose a booking draft for the patient to CONFIRM in the UI. Call when the user has chosen a specific doctor and slot (date + time) and wants to book. NEVER invent slots — use only times from earlier tool results. This tool does NOT book or charge; it only returns a draft for confirmation.",
+      inputSchema: z.object({
+        doctorSlug: z.string().min(1).describe("Doctor profile slug"),
+        doctorName: z
+          .string()
+          .min(1)
+          .describe("Display name e.g. Dr. Jane Smith"),
+        date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/)
+          .describe("Appointment date YYYY-MM-DD"),
+        time: z
+          .string()
+          .describe("Start time HH:MM or HH:MM:SS from availability"),
+        consultationType: z
+          .enum(["in_person", "video"])
+          .describe("Consultation type for the slot"),
+      }),
+      execute: async ({
+        doctorSlug,
+        doctorName,
+        date,
+        time,
+        consultationType,
+      }) => {
+        const timeNorm = time.length === 5 ? `${time}:00` : time;
+        const bookPath = `/doctors/${doctorSlug}/book?date=${encodeURIComponent(
+          date
+        )}&time=${encodeURIComponent(timeNorm)}&type=${consultationType}`;
+        const typeLabel =
+          consultationType === "video" ? "video" : "in-person";
+        const spokenSummary = `I've prepared a ${typeLabel} booking with ${doctorName} on ${date} at ${time.slice(
+          0,
+          5
+        )}. Please confirm to continue — I will not book without your confirmation.`;
+        return {
+          ok: true as const,
+          requiresConfirm: true as const,
+          draft: {
+            doctorSlug,
+            doctorName,
+            date,
+            time: timeNorm,
+            consultationType,
+            bookPath,
+          },
+          spokenSummary,
+        };
+      },
+    }),
+
     answerFaq: tool({
       description:
         "Answer a question about how the MyDoctors360 platform works — pricing, payments, cancellation, refunds, video consultations, account setup, supported languages, booking process, etc. Call this when the user asks a non-medical question about the platform. Do NOT call analyzeSymptoms or searchDoctors for platform questions.",

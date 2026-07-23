@@ -58,6 +58,7 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   "/verify-email",
   "/verify-mfa",
   "/forgot-password",
+  "/reset-password",
   "/email-verified",
   "/callback",
   // Doctor onboarding

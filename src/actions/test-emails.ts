@@ -217,6 +217,12 @@ const SAMPLE_DATA = {
       date: "1 April 2026",
       surveyUrl: `${APP_URL}/en/survey/test-token-123`,
     }),
+  guestAccountClaim: () =>
+    templates.guestAccountClaimEmail({
+      patientName: "John",
+      claimUrl: `${APP_URL}/en/callback?next=/en/reset-password`,
+      bookingNumber: "BK-TEST-001",
+    }),
 };
 
 // TemplateKey and TEMPLATE_LIST imported from @/lib/email/template-list

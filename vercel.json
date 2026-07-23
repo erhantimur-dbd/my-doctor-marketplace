@@ -27,7 +27,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!api/|_next/|coming-soon|sitemap\\.xml|robots\\.txt|favicon\\.ico|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|map)$|(?:en|de|tr|fr|it|es|pt|zh|ja)/(?:login|register|register-doctor|verify-email|verify-mfa|forgot-password|email-verified|callback|doctor-dashboard|pricing|how-it-works|contact|help-center|terms|privacy|cookie-policy|about|regulatory|complaints)(?:/|$)).*)",
+      "source": "/((?!api/|_next/|coming-soon|sitemap\\.xml|robots\\.txt|favicon\\.ico|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff|woff2|ttf|map)$|(?:en|de|tr|fr|it|es|pt|zh|ja)/(?:login|register|register-doctor|verify-email|verify-mfa|forgot-password|reset-password|email-verified|callback|doctor-dashboard|pricing|how-it-works|contact|help-center|terms|privacy|cookie-policy|about|regulatory|complaints|survey)(?:/|$)).*)",
       "has": [
         {
           "type": "host",
