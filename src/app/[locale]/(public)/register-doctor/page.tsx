@@ -1603,18 +1603,18 @@ export default function RegisterDoctorPage() {
                   </div>
                   {billingPeriod === "annual" ? (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Equivalent to{" "}
+                      12-month term · equivalent to{" "}
                       {formatAnnualEffectiveMonthlyForLocale(
                         calculateMonthlyTotal(),
                         locale
                       )}
                       /mo · 2 months free (pay 10, get 12)
                     </p>
-                  ) : getSelectedTierConfig()?.commitmentMonths ? (
+                  ) : (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {getSelectedTierConfig()!.commitmentMonths}-month commitment, billed monthly
+                      Month-to-month · billed monthly · no lock-in
                     </p>
-                  ) : null}
+                  )}
                 </div>
               )}
 

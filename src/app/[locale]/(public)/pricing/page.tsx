@@ -349,7 +349,7 @@ export default async function PricingPage() {
                 step: "3",
                 icon: CreditCard,
                 title: "Choose Your Plan",
-                desc: "Pick Founding Free or a paid plan. Paid licences are a 12-month term — bill monthly or annually (2 months free).",
+                desc: "Pick Founding Free or a paid plan. Monthly is month-to-month with no lock-in; annual is a 12-month term (2 months free).",
                 bg: "bg-violet-50 dark:bg-violet-950/30",
                 text: "text-violet-600",
                 ring: "ring-violet-200 dark:ring-violet-800",

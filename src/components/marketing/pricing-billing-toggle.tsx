@@ -223,9 +223,14 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
             </Badge>
           </button>
         </div>
-        {period === "annual" && (
+        {period === "annual" ? (
           <p className="text-center text-sm text-muted-foreground">
-            Pay for 10 months, get 12 — save {discount}% vs monthly
+            12-month term · pay for 10 months, get 12 — save {discount}% vs
+            monthly
+          </p>
+        ) : (
+          <p className="text-center text-sm text-muted-foreground">
+            Month-to-month pricing · no lock-in · cancel anytime
           </p>
         )}
       </div>
@@ -305,10 +310,9 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                 ) : (
                   <>
                     <p className="text-xs leading-snug text-muted-foreground">
-                      12-month term ·{" "}
                       {period === "annual"
-                        ? "billed yearly"
-                        : "billed monthly"}
+                        ? "12-month term · billed yearly"
+                        : "Month-to-month · no lock-in"}
                     </p>
                     <p className="text-xs leading-snug text-muted-foreground">
                       {tier.perUser

@@ -43,8 +43,8 @@ Actions: `schedulePlanChange`, `cancelScheduledPlanChange`, `upgradeLicenseTier`
 
 ## Billing
 
-- **Monthly:** list price per month, 12-month term on paid plans.  
-- **Annual:** charge `10 × monthly` once per year (2 months free). Display effective monthly in whole pounds. Downgrade/cancel at annual period end.  
+- **Monthly:** list price per month, **no lock-in** (month-to-month).  
+- **Annual:** 12-month term; charge `10 × monthly` once per year (2 months free). Display effective monthly in whole pounds. Downgrade/cancel at annual period end.  
 - Stripe: `getOrCreateLicensePriceId(tier, config, "monthly" | "annual")`.  
 - Optional env: `STRIPE_PRICE_*_ANNUAL`.  
 

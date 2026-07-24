@@ -106,7 +106,8 @@ export interface LicenseTierConfig {
   maxSeats: number;
   includedSeats: number; // seats included in base price
   extraSeatPricePence: number; // GBP pence per extra seat/month
-  commitmentMonths: number; // minimum commitment period (e.g. 12)
+  /** Contract length for annual billing only (monthly is month-to-month). */
+  commitmentMonths: number;
   features: string[];
   excludedFeatures?: string[]; // features NOT available on this tier
   popular?: boolean;
@@ -141,6 +142,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     maxSeats: 1, // single seat only — multi-doctor is Clinic
     includedSeats: 1,
     extraSeatPricePence: 0, // no add-on seats — must upgrade
+    // Annual = 12-month term; monthly = no lock-in (UI uses billing period)
     commitmentMonths: 12,
     features: PACKAGE_MARKETING.starter.features,
     excludedFeatures: PACKAGE_MARKETING.starter.excludedFeatures,
