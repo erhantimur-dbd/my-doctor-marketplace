@@ -1578,7 +1578,7 @@ export default function RegisterDoctorPage() {
                     <span className="font-medium text-foreground">
                       3 doctor profiles included
                     </span>{" "}
-                    in the Clinic Starter Pack. Expand to 15 doctors at{" "}
+                    in the Clinic plan. Expand to 15 doctors at{" "}
                     {formatPriceForLocale(29900, locale)}
                     /extra seat/month from your dashboard after registration.
                   </p>
