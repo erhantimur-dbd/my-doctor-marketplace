@@ -1,5 +1,5 @@
 /**
- * Doctor seat capacity — Professional (1–4 per-user) vs Clinic (5–15).
+ * Doctor seat capacity — Solo plans (Free/Starter/Pro = 1) vs Clinic (3–15).
  * Distinct from referrals (independent accounts, zero seat impact).
  */
 
@@ -69,8 +69,15 @@ export function getTierSeatLimits(tierId: string | null | undefined): {
   if (!config || config.isFreeTier) {
     return { min: 1, max: 1, included: 1, perUser: false, multiDoctor: false };
   }
-  if (config.id === "starter") {
-    return { min: 1, max: 1, included: 1, perUser: false, multiDoctor: false };
+  if (config.id === "starter" || config.id === "professional") {
+    // Solo plans: one doctor only; multi-doctor is Clinic
+    return {
+      min: 1,
+      max: 1,
+      included: 1,
+      perUser: false,
+      multiDoctor: false,
+    };
   }
   return {
     min: config.defaultSeats,
@@ -164,9 +171,9 @@ export function canInviteDoctor(params: {
       reason:
         max >= limits.max
           ? `All ${max} doctor seats are in use or invited. ${
-              tier === "professional"
-                ? "Upgrade to Clinic for up to 15 seats."
-                : "Add extra seats from Billing if available."
+              tier === "clinic" || tier === "enterprise"
+                ? "Add extra seats from Billing if under 15, or contact us for Enterprise."
+                : "Multi-doctor practices use Clinic (3–15 seats). Or use Referrals for independent accounts."
             }`
           : "No free doctor seats. Add a seat from Billing first.",
       used,
@@ -195,9 +202,13 @@ export function pickLicenseForSeats(
   return pickEffectiveLicense(licenses);
 }
 
-/** Professional: Stripe quantity should equal max_seats (1–4). */
+/**
+ * @deprecated Professional is flat 1-seat; multi-doctor is Clinic only.
+ * Kept for callers that still clamp seat counts to a single doctor.
+ */
 export function professionalQuantityFromSeats(maxSeats: number): number {
-  return Math.min(4, Math.max(1, maxSeats));
+  void maxSeats;
+  return 1;
 }
 
 /**

@@ -114,8 +114,8 @@ export const MARKETING_CAPABILITY_CHECKS: {
  * Ladder (enforced):
  *   Free → profile/list only
  *   Starter → bookings, video, email, messaging, AI; testing add-on optional
- *   Professional → multi-channel reminders, analytics, CRM, waitlist, 1–4 seats
- *   Clinic → 5–15 seats, multi-location, team, testing included
+ *   Professional → multi-channel reminders, analytics, CRM, waitlist (1 doctor)
+ *   Clinic → multi-doctor (3–15), multi-location, team, testing included
  *   Enterprise → branding, API, SLA, dedicated AM
  */
 export const PACKAGE_MARKETING: Record<
@@ -161,17 +161,18 @@ export const PACKAGE_MARKETING: Record<
   professional: {
     features: [
       "Everything in Starter",
-      "1–4 doctor seats (per-user pricing)",
       "SMS & WhatsApp reminders",
       "Advanced analytics dashboard",
       "Patient CRM",
       "Care plans & prescriptions",
       "Waitlist auto-notify",
       "Priority support",
+      "Single doctor seat (solo practice)",
     ],
     excludedFeatures: [
+      "Multi-doctor seats (Clinic 3–15)",
       "Multi-location clinic tools",
-      "Team management (5+ seats — Clinic)",
+      "Team management & practice dashboard",
       "Medical testing included (optional +£49/mo add-on)",
       "Custom branding & API (Enterprise)",
     ],
@@ -179,7 +180,7 @@ export const PACKAGE_MARKETING: Record<
   clinic: {
     features: [
       "Everything in Professional",
-      "5 doctor seats included (expand to 15)",
+      "3 doctor seats included (expand to 15)",
       "Multi-location clinic",
       "Team management & multi-doctor scheduling",
       "Medical testing included (no add-on fee)",

@@ -91,7 +91,7 @@ export function formatAnnualEffectiveMonthlyForLocale(
 // you'll need to create products/prices for each paid tier and then add the
 // price IDs (e.g. `price_1Abc...`) to Vercel's environment variables:
 //   STRIPE_PRICE_STARTER      → Starter plan (£199/mo, annual)
-//   STRIPE_PRICE_PROFESSIONAL → Professional plan (£299/mo per user, annual)
+//   STRIPE_PRICE_PROFESSIONAL → Professional plan (£299/mo flat, 1 seat, annual)
 //   STRIPE_PRICE_CLINIC       → Clinic Starter Pack (£1,495/mo, annual)
 // Also add the extra-seat add-on price if you charge for additional seats:
 //   STRIPE_PRICE_EXTRA_SEAT   → Extra seat (£299/mo, annual)
@@ -148,13 +148,14 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "professional",
     name: "Professional",
-    description: "Growth tools: analytics, CRM, waitlist and multi-channel reminders",
-    priceMonthlyPence: 29900, // £299 per user
-    perUser: true,
+    description:
+      "Growth tools for a solo practice: analytics, CRM, waitlist and multi-channel reminders",
+    priceMonthlyPence: 29900, // £299 flat — one doctor seat (not per-user multi-seat)
+    perUser: false,
     defaultSeats: 1,
-    maxSeats: 4,
+    maxSeats: 1, // multi-doctor only on Clinic
     includedSeats: 1,
-    extraSeatPricePence: 29900, // £299 per additional user
+    extraSeatPricePence: 0,
     commitmentMonths: 12,
     features: PACKAGE_MARKETING.professional.features,
     excludedFeatures: PACKAGE_MARKETING.professional.excludedFeatures,
@@ -163,12 +164,13 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "clinic",
     name: "Clinic Starter Pack",
-    description: "Multi-location clinic with seats, testing and team tools",
-    priceMonthlyPence: 149500, // £1,495
+    description:
+      "Practice licence: multi-doctor seats, multi-location, testing and team tools",
+    priceMonthlyPence: 149500, // £1,495 practice pack
     perUser: false,
-    defaultSeats: 5,
-    maxSeats: 15, // 5 included + up to 10 extras = 15 total
-    includedSeats: 5,
+    defaultSeats: 3,
+    maxSeats: 15, // 3 included + extras to 15
+    includedSeats: 3,
     extraSeatPricePence: 29900, // £299 per extra seat
     commitmentMonths: 12,
     features: PACKAGE_MARKETING.clinic.features,

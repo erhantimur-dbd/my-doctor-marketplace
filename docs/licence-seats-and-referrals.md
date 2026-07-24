@@ -2,11 +2,23 @@
 
 **Updated:** 2026-07-24
 
+## Packaging model (D-simple)
+
+| Package | Seats | Price model | Job |
+|---------|-------|-------------|-----|
+| Free | 1 | £0 | List & prepare |
+| Starter | 1 | Flat £199 | Solo paid marketplace |
+| **Professional** | **1** | Flat £299 | Solo growth tools (not multi-user) |
+| **Clinic** | **3 included → 15** | Flat £1,495 + £299 extra seats | Practice / multi-doctor |
+| Enterprise | Custom | Custom | Large orgs |
+
+**Rule:** Multi-doctor seats exist only on **Clinic** (and Enterprise). Professional is a **solo** feature tier.
+
 ## Two ways to invite someone
 
 | | **Seat invite** (team) | **Referral** (growth) |
 |--|------------------------|------------------------|
-| Who | Professional / Clinic owner or admin | Any doctor (any plan) |
+| Who | **Clinic** (or Enterprise) owner/admin | Any doctor (any plan) |
 | Result | Joins **your organization** under **your** licence | Creates their **own** account + org |
 | Seats | Doctor role uses a doctor seat | **Zero** seat impact on you |
 | Path | Members / clinic invite → `/invite/[token]` | Referrals + `?ref=` code |
@@ -14,35 +26,21 @@
 
 Never mix the copy: referrals are not “add to my plan.”
 
-## Doctor seats by package
+## Add / remove / reassign (Clinic)
 
-| Package | Capacity | Billing |
-|---------|----------|---------|
-| Free / Starter | 1 | Single doctor |
-| **Professional** | **1–4** | £299 **per user** (Stripe quantity) |
-| **Clinic** | **5 included, max 15** | Flat pack + £299 extra seats |
-| Enterprise | Custom | Custom |
+1. **Add** — invite doctor if capacity; else buy extra seats (≤15) then invite.
+2. **Remove** — deactivate membership; recompute `used_seats`; capacity kept (no mid-period refund).
+3. **Reassign** — remove or revoke invite, then invite a new email.
 
-- **Counted:** active members with role `doctor` or `owner`.
-- **Not counted:** `admin`, `staff`.
-- **Pending doctor invites** soft-reserve capacity (`used + pending ≤ max`) but do not charge until the seat is accepted / capacity purchased.
-
-## Add / remove / reassign
-
-1. **Add** — invite doctor if capacity; else add seat (Pro: increase quantity ≤4; Clinic: extra seat ≤15) then invite.
-2. **Remove** — deactivate membership; recompute `used_seats`; capacity kept for rehire (no mid-period refund).
-3. **Reassign** — remove or revoke invite, then invite a new email into free capacity.
-
-Invitees complete **their own** profile and verification; bookings still need verified + Connect.
+Invitees complete **their own** profile and verification.
 
 ## Solo doctor in a practice
 
-They can stay Free/Starter/Pro alone and **refer** peers. When the practice buys Clinic, the owner invites them; if they have a personal paid sub they confirm **transfer** (cancel personal sub → join Clinic).
+Stay Free/Starter/Pro alone; **refer** peers. When the practice buys Clinic, the owner invites them (transfer path if they have a personal paid sub).
 
-## Implementation pointers
+## Implementation
 
-- Capacity helpers: `src/lib/license/seats.ts`
-- Effective licence: `pickEffectiveLicense`
+- Capacity: `src/lib/license/seats.ts` (`multiDoctor` only when maxSeats > 1)
+- Recompute: `src/lib/license/recompute-seats.ts`
 - Clinic invites: `src/actions/clinic-invitations.ts`
-- Org members: `src/actions/organization.ts`
-- Referrals: `src/actions/referral.ts` (must never touch `used_seats`)
+- Referrals: `src/actions/referral.ts` (never touches `used_seats`)

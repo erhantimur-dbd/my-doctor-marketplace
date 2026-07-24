@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 export const createLicenseCheckoutSchema = z.object({
   tier: z.enum(["free", "starter", "professional", "clinic", "enterprise"]),
   billing_period: z.enum(["monthly", "annual"]).default("monthly"),
-  seat_count: z.number().int().min(1).max(4).optional(),
+  seat_count: z.number().int().min(1).max(15).optional(),
   coupon_code: z.string().max(50).optional(),
 });
 

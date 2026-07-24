@@ -32,113 +32,77 @@ describe("seat counting", () => {
   });
 });
 
-describe("tier seat limits", () => {
-  it("free/starter are single-seat", () => {
+describe("tier seat limits (D-simple packaging)", () => {
+  it("free/starter/professional are single-seat solo plans", () => {
     expect(getTierSeatLimits("free").multiDoctor).toBe(false);
     expect(getTierSeatLimits("starter").max).toBe(1);
+    expect(getTierSeatLimits("professional").max).toBe(1);
+    expect(getTierSeatLimits("professional").multiDoctor).toBe(false);
+    expect(getTierSeatLimits("professional").perUser).toBe(false);
   });
 
-  it("professional is 1–4 per-user", () => {
-    const p = getTierSeatLimits("professional");
-    expect(p.max).toBe(4);
-    expect(p.perUser).toBe(true);
-    expect(p.multiDoctor).toBe(true);
-  });
-
-  it("clinic is 5 included max 15", () => {
+  it("clinic is 3 included max 15 multi-doctor", () => {
     const c = getTierSeatLimits("clinic");
-    expect(c.included).toBe(5);
+    expect(c.included).toBe(3);
     expect(c.max).toBe(15);
     expect(c.perUser).toBe(false);
+    expect(c.multiDoctor).toBe(true);
   });
 });
 
 describe("canInviteDoctor", () => {
-  const proLicense = {
-    tier: "professional",
-    status: "active",
-    max_seats: 2,
-  } as const;
-
-  it("blocks free/starter doctor invites with referral guidance", () => {
-    const r = canInviteDoctor({
-      members: [{ role: "owner", status: "active" }],
-      pendingInvites: [],
-      license: { tier: "free", status: "active" },
-      role: "doctor",
-    });
-    expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/Referrals|Professional|Clinic/i);
+  it("blocks free/starter/professional doctor invites with Clinic/referral guidance", () => {
+    for (const tier of ["free", "starter", "professional"] as const) {
+      const r = canInviteDoctor({
+        members: [{ role: "owner", status: "active" }],
+        pendingInvites: [],
+        license: { tier, status: "active", max_seats: 1 },
+        role: "doctor",
+      });
+      expect(r.allowed, tier).toBe(false);
+      expect(r.reason, tier).toMatch(/Clinic|Referrals|one doctor|Professional/i);
+    }
   });
 
-  it("allows admin invite without seat on any paid org", () => {
+  it("allows admin invite without seat", () => {
     const r = canInviteDoctor({
       members: [{ role: "owner", status: "active" }],
       pendingInvites: [],
-      license: { tier: "starter", status: "active", max_seats: 1 } as never,
+      license: { tier: "clinic", status: "active", max_seats: 3 },
       role: "admin",
     });
-    // starter is paid but multiDoctor false — admin still allowed
     expect(r.allowed).toBe(true);
   });
 
-  it("soft-caps professional seats with used + pending invites", () => {
-    // 2 seats full with owner + one active doctor
+  it("soft-caps clinic seats with used + pending invites", () => {
     const full = canInviteDoctor({
       members: [
         { role: "owner", status: "active" },
         { role: "doctor", status: "active" },
+        { role: "doctor", status: "active" },
       ],
       pendingInvites: [],
-      license: { ...proLicense, max_seats: 2 },
+      license: { tier: "clinic", status: "active", max_seats: 3 },
       role: "doctor",
     });
     expect(full.allowed).toBe(false);
 
-    // owner + one pending invite fills soft-cap of 2
-    const softFull = canInviteDoctor({
-      members: [{ role: "owner", status: "active" }],
-      pendingInvites: [{ role: "doctor", status: "pending" }],
-      license: { ...proLicense, max_seats: 2 },
-      role: "doctor",
-    });
-    expect(softFull.allowed).toBe(false);
-    expect(softFull.used + softFull.pending).toBe(2);
-
-    // room for one more invite when only owner
     const open = canInviteDoctor({
       members: [{ role: "owner", status: "active" }],
       pendingInvites: [],
-      license: { ...proLicense, max_seats: 2 },
+      license: { tier: "clinic", status: "active", max_seats: 3 },
       role: "doctor",
     });
     expect(open.allowed).toBe(true);
-    expect(open.remaining).toBe(1);
-  });
-
-  it("blocks 5th professional seat at hard max", () => {
-    const members = [
-      { role: "owner", status: "active" },
-      { role: "doctor", status: "active" },
-      { role: "doctor", status: "active" },
-      { role: "doctor", status: "active" },
-    ];
-    const r = canInviteDoctor({
-      members,
-      pendingInvites: [],
-      license: { tier: "professional", status: "active", max_seats: 4 },
-      role: "doctor",
-    });
-    expect(r.allowed).toBe(false);
-    expect(r.reason).toMatch(/Clinic|seats/i);
+    expect(open.remaining).toBe(2);
   });
 });
 
 describe("professionalQuantityFromSeats", () => {
-  it("clamps 1–4", () => {
+  it("always returns 1 (Pro is not multi-seat)", () => {
     expect(professionalQuantityFromSeats(0)).toBe(1);
-    expect(professionalQuantityFromSeats(3)).toBe(3);
-    expect(professionalQuantityFromSeats(9)).toBe(4);
+    expect(professionalQuantityFromSeats(3)).toBe(1);
+    expect(professionalQuantityFromSeats(9)).toBe(1);
   });
 });
 

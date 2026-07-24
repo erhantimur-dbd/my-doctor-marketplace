@@ -95,8 +95,8 @@ export default async function DoctorReferralsPage() {
         Invite colleagues to create their <strong>own</strong> MyDoctors360
         account (not a seat on your plan). When they take a paid licence, you
         both get 1 month free. To add doctors under{" "}
-        <strong>your</strong> Professional or Clinic licence, use Team Members
-        instead.
+        <strong>your</strong> Clinic practice licence (3–15 seats), use Team
+        Members instead.
       </p>
 
       {/* Referral Code & Link */}

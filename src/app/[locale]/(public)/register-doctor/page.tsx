@@ -1437,8 +1437,7 @@ export default function RegisterDoctorPage() {
                         } ${tier.popular ? "ring-1 ring-primary/20" : ""}`}
                         onClick={() => {
                           setSelectedTier(tier.id);
-                          if (tier.id !== "professional") setSeatCount(tier.defaultSeats);
-                          else setSeatCount(1);
+                          setSeatCount(tier.defaultSeats || 1);
                         }}
                         role="button"
                         tabIndex={0}
@@ -1446,8 +1445,7 @@ export default function RegisterDoctorPage() {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
                             setSelectedTier(tier.id);
-                            if (tier.id !== "professional") setSeatCount(tier.defaultSeats);
-                            else setSeatCount(1);
+                            setSeatCount(tier.defaultSeats || 1);
                           }
                         }}
                       >
@@ -1550,34 +1548,17 @@ export default function RegisterDoctorPage() {
                 </p>
               </div>
 
-              {/* Seat count for Professional */}
+              {/* Professional is solo (1 seat) */}
               {selectedTier === "professional" && (
                 <div className="rounded-lg border p-4">
-                  <Label className="text-sm font-medium">Number of Doctors</Label>
-                  <div className="mt-2 flex items-center gap-3">
-                    {[1, 2, 3, 4].map((n) => (
-                      <button
-                        key={n}
-                        type="button"
-                        className={`flex h-10 w-10 items-center justify-center rounded-lg border-2 text-sm font-medium transition-colors ${
-                          seatCount === n
-                            ? "border-primary bg-primary text-primary-foreground"
-                            : "border-border hover:border-primary/40"
-                        }`}
-                        onClick={() => setSeatCount(n)}
-                      >
-                        {n}
-                      </button>
-                    ))}
-                  </div>
-                  {seatCount > 1 && (
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {seatCount} doctors × {formatPriceForLocale(29900, locale)} ={" "}
-                      <span className="font-medium text-foreground">
-                        {formatPriceForLocale(29900 * seatCount, locale)}/mo
-                      </span>
-                    </p>
-                  )}
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      One doctor seat
+                    </span>{" "}
+                    — Professional is for a solo practice with growth tools. For
+                    3–15 doctors on one bill, choose{" "}
+                    <span className="font-medium text-foreground">Clinic</span>.
+                  </p>
                 </div>
               )}
 
@@ -1585,8 +1566,12 @@ export default function RegisterDoctorPage() {
               {selectedTier === "clinic" && (
                 <div className="rounded-lg border p-4">
                   <p className="text-sm text-muted-foreground">
-                    <span className="font-medium text-foreground">5 doctor profiles included</span> in the Clinic Starter Pack.
-                    Add up to 10 more doctors at {formatPriceForLocale(29900, locale)}/seat/month from your dashboard after registration.
+                    <span className="font-medium text-foreground">
+                      3 doctor profiles included
+                    </span>{" "}
+                    in the Clinic Starter Pack. Expand to 15 doctors at{" "}
+                    {formatPriceForLocale(29900, locale)}
+                    /extra seat/month from your dashboard after registration.
                   </p>
                 </div>
               )}

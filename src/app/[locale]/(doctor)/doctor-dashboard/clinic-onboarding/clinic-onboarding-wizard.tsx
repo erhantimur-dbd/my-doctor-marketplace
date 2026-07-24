@@ -94,7 +94,7 @@ export function ClinicOnboardingWizard({
   const [inviteRole, setInviteRole] = useState<"doctor" | "admin" | "staff">("doctor");
   const [inviteSending, setInviteSending] = useState(false);
 
-  const maxSeats = license?.max_seats ?? 5;
+  const maxSeats = license?.max_seats ?? 3;
   const doctorInvitesSent = invitations.filter(
     (i) => i.role === "doctor" && i.status === "pending"
   ).length;

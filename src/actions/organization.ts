@@ -228,7 +228,7 @@ export async function inviteMember(formData: FormData) {
 
   const adminSupabase = createAdminClient();
 
-  // Doctor seats use capacity helper (Pro 1–4 / Clinic 5–15); admin/staff free
+  // Doctor seats: Clinic 3–15 (multi-doctor); Free/Starter/Pro = 1 seat only
   if (parsed.data.role === "doctor") {
     const { data: licenses } = await adminSupabase
       .from("licenses")

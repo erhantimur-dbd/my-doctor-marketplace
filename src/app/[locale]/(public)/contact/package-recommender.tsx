@@ -36,7 +36,7 @@ function getRecommendationReason(
   answers: Answers
 ): string {
   if (tierId === "professional") {
-    return "Professional is Starter plus 1–4 seats, SMS & WhatsApp, advanced analytics, patient CRM, care plans, waitlist auto-notify, and priority support. Multi-location and included medical testing are on Clinic.";
+    return "Professional is a solo growth plan (£299 flat): Starter plus SMS & WhatsApp, advanced analytics, patient CRM, care plans, waitlist auto-notify, and priority support. Multi-doctor seats (3–15), multi-location and included medical testing are on Clinic.";
   }
   if (tierId === "starter") {
     if (answers.needsVideo === "yes" && answers.patientsPerWeek === "over_30") {

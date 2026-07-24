@@ -256,103 +256,18 @@ export async function createLicenseCheckout(
 }
 
 /**
- * Professional only: set seat capacity 1–4 via Stripe subscription quantity.
- * Does not mid-period refund when reducing quantity (caller should only increase
- * in v1 UX, or reduce capacity without Stripe decrease).
+ * @deprecated Professional is a single-doctor flat plan.
+ * Multi-doctor seats are Clinic (3–15) via addExtraSeats.
  */
-export async function setProfessionalSeatCapacity(formData: FormData): Promise<{
+export async function setProfessionalSeatCapacity(_formData: FormData): Promise<{
   error?: string | null;
   maxSeats?: number;
 }> {
-  const { error: authError, supabase, org } = await requireOrgOwner();
-  if (authError || !supabase || !org) return { error: authError };
-
-  const requested = parseInt(formData.get("seat_count") as string, 10);
-  if (!requested || requested < 1 || requested > 4) {
-    return { error: "Professional plans support 1–4 doctor seats." };
-  }
-
-  const { data: rows } = await supabase
-    .from("licenses")
-    .select("*")
-    .eq("organization_id", org.id);
-
-  const { pickEffectiveLicense, isPaidTier } = await import(
-    "@/lib/license/tier-lifecycle"
-  );
-  const {
-    countDoctorSeatsUsed,
-    professionalQuantityFromSeats,
-  } = await import("@/lib/license/seats");
-
-  const license = pickEffectiveLicense(rows || []);
-  if (!license || !isPaidTier(license.tier) || license.tier !== "professional") {
-    return {
-      error: "Seat quantity is only available on the Professional plan.",
-    };
-  }
-
-  const { data: members } = await supabase
-    .from("organization_members")
-    .select("role, status")
-    .eq("organization_id", org.id);
-
-  const used = countDoctorSeatsUsed(members || []);
-  if (requested < used) {
-    return {
-      error: `You have ${used} doctor seat(s) in use. Remove a team doctor before reducing capacity to ${requested}.`,
-    };
-  }
-
-  const quantity = professionalQuantityFromSeats(requested);
-  const subId = license.stripe_subscription_id as string | null;
-
-  if (subId) {
-    try {
-      const stripe = getStripe();
-      const sub = await stripe.subscriptions.retrieve(subId);
-      const itemId = sub.items.data[0]?.id;
-      if (!itemId) return { error: "Subscription has no line items" };
-      // Increase charges prorated; decrease keeps access until period end (no refund)
-      await stripe.subscriptions.update(subId, {
-        items: [{ id: itemId, quantity }],
-        proration_behavior:
-          quantity > (sub.items.data[0]?.quantity || 1)
-            ? "create_prorations"
-            : "none",
-        metadata: {
-          ...sub.metadata,
-          seat_count: String(quantity),
-          max_seats: String(quantity),
-        },
-      });
-    } catch (err) {
-      log.error("setProfessionalSeatCapacity Stripe error", { err });
-      return {
-        error:
-          err instanceof Error
-            ? err.message
-            : "Failed to update seat quantity in Stripe.",
-      };
-    }
-  }
-
-  if (license.id) {
-    await supabase
-      .from("licenses")
-      .update({ max_seats: quantity })
-      .eq("id", license.id);
-  }
-
-  const { recomputeOrgUsedSeats } = await import(
-    "@/lib/license/recompute-seats"
-  );
-  const adminSupabase = createAdminClient();
-  await recomputeOrgUsedSeats(adminSupabase, org.id);
-
-  revalidatePath("/doctor-dashboard/organization/billing");
-  revalidatePath("/doctor-dashboard/organization/members");
-  return { error: null, maxSeats: quantity };
+  void _formData;
+  return {
+    error:
+      "Professional includes one doctor seat. For 3–15 doctors on one bill, upgrade to Clinic from Billing.",
+  };
 }
 
 export async function manageLicenseBilling() {

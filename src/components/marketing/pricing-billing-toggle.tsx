@@ -401,14 +401,15 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
       <p className="mt-8 text-center text-sm text-muted-foreground">
         Paid plans include a {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
         on each booking (invoiced monthly). Annual licences are charged as 10×
-        the monthly price once a year (2 months free). Seats: Starter 1 ·
-        Professional 1–4 (per user) · Clinic 5 included (to 15).
+        the monthly price once a year (2 months free). Seats: Starter &amp;
+        Professional = 1 doctor · Clinic = 3 included (to 15).
       </p>
       <p className="mt-3 text-center text-xs text-muted-foreground">
         Founding Free is a permanent gateway (list &amp; prepare). Bookings,
         video and AI start on Starter. SMS/WhatsApp, analytics, CRM and waitlist
-        are Professional+. Multi-location, team tools and included medical
-        testing are Clinic+. Custom branding &amp; API are Enterprise.
+        are Professional+ (solo). Multi-doctor seats, multi-location, team tools
+        and included medical testing are Clinic+. Custom branding &amp; API are
+        Enterprise.
       </p>
     </div>
   );

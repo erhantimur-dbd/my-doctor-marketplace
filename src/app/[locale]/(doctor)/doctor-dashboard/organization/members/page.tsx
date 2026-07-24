@@ -185,8 +185,7 @@ export default function MembersPage() {
     (m: any) => m.status === "active" || m.status === "invited"
   );
   const tier = license?.tier as string | undefined;
-  const multiDoctor =
-    tier === "professional" || tier === "clinic" || tier === "enterprise";
+  const multiDoctor = tier === "clinic" || tier === "enterprise";
   const seatInfo = license
     ? `${license.used_seats} / ${license.max_seats} doctor seats on your ${tier || "plan"} licence`
     : "No licence";
@@ -198,9 +197,10 @@ export default function MembersPage() {
           <h1 className="text-2xl font-bold">Team Members</h1>
           <p className="text-muted-foreground">{seatInfo}</p>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Invite colleagues to join <strong>your practice</strong> under this
-            licence (Professional up to 4 doctors; Clinic up to 15). This is not
-            a referral — for independent accounts use{" "}
+            Invite colleagues to join <strong>your practice</strong> under a
+            Clinic licence (3–15 doctor seats). Starter and Professional are
+            single-doctor plans. This is not a referral — for independent
+            accounts use{" "}
             <a href="../referrals" className="text-primary underline">
               Referrals
             </a>
