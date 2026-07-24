@@ -7,48 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { getLicenseTier, formatPriceForLocale } from "@/lib/constants/license-tiers";
-import type { LicenseTier } from "@/types";
+import {
+  getPackageRecommendation,
+  getPackageRecommendationReason,
+  type PackageRecommenderAnswers,
+} from "@/lib/marketing/package-recommender";
 import { CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
-
-type PatientVolume = "under_10" | "10_to_30" | "over_30";
-type YesNo = "yes" | "no";
-
-interface Answers {
-  patientsPerWeek: PatientVolume | null;
-  needsVideo: YesNo | null;
-  wantsFeatured: YesNo | null;
-}
-
-function getRecommendation(
-  answers: Answers
-): LicenseTier | null {
-  const { patientsPerWeek, needsVideo, wantsFeatured } = answers;
-  if (!patientsPerWeek || !needsVideo || !wantsFeatured) return null;
-
-  if (wantsFeatured === "yes") return "professional";
-  if (needsVideo === "yes" || patientsPerWeek === "over_30")
-    return "starter";
-  return "free";
-}
-
-function getRecommendationReason(
-  tierId: LicenseTier,
-  answers: Answers
-): string {
-  if (tierId === "professional") {
-    return "Professional is a solo growth plan (£299 flat): Starter plus SMS & WhatsApp, advanced analytics, patient CRM, care plans, waitlist auto-notify, and priority support. Multi-doctor seats (3–15), multi-location and included medical testing are on Clinic.";
-  }
-  if (tierId === "starter") {
-    if (answers.needsVideo === "yes" && answers.patientsPerWeek === "over_30") {
-      return "With high patient volume and video demand, Starter unlocks online bookings, video, email reminders, messaging and AI insights — upgrade to Professional for SMS/WhatsApp, analytics and waitlist.";
-    }
-    if (answers.needsVideo === "yes") {
-      return "Video and online bookings are on Starter (£199/mo), with email reminders, messaging and AI review summaries. SMS, WhatsApp, CRM and analytics come with Professional.";
-    }
-    return "With your patient volume, Starter is the right step for paid bookings, video, email and AI. SMS/WhatsApp, analytics and waitlist unlock on Professional.";
-  }
-  return "Founding Free is ideal to start — public listing after verification and a dashboard, with no online bookings, video or AI until you upgrade to Starter.";
-}
 
 interface OptionCardProps {
   label: string;
@@ -93,13 +57,14 @@ function OptionCard({ label, description, selected, onClick }: OptionCardProps) 
 
 export function PackageRecommender() {
   const locale = useLocale();
-  const [answers, setAnswers] = useState<Answers>({
+  const [answers, setAnswers] = useState<PackageRecommenderAnswers>({
+    practiceSize: null,
     patientsPerWeek: null,
     needsVideo: null,
-    wantsFeatured: null,
+    wantsGrowthTools: null,
   });
 
-  const recommendation = getRecommendation(answers);
+  const recommendation = getPackageRecommendation(answers);
   const tierConfig = recommendation ? getLicenseTier(recommendation) : null;
 
   return (
@@ -110,15 +75,41 @@ export function PackageRecommender() {
           Which Package is Right for You?
         </h3>
         <p className="text-center text-sm text-indigo-700/70 dark:text-indigo-300/70">
-          Answer 3 quick questions and we&apos;ll recommend the best plan.
+          Answer a few quick questions and we&apos;ll recommend Free, Starter,
+          Professional (solo) or Clinic (multi-doctor).
         </p>
       </div>
 
       <CardContent className="space-y-6 pt-6">
-        {/* Question 1 */}
+        {/* Question 1 — practice shape drives Clinic vs solo ladder */}
         <div>
           <p className="mb-3 text-sm font-semibold">
-            1. How many patients do you see per week?
+            1. Are you a solo doctor or a multi-doctor practice?
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <OptionCard
+              label="Solo"
+              description="One doctor seat (Free / Starter / Pro)"
+              selected={answers.practiceSize === "solo"}
+              onClick={() =>
+                setAnswers((a) => ({ ...a, practiceSize: "solo" }))
+              }
+            />
+            <OptionCard
+              label="Multi-doctor practice"
+              description="3–15 seats on one Clinic bill"
+              selected={answers.practiceSize === "multi"}
+              onClick={() =>
+                setAnswers((a) => ({ ...a, practiceSize: "multi" }))
+              }
+            />
+          </div>
+        </div>
+
+        {/* Question 2 */}
+        <div>
+          <p className="mb-3 text-sm font-semibold">
+            2. How many patients do you see per week?
           </p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <OptionCard
@@ -148,10 +139,10 @@ export function PackageRecommender() {
           </div>
         </div>
 
-        {/* Question 2 */}
+        {/* Question 3 */}
         <div>
           <p className="mb-3 text-sm font-semibold">
-            2. Do you need video consultations?
+            3. Do you need video consultations?
           </p>
           <div className="grid grid-cols-2 gap-2">
             <OptionCard
@@ -173,26 +164,26 @@ export function PackageRecommender() {
           </div>
         </div>
 
-        {/* Question 3 */}
+        {/* Question 4 — growth tools (solo path → Professional) */}
         <div>
           <p className="mb-3 text-sm font-semibold">
-            3. Do you want featured placement in search results?
+            4. Do you need SMS/WhatsApp, analytics, CRM or waitlist tools?
           </p>
           <div className="grid grid-cols-2 gap-2">
             <OptionCard
               label="Yes"
-              description="Maximum visibility"
-              selected={answers.wantsFeatured === "yes"}
+              description="Solo growth (Professional)"
+              selected={answers.wantsGrowthTools === "yes"}
               onClick={() =>
-                setAnswers((a) => ({ ...a, wantsFeatured: "yes" }))
+                setAnswers((a) => ({ ...a, wantsGrowthTools: "yes" }))
               }
             />
             <OptionCard
-              label="No"
-              description="Standard listing"
-              selected={answers.wantsFeatured === "no"}
+              label="Not yet"
+              description="Core bookings are enough"
+              selected={answers.wantsGrowthTools === "no"}
               onClick={() =>
-                setAnswers((a) => ({ ...a, wantsFeatured: "no" }))
+                setAnswers((a) => ({ ...a, wantsGrowthTools: "no" }))
               }
             />
           </div>
@@ -201,7 +192,7 @@ export function PackageRecommender() {
         {/* Result */}
         {tierConfig && recommendation && (
           <div className="animate-in fade-in slide-in-from-bottom-2 rounded-xl border-2 border-primary/20 bg-primary/5 p-5">
-            <div className="mb-3 flex items-center gap-3">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
               <Badge variant="default" className="text-sm">
                 Recommended
               </Badge>
@@ -217,7 +208,7 @@ export function PackageRecommender() {
             </div>
 
             <p className="mb-4 text-sm text-muted-foreground">
-              {getRecommendationReason(recommendation, answers)}
+              {getPackageRecommendationReason(recommendation, answers)}
             </p>
 
             <ul className="mb-5 space-y-1.5">

@@ -138,7 +138,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     priceMonthlyPence: 19900, // £199
     perUser: false,
     defaultSeats: 1,
-    maxSeats: 1, // single seat only — upgrade to Professional for more
+    maxSeats: 1, // single seat only — multi-doctor is Clinic
     includedSeats: 1,
     extraSeatPricePence: 0, // no add-on seats — must upgrade
     commitmentMonths: 12,

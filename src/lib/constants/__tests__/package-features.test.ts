@@ -59,17 +59,19 @@ describe("hasFeature matrix (enforcement)", () => {
 });
 
 describe("public packaging copy does not contradict matrix", () => {
-  it("package-recommender does not put WhatsApp on Starter", async () => {
+  it("package-recommender does not put WhatsApp on Starter; multi → Clinic", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const src = readFileSync(
-      join(process.cwd(), "src/app/[locale]/(public)/contact/package-recommender.tsx"),
+    const logic = readFileSync(
+      join(process.cwd(), "src/lib/marketing/package-recommender.ts"),
       "utf8"
     );
-    // Extract starter-reason strings only (between starter branch returns)
-    const starterBlock = src.slice(
-      src.indexOf('if (tierId === "starter")'),
-      src.indexOf('return "Founding Free')
+    // Multi-doctor always Clinic
+    expect(logic).toMatch(/practiceSize === "multi"[\s\S]{0,40}return "clinic"/);
+    // Extract starter-reason strings only
+    const starterBlock = logic.slice(
+      logic.indexOf('if (tierId === "starter")'),
+      logic.indexOf('return "Founding Free')
     );
     // Must not claim SMS/WhatsApp as included benefits for Starter
     expect(starterBlock).not.toMatch(
@@ -79,6 +81,22 @@ describe("public packaging copy does not contradict matrix", () => {
     if (/whatsapp/i.test(starterBlock)) {
       expect(starterBlock).toMatch(/Professional|later for SMS|come with Professional/i);
     }
+  });
+
+  it("coming-soon FAQ lists Free → Starter → Pro solo → Clinic 3–15", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const html = readFileSync(
+      join(process.cwd(), "public/coming-soon/index.html"),
+      "utf8"
+    );
+    expect(html).toMatch(/Founding Free \(£0\)/i);
+    expect(html).toMatch(/Starter \(£199\/mo\)/i);
+    expect(html).toMatch(/Professional \(£299\/mo, 1 doctor\)/i);
+    expect(html).toMatch(/Clinic \(£1,495\/mo\)/i);
+    expect(html).toMatch(/3 seats included \(expand to 15\)/i);
+    expect(html).toMatch(/Solo practice or multi-doctor clinic/i);
+    expect(html).not.toMatch(/1–4 doctor|up to 4 seats|per-user multi/i);
   });
 
   it("EN FAQ doctor-subscription matches package matrix (no Starter WhatsApp, no Clinic branding)", async () => {
