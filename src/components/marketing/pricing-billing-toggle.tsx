@@ -369,16 +369,19 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                 </ul>
               </CardContent>
 
-              <CardFooter className="p-6 pt-0">
+              <CardFooter className="p-4 pt-0 sm:p-6 sm:pt-0">
                 {isEnterprise ? (
                   <Button
-                    className="w-full rounded-full"
+                    className="h-auto min-h-10 w-full whitespace-normal rounded-full px-3 py-2 text-sm leading-snug"
                     variant="outline"
                     asChild
                   >
-                    <Link href="/support">
-                      Get in Touch for a Demo
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                    <Link
+                      href="/support"
+                      className="inline-flex max-w-full items-center justify-center gap-1.5"
+                    >
+                      <span className="text-center">Contact for demo</span>
+                      <ArrowRight className="h-4 w-4 shrink-0" />
                     </Link>
                   </Button>
                 ) : tier.id === "clinic" ? (
@@ -389,7 +392,7 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                   />
                 ) : (
                   <Button
-                    className="w-full rounded-full"
+                    className="h-auto min-h-10 w-full rounded-full px-3 text-sm"
                     variant={isPopular || isFree ? "default" : "outline"}
                     asChild
                   >
