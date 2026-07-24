@@ -49,6 +49,7 @@ import {
 import {
   getOrganizationLicense,
   createLicenseCheckout,
+  upgradeLicenseTier,
   manageLicenseBilling,
   addExtraSeats,
   previewSeatCost,
@@ -56,6 +57,7 @@ import {
 } from "@/actions/license";
 import { resumeDoctorLicenseCheckout } from "@/actions/auth";
 import { cn } from "@/lib/utils";
+import { isPaidTier, TIER_RANK } from "@/lib/license/tier-lifecycle";
 
 export default function BillingPage() {
   const searchParams = useSearchParams();
@@ -105,7 +107,33 @@ export default function BillingPage() {
     if (couponCode.trim()) formData.set("coupon_code", couponCode);
 
     startTransition(async () => {
-      // Prefer resume path for abandoned signup accounts, else org checkout
+      const currentTier = license?.tier as string | undefined;
+      const upgradingPaid =
+        currentTier &&
+        isPaidTier(currentTier) &&
+        (TIER_RANK[tier] ?? 0) > (TIER_RANK[currentTier] ?? 0);
+
+      // starter→professional (or higher): Stripe subscription update
+      if (upgradingPaid) {
+        formData.set("new_tier", tier);
+        const upgraded = await upgradeLicenseTier(formData);
+        if (upgraded.error) {
+          setErrorMsg(upgraded.error);
+          setTimeout(() => setErrorMsg(""), 5000);
+          return;
+        }
+        if ("upgraded" in upgraded && upgraded.upgraded) {
+          setSuccessMsg(`Upgraded to ${tier}. Features unlock shortly.`);
+          await loadData();
+          return;
+        }
+        if ("url" in upgraded && upgraded.url) {
+          window.location.href = upgraded.url as string;
+          return;
+        }
+      }
+
+      // free→starter / no paid licence: resume abandoned checkout or new Checkout
       const resume = await resumeDoctorLicenseCheckout(tier, 1, billingPeriod);
       if (resume.checkoutUrl) {
         window.location.href = resume.checkoutUrl;
@@ -117,6 +145,13 @@ export default function BillingPage() {
         setTimeout(() => setErrorMsg(""), 4000);
       } else if (result.url) {
         window.location.href = result.url;
+      } else if (
+        result &&
+        "upgraded" in result &&
+        (result as { upgraded?: boolean }).upgraded
+      ) {
+        setSuccessMsg(`Upgraded to ${tier}.`);
+        await loadData();
       }
     });
   }

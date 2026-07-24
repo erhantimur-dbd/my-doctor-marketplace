@@ -29,18 +29,18 @@ export async function getDoctorLicense(
 
   if (!doctor?.organization_id) return null;
 
-  const { data: license } = await supabase
+  const { data: licenses } = await supabase
     .from("licenses")
     .select(
-      "id, tier, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, stripe_customer_id, metadata"
+      "id, tier, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, stripe_customer_id, metadata, created_at"
     )
     .eq("organization_id", doctor.organization_id)
-    .in("status", ["active", "trialing", "past_due"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .in("status", ["active", "trialing", "past_due"]);
 
-  return license as LicenseInfo | null;
+  const { pickEffectiveLicense } = await import("@/lib/license/tier-lifecycle");
+  return pickEffectiveLicense(
+    (licenses || []) as (LicenseInfo & { created_at?: string })[]
+  ) as LicenseInfo | null;
 }
 
 /**
@@ -90,16 +90,16 @@ export async function getOrgLicense(
   supabase: SupabaseClient,
   organizationId: string
 ): Promise<LicenseInfo | null> {
-  const { data: license } = await supabase
+  const { data: licenses } = await supabase
     .from("licenses")
     .select(
-      "id, tier, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, stripe_customer_id, metadata"
+      "id, tier, status, current_period_start, current_period_end, cancel_at_period_end, stripe_subscription_id, stripe_customer_id, metadata, created_at"
     )
     .eq("organization_id", organizationId)
-    .in("status", ["active", "trialing", "past_due"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .in("status", ["active", "trialing", "past_due"]);
 
-  return license as LicenseInfo | null;
+  const { pickEffectiveLicense } = await import("@/lib/license/tier-lifecycle");
+  return pickEffectiveLicense(
+    (licenses || []) as (LicenseInfo & { created_at?: string })[]
+  ) as LicenseInfo | null;
 }

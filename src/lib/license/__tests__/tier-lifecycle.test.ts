@@ -1,0 +1,144 @@
+import { describe, expect, it } from "vitest";
+import {
+  freeLicensesToSupersede,
+  licenseAllowsOnlineBookings,
+  pickEffectiveLicense,
+  resolvePaidCheckoutMode,
+} from "@/lib/license/tier-lifecycle";
+import { hasFeature } from "@/lib/utils/feature-flags";
+
+describe("pickEffectiveLicense", () => {
+  it("prefers paid over free when both active", () => {
+    const effective = pickEffectiveLicense([
+      {
+        id: "1",
+        tier: "free",
+        status: "active",
+        created_at: "2026-01-02T00:00:00.000Z",
+      },
+      {
+        id: "2",
+        tier: "starter",
+        status: "active",
+        created_at: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    expect(effective?.tier).toBe("starter");
+    expect(effective?.id).toBe("2");
+  });
+
+  it("prefers professional over starter", () => {
+    const effective = pickEffectiveLicense([
+      { tier: "starter", status: "active", created_at: "2026-06-01T00:00:00Z" },
+      {
+        tier: "professional",
+        status: "active",
+        created_at: "2026-05-01T00:00:00Z",
+      },
+    ]);
+    expect(effective?.tier).toBe("professional");
+  });
+
+  it("ignores cancelled free when paid is active", () => {
+    const effective = pickEffectiveLicense([
+      { tier: "free", status: "cancelled" },
+      { tier: "starter", status: "trialing" },
+    ]);
+    expect(effective?.tier).toBe("starter");
+  });
+});
+
+describe("resolvePaidCheckoutMode (free→starter, starter→professional)", () => {
+  it("allows new checkout with no licence", () => {
+    expect(resolvePaidCheckoutMode([], "starter").mode).toBe("new");
+  });
+
+  it("allows free→starter as upgrade_from_free", () => {
+    const r = resolvePaidCheckoutMode(
+      [{ tier: "free", status: "active" }],
+      "starter"
+    );
+    expect(r.mode).toBe("upgrade_from_free");
+  });
+
+  it("allows free→professional as upgrade_from_free", () => {
+    expect(
+      resolvePaidCheckoutMode([{ tier: "free", status: "active" }], "professional")
+        .mode
+    ).toBe("upgrade_from_free");
+  });
+
+  it("allows starter→professional as upgrade_paid", () => {
+    const r = resolvePaidCheckoutMode(
+      [
+        {
+          tier: "starter",
+          status: "active",
+          stripe_subscription_id: "sub_123",
+        },
+      ],
+      "professional"
+    );
+    expect(r.mode).toBe("upgrade_paid");
+    expect(r.current?.tier).toBe("starter");
+  });
+
+  it("blocks already-on-plan and free checkout", () => {
+    expect(
+      resolvePaidCheckoutMode([{ tier: "starter", status: "active" }], "starter")
+        .mode
+    ).toBe("blocked");
+    expect(resolvePaidCheckoutMode([], "free").mode).toBe("blocked");
+  });
+
+  it("blocks downgrade professional→starter via checkout", () => {
+    const r = resolvePaidCheckoutMode(
+      [{ tier: "professional", status: "active" }],
+      "starter"
+    );
+    expect(r.mode).toBe("blocked");
+  });
+});
+
+describe("licenseAllowsOnlineBookings + hasFeature matrix", () => {
+  it("free never allows bookings; starter/professional do when active", () => {
+    expect(licenseAllowsOnlineBookings("free", "active")).toBe(false);
+    expect(licenseAllowsOnlineBookings("starter", "active")).toBe(true);
+    expect(licenseAllowsOnlineBookings("professional", "trialing")).toBe(true);
+    expect(licenseAllowsOnlineBookings("starter", "cancelled")).toBe(false);
+  });
+
+  it("feature matrix free vs starter vs professional", () => {
+    expect(hasFeature("online_bookings", "free")).toBe(false);
+    expect(hasFeature("ai_review_summaries", "free")).toBe(false);
+    expect(hasFeature("whatsapp_notifications", "free")).toBe(false);
+
+    expect(hasFeature("online_bookings", "starter")).toBe(true);
+    expect(hasFeature("video_consultations", "starter")).toBe(true);
+    expect(hasFeature("ai_review_summaries", "starter")).toBe(true);
+    expect(hasFeature("email_reminders", "starter")).toBe(true);
+    expect(hasFeature("whatsapp_notifications", "starter")).toBe(false);
+    expect(hasFeature("waitlist_auto_notify", "starter")).toBe(false);
+    expect(hasFeature("analytics_dashboard", "starter")).toBe(false);
+
+    expect(hasFeature("whatsapp_notifications", "professional")).toBe(true);
+    expect(hasFeature("waitlist_auto_notify", "professional")).toBe(true);
+    expect(hasFeature("analytics_dashboard", "professional")).toBe(true);
+    expect(hasFeature("online_bookings", "professional")).toBe(true);
+  });
+});
+
+describe("freeLicensesToSupersede", () => {
+  it("lists free active rows to cancel after paid activation", () => {
+    const rows = freeLicensesToSupersede(
+      [
+        { tier: "free", status: "active", id: "f1" },
+        { tier: "starter", status: "active", id: "s1" },
+        { tier: "free", status: "cancelled", id: "f2" },
+      ],
+      "org_1"
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe("f1");
+  });
+});

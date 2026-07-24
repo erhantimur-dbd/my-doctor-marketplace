@@ -58,13 +58,13 @@ export async function getOrganizationLicense() {
 
   if (!membership) return { error: null, license: null, modules: null };
 
-  const { data: license } = await supabase
+  const { data: licenses } = await supabase
     .from("licenses")
     .select("*")
-    .eq("organization_id", membership.organization_id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .eq("organization_id", membership.organization_id);
+
+  const { pickEffectiveLicense } = await import("@/lib/license/tier-lifecycle");
+  const license = pickEffectiveLicense(licenses || []);
 
   if (!license) return { error: null, license: null, modules: null };
 
@@ -111,7 +111,16 @@ export async function checkLicenseStatus() {
 
 // ─── Billing Actions ────────────────────────────────────────
 
-export async function createLicenseCheckout(formData: FormData) {
+type LicenseCheckoutResult = {
+  error?: string | null;
+  url?: string | null;
+  upgraded?: boolean;
+  tier?: string;
+};
+
+export async function createLicenseCheckout(
+  formData: FormData
+): Promise<LicenseCheckoutResult> {
   const { error: authError, supabase, org } = await requireOrgOwner();
   if (authError || !supabase || !org) return { error: authError };
 
@@ -128,16 +137,37 @@ export async function createLicenseCheckout(formData: FormData) {
   if (tierConfig.isCustomPricing) return { error: "Please get in touch for Enterprise pricing" };
   if (tierConfig.isFreeTier) return { error: "Free tier does not require checkout" };
 
-  // Check no existing active license
-  const { data: existingLicense } = await supabase
+  // Free gateway may already have an active free row — that must not block Starter Checkout.
+  // Paid→paid upgrades use upgradeLicenseTier (Stripe subscription update).
+  const { data: existingRows } = await supabase
     .from("licenses")
-    .select("id")
-    .eq("organization_id", org.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
+    .select("id, tier, status, stripe_subscription_id, created_at")
+    .eq("organization_id", org.id);
 
-  if (existingLicense) return { error: "You already have an active license. Use upgrade instead." };
+  const {
+    resolvePaidCheckoutMode,
+  } = await import("@/lib/license/tier-lifecycle");
+  const decision = resolvePaidCheckoutMode(
+    existingRows || [],
+    parsed.data.tier
+  );
+
+  if (decision.mode === "blocked") {
+    return { error: decision.reason || "Cannot start checkout for this plan" };
+  }
+  if (decision.mode === "upgrade_paid") {
+    // Delegate to subscription update path
+    const upgradeFd = new FormData();
+    upgradeFd.set("new_tier", parsed.data.tier);
+    upgradeFd.set(
+      "billing_period",
+      (formData.get("billing_period") as string) || "monthly"
+    );
+    if (formData.get("seat_count")) {
+      upgradeFd.set("seat_count", formData.get("seat_count") as string);
+    }
+    return upgradeLicenseTier(upgradeFd);
+  }
 
   const stripe = getStripe();
 
@@ -433,4 +463,140 @@ export async function toggleModule(formData: FormData) {
 
   revalidatePath("/doctor-dashboard/organization/billing");
   return { error: null };
+}
+
+/**
+ * Upgrade package: free→paid uses Checkout; paid→higher (starter→professional)
+ * updates the Stripe subscription price and local licence tier.
+ */
+export async function upgradeLicenseTier(
+  formData: FormData
+): Promise<LicenseCheckoutResult> {
+  const { error: authError, supabase, org } = await requireOrgOwner();
+  if (authError || !supabase || !org) return { error: authError };
+
+  const newTier =
+    (formData.get("new_tier") as string) || (formData.get("tier") as string);
+  const parsed = upgradeTierSchema.safeParse({ new_tier: newTier });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid tier" };
+  }
+
+  const tierConfig = getLicenseTier(parsed.data.new_tier);
+  if (!tierConfig || tierConfig.isFreeTier || tierConfig.isCustomPricing) {
+    return { error: "Invalid upgrade target" };
+  }
+
+  const { data: existingRows } = await supabase
+    .from("licenses")
+    .select("id, tier, status, stripe_subscription_id, created_at, max_seats")
+    .eq("organization_id", org.id);
+
+  const { resolvePaidCheckoutMode } = await import(
+    "@/lib/license/tier-lifecycle"
+  );
+  const decision = resolvePaidCheckoutMode(
+    existingRows || [],
+    parsed.data.new_tier
+  );
+
+  if (decision.mode === "blocked") {
+    return { error: decision.reason || "Upgrade not available" };
+  }
+
+  // free→paid or no licence: Checkout session (createLicenseCheckout allows free row)
+  if (decision.mode === "new" || decision.mode === "upgrade_from_free") {
+    const checkoutFd = new FormData();
+    checkoutFd.set("tier", parsed.data.new_tier);
+    checkoutFd.set(
+      "billing_period",
+      (formData.get("billing_period") as string) || "monthly"
+    );
+    if (formData.get("seat_count")) {
+      checkoutFd.set("seat_count", formData.get("seat_count") as string);
+    }
+    if (formData.get("coupon_code")) {
+      checkoutFd.set("coupon_code", formData.get("coupon_code") as string);
+    }
+    return createLicenseCheckout(checkoutFd);
+  }
+
+  const current = decision.current;
+  if (!current?.stripe_subscription_id) {
+    return {
+      error:
+        "No Stripe subscription found for your plan. Use Manage Billing or contact support.",
+    };
+  }
+
+  const billingPeriod =
+    (formData.get("billing_period") as string) === "annual"
+      ? "annual"
+      : "monthly";
+  const seatCount = formData.get("seat_count")
+    ? parseInt(formData.get("seat_count") as string, 10)
+    : 1;
+
+  const { getOrCreateLicensePriceId } = await import(
+    "@/lib/constants/license-tiers"
+  );
+  const priceId = await getOrCreateLicensePriceId(
+    parsed.data.new_tier,
+    tierConfig,
+    billingPeriod
+  );
+
+  const quantity = tierConfig.perUser
+    ? Math.min(Math.max(seatCount, 1), tierConfig.maxSeats)
+    : 1;
+  const maxSeats = tierConfig.perUser
+    ? quantity
+    : tierConfig.includedSeats || 1;
+
+  const stripe = getStripe();
+  try {
+    const subscription = await stripe.subscriptions.retrieve(
+      current.stripe_subscription_id
+    );
+    const itemId = subscription.items.data[0]?.id;
+    if (!itemId) {
+      return { error: "Subscription has no line items to upgrade" };
+    }
+
+    await stripe.subscriptions.update(current.stripe_subscription_id, {
+      items: [{ id: itemId, price: priceId, quantity }],
+      proration_behavior: "create_prorations",
+      metadata: {
+        ...subscription.metadata,
+        organization_id: org.id,
+        tier: parsed.data.new_tier,
+        type: "license",
+        seat_count: String(quantity),
+        max_seats: String(maxSeats),
+        billing_period: billingPeriod,
+      },
+    });
+
+    if (current.id) {
+      await supabase
+        .from("licenses")
+        .update({
+          tier: parsed.data.new_tier,
+          max_seats: maxSeats,
+          used_seats: Math.min(quantity, maxSeats),
+        })
+        .eq("id", current.id);
+    }
+
+    revalidatePath("/doctor-dashboard/organization/billing");
+    return { error: null, upgraded: true as const, tier: parsed.data.new_tier };
+  } catch (err) {
+    log.error("upgradeLicenseTier failed", { err });
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "Failed to upgrade subscription. Try Manage Billing.",
+    };
+  }
 }

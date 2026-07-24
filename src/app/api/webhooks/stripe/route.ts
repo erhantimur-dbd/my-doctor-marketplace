@@ -728,6 +728,26 @@ export async function POST(request: NextRequest) {
           { onConflict: "stripe_subscription_id" }
         );
 
+        // Paid activation must supersede Founding Free gateway rows (no Stripe id).
+        // Otherwise pickEffectiveLicense / booking gates can still see free as active.
+        if (
+          (licenseStatus === "active" ||
+            licenseStatus === "trialing" ||
+            licenseStatus === "past_due") &&
+          tier &&
+          tier !== "free"
+        ) {
+          await supabase
+            .from("licenses")
+            .update({
+              status: "cancelled",
+              cancelled_at: new Date().toISOString(),
+            })
+            .eq("organization_id", orgId)
+            .eq("tier", "free")
+            .in("status", ["active", "trialing", "past_due"]);
+        }
+
         // Referral rewards + testing addon when paid licence becomes active
         if (licenseStatus === "active" || licenseStatus === "trialing") {
           try {

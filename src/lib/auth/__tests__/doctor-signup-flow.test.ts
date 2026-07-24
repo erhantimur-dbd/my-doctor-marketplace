@@ -35,11 +35,13 @@ describe("doctor signup flow contracts", () => {
     expect(auth).toMatch(/supabase\.auth\.signUp/);
     // Free license insert
     expect(auth).toMatch(/tier:\s*"free"/);
-    // Paid path creates Stripe Checkout subscription
+    // Paid path creates Stripe Checkout subscription with tier metadata
     expect(auth).toMatch(/mode:\s*"subscription"/);
     expect(auth).toMatch(/checkoutUrl/);
-    // Licence checkout prefers env price IDs (getOrCreateLicensePriceId)
     expect(auth).toMatch(/getOrCreateLicensePriceId/);
+    expect(auth).toMatch(/billing_period/);
+    // Selected tier lands in Checkout subscription metadata
+    expect(auth).toMatch(/tier,/);
   });
 
   it("register-doctor page wires free vs checkout branches and referral URL", () => {
@@ -61,6 +63,34 @@ describe("doctor signup flow contracts", () => {
     expect(booking).toContain("stripe_onboarding_complete");
     expect(booking).toContain("stripe_account_id");
     expect(booking).toMatch(/status.*active.*trialing.*past_due|in\("status"/);
+    // Prefer paid licence when free + paid coexist
+    expect(booking).toMatch(/pickEffectiveLicense|licenseAllowsOnlineBookings/);
+  });
+
+  it("free→starter checkout is not blocked by active free licence", () => {
+    const license = read("src/actions/license.ts");
+    expect(license).toMatch(/resolvePaidCheckoutMode/);
+    expect(license).toMatch(/upgrade_from_free|upgradeLicenseTier/);
+    expect(license).toMatch(/export async function upgradeLicenseTier/);
+    // Must not only hard-block all active licences
+    expect(license).toMatch(/upgrade_from_free/);
+  });
+
+  it("webhook supersedes free licence when paid subscription activates", () => {
+    const webhook = read("src/app/api/webhooks/stripe/route.ts");
+    expect(webhook).toMatch(/tier.*free/);
+    expect(webhook).toMatch(/status:\s*"cancelled"|cancelled_at/);
+    expect(webhook).toMatch(/stripe_subscription_id/);
+    expect(webhook).toMatch(/metadata\?\.tier|metadata\.tier/);
+  });
+
+  it("billing page wires free→paid checkout and paid→paid upgrade", () => {
+    const billing = read(
+      "src/app/[locale]/(doctor)/doctor-dashboard/organization/billing/page.tsx"
+    );
+    expect(billing).toContain("createLicenseCheckout");
+    expect(billing).toContain("upgradeLicenseTier");
+    expect(billing).toContain("resumeDoctorLicenseCheckout");
   });
 
   it("search only lists verified doctors", () => {

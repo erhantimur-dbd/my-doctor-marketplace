@@ -243,19 +243,22 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     }
 
     // Check doctor's org has an active paid-capable license.
-    // Free tier is listing-only (marketing) — no online bookings.
+    // Free tier is listing-only — no online bookings. Prefer paid if dual rows.
     let hasActiveLicense = false;
 
     if (doctor.organization_id) {
-      const { data: orgLicense } = await adminSupabase
+      const { data: orgLicenses } = await adminSupabase
         .from("licenses")
-        .select("id, tier, status")
+        .select("id, tier, status, created_at")
         .eq("organization_id", doctor.organization_id)
-        .in("status", ["active", "trialing", "past_due"])
-        .limit(1)
-        .maybeSingle();
+        .in("status", ["active", "trialing", "past_due"]);
+
+      const { pickEffectiveLicense, licenseAllowsOnlineBookings } =
+        await import("@/lib/license/tier-lifecycle");
+      const orgLicense = pickEffectiveLicense(orgLicenses || []);
+
       if (orgLicense) {
-        if (orgLicense.tier === "free") {
+        if (!licenseAllowsOnlineBookings(orgLicense.tier, orgLicense.status)) {
           return {
             error:
               "This doctor is on a free listing plan and does not accept online bookings yet.",
