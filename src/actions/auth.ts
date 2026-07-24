@@ -237,7 +237,12 @@ async function createDoctorAccount(formData: FormData): Promise<
   const locale = (formData.get("locale") as string) || "en";
   const colleagueName = (formData.get("colleague_name") as string)?.trim() || "";
   const colleagueEmail = (formData.get("colleague_email") as string)?.trim().toLowerCase() || "";
-  const hasTestingAddon = formData.get("has_testing_addon") === "true";
+  // Durable testing entitlement is never set at account create (avoids free unlock
+  // if Checkout is abandoned). Paid opt-in is applied only on Checkout + webhook.
+  const { hasTestingAddonAtAccountCreate } = await import(
+    "@/lib/license/medical-testing"
+  );
+  const hasTestingAddon = hasTestingAddonAtAccountCreate();
 
   // Server-side password strength validation
   const pwResult = passwordSchema.safeParse(password);
@@ -768,7 +773,13 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     ? quantity
     : tierConfig.includedSeats || 1;
 
-  const hasTestingAddon = formData.get("has_testing_addon") === "true";
+  const { shouldChargeTestingAddonAtCheckout } = await import(
+    "@/lib/license/medical-testing"
+  );
+  const hasTestingAddon = shouldChargeTestingAddonAtCheckout({
+    tier,
+    formWantsAddon: formData.get("has_testing_addon") === "true",
+  });
   const lineItems: { price: string; quantity: number }[] = [
     { price: priceId, quantity },
   ];

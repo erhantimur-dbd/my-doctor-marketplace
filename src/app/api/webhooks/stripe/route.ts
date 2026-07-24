@@ -846,9 +846,17 @@ export async function POST(request: NextRequest) {
             console.error("Referral reward error (non-fatal):", err);
           }
 
-          // Medical testing add-on purchased with plan
-          if (subscription.metadata?.has_testing_addon === "1") {
-            try {
+          // Medical testing: paid add-on metadata OR Clinic/Enterprise included
+          try {
+            const { shouldGrantTestingAfterLicenseActive } = await import(
+              "@/lib/license/medical-testing"
+            );
+            const grantTesting = shouldGrantTestingAfterLicenseActive({
+              tier: effectiveTier,
+              metadataHasTestingAddon:
+                subscription.metadata?.has_testing_addon === "1",
+            });
+            if (grantTesting) {
               const doctorIdMeta = subscription.metadata?.doctor_id;
               if (doctorIdMeta) {
                 await supabase
@@ -861,7 +869,6 @@ export async function POST(request: NextRequest) {
                   .update({ has_testing_addon: true })
                   .eq("organization_id", orgId);
               }
-              // Activate license_modules row if license id known
               const { data: lic } = await supabase
                 .from("licenses")
                 .select("id")
@@ -879,9 +886,9 @@ export async function POST(request: NextRequest) {
                   { onConflict: "license_id,module_key" }
                 );
               }
-            } catch (err) {
-              console.error("Testing addon activation error (non-fatal):", err);
             }
+          } catch (err) {
+            console.error("Testing entitlement activation error (non-fatal):", err);
           }
         }
       }

@@ -453,19 +453,155 @@ export async function toggleModule(formData: FormData) {
   const moduleConfig = getModuleConfig(parsed.data.module_key);
   if (!moduleConfig) return { error: "Unknown module" };
 
-  const { data: license } = await supabase
+  const { data: licenses } = await supabase
     .from("licenses")
-    .select("id")
-    .eq("organization_id", org.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
+    .select("id, tier, status, stripe_subscription_id")
+    .eq("organization_id", org.id);
 
+  const { pickEffectiveLicense } = await import("@/lib/license/tier-lifecycle");
+  const license = pickEffectiveLicense(licenses || []);
   if (!license) return { error: "No active license found" };
 
   const adminSupabase = createAdminClient();
+  const enabled = parsed.data.enabled;
 
-  if (parsed.data.enabled) {
+  // Medical Testing: keep doctors.has_testing_addon in sync; charge Stripe for
+  // Starter/Pro paid add-on; Clinic/Enterprise include at no extra fee.
+  if (parsed.data.module_key === "medical_testing") {
+    const {
+      canToggleMedicalTestingModule,
+      isTestingAddonPriceMetadata,
+    } = await import("@/lib/license/medical-testing");
+    const gate = canToggleMedicalTestingModule(license.tier);
+    if (!gate.ok) return { error: gate.reason };
+
+    if (enabled && gate.mode === "paid_addon") {
+      if (!license.stripe_subscription_id) {
+        return {
+          error:
+            "No Stripe subscription found. Complete licence checkout before adding Medical Testing.",
+        };
+      }
+      try {
+        const stripe = getStripe();
+        const {
+          getOrCreateTestingAddonPriceId,
+        } = await import("@/lib/constants/license-tiers");
+        const sub = await stripe.subscriptions.retrieve(
+          license.stripe_subscription_id,
+          { expand: ["items.data.price"] }
+        );
+        const billingPeriod =
+          sub.items?.data?.[0]?.price?.recurring?.interval === "year"
+            ? "annual"
+            : "monthly";
+        const testingPriceId =
+          await getOrCreateTestingAddonPriceId(billingPeriod);
+        const monthlyId = await getOrCreateTestingAddonPriceId("monthly");
+        const annualId = await getOrCreateTestingAddonPriceId("annual");
+        const already = (sub.items?.data || []).some((item) => {
+          const priceId =
+            typeof item.price === "string" ? item.price : item.price?.id;
+          if (priceId === testingPriceId || priceId === monthlyId || priceId === annualId) {
+            return true;
+          }
+          const meta = (
+            typeof item.price === "object" ? item.price?.metadata : undefined
+          ) as Record<string, string> | undefined;
+          return isTestingAddonPriceMetadata(meta);
+        });
+        if (!already) {
+          await stripe.subscriptionItems.create({
+            subscription: license.stripe_subscription_id,
+            price: testingPriceId,
+            quantity: 1,
+            proration_behavior: "create_prorations",
+          });
+        }
+      } catch (err) {
+        log.error("[License] Failed to add Medical Testing Stripe item:", {
+          err,
+        });
+        return {
+          error:
+            "Could not update billing for Medical Testing. Please try again or contact support.",
+        };
+      }
+    }
+
+    if (!enabled && gate.mode === "paid_addon" && license.stripe_subscription_id) {
+      try {
+        const stripe = getStripe();
+        const {
+          getOrCreateTestingAddonPriceId,
+        } = await import("@/lib/constants/license-tiers");
+        const monthlyId = await getOrCreateTestingAddonPriceId("monthly");
+        const annualId = await getOrCreateTestingAddonPriceId("annual");
+        const sub = await stripe.subscriptions.retrieve(
+          license.stripe_subscription_id,
+          { expand: ["items.data.price"] }
+        );
+        for (const item of sub.items?.data || []) {
+          const priceId =
+            typeof item.price === "string" ? item.price : item.price?.id;
+          const meta = (
+            typeof item.price === "object" ? item.price?.metadata : undefined
+          ) as Record<string, string> | undefined;
+          const isTesting =
+            priceId === monthlyId ||
+            priceId === annualId ||
+            isTestingAddonPriceMetadata(meta);
+          if (isTesting) {
+            await stripe.subscriptionItems.del(item.id, {
+              proration_behavior: "create_prorations",
+            });
+          }
+        }
+      } catch (err) {
+        log.error("[License] Failed to remove Medical Testing Stripe item:", {
+          err,
+        });
+        return {
+          error:
+            "Could not remove Medical Testing from billing. Please try again or contact support.",
+        };
+      }
+    }
+
+    await adminSupabase
+      .from("doctors")
+      .update({ has_testing_addon: enabled })
+      .eq("organization_id", org.id);
+
+    if (enabled) {
+      await adminSupabase.from("license_modules").upsert(
+        {
+          license_id: license.id,
+          module_key: "medical_testing",
+          is_active: true,
+          activated_at: new Date().toISOString(),
+          deactivated_at: null,
+        },
+        { onConflict: "license_id,module_key" }
+      );
+    } else {
+      await adminSupabase
+        .from("license_modules")
+        .update({
+          is_active: false,
+          deactivated_at: new Date().toISOString(),
+        })
+        .eq("license_id", license.id)
+        .eq("module_key", "medical_testing");
+    }
+
+    revalidatePath("/doctor-dashboard/organization/billing");
+    revalidatePath("/doctor-dashboard/medical-testing");
+    return { error: null };
+  }
+
+  // Other modules: license_modules only (legacy)
+  if (enabled) {
     await adminSupabase.from("license_modules").upsert(
       {
         license_id: license.id,

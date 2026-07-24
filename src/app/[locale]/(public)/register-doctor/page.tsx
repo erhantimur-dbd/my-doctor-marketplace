@@ -1318,8 +1318,10 @@ export default function RegisterDoctorPage() {
 
               <Separator />
 
-              {/* Medical Testing Add-on — paid plans only (Stripe line item) */}
-              {testingAddon && selectedTier !== "free" && (
+              {/* Medical Testing: paid add-on on Starter/Pro only; Clinic+ included */}
+              {testingAddon &&
+                (selectedTier === "starter" ||
+                  selectedTier === "professional") && (
                 <div
                   className={`rounded-lg border p-4 transition-colors ${
                     hasTestingAddon
@@ -1381,6 +1383,22 @@ export default function RegisterDoctorPage() {
                       </div>
                     </div>
                   </label>
+                </div>
+              )}
+              {selectedTier === "clinic" && (
+                <div className="rounded-lg border border-teal-200 bg-teal-50/40 p-4">
+                  <div className="flex items-start gap-3">
+                    <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                    <div>
+                      <p className="font-medium text-sm">
+                        Medical Testing included
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Clinic includes Medical Testing Services at no extra
+                        fee. It unlocks after your licence payment succeeds.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

@@ -340,20 +340,21 @@ export default function MedicalTestingPage() {
               Medical Testing Add-on Required
             </h2>
             <p className="mb-6 max-w-md text-sm text-muted-foreground">
-              Medical testing is included on Clinic and Enterprise. On Starter or
-              Professional, add the Medical Testing module (
+              Medical testing is included on Clinic and Enterprise (unlocks after
+              licence payment). On Starter or Professional, add the Medical
+              Testing module (
               {formatPrice(
                 AVAILABLE_MODULES.find((m) => m.key === "medical_testing")!
                   .priceMonthlyPence,
                 "GBP"
               )}
-              /month, or annual with 2 months free) to list in-person diagnostic
-              services, set your own prices, and manage locations.
+              /month, or annual with 2 months free) from Billing — it charges
+              your subscription and unlocks this page.
             </p>
-            <Link href="/doctor-dashboard/subscription">
+            <Link href="/doctor-dashboard/organization/billing">
               <Button>
                 <Crown className="mr-2 h-4 w-4" />
-                Go to Subscription
+                Go to Billing
               </Button>
             </Link>
           </CardContent>
