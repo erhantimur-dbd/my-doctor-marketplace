@@ -92,7 +92,7 @@ export function formatAnnualEffectiveMonthlyForLocale(
 // price IDs (e.g. `price_1Abc...`) to Vercel's environment variables:
 //   STRIPE_PRICE_STARTER      → Starter plan (£199/mo, annual)
 //   STRIPE_PRICE_PROFESSIONAL → Professional plan (£299/mo flat, 1 seat, annual)
-//   STRIPE_PRICE_CLINIC       → Clinic Starter Pack (£1,495/mo, annual)
+//   STRIPE_PRICE_CLINIC       → Clinic Starter Pack (£897/mo, annual)
 // Also add the extra-seat add-on price if you charge for additional seats:
 //   STRIPE_PRICE_EXTRA_SEAT   → Extra seat (£299/mo, annual)
 
@@ -166,7 +166,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     name: "Clinic Starter Pack",
     description:
       "Practice licence: multi-doctor seats, multi-location, testing and team tools",
-    priceMonthlyPence: 149500, // £1,495 practice pack
+    priceMonthlyPence: 89700, // £897 = 3 × £299 (was £1,495 for 5 seats)
     perUser: false,
     defaultSeats: 3,
     maxSeats: 15, // 3 included + extras to 15

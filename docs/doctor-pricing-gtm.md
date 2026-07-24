@@ -13,7 +13,7 @@ Pricing UI reads `LICENSE_TIERS` which pulls marketing lists from package-featur
 | **Founding Free** | £0 | — | Verified public profile, practice profile, dashboard/checklist | Bookings, video, messaging, AI, all reminders, analytics/waitlist/CRM, testing, multi-location |
 | **Starter** | £199 | £1,990/yr (~£165.83/mo) | Free + online bookings & Stripe, video, email reminders, messaging, AI; testing **add-on** optional | SMS/WhatsApp, advanced analytics, waitlist, CRM/care plans, multi-location/team, branding/API |
 | **Professional** | £299 flat | £2,990/yr | Starter + SMS/WhatsApp, analytics, CRM, care plans, waitlist, priority support; **1 doctor seat** | Multi-doctor seats, multi-location, team ops (Clinic), testing *included* (add-on on Pro), branding/API |
-| **Clinic** | £1,495 | £14,950/yr | Pro features + **3 doctor seats** (to 15), multi-location, team tools, **testing included**, clinic dashboard, bulk invoicing, onboarding | Branding, API, SLA (Enterprise) |
+| **Clinic** | £897 (3×£299) | £8,970/yr (~£748/mo) | Pro features + **3 doctor seats** (to 15), multi-location, team tools, **testing included**, clinic dashboard, bulk invoicing, onboarding | Branding, API, SLA (Enterprise) |
 | **Enterprise** | Custom | Custom | Clinic + branding, API, 15+ profiles, SLA, dedicated AM | — |
 | **Testing add-on** | +£49 | +£490/yr | Diagnostic catalogue on Starter/Pro; **included** on Clinic+ | Not on Free |
 | **Extra seat** | +£299 | +£2,990/yr | Clinic only (up to 15 total) | — |

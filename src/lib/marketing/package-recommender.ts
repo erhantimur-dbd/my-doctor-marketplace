@@ -44,7 +44,7 @@ export function getPackageRecommendationReason(
   answers: PackageRecommenderAnswers
 ): string {
   if (tierId === "clinic") {
-    return "Clinic is the multi-doctor practice licence (£1,495/mo): 3 doctor seats included (expand to 15), multi-location, team tools, medical testing included, and everything in Professional. Solo doctors should use Free, Starter or Professional instead.";
+    return "Clinic is the multi-doctor practice licence (£897/mo): 3 doctor seats included (expand to 15), multi-location, team tools, medical testing included, and everything in Professional. Solo doctors should use Free, Starter or Professional instead.";
   }
   if (tierId === "professional") {
     return "Professional is a solo growth plan (£299 flat): Starter plus SMS & WhatsApp, advanced analytics, patient CRM, care plans, waitlist auto-notify, and priority support. Multi-doctor seats (3–15), multi-location and included medical testing are on Clinic.";

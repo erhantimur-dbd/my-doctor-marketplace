@@ -93,7 +93,7 @@ describe("public packaging copy does not contradict matrix", () => {
     expect(html).toMatch(/Founding Free \(£0\)/i);
     expect(html).toMatch(/Starter \(£199\/mo\)/i);
     expect(html).toMatch(/Professional \(£299\/mo, 1 doctor\)/i);
-    expect(html).toMatch(/Clinic \(£1,495\/mo\)/i);
+    expect(html).toMatch(/Clinic \(£897\/mo\)/i);
     expect(html).toMatch(/3 seats included \(expand to 15\)/i);
     expect(html).toMatch(/Solo practice or multi-doctor clinic/i);
     expect(html).not.toMatch(/1–4 doctor|up to 4 seats|per-user multi/i);

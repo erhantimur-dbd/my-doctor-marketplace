@@ -9,7 +9,7 @@
 | Free | 1 | £0 | List & prepare |
 | Starter | 1 | Flat £199 | Solo paid marketplace |
 | **Professional** | **1** | Flat £299 | Solo growth tools (not multi-user) |
-| **Clinic** | **3 included → 15** | Flat £1,495 + £299 extra seats | Practice / multi-doctor |
+| **Clinic** | **3 included → 15** | Flat £897 + £299 extra seats | Practice / multi-doctor |
 | Enterprise | Custom | Custom | Large orgs |
 
 **Rule:** Multi-doctor seats exist only on **Clinic** (and Enterprise). Professional is a **solo** feature tier.

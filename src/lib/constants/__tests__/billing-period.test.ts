@@ -32,6 +32,7 @@ describe("annual billing (2 months free)", () => {
     // Marketing shows rounded £/mo; Stripe still charges exact 10× monthly
     expect(formatAnnualEffectiveMonthlyForLocale(19900, "en")).toBe("£166");
     expect(formatAnnualEffectiveMonthlyForLocale(29900, "en")).toBe("£249");
-    expect(formatAnnualEffectiveMonthlyForLocale(149500, "en")).toBe("£1,246");
+    // Clinic £897/mo → £8,970/yr → £748/mo display
+    expect(formatAnnualEffectiveMonthlyForLocale(89700, "en")).toBe("£748");
   });
 });
