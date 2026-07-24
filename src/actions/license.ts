@@ -518,6 +518,13 @@ export async function toggleModule(formData: FormData) {
             proration_behavior: "create_prorations",
           });
         }
+        // Durable metadata so webhook grants align with item (and disable can clear)
+        await stripe.subscriptions.update(license.stripe_subscription_id, {
+          metadata: {
+            ...(sub.metadata || {}),
+            has_testing_addon: "1",
+          },
+        });
       } catch (err) {
         log.error("[License] Failed to add Medical Testing Stripe item:", {
           err,
@@ -557,6 +564,13 @@ export async function toggleModule(formData: FormData) {
             });
           }
         }
+        // Prevent subscription.updated webhook from re-granting via stale metadata
+        await stripe.subscriptions.update(license.stripe_subscription_id, {
+          metadata: {
+            ...(sub.metadata || {}),
+            has_testing_addon: "0",
+          },
+        });
       } catch (err) {
         log.error("[License] Failed to remove Medical Testing Stripe item:", {
           err,

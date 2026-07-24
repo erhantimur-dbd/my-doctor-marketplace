@@ -65,20 +65,35 @@ describe("Medical Testing signup / add-on flow contracts", () => {
     expect(
       shouldGrantTestingAfterLicenseActive({
         tier: "clinic",
-        metadataHasTestingAddon: false,
+        hasTestingPriceItem: false,
       })
     ).toBe(true);
     expect(
       shouldGrantTestingAfterLicenseActive({
         tier: "starter",
-        metadataHasTestingAddon: true,
+        hasTestingPriceItem: true,
       })
     ).toBe(true);
+    // metadata alone must not re-grant after disable
+    expect(
+      shouldGrantTestingAfterLicenseActive({
+        tier: "starter",
+        hasTestingPriceItem: false,
+        metadataHasTestingAddon: true,
+      })
+    ).toBe(false);
 
     const webhook = read("src/app/api/webhooks/stripe/route.ts");
     expect(webhook).toContain("shouldGrantTestingAfterLicenseActive");
+    expect(webhook).toContain("shouldRevokePaidTestingAddon");
+    expect(webhook).toContain("hasTestingPriceItem");
     expect(webhook).toMatch(/has_testing_addon:\s*true/);
+    expect(webhook).toMatch(/has_testing_addon:\s*false/);
     expect(webhook).toMatch(/module_key:\s*"medical_testing"/);
+    // subscription.deleted clears doctor flag
+    expect(webhook).toMatch(
+      /subscription\.deleted[\s\S]*has_testing_addon:\s*false/
+    );
   });
 
   it("runtime gates on doctors.has_testing_addon", () => {
@@ -93,7 +108,7 @@ describe("Medical Testing signup / add-on flow contracts", () => {
     expect(dash).toMatch(/Go to Billing/);
   });
 
-  it("toggleModule medical_testing sets has_testing_addon and Stripe for paid_addon", () => {
+  it("toggleModule medical_testing sets flag, Stripe item, and metadata 0/1", () => {
     const license = read("src/actions/license.ts");
     const toggleStart = license.indexOf("export async function toggleModule");
     expect(toggleStart).toBeGreaterThan(-1);
@@ -103,7 +118,7 @@ describe("Medical Testing signup / add-on flow contracts", () => {
     );
     const toggleBlock = license.slice(
       toggleStart,
-      toggleEnd > toggleStart ? toggleEnd : toggleStart + 8000
+      toggleEnd > toggleStart ? toggleEnd : toggleStart + 10000
     );
     expect(toggleBlock).toContain("medical_testing");
     expect(toggleBlock).toContain("has_testing_addon");
@@ -111,6 +126,8 @@ describe("Medical Testing signup / add-on flow contracts", () => {
     expect(toggleBlock).toContain("getOrCreateTestingAddonPriceId");
     expect(toggleBlock).toContain("subscriptionItems.create");
     expect(toggleBlock).toMatch(/subscriptionItems\.del/);
+    expect(toggleBlock).toMatch(/has_testing_addon:\s*"1"/);
+    expect(toggleBlock).toMatch(/has_testing_addon:\s*"0"/);
   });
 
   it("AVAILABLE_MODULES price is £49 and price helper exists", () => {

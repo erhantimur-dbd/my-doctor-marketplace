@@ -846,16 +846,55 @@ export async function POST(request: NextRequest) {
             console.error("Referral reward error (non-fatal):", err);
           }
 
-          // Medical testing: paid add-on metadata OR Clinic/Enterprise included
+          // Medical testing: Clinic/Enterprise included, or paid add-on line item present
           try {
-            const { shouldGrantTestingAfterLicenseActive } = await import(
-              "@/lib/license/medical-testing"
-            );
+            const {
+              shouldGrantTestingAfterLicenseActive,
+              shouldRevokePaidTestingAddon,
+              isTestingAddonPriceMetadata,
+            } = await import("@/lib/license/medical-testing");
+
+            const {
+              getOrCreateTestingAddonPriceId,
+            } = await import("@/lib/constants/license-tiers");
+            let monthlyTestingId: string | null = null;
+            let annualTestingId: string | null = null;
+            try {
+              monthlyTestingId =
+                await getOrCreateTestingAddonPriceId("monthly");
+              annualTestingId =
+                await getOrCreateTestingAddonPriceId("annual");
+            } catch {
+              /* Stripe unavailable — fall back to metadata types only */
+            }
+            const items = subscription.items?.data || [];
+            const hasTestingPriceItem = items.some((item) => {
+              const price = item.price;
+              const priceId =
+                typeof price === "string" ? price : price?.id;
+              if (
+                priceId &&
+                (priceId === monthlyTestingId || priceId === annualTestingId)
+              ) {
+                return true;
+              }
+              if (!price || typeof price === "string") return false;
+              return isTestingAddonPriceMetadata(
+                price.metadata as Record<string, string> | undefined
+              );
+            });
+
             const grantTesting = shouldGrantTestingAfterLicenseActive({
               tier: effectiveTier,
+              hasTestingPriceItem,
               metadataHasTestingAddon:
                 subscription.metadata?.has_testing_addon === "1",
             });
+            const revokePaid = shouldRevokePaidTestingAddon({
+              tier: effectiveTier,
+              hasTestingPriceItem,
+            });
+
             if (grantTesting) {
               const doctorIdMeta = subscription.metadata?.doctor_id;
               if (doctorIdMeta) {
@@ -885,6 +924,27 @@ export async function POST(request: NextRequest) {
                   },
                   { onConflict: "license_id,module_key" }
                 );
+              }
+            } else if (revokePaid) {
+              // Paid add-on removed (billing toggle) — keep flag false after webhook
+              await supabase
+                .from("doctors")
+                .update({ has_testing_addon: false })
+                .eq("organization_id", orgId);
+              const { data: lic } = await supabase
+                .from("licenses")
+                .select("id")
+                .eq("stripe_subscription_id", subscription.id)
+                .maybeSingle();
+              if (lic?.id) {
+                await supabase
+                  .from("license_modules")
+                  .update({
+                    is_active: false,
+                    deactivated_at: new Date().toISOString(),
+                  })
+                  .eq("license_id", lic.id)
+                  .eq("module_key", "medical_testing");
               }
             }
           } catch (err) {
@@ -957,6 +1017,19 @@ export async function POST(request: NextRequest) {
           }
         } catch (err) {
           console.error("Module deactivation on cancel (non-fatal):", err);
+        }
+
+        // Clear product gate — Free gateway must not keep Medical Testing unlocked
+        try {
+          await supabase
+            .from("doctors")
+            .update({ has_testing_addon: false })
+            .eq("organization_id", orgId);
+        } catch (err) {
+          console.error(
+            "Clear has_testing_addon on subscription delete (non-fatal):",
+            err
+          );
         }
       }
       break;

@@ -49,17 +49,35 @@ export function hasTestingAddonAtAccountCreate(): boolean {
 /**
  * After a paid licence is active/trialing, should we grant testing?
  * - included tiers always
- * - paid add-on when Stripe metadata says so
+ * - paid add-on only when a testing price item is on the subscription
+ *   (metadata alone is not enough — disable clears items + metadata)
  */
 export function shouldGrantTestingAfterLicenseActive(params: {
   tier: string | null | undefined;
-  metadataHasTestingAddon: boolean;
+  /** @deprecated use hasTestingPriceItem for paid_addon */
+  metadataHasTestingAddon?: boolean;
+  /** True when subscription has a Medical Testing add-on line item */
+  hasTestingPriceItem?: boolean;
 }): boolean {
   if (isMedicalTestingIncludedInTier(params.tier)) return true;
   if (medicalTestingModeForTier(params.tier) === "paid_addon") {
-    return params.metadataHasTestingAddon;
+    if (params.hasTestingPriceItem === true) return true;
+    if (params.hasTestingPriceItem === false) return false;
+    // Unknown item state: do not grant from metadata alone (prevents re-unlock after disable)
+    return false;
   }
   return false;
+}
+
+/** Whether webhook should clear testing when paid sub is active but add-on was removed */
+export function shouldRevokePaidTestingAddon(params: {
+  tier: string | null | undefined;
+  hasTestingPriceItem: boolean;
+}): boolean {
+  return (
+    medicalTestingModeForTier(params.tier) === "paid_addon" &&
+    !params.hasTestingPriceItem
+  );
 }
 
 /**

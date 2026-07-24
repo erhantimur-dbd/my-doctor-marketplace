@@ -64,26 +64,34 @@ describe("hasTestingAddonAtAccountCreate", () => {
 });
 
 describe("shouldGrantTestingAfterLicenseActive", () => {
-  it("grants clinic without metadata", () => {
+  it("grants clinic without price item", () => {
     expect(
       shouldGrantTestingAfterLicenseActive({
         tier: "clinic",
-        metadataHasTestingAddon: false,
+        hasTestingPriceItem: false,
       })
     ).toBe(true);
   });
 
-  it("grants starter only with metadata", () => {
+  it("grants starter only when testing price item is present", () => {
     expect(
       shouldGrantTestingAfterLicenseActive({
         tier: "starter",
-        metadataHasTestingAddon: true,
+        hasTestingPriceItem: true,
+        metadataHasTestingAddon: false,
       })
     ).toBe(true);
     expect(
       shouldGrantTestingAfterLicenseActive({
         tier: "starter",
-        metadataHasTestingAddon: false,
+        hasTestingPriceItem: false,
+        metadataHasTestingAddon: true,
+      })
+    ).toBe(false);
+    expect(
+      shouldGrantTestingAfterLicenseActive({
+        tier: "starter",
+        metadataHasTestingAddon: true,
       })
     ).toBe(false);
   });
@@ -92,7 +100,27 @@ describe("shouldGrantTestingAfterLicenseActive", () => {
     expect(
       shouldGrantTestingAfterLicenseActive({
         tier: "free",
-        metadataHasTestingAddon: true,
+        hasTestingPriceItem: true,
+      })
+    ).toBe(false);
+  });
+});
+
+describe("shouldRevokePaidTestingAddon", () => {
+  it("revokes starter when item gone", async () => {
+    const { shouldRevokePaidTestingAddon } = await import(
+      "../medical-testing"
+    );
+    expect(
+      shouldRevokePaidTestingAddon({
+        tier: "starter",
+        hasTestingPriceItem: false,
+      })
+    ).toBe(true);
+    expect(
+      shouldRevokePaidTestingAddon({
+        tier: "clinic",
+        hasTestingPriceItem: false,
       })
     ).toBe(false);
   });
