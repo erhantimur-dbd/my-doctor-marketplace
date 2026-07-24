@@ -141,7 +141,7 @@ export function canInviteDoctor(params: {
     return {
       allowed: false,
       reason:
-        "Multi-doctor seats require Professional or Clinic. Use Referrals to invite colleagues to their own account, or upgrade your plan.",
+        "Multi-doctor seats require a Clinic plan (3–15 doctors). Use Referrals to invite colleagues to their own account, or upgrade to Clinic.",
       used,
       pending,
       max,
@@ -155,7 +155,7 @@ export function canInviteDoctor(params: {
     return {
       allowed: false,
       reason:
-        "Your plan includes one doctor seat. Upgrade to Professional (up to 4) or Clinic (up to 15), or use Referrals for independent accounts.",
+        "Your plan includes one doctor seat. For 3–15 doctors on one bill, upgrade to Clinic — or use Referrals for independent accounts.",
       used,
       pending,
       max,

@@ -60,7 +60,7 @@ describe("canInviteDoctor", () => {
         role: "doctor",
       });
       expect(r.allowed, tier).toBe(false);
-      expect(r.reason, tier).toMatch(/Clinic|Referrals|one doctor|Professional/i);
+      expect(r.reason, tier).toMatch(/Clinic|Referrals|one doctor/i);
     }
   });
 

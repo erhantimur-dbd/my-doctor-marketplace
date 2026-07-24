@@ -432,7 +432,16 @@ export default function RegisterDoctorPage() {
 
     // Plan selection
     formData.set("tier", selectedTier);
-    formData.set("seat_count", seatCount.toString());
+    // Solo plans always 1 seat; Clinic default 3 (capacity expanded later from dashboard)
+    const tierCfg = getSelectedTierConfig();
+    const seatsToSubmit =
+      tierCfg && !tierCfg.isFreeTier
+        ? Math.min(
+            Math.max(seatCount || tierCfg.defaultSeats || 1, 1),
+            tierCfg.maxSeats
+          )
+        : 1;
+    formData.set("seat_count", String(seatsToSubmit));
     formData.set("billing_period", billingPeriod);
 
     const tierConfig = getSelectedTierConfig();
