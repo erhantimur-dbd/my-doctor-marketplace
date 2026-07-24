@@ -44,15 +44,33 @@ export async function getDoctorLicense(
 }
 
 /**
- * Check whether a doctor has any active license (active, trialing, or past_due).
- * Shortcut for cases where you only need a boolean check.
+ * True when the doctor has an active **paid** licence (Starter+).
+ * Founding Free is active but listing-only — must return false so dashboard
+ * gates do not treat free as subscribed.
  */
 export async function hasActiveLicense(
   supabase: SupabaseClient,
   doctorId: string
 ): Promise<boolean> {
   const license = await getDoctorLicense(supabase, doctorId);
-  return !!license;
+  if (!license) return false;
+  const { isPaidTier, isActiveLicenseStatus } = await import(
+    "@/lib/license/tier-lifecycle"
+  );
+  return (
+    isPaidTier(license.tier) && isActiveLicenseStatus(license.status)
+  );
+}
+
+/**
+ * Effective licence tier for a doctor (free / starter / …), or null.
+ */
+export async function getDoctorLicenseTier(
+  supabase: SupabaseClient,
+  doctorId: string
+): Promise<string | null> {
+  const license = await getDoctorLicense(supabase, doctorId);
+  return license?.tier ?? null;
 }
 
 /**

@@ -21,7 +21,8 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
-import { hasActiveLicense } from "@/lib/license/check";
+import { getDoctorLicenseTier } from "@/lib/license/check";
+import { hasFeature } from "@/lib/utils/feature-flags";
 import { MonthlyBarChart } from "@/components/charts/monthly-bar-chart";
 import { DayOfWeekChart } from "@/components/charts/day-of-week-chart";
 import { ConsultationPieChart } from "@/components/charts/consultation-pie-chart";
@@ -45,8 +46,15 @@ export default async function AnalyticsPage() {
 
   if (!doctor) redirect("/en/register-doctor");
 
-  if (!(await hasActiveLicense(supabase, doctor.id))) {
-    return <UpgradePrompt feature="Analytics" />;
+  // Advanced analytics is Professional+ (not Free/Starter)
+  const licenseTier = await getDoctorLicenseTier(supabase, doctor.id);
+  if (!hasFeature("analytics_dashboard", licenseTier)) {
+    return (
+      <UpgradePrompt
+        feature="Analytics"
+        description="Advanced analytics are included on Professional, Clinic, and Enterprise plans. Upgrade from Billing to unlock revenue and booking insights."
+      />
+    );
   }
 
   const currency = doctor.base_currency || "EUR";

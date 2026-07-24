@@ -280,15 +280,20 @@ export async function previewSeatCost(count: number) {
 
   if (!count || count < 1 || count > 50) return { error: "Invalid seat count" };
 
-  const { data: license } = await supabase
+  const { data: licenseRows } = await supabase
     .from("licenses")
     .select("*")
     .eq("organization_id", org.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
+    .in("status", ["active", "trialing", "past_due"]);
 
-  if (!license) return { error: "No active license found" };
+  const { pickEffectiveLicense, isPaidTier } = await import(
+    "@/lib/license/tier-lifecycle"
+  );
+  const license = pickEffectiveLicense(licenseRows || []);
+
+  if (!license || !isPaidTier(license.tier)) {
+    return { error: "No active paid license found" };
+  }
 
   const tierConfig = getLicenseTier(license.tier);
   if (!tierConfig) return { error: "Invalid license tier" };
@@ -337,15 +342,20 @@ export async function addExtraSeats(formData: FormData) {
   });
   if (!parsed.success) return { error: "Invalid seat count" };
 
-  const { data: license } = await supabase
+  const { data: licenseRows } = await supabase
     .from("licenses")
     .select("*")
     .eq("organization_id", org.id)
-    .in("status", ["active", "trialing", "past_due"])
-    .limit(1)
-    .maybeSingle();
+    .in("status", ["active", "trialing", "past_due"]);
 
-  if (!license) return { error: "No active license found" };
+  const { pickEffectiveLicense, isPaidTier } = await import(
+    "@/lib/license/tier-lifecycle"
+  );
+  const license = pickEffectiveLicense(licenseRows || []);
+
+  if (!license || !isPaidTier(license.tier)) {
+    return { error: "No active paid license found" };
+  }
 
   const tierConfig = getLicenseTier(license.tier);
   if (!tierConfig) return { error: "Invalid license tier" };

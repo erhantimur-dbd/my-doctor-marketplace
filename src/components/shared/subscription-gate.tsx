@@ -49,17 +49,19 @@ export function SubscriptionGate({
           return;
         }
 
-        // Check org license
+        // Paid licence only (Founding Free is not "subscribed" for product gates)
         if (doctor.organization_id) {
-          const { data: license } = await supabase
+          const { data: licenses } = await supabase
             .from("licenses")
-            .select("id")
+            .select("id, tier, status, created_at")
             .eq("organization_id", doctor.organization_id)
-            .in("status", ["active", "trialing", "past_due"])
-            .limit(1)
-            .maybeSingle();
+            .in("status", ["active", "trialing", "past_due"]);
 
-          if (license) {
+          const { pickEffectiveLicense, isPaidTier } = await import(
+            "@/lib/license/tier-lifecycle"
+          );
+          const license = pickEffectiveLicense(licenses || []);
+          if (license && isPaidTier(license.tier)) {
             setStatus("subscribed");
             return;
           }

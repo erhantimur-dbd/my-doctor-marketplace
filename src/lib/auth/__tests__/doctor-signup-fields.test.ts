@@ -70,7 +70,8 @@ describe("referral cold-code + free booking gate", () => {
 
   it("booking rejects free tier for online bookings", () => {
     const booking = read("src/actions/booking.ts");
-    expect(booking).toContain('tier === "free"');
+    // Effective licence helper (not raw tier === "free" — free can coexist until webhook)
+    expect(booking).toMatch(/licenseAllowsOnlineBookings|pickEffectiveLicense/);
     expect(booking.toLowerCase()).toMatch(/free listing|does not accept online/);
   });
 

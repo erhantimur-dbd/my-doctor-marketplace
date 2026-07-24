@@ -126,6 +126,51 @@ describe("licenseAllowsOnlineBookings + hasFeature matrix", () => {
     expect(hasFeature("analytics_dashboard", "professional")).toBe(true);
     expect(hasFeature("online_bookings", "professional")).toBe(true);
   });
+
+  it("isPaidTier treats free as unpaid for dashboard gates", async () => {
+    const { isPaidTier } = await import("@/lib/license/tier-lifecycle");
+    expect(isPaidTier("free")).toBe(false);
+    expect(isPaidTier("starter")).toBe(true);
+    expect(isPaidTier("professional")).toBe(true);
+  });
+});
+
+describe("dashboard paid-only gates (structural)", () => {
+  it("hasActiveLicense source excludes free via isPaidTier", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const check = readFileSync(
+      join(process.cwd(), "src/lib/license/check.ts"),
+      "utf8"
+    );
+    expect(check).toMatch(/isPaidTier/);
+    expect(check).toMatch(/hasActiveLicense/);
+  });
+
+  it("SubscriptionGate requires isPaidTier not bare license id", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const gate = readFileSync(
+      join(process.cwd(), "src/components/shared/subscription-gate.tsx"),
+      "utf8"
+    );
+    expect(gate).toMatch(/isPaidTier/);
+    expect(gate).toMatch(/pickEffectiveLicense/);
+  });
+
+  it("analytics page uses hasFeature analytics_dashboard", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const page = readFileSync(
+      join(
+        process.cwd(),
+        "src/app/[locale]/(doctor)/doctor-dashboard/analytics/page.tsx"
+      ),
+      "utf8"
+    );
+    expect(page).toMatch(/hasFeature\(\s*["']analytics_dashboard["']/);
+    expect(page).not.toMatch(/hasActiveLicense/);
+  });
 });
 
 describe("freeLicensesToSupersede", () => {
