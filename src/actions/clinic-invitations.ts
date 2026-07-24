@@ -91,18 +91,49 @@ export async function sendClinicInvitation(formData: FormData) {
 
   const adminSupabase = createAdminClient();
 
-  // Check doctor seat availability (only for doctor role invites)
+  // Doctor seat capacity (soft-cap pending invites); admin/staff free
   if (parsed.data.role === "doctor") {
-    const { data: license } = await adminSupabase
+    const { data: licenses } = await adminSupabase
       .from("licenses")
-      .select("max_seats, used_seats")
-      .eq("organization_id", org.id)
-      .in("status", ["active", "trialing", "past_due"])
-      .limit(1)
-      .maybeSingle();
+      .select("id, tier, status, max_seats, used_seats, created_at")
+      .eq("organization_id", org.id);
 
-    if (license && license.used_seats >= license.max_seats) {
-      return { error: "No available doctor seats. Please add extra seats or upgrade your plan." };
+    const { pickEffectiveLicense } = await import("@/lib/license/tier-lifecycle");
+    const {
+      canInviteDoctor,
+    } = await import("@/lib/license/seats");
+
+    const license = pickEffectiveLicense(licenses || []);
+    const { data: members } = await adminSupabase
+      .from("organization_members")
+      .select("role, status")
+      .eq("organization_id", org.id);
+
+    const { data: pendingInvites } = await adminSupabase
+      .from("clinic_invitations")
+      .select("role, status")
+      .eq("organization_id", org.id)
+      .eq("status", "pending");
+
+    const check = canInviteDoctor({
+      members: members || [],
+      pendingInvites: pendingInvites || [],
+      license: license
+        ? {
+            tier: license.tier,
+            status: license.status,
+            max_seats: (license as { max_seats?: number }).max_seats,
+          }
+        : null,
+      role: "doctor",
+    });
+
+    if (!check.allowed) {
+      return {
+        error:
+          check.reason ||
+          "No available doctor seats. Add seats from Billing or upgrade your plan.",
+      };
     }
   }
 
@@ -421,11 +452,6 @@ async function _completeInviteAcceptance(
           .upsert(assignments, { onConflict: "doctor_id,clinic_location_id" });
       }
 
-      // Increment used_seats (only for doctor role)
-      await adminSupabase.rpc("increment_used_seats", {
-        org_id: invite.organization_id,
-        p_member_role: "doctor",
-      });
     }
   }
 
@@ -438,6 +464,12 @@ async function _completeInviteAcceptance(
       accepted_at: new Date().toISOString(),
     })
     .eq("id", invite.id);
+
+  // Recompute used_seats from live membership (source of truth)
+  const { recomputeOrgUsedSeats } = await import(
+    "@/lib/license/recompute-seats"
+  );
+  await recomputeOrgUsedSeats(adminSupabase, invite.organization_id);
 
   revalidatePath("/doctor-dashboard");
   return {

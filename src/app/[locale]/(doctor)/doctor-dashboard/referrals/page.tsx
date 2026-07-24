@@ -24,9 +24,6 @@ import {
   Link2,
 } from "lucide-react";
 import { CopyButton, InviteForm } from "./referral-form";
-import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
-import { hasActiveLicense } from "@/lib/license/check";
-
 const statusColors: Record<string, string> = {
   invited: "bg-blue-100 text-blue-700",
   signed_up: "bg-amber-100 text-amber-700",
@@ -59,9 +56,7 @@ export default async function DoctorReferralsPage() {
 
   if (!doctor) redirect("/en/register-doctor");
 
-  if (!(await hasActiveLicense(supabase, doctor.id))) {
-    return <UpgradePrompt feature="Referrals" />;
-  }
+  // Referrals are available on every plan (including Free) — independent accounts, not seats
 
   // Get referrals
   const { data: referrals } = await supabase
@@ -97,8 +92,11 @@ export default async function DoctorReferralsPage() {
       </div>
 
       <p className="text-muted-foreground">
-        Invite colleagues to join MyDoctors360. When they sign up for a paid licence,
-        you both get 1 month free on your plan.
+        Invite colleagues to create their <strong>own</strong> MyDoctors360
+        account (not a seat on your plan). When they take a paid licence, you
+        both get 1 month free. To add doctors under{" "}
+        <strong>your</strong> Professional or Clinic licence, use Team Members
+        instead.
       </p>
 
       {/* Referral Code & Link */}

@@ -29,6 +29,8 @@ export type LicenseLike = {
   cancel_at_period_end?: boolean | null;
   current_period_end?: string | null;
   metadata?: Record<string, unknown> | null;
+  max_seats?: number | null;
+  used_seats?: number | null;
 };
 
 /** Stripe / local metadata keys for scheduled downgrades (no mid-period price cut). */

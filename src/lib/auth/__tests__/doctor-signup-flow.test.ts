@@ -96,6 +96,24 @@ describe("doctor signup flow contracts", () => {
     expect(billing).toMatch(/period end|Keep current plan/i);
   });
 
+  it("seat invites use capacity helpers; referrals never touch used_seats", () => {
+    const seats = read("src/lib/license/seats.ts");
+    expect(seats).toMatch(/canInviteDoctor/);
+    expect(seats).toMatch(/countDoctorSeatsUsed/);
+    expect(seats).toMatch(/professionalQuantityFromSeats/);
+
+    const clinicInv = read("src/actions/clinic-invitations.ts");
+    expect(clinicInv).toMatch(/canInviteDoctor|pickEffectiveLicense/);
+    expect(clinicInv).toMatch(/recomputeOrgUsedSeats/);
+
+    const referral = read("src/actions/referral.ts");
+    expect(referral).not.toMatch(/used_seats/);
+    expect(referral).toMatch(/sendReferralInvitation|processReferralSignup/);
+
+    const license = read("src/actions/license.ts");
+    expect(license).toMatch(/setProfessionalSeatCapacity/);
+  });
+
   it("exposes schedulePlanChange and restores free on subscription delete", () => {
     const license = read("src/actions/license.ts");
     expect(license).toMatch(/export async function schedulePlanChange/);

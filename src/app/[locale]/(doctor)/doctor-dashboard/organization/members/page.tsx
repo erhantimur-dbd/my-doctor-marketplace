@@ -184,9 +184,12 @@ export default function MembersPage() {
   const activeMembers = members.filter(
     (m: any) => m.status === "active" || m.status === "invited"
   );
+  const tier = license?.tier as string | undefined;
+  const multiDoctor =
+    tier === "professional" || tier === "clinic" || tier === "enterprise";
   const seatInfo = license
-    ? `${license.used_seats} / ${license.max_seats} seats used`
-    : "No license";
+    ? `${license.used_seats} / ${license.max_seats} doctor seats on your ${tier || "plan"} licence`
+    : "No licence";
 
   return (
     <div className="space-y-6">
@@ -194,8 +197,17 @@ export default function MembersPage() {
         <div>
           <h1 className="text-2xl font-bold">Team Members</h1>
           <p className="text-muted-foreground">{seatInfo}</p>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+            Invite colleagues to join <strong>your practice</strong> under this
+            licence (Professional up to 4 doctors; Clinic up to 15). This is not
+            a referral — for independent accounts use{" "}
+            <a href="../referrals" className="text-primary underline">
+              Referrals
+            </a>
+            .
+          </p>
         </div>
-        {isOwnerOrAdmin && (
+        {isOwnerOrAdmin && multiDoctor && (
           <Button onClick={() => setInviteOpen(true)}>
             <UserPlus className="mr-2 h-4 w-4" />
             Invite Member
