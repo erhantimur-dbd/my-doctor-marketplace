@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildFreeGatewayLicenseInsert,
   freeLicensesToSupersede,
+  getPendingPlanChange,
   licenseAllowsOnlineBookings,
+  paidFeaturesActiveDuringCancel,
   pickEffectiveLicense,
   resolvePaidCheckoutMode,
+  resolvePlanChange,
 } from "@/lib/license/tier-lifecycle";
 import { hasFeature } from "@/lib/utils/feature-flags";
 
@@ -91,12 +95,90 @@ describe("resolvePaidCheckoutMode (free→starter, starter→professional)", () 
     expect(resolvePaidCheckoutMode([], "free").mode).toBe("blocked");
   });
 
-  it("blocks downgrade professional→starter via checkout", () => {
+  it("blocks immediate checkout downgrade professional→starter", () => {
     const r = resolvePaidCheckoutMode(
       [{ tier: "professional", status: "active" }],
       "starter"
     );
     expect(r.mode).toBe("blocked");
+    expect(r.reason).toMatch(/period end|Switch Plan/i);
+  });
+});
+
+describe("resolvePlanChange (upgrade now / schedule downgrade)", () => {
+  it("starter→professional is upgrade_now", () => {
+    expect(
+      resolvePlanChange(
+        [{ tier: "starter", status: "active" }],
+        "professional"
+      ).mode
+    ).toBe("upgrade_now");
+  });
+
+  it("professional→starter schedules downgrade (period end)", () => {
+    const r = resolvePlanChange(
+      [
+        {
+          tier: "professional",
+          status: "active",
+          stripe_subscription_id: "sub_1",
+        },
+      ],
+      "starter"
+    );
+    expect(r.mode).toBe("schedule_downgrade");
+  });
+
+  it("starter→free schedules downgrade", () => {
+    expect(
+      resolvePlanChange([{ tier: "starter", status: "active" }], "free").mode
+    ).toBe("schedule_downgrade");
+  });
+
+  it("paid features stay active while cancel_at_period_end", () => {
+    expect(
+      paidFeaturesActiveDuringCancel({
+        tier: "professional",
+        status: "active",
+        cancel_at_period_end: true,
+      })
+    ).toBe(true);
+    expect(
+      paidFeaturesActiveDuringCancel({
+        tier: "professional",
+        status: "cancelled",
+        cancel_at_period_end: false,
+      })
+    ).toBe(false);
+  });
+
+  it("getPendingPlanChange reads cancel and pending_tier", () => {
+    expect(
+      getPendingPlanChange({
+        tier: "starter",
+        status: "active",
+        cancel_at_period_end: true,
+        current_period_end: "2026-12-01T00:00:00.000Z",
+      })?.targetTier
+    ).toBe("free");
+
+    expect(
+      getPendingPlanChange({
+        tier: "professional",
+        status: "active",
+        cancel_at_period_end: false,
+        metadata: { pending_tier: "starter", pending_change: "downgrade" },
+        current_period_end: "2026-08-01T00:00:00.000Z",
+      })?.targetTier
+    ).toBe("starter");
+  });
+
+  it("buildFreeGatewayLicenseInsert is free active listing row", () => {
+    const row = buildFreeGatewayLicenseInsert("org-1");
+    expect(row.tier).toBe("free");
+    expect(row.status).toBe("active");
+    expect(row.organization_id).toBe("org-1");
+    expect(row.stripe_subscription_id).toBeNull();
   });
 });
 

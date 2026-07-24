@@ -702,18 +702,31 @@ export async function POST(request: NextRequest) {
             ? maxSeatsMeta
             : quantity;
 
+        // Snapshot prior period start for scheduled downgrade apply (period roll)
+        const { data: priorLic } = await supabase
+          .from("licenses")
+          .select("id, tier, current_period_start, metadata")
+          .eq("stripe_subscription_id", subscription.id)
+          .maybeSingle();
+
+        const newPeriodStartIso = periodStart
+          ? new Date(periodStart * 1000).toISOString()
+          : new Date().toISOString();
+
+        // Keep current paid tier until period end; do not apply pending_tier here
+        const effectiveTier =
+          subscription.metadata?.tier || priorLic?.tier || "starter";
+
         await supabase.from("licenses").upsert(
           {
             organization_id: orgId,
-            tier,
+            tier: effectiveTier,
             status: licenseStatus,
             stripe_subscription_id: subscription.id,
             stripe_customer_id: subscription.customer as string,
             max_seats: maxSeats,
             used_seats: Math.min(quantity, maxSeats),
-            current_period_start: periodStart
-              ? new Date(periodStart * 1000).toISOString()
-              : new Date().toISOString(),
+            current_period_start: newPeriodStartIso,
             current_period_end: periodEnd
               ? new Date(periodEnd * 1000).toISOString()
               : new Date().toISOString(),
@@ -728,14 +741,76 @@ export async function POST(request: NextRequest) {
           { onConflict: "stripe_subscription_id" }
         );
 
+        // Paid→paid scheduled downgrade: when period rolls, switch price with no proration
+        const pendingTier = subscription.metadata?.pending_tier;
+        const pendingChange = subscription.metadata?.pending_change;
+        if (
+          pendingChange === "downgrade" &&
+          pendingTier &&
+          pendingTier !== "free" &&
+          pendingTier !== effectiveTier &&
+          (licenseStatus === "active" || licenseStatus === "trialing") &&
+          priorLic?.current_period_start &&
+          new Date(newPeriodStartIso) > new Date(priorLic.current_period_start)
+        ) {
+          try {
+            const { getLicenseTier, getOrCreateLicensePriceId } = await import(
+              "@/lib/constants/license-tiers"
+            );
+            const tierConfig = getLicenseTier(pendingTier);
+            if (tierConfig && !tierConfig.isFreeTier) {
+              const billingPeriod =
+                subscription.metadata?.billing_period === "annual"
+                  ? "annual"
+                  : "monthly";
+              const priceId = await getOrCreateLicensePriceId(
+                pendingTier,
+                tierConfig,
+                billingPeriod
+              );
+              const itemId = subscription.items?.data?.[0]?.id;
+              const qty = subscription.items?.data?.[0]?.quantity || 1;
+              if (itemId) {
+                const { getStripe } = await import("@/lib/stripe/client");
+                const stripeClient = getStripe();
+                await stripeClient.subscriptions.update(subscription.id, {
+                  items: [{ id: itemId, price: priceId, quantity: qty }],
+                  proration_behavior: "none",
+                  metadata: {
+                    ...subscription.metadata,
+                    tier: pendingTier,
+                    pending_tier: "",
+                    pending_change: "",
+                    organization_id: orgId,
+                    type: "license",
+                  },
+                });
+                await supabase
+                  .from("licenses")
+                  .update({
+                    tier: pendingTier,
+                    metadata: {
+                      ...((priorLic.metadata as Record<string, unknown>) || {}),
+                      pending_tier: null,
+                      pending_change: null,
+                    },
+                  })
+                  .eq("stripe_subscription_id", subscription.id);
+              }
+            }
+          } catch (err) {
+            console.error("Scheduled paid downgrade apply failed:", err);
+          }
+        }
+
         // Paid activation must supersede Founding Free gateway rows (no Stripe id).
         // Otherwise pickEffectiveLicense / booking gates can still see free as active.
         if (
           (licenseStatus === "active" ||
             licenseStatus === "trialing" ||
             licenseStatus === "past_due") &&
-          tier &&
-          tier !== "free"
+          effectiveTier &&
+          effectiveTier !== "free"
         ) {
           await supabase
             .from("licenses")
@@ -817,12 +892,65 @@ export async function POST(request: NextRequest) {
       const subscription = event.data.object as Stripe.Subscription;
       const orgId = subscription.metadata?.organization_id;
 
-      // License cancellation
+      // Paid period ended (cancel-at-period-end) or sub deleted
       if (orgId) {
         await supabase
           .from("licenses")
-          .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
+          .update({
+            status: "cancelled",
+            cancelled_at: new Date().toISOString(),
+            cancel_at_period_end: false,
+          })
           .eq("stripe_subscription_id", subscription.id);
+
+        // Restore Founding Free gateway so listing/dashboard remain usable
+        const { buildFreeGatewayLicenseInsert } = await import(
+          "@/lib/license/tier-lifecycle"
+        );
+        const { data: freeRows } = await supabase
+          .from("licenses")
+          .select("id, status")
+          .eq("organization_id", orgId)
+          .eq("tier", "free");
+
+        const freeRow = freeRows?.[0];
+        if (freeRow?.id) {
+          await supabase
+            .from("licenses")
+            .update({
+              status: "active",
+              cancelled_at: null,
+              cancel_at_period_end: false,
+              current_period_start: new Date().toISOString(),
+              current_period_end: "2099-12-31T23:59:59.000Z",
+              stripe_subscription_id: null,
+            })
+            .eq("id", freeRow.id);
+        } else {
+          await supabase
+            .from("licenses")
+            .insert(buildFreeGatewayLicenseInsert(orgId));
+        }
+
+        // Deactivate paid add-on modules for this org's licences
+        try {
+          const { data: orgLics } = await supabase
+            .from("licenses")
+            .select("id")
+            .eq("organization_id", orgId);
+          const ids = (orgLics || []).map((l) => l.id);
+          if (ids.length > 0) {
+            await supabase
+              .from("license_modules")
+              .update({
+                is_active: false,
+                deactivated_at: new Date().toISOString(),
+              })
+              .in("license_id", ids);
+          }
+        } catch (err) {
+          console.error("Module deactivation on cancel (non-fatal):", err);
+        }
       }
       break;
     }

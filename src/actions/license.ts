@@ -9,6 +9,7 @@ import {
   addExtraSeatsSchema,
   toggleModuleSchema,
   upgradeTierSchema,
+  schedulePlanChangeSchema,
 } from "@/lib/validators/license";
 import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_PENCE, convertPrice, BASE_CURRENCY, getOrCreateExtraSeatPriceId } from "@/lib/constants/license-tiers";
 import type { LicenseTier } from "@/types";
@@ -607,6 +608,263 @@ export async function upgradeLicenseTier(
         err instanceof Error
           ? err.message
           : "Failed to upgrade subscription. Try Manage Billing.",
+    };
+  }
+}
+
+type SchedulePlanResult = {
+  error?: string | null;
+  scheduled?: boolean;
+  upgraded?: boolean;
+  url?: string | null;
+  targetTier?: string;
+  periodEnd?: string | null;
+  message?: string;
+};
+
+/**
+ * Self-service plan change:
+ * - upgrade → immediate Checkout / subscription update
+ * - downgrade / cancel to free → schedule at period end (no refunds)
+ */
+export async function schedulePlanChange(
+  formData: FormData
+): Promise<SchedulePlanResult> {
+  const { error: authError, supabase, org } = await requireOrgOwner();
+  if (authError || !supabase || !org) return { error: authError };
+
+  const parsed = schedulePlanChangeSchema.safeParse({
+    target_tier:
+      (formData.get("target_tier") as string) ||
+      (formData.get("tier") as string) ||
+      (formData.get("new_tier") as string),
+    billing_period: (formData.get("billing_period") as string) || undefined,
+    seat_count: formData.get("seat_count")
+      ? parseInt(formData.get("seat_count") as string, 10)
+      : undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message || "Invalid plan change" };
+  }
+
+  const { data: existingRows } = await supabase
+    .from("licenses")
+    .select(
+      "id, tier, status, stripe_subscription_id, created_at, cancel_at_period_end, current_period_end, metadata"
+    )
+    .eq("organization_id", org.id);
+
+  const {
+    resolvePlanChange,
+    PENDING_TIER_META,
+    PENDING_CHANGE_META,
+  } = await import("@/lib/license/tier-lifecycle");
+
+  const decision = resolvePlanChange(
+    existingRows || [],
+    parsed.data.target_tier
+  );
+
+  if (decision.mode === "blocked" || decision.mode === "already_on_plan") {
+    return { error: decision.reason || "Cannot change plan" };
+  }
+
+  // Upgrades: immediate
+  if (decision.mode === "upgrade_now") {
+    if (parsed.data.target_tier === "free") {
+      return { error: "Invalid upgrade target" };
+    }
+    const fd = new FormData();
+    fd.set("tier", parsed.data.target_tier);
+    fd.set("new_tier", parsed.data.target_tier);
+    fd.set(
+      "billing_period",
+      parsed.data.billing_period || "monthly"
+    );
+    if (parsed.data.seat_count) {
+      fd.set("seat_count", String(parsed.data.seat_count));
+    }
+    const result = await createLicenseCheckout(fd);
+    if (result.error) return { error: result.error };
+    if (result.url) return { url: result.url, upgraded: true };
+    if (result.upgraded) {
+      return {
+        upgraded: true,
+        targetTier: parsed.data.target_tier,
+        message: `Upgraded to ${parsed.data.target_tier}.`,
+      };
+    }
+    return result;
+  }
+
+  // Downgrades: schedule only
+  const current = decision.current;
+  if (!current?.stripe_subscription_id || !current.id) {
+    return {
+      error: "No paid Stripe subscription found to schedule a change on.",
+    };
+  }
+
+  const stripe = getStripe();
+  const periodEnd = current.current_period_end || null;
+
+  try {
+    if (parsed.data.target_tier === "free") {
+      // Cancel at period end — no refund; keep paid features until then
+      const sub = await stripe.subscriptions.update(
+        current.stripe_subscription_id,
+        {
+          cancel_at_period_end: true,
+          metadata: {
+            pending_tier: "free",
+            pending_change: "downgrade",
+          },
+        }
+      );
+
+      const existingMeta =
+        (current.metadata as Record<string, unknown> | null) || {};
+      await supabase
+        .from("licenses")
+        .update({
+          cancel_at_period_end: true,
+          metadata: {
+            ...existingMeta,
+            [PENDING_TIER_META]: "free",
+            [PENDING_CHANGE_META]: "downgrade",
+          },
+        })
+        .eq("id", current.id);
+
+      const subPeriodEnd = (sub as unknown as { current_period_end?: number })
+        .current_period_end;
+      const endIso =
+        periodEnd ||
+        (subPeriodEnd ? new Date(subPeriodEnd * 1000).toISOString() : null);
+
+      revalidatePath("/doctor-dashboard/organization/billing");
+      return {
+        scheduled: true,
+        targetTier: "free",
+        periodEnd: endIso,
+        message:
+          "Your plan will switch to Founding Free at the end of the current paid period. No refund for the remaining time — you keep paid features until then.",
+      };
+    }
+
+    // Paid → lower paid: schedule via metadata; apply price at period end (no proration)
+    const sub = await stripe.subscriptions.retrieve(
+      current.stripe_subscription_id
+    );
+    await stripe.subscriptions.update(current.stripe_subscription_id, {
+      cancel_at_period_end: false,
+      metadata: {
+        ...sub.metadata,
+        organization_id: org.id,
+        tier: current.tier, // stay on current tier until apply
+        pending_tier: parsed.data.target_tier,
+        pending_change: "downgrade",
+        type: "license",
+      },
+    });
+
+    const existingMeta =
+      (current.metadata as Record<string, unknown> | null) || {};
+    await supabase
+      .from("licenses")
+      .update({
+        cancel_at_period_end: false,
+        metadata: {
+          ...existingMeta,
+          [PENDING_TIER_META]: parsed.data.target_tier,
+          [PENDING_CHANGE_META]: "downgrade",
+        },
+      })
+      .eq("id", current.id);
+
+    revalidatePath("/doctor-dashboard/organization/billing");
+    return {
+      scheduled: true,
+      targetTier: parsed.data.target_tier,
+      periodEnd,
+      message: `Your plan will change to ${parsed.data.target_tier} at the end of the current paid period. No refund — you keep current features until then.`,
+    };
+  } catch (err) {
+    log.error("schedulePlanChange failed", { err });
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "Failed to schedule plan change. Try Manage Billing.",
+    };
+  }
+}
+
+/** Undo scheduled downgrade / cancel-at-period-end (keep current paid plan). */
+export async function cancelScheduledPlanChange(): Promise<{
+  error?: string | null;
+  resumed?: boolean;
+  message?: string;
+}> {
+  const { error: authError, supabase, org } = await requireOrgOwner();
+  if (authError || !supabase || !org) return { error: authError };
+
+  const { data: rows } = await supabase
+    .from("licenses")
+    .select(
+      "id, tier, status, stripe_subscription_id, cancel_at_period_end, metadata"
+    )
+    .eq("organization_id", org.id);
+
+  const { pickEffectiveLicense, isPaidTier, PENDING_TIER_META, PENDING_CHANGE_META } =
+    await import("@/lib/license/tier-lifecycle");
+  const current = pickEffectiveLicense(rows || []);
+  if (!current || !isPaidTier(current.tier) || !current.stripe_subscription_id) {
+    return { error: "No paid plan with a scheduled change found." };
+  }
+
+  const stripe = getStripe();
+  try {
+    const sub = await stripe.subscriptions.retrieve(
+      current.stripe_subscription_id
+    );
+    const meta = { ...sub.metadata };
+    delete meta.pending_tier;
+    delete meta.pending_change;
+
+    await stripe.subscriptions.update(current.stripe_subscription_id, {
+      cancel_at_period_end: false,
+      metadata: meta,
+    });
+
+    const localMeta = {
+      ...((current.metadata as Record<string, unknown>) || {}),
+    };
+    delete localMeta[PENDING_TIER_META];
+    delete localMeta[PENDING_CHANGE_META];
+
+    if (current.id) {
+      await supabase
+        .from("licenses")
+        .update({
+          cancel_at_period_end: false,
+          metadata: localMeta,
+        })
+        .eq("id", current.id);
+    }
+
+    revalidatePath("/doctor-dashboard/organization/billing");
+    return {
+      resumed: true,
+      message: "Scheduled plan change cancelled. Your current plan continues.",
+    };
+  } catch (err) {
+    log.error("cancelScheduledPlanChange failed", { err });
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : "Could not resume plan. Try Manage Billing.",
     };
   }
 }

@@ -91,6 +91,21 @@ describe("doctor signup flow contracts", () => {
     expect(billing).toContain("createLicenseCheckout");
     expect(billing).toContain("upgradeLicenseTier");
     expect(billing).toContain("resumeDoctorLicenseCheckout");
+    expect(billing).toContain("schedulePlanChange");
+    expect(billing).toContain("cancelScheduledPlanChange");
+    expect(billing).toMatch(/period end|Keep current plan/i);
+  });
+
+  it("exposes schedulePlanChange and restores free on subscription delete", () => {
+    const license = read("src/actions/license.ts");
+    expect(license).toMatch(/export async function schedulePlanChange/);
+    expect(license).toMatch(/export async function cancelScheduledPlanChange/);
+    expect(license).toMatch(/cancel_at_period_end:\s*true/);
+
+    const webhook = read("src/app/api/webhooks/stripe/route.ts");
+    expect(webhook).toMatch(/buildFreeGatewayLicenseInsert|tier.*free/);
+    expect(webhook).toMatch(/customer\.subscription\.deleted/);
+    expect(webhook).toMatch(/pending_tier|proration_behavior:\s*["']none["']/);
   });
 
   it("search only lists verified doctors", () => {

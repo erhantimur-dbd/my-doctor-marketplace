@@ -30,10 +30,21 @@ Pricing UI reads `LICENSE_TIERS` which pulls marketing lists from package-featur
 2. Starter → Professional: multi-channel reminders, analytics, waitlist, CRM, seats  
 3. Professional → Clinic: 5–15 seats, multi-location, testing included  
 
+## Self-service plan changes
+
+| Direction | When features change | Refunds |
+|-----------|----------------------|---------|
+| **Upgrade** (free→paid, starter→pro, …) | Immediately after Checkout / subscription update | N/A |
+| **Downgrade** (pro→starter, paid→free, …) | **End of current paid period** (monthly cycle or **annual term**) | **No pro-rata refunds** |
+
+Until period end, the **current** paid tier stays fully active. After cancel-to-free, webhook restores Founding Free. Re-upgrade is self-service Checkout.
+
+Actions: `schedulePlanChange`, `cancelScheduledPlanChange`, `upgradeLicenseTier`, `createLicenseCheckout`.
+
 ## Billing
 
 - **Monthly:** list price per month, 12-month term on paid plans.  
-- **Annual:** charge `10 × monthly` once per year (2 months free). Effective monthly = annual ÷ 12 (show 2 d.p. on marketing).  
+- **Annual:** charge `10 × monthly` once per year (2 months free). Display effective monthly in whole pounds. Downgrade/cancel at annual period end.  
 - Stripe: `getOrCreateLicensePriceId(tier, config, "monthly" | "annual")`.  
 - Optional env: `STRIPE_PRICE_*_ANNUAL`.  
 
@@ -41,7 +52,7 @@ Pricing UI reads `LICENSE_TIERS` which pulls marketing lists from package-featur
 
 - License checkout: env `STRIPE_PRICE_*` for monthly; annual prices created/searched with metadata `billing_period=annual`.  
 - Testing addon: `STRIPE_PRICE_TESTING_ADDON` + metadata `has_testing_addon=1`.  
-- Consistency tests: `package-features.test.ts`, `billing-period.test.ts`.
+- Consistency tests: `package-features.test.ts`, `billing-period.test.ts`, `tier-lifecycle.test.ts`.
 
 ## Marketing surfaces
 

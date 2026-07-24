@@ -50,6 +50,8 @@ import {
   getOrganizationLicense,
   createLicenseCheckout,
   upgradeLicenseTier,
+  schedulePlanChange,
+  cancelScheduledPlanChange,
   manageLicenseBilling,
   addExtraSeats,
   previewSeatCost,
@@ -57,7 +59,11 @@ import {
 } from "@/actions/license";
 import { resumeDoctorLicenseCheckout } from "@/actions/auth";
 import { cn } from "@/lib/utils";
-import { isPaidTier, TIER_RANK } from "@/lib/license/tier-lifecycle";
+import {
+  isPaidTier,
+  TIER_RANK,
+  getPendingPlanChange,
+} from "@/lib/license/tier-lifecycle";
 
 export default function BillingPage() {
   const searchParams = useSearchParams();
@@ -100,21 +106,43 @@ export default function BillingPage() {
     setLoading(false);
   }
 
+  const pendingChange = getPendingPlanChange(license);
+
   async function handleSubscribe(tier: string) {
     const formData = new FormData();
     formData.set("tier", tier);
+    formData.set("target_tier", tier);
+    formData.set("new_tier", tier);
     formData.set("billing_period", billingPeriod);
     if (couponCode.trim()) formData.set("coupon_code", couponCode);
 
     startTransition(async () => {
       const currentTier = license?.tier as string | undefined;
-      const upgradingPaid =
+      const currentRank = currentTier ? (TIER_RANK[currentTier] ?? 0) : -1;
+      const targetRank = TIER_RANK[tier] ?? 0;
+
+      // Downgrade or cancel-to-free: schedule at period end (no refunds)
+      if (
         currentTier &&
         isPaidTier(currentTier) &&
-        (TIER_RANK[tier] ?? 0) > (TIER_RANK[currentTier] ?? 0);
+        targetRank < currentRank
+      ) {
+        const scheduled = await schedulePlanChange(formData);
+        if (scheduled.error) {
+          setErrorMsg(scheduled.error);
+          setTimeout(() => setErrorMsg(""), 6000);
+          return;
+        }
+        setSuccessMsg(
+          scheduled.message ||
+            `Plan change to ${tier} scheduled for the end of your paid period.`
+        );
+        await loadData();
+        return;
+      }
 
-      // starter→professional (or higher): Stripe subscription update
-      if (upgradingPaid) {
+      // Upgrade paid→higher: immediate subscription update
+      if (currentTier && isPaidTier(currentTier) && targetRank > currentRank) {
         formData.set("new_tier", tier);
         const upgraded = await upgradeLicenseTier(formData);
         if (upgraded.error) {
@@ -133,7 +161,7 @@ export default function BillingPage() {
         }
       }
 
-      // free→starter / no paid licence: resume abandoned checkout or new Checkout
+      // free→paid / no paid licence: resume abandoned checkout or new Checkout
       const resume = await resumeDoctorLicenseCheckout(tier, 1, billingPeriod);
       if (resume.checkoutUrl) {
         window.location.href = resume.checkoutUrl;
@@ -153,6 +181,21 @@ export default function BillingPage() {
         setSuccessMsg(`Upgraded to ${tier}.`);
         await loadData();
       }
+    });
+  }
+
+  async function handleKeepPaidPlan() {
+    startTransition(async () => {
+      const result = await cancelScheduledPlanChange();
+      if (result.error) {
+        setErrorMsg(result.error);
+        setTimeout(() => setErrorMsg(""), 5000);
+        return;
+      }
+      setSuccessMsg(
+        result.message || "Scheduled change cancelled. Current plan continues."
+      );
+      await loadData();
     });
   }
 
@@ -269,6 +312,47 @@ export default function BillingPage() {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMsg}
         </div>
+      )}
+
+      {pendingChange && (
+        <Card className="border-amber-200 bg-amber-50/60">
+          <CardContent className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold text-amber-950">
+                Plan change scheduled
+              </p>
+              <p className="text-sm text-amber-900/80">
+                You keep{" "}
+                <span className="font-medium capitalize">{license?.tier}</span>{" "}
+                features until{" "}
+                {pendingChange.effectiveAt
+                  ? new Date(pendingChange.effectiveAt).toLocaleDateString(
+                      "en-GB",
+                      { day: "numeric", month: "short", year: "numeric" }
+                    )
+                  : "the end of your paid period"}
+                , then switch to{" "}
+                <span className="font-medium capitalize">
+                  {pendingChange.targetTier === "free"
+                    ? "Founding Free"
+                    : pendingChange.targetTier}
+                </span>
+                . No refund for the remaining period.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="shrink-0"
+              onClick={handleKeepPaidPlan}
+              disabled={isPending}
+            >
+              {isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Keep current plan
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {(showResumeCheckout || needsPaidPlan) && (
@@ -573,7 +657,18 @@ export default function BillingPage() {
                       ) : (
                         <Zap className="mr-2 h-4 w-4" />
                       )}
-                      {license ? "Switch Plan" : "Subscribe"}
+                      {(() => {
+                        if (!license) return "Subscribe";
+                        const cur = TIER_RANK[license.tier] ?? 0;
+                        const tgt = TIER_RANK[tier.id] ?? 0;
+                        if (tgt > cur) return "Upgrade";
+                        if (tgt < cur) {
+                          return tier.isFreeTier
+                            ? "Switch to Free (period end)"
+                            : "Downgrade (period end)";
+                        }
+                        return "Switch Plan";
+                      })()}
                     </Button>
                   )}
                 </CardFooter>
