@@ -268,17 +268,19 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                 </div>
               )}
 
-              {/* Fixed header so price zone Y is identical on every card */}
-              <div className="flex h-[148px] shrink-0 flex-col items-center px-5 pt-10 text-center sm:px-6">
+              {/* Fixed header so price zone Y is identical on every card.
+                  Titles/descriptions are kept short in LICENSE_TIERS so nothing
+                  clips in the 5-column grid (avoid mid-word line-clamp). */}
+              <div className="flex h-[152px] shrink-0 flex-col items-center px-3 pt-10 text-center sm:px-4">
                 <div
                   className={`mb-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tierColor.bg}`}
                 >
                   <TierIcon className={`h-5 w-5 ${tierColor.text}`} />
                 </div>
-                <h3 className="line-clamp-2 h-12 w-full text-lg font-bold leading-tight">
+                <h3 className="flex h-7 w-full items-center justify-center text-base font-bold leading-none tracking-tight sm:text-lg">
                   {tier.name}
                 </h3>
-                <p className="mt-1 line-clamp-2 h-10 w-full text-sm leading-snug text-muted-foreground">
+                <p className="mt-2 flex h-10 w-full items-start justify-center text-center text-xs leading-snug text-muted-foreground sm:text-[13px]">
                   {tier.description}
                 </p>
               </div>

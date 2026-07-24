@@ -92,7 +92,7 @@ export function formatAnnualEffectiveMonthlyForLocale(
 // price IDs (e.g. `price_1Abc...`) to Vercel's environment variables:
 //   STRIPE_PRICE_STARTER      → Starter plan (£199/mo, annual)
 //   STRIPE_PRICE_PROFESSIONAL → Professional plan (£299/mo flat, 1 seat, annual)
-//   STRIPE_PRICE_CLINIC       → Clinic Starter Pack (£897/mo, annual)
+//   STRIPE_PRICE_CLINIC       → Clinic (£897/mo = 3×£299, annual)
 // Also add the extra-seat add-on price if you charge for additional seats:
 //   STRIPE_PRICE_EXTRA_SEAT   → Extra seat (£299/mo, annual)
 
@@ -119,8 +119,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "free",
     name: "Founding Free",
-    description:
-      "List your profile and get ready for launch — upgrade when you want to accept bookings",
+    description: "List your profile and prepare for launch",
     priceMonthlyPence: 0,
     perUser: false,
     defaultSeats: 1,
@@ -135,7 +134,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "starter",
     name: "Starter",
-    description: "Accept paid bookings, video and AI insights for solo practitioners",
+    description: "Paid bookings, video and AI for solo practices",
     priceMonthlyPence: 19900, // £199
     perUser: false,
     defaultSeats: 1,
@@ -150,8 +149,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "professional",
     name: "Professional",
-    description:
-      "Growth tools for a solo practice: analytics, CRM, waitlist and multi-channel reminders",
+    description: "Solo growth: SMS, analytics, CRM and waitlist",
     priceMonthlyPence: 29900, // £299 flat — one doctor seat (not per-user multi-seat)
     perUser: false,
     defaultSeats: 1,
@@ -165,9 +163,9 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   },
   {
     id: "clinic",
-    name: "Clinic Starter Pack",
-    description:
-      "Practice licence: multi-doctor seats, multi-location, testing and team tools",
+    // Short card title — full product name still used in Stripe product_data
+    name: "Clinic",
+    description: "3–15 seats, multi-location and team tools",
     priceMonthlyPence: 89700, // £897 = 3 × £299 (was £1,495 for 5 seats)
     perUser: false,
     defaultSeats: 3,
@@ -181,7 +179,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "enterprise",
     name: "Enterprise",
-    description: "Custom solutions for large healthcare organizations",
+    description: "Custom solutions for large organisations",
     priceMonthlyPence: 0,
     perUser: false,
     defaultSeats: 999,
