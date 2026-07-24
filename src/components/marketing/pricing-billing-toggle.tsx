@@ -143,8 +143,8 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
       unit = "per org";
       detail = "Contact us for a quote";
     } else if (tier.isFreeTier) {
-      // Same 3-line skeleton as paid: amount → unit → detail
-      amount = "£0";
+      // Same formatter + 3-line skeleton as paid so £0 shares the amount baseline
+      amount = formatPriceForLocale(0, locale);
       unit = "per mo";
       detail = "Free forever";
     } else if (period === "annual") {
@@ -171,11 +171,11 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
 
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-0.5">
-        {/* Line 1 — amount only, no wrap with unit */}
-        <p className="w-full text-center text-3xl font-bold leading-none tracking-tight tabular-nums xl:text-[1.75rem]">
+        {/* Line 1 — fixed height so Free £0 and paid amounts share one baseline */}
+        <p className="flex h-9 w-full items-end justify-center text-center text-3xl font-bold leading-none tracking-tight tabular-nums xl:text-[1.75rem]">
           {amount}
         </p>
-        {/* Line 2 — unit (always visible text for baseline match) */}
+        {/* Line 2 — unit (always visible) */}
         <p className="h-5 w-full text-center text-xs leading-5 text-muted-foreground">
           {unit}
         </p>
@@ -241,13 +241,12 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
           return (
             <Card
               key={tier.id}
-              className={`relative flex flex-col overflow-hidden ${
-                isPopular
-                  ? "border-foreground/20 shadow-lg"
-                  : isFree
-                    ? "border-emerald-300/80 shadow-sm ring-1 ring-emerald-100 dark:ring-emerald-900/40"
-                    : ""
-              }`}
+              className={cn(
+                "relative flex flex-col overflow-hidden border",
+                isPopular && "border-foreground/20 shadow-lg",
+                isFree && "border-emerald-400/90 shadow-sm",
+                !isPopular && !isFree && "border-border"
+              )}
             >
               {isPopular && (
                 <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
@@ -264,16 +263,17 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                 </div>
               )}
 
-              <div className="flex flex-col items-center px-5 pt-10 text-center sm:px-6">
+              {/* Fixed header so price zone Y is identical on every card */}
+              <div className="flex h-[148px] shrink-0 flex-col items-center px-5 pt-10 text-center sm:px-6">
                 <div
-                  className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${tierColor.bg}`}
+                  className={`mb-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tierColor.bg}`}
                 >
                   <TierIcon className={`h-5 w-5 ${tierColor.text}`} />
                 </div>
-                <h3 className="min-h-[3rem] text-lg font-bold leading-tight">
+                <h3 className="line-clamp-2 h-12 w-full text-lg font-bold leading-tight">
                   {tier.name}
                 </h3>
-                <p className="mt-1 min-h-[2.75rem] text-sm leading-snug text-muted-foreground">
+                <p className="mt-1 line-clamp-2 h-10 w-full text-sm leading-snug text-muted-foreground">
                   {tier.description}
                 </p>
               </div>

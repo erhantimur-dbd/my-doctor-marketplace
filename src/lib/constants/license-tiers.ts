@@ -70,8 +70,9 @@ export function formatPriceForLocale(
 }
 
 /**
- * Annual effective monthly with 2 decimal places.
- * Uses (10 × monthly) / 12 so e.g. £1,990/yr → £165.83/mo (not rounded £166).
+ * Annual effective monthly for display — whole major units (no decimals).
+ * Uses (10 × monthly) / 12, rounded. Stripe still charges exact 10× monthly.
+ * e.g. £1,990/yr → £166/mo display (199000/12 → 16583.33 pence → £166).
  */
 export function formatAnnualEffectiveMonthlyForLocale(
   monthlyPenceGBP: number,
@@ -81,19 +82,8 @@ export function formatAnnualEffectiveMonthlyForLocale(
   const yearlyPence = monthlyPenceGBP <= 0 ? 0 : monthlyPenceGBP * 10;
   const currency = getDisplayCurrency(locale);
   const yearlyMinor = convertPrice(yearlyPence, currency);
-  const effectiveMajor = yearlyMinor / 12 / 100;
-  const localeMap: Record<string, string> = {
-    GBP: "en-GB",
-    EUR: "de-DE",
-    USD: "en-US",
-    TRY: "tr-TR",
-  };
-  return new Intl.NumberFormat(localeMap[currency] ?? "en-GB", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(effectiveMajor);
+  const effectiveMinor = Math.round(yearlyMinor / 12);
+  return formatPrice(effectiveMinor, currency, { fractionDigits: 0 });
 }
 
 // ─── Tier Config ───────────────────────────────────────────

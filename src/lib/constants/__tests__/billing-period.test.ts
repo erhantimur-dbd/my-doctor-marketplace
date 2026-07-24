@@ -28,12 +28,10 @@ describe("annual billing (2 months free)", () => {
     expect(annualDiscountPercent()).toBe(16.7);
   });
 
-  it("display effective monthly keeps 2dp so 12× matches yearly intent", () => {
-    // £1,990 / 12 = £165.83 (not whole-pound £166)
-    expect(formatAnnualEffectiveMonthlyForLocale(19900, "en")).toBe("£165.83");
-    expect(formatAnnualEffectiveMonthlyForLocale(29900, "en")).toBe("£249.17");
-    expect(formatAnnualEffectiveMonthlyForLocale(149500, "en")).toBe(
-      "£1,245.83"
-    );
+  it("display effective monthly is whole pounds (no decimals)", () => {
+    // Marketing shows rounded £/mo; Stripe still charges exact 10× monthly
+    expect(formatAnnualEffectiveMonthlyForLocale(19900, "en")).toBe("£166");
+    expect(formatAnnualEffectiveMonthlyForLocale(29900, "en")).toBe("£249");
+    expect(formatAnnualEffectiveMonthlyForLocale(149500, "en")).toBe("£1,246");
   });
 });
