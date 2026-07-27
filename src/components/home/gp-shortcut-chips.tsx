@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Component, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { Building2, Clock, Stethoscope, Video } from "lucide-react";
@@ -20,7 +20,6 @@ import {
 } from "@/lib/gp/market-country";
 
 const GP_SLUG = "general-practice";
-/** Align video Available Now with in-person “soon” window */
 const LIVE_WINDOW_HOURS = 2;
 const IN_PERSON_WINDOW_HOURS = 2;
 
@@ -30,24 +29,69 @@ export type GpShortcutLocation = GpMarketLocation;
 export type GpShortcutPlace = GpMarketPlace;
 
 interface GpShortcutChipsProps {
-  /** Server-rendered live count for general-practice (next hour) */
   initialGpCount?: number;
-  /** Optional SSR seed for in-person slot count (next 2h) */
   initialInPersonSlotCount?: number;
-  /** Locations catalog (same as home search) for country / city resolution */
   locations?: GpShortcutLocation[];
-  /** Selected Google Place from the home search bar */
   placeData?: GpShortcutPlace | null;
-  /** Predefined location slug selected in search (city or country-xx) */
   locationSlug?: string;
-  /** GPS coords when available */
   geo?: { latitude: number | null; longitude: number | null };
-  /**
-   * hero — translucent white pills on the gradient
-   * dashboard — solid chips on light backgrounds
-   */
   variant?: "hero" | "dashboard";
   className?: string;
+}
+
+const FALLBACKS = {
+  section: "Quick book appointments",
+  seeToday: "Video GP today",
+  seeTodayCount: (n: number) => `Video GP today · ${n} open`,
+  seeTodayTitle: "Video GP appointments available today",
+  nextGp: "Next video GP",
+  nextGpTitle: "No free video slots left today — browse the next available video GP",
+  availableNow: (n: number) => `Video GP · soon · ${n}`,
+  availableNowTitle: "Video GPs with free appointments in the next 2 hours",
+  inPerson: (n: number) => `In person nearby · ${n}`,
+  inPersonTitle: "In-person GPs near you with free appointments in the next 2 hours",
+  needLocation: "Choose a city or allow location to find in-person GPs nearby",
+  hint: "Same-day video GPs",
+} as const;
+
+/** Catch render errors so the rest of the home search bar still works */
+class ChipsErrorBoundary extends Component<
+  { children: ReactNode; className?: string },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(err: unknown) {
+    console.error("[GpShortcutChips] render error:", err);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Minimal always-visible fallback chips (no i18n / server actions)
+      return (
+        <div
+          className={cn(
+            "flex flex-col items-center gap-2",
+            this.props.className
+          )}
+        >
+          <p className="text-xs font-semibold uppercase tracking-wide text-white/80">
+            {FALLBACKS.section}
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 text-sm font-medium text-white">
+            <span className="rounded-full bg-white px-3.5 py-2 text-primary">
+              {FALLBACKS.nextGp}
+            </span>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 function trackGpShortcutClick(
@@ -75,18 +119,35 @@ function trackGpShortcutClick(
       });
     }
   } catch {
-    // analytics is best-effort
+    // ignore
   }
 }
 
+function useHomeT() {
+  const t = useTranslations("home");
+  return (key: string, fallback: string, values?: Record<string, number | string>) => {
+    try {
+      // next-intl throws or returns MISSING_MESSAGE depending on config
+      const msg = values
+        ? t(key as Parameters<typeof t>[0], values as never)
+        : t(key as Parameters<typeof t>[0]);
+      if (
+        typeof msg === "string" &&
+        (msg === key || msg.includes("MISSING_MESSAGE") || msg.startsWith("home."))
+      ) {
+        return fallback;
+      }
+      return msg;
+    } catch {
+      return fallback;
+    }
+  };
+}
+
 /**
- * One-tap shortcuts into GP search.
- *
- * - See a GP today → country-wide **video**; chip shows total **open appointments today**
- * - Available now → video GPs with free slots in next 2h (**doctor** count)
- * - In person nearby → **doctor** count within 10km / 2h
+ * One-tap GP shortcuts — always visible (counts may be zero).
  */
-export function GpShortcutChips({
+function GpShortcutChipsInner({
   initialGpCount = 0,
   initialInPersonSlotCount = 0,
   locations = [],
@@ -96,76 +157,82 @@ export function GpShortcutChips({
   variant = "hero",
   className,
 }: GpShortcutChipsProps) {
-  const t = useTranslations("home");
+  const t = useHomeT();
   const locale = useLocale();
   const router = useRouter();
-  /** Available now — doctors with video slots in next 2h */
+
   const [gpCount, setGpCount] = useState(initialGpCount);
-  /** See a GP today — total free video appointment slots remaining today */
   const [todaySlotCount, setTodaySlotCount] = useState(0);
-  /** In person nearby — doctors (not slots) */
   const [inPersonDoctorCount, setInPersonDoctorCount] = useState(
     initialInPersonSlotCount
   );
 
-  const countryCode = useMemo(
-    () =>
-      resolveGpMarketCountry({
+  const countryCode = useMemo(() => {
+    try {
+      return resolveGpMarketCountry({
         locale,
-        locations,
+        locations: locations || [],
         locationSlug,
         placeData,
         geo,
-      }),
-    [locale, locations, locationSlug, placeData, geo]
-  );
+      });
+    } catch {
+      return "GB";
+    }
+  }, [locale, locations, locationSlug, placeData, geo]);
 
-  const localArea = useMemo(
-    () =>
-      resolveGpLocalArea({
-        locations,
+  const localArea = useMemo(() => {
+    try {
+      return resolveGpLocalArea({
+        locations: locations || [],
         locationSlug,
         placeData,
         geo,
-      }),
-    [locations, locationSlug, placeData, geo]
-  );
+      });
+    } catch {
+      return { kind: "missing" as const };
+    }
+  }, [locations, locationSlug, placeData, geo]);
 
-  // Nearby-only coords for in-person live count (never country-wide)
   const nearbyCoords = useMemo((): {
     lat: number;
     lng: number;
     radiusKm: number;
   } | null => {
-    if (localArea.kind === "place") {
-      return {
-        lat: localArea.placeLat,
-        lng: localArea.placeLng,
-        radiusKm: localArea.radiusKm,
-      };
-    }
-    if (localArea.kind === "city") {
-      const city = locations.find((l) => l.slug === localArea.locationSlug);
-      if (city?.latitude != null && city?.longitude != null) {
+    try {
+      if (localArea.kind === "place") {
         return {
-          lat: city.latitude,
-          lng: city.longitude,
+          lat: localArea.placeLat,
+          lng: localArea.placeLng,
+          radiusKm: localArea.radiusKm,
+        };
+      }
+      if (localArea.kind === "city") {
+        const city = (locations || []).find(
+          (l) => l.slug === localArea.locationSlug
+        );
+        if (city?.latitude != null && city?.longitude != null) {
+          return {
+            lat: city.latitude,
+            lng: city.longitude,
+            radiusKm: GP_IN_PERSON_RADIUS_KM,
+          };
+        }
+      }
+      if (
+        geo?.latitude != null &&
+        geo?.longitude != null &&
+        Number.isFinite(geo.latitude) &&
+        Number.isFinite(geo.longitude)
+      ) {
+        return {
+          lat: geo.latitude,
+          lng: geo.longitude,
           radiusKm: GP_IN_PERSON_RADIUS_KM,
         };
       }
-    }
-    // GPS without resolved city still counts as nearby
-    if (
-      geo?.latitude != null &&
-      geo?.longitude != null &&
-      Number.isFinite(geo.latitude) &&
-      Number.isFinite(geo.longitude)
-    ) {
-      return {
-        lat: geo.latitude,
-        lng: geo.longitude,
-        radiusKm: GP_IN_PERSON_RADIUS_KM,
-      };
+    } catch {
+      // ignore
     }
     return null;
   }, [localArea, locations, geo]);
@@ -174,44 +241,40 @@ export function GpShortcutChips({
     let cancelled = false;
     const poll = async () => {
       try {
-        // Video Available Now = GPs who offer video with free slots in 2h
-        const liveIdsPromise = getLiveAvailableDoctorIds({
-          specialtySlug: GP_SLUG,
-          consultationType: "video",
-          windowHours: LIVE_WINDOW_HOURS,
-        });
-
-        // See a GP today = total free video appointments left today (country)
-        const todaySlotsPromise = getGpVideoTodaySlotCount({
-          countryCode,
-        });
-
-        // In-person counter is nearby-only — skip RPC until we have lat/lng
-        const inPersonPromise = nearbyCoords
-          ? getGpInPersonAvailability({
-              windowHours: IN_PERSON_WINDOW_HOURS,
-              lat: nearbyCoords.lat,
-              lng: nearbyCoords.lng,
-              radiusKm: nearbyCoords.radiusKm,
-            })
-          : Promise.resolve({
-              doctorCount: 0,
-              slotCount: 0,
-              doctorIds: [] as string[],
-            });
-
         const [liveIds, todaySlots, inPerson] = await Promise.all([
-          liveIdsPromise,
-          todaySlotsPromise,
-          inPersonPromise,
+          getLiveAvailableDoctorIds({
+            specialtySlug: GP_SLUG,
+            consultationType: "video",
+            windowHours: LIVE_WINDOW_HOURS,
+          }).catch(() => [] as string[]),
+          getGpVideoTodaySlotCount({ countryCode }).catch(() => ({
+            doctorCount: 0,
+            slotCount: 0,
+          })),
+          nearbyCoords
+            ? getGpInPersonAvailability({
+                windowHours: IN_PERSON_WINDOW_HOURS,
+                lat: nearbyCoords.lat,
+                lng: nearbyCoords.lng,
+                radiusKm: nearbyCoords.radiusKm,
+              }).catch(() => ({
+                doctorCount: 0,
+                slotCount: 0,
+                doctorIds: [] as string[],
+              }))
+            : Promise.resolve({
+                doctorCount: 0,
+                slotCount: 0,
+                doctorIds: [] as string[],
+              }),
         ]);
         if (!cancelled) {
           setGpCount(liveIds.length);
           setTodaySlotCount(todaySlots.slotCount);
           setInPersonDoctorCount(inPerson.doctorCount);
         }
-      } catch {
-        // keep last known counts
+      } catch (err) {
+        console.error("[GpShortcutChips] poll failed:", err);
       }
     };
     poll();
@@ -235,16 +298,13 @@ export function GpShortcutChips({
     params.set("consultationType", "video");
 
     if (chip === "available_now") {
-      // Exact same filter as the live count: video GPs with free slots in 2h
       params.set("liveNow", "true");
       params.set("liveWindowHours", String(LIVE_WINDOW_HOURS));
     } else if (hasTodaySlots) {
-      // Same-day video GPs in the patient's market country
       params.set("availableToday", "true");
       params.set("location", `country-${countryCode.toLowerCase()}`);
       params.set("gpMarket", countryCode);
     } else {
-      // No free slots left today — browse next available video GP (not empty same-day list)
       params.set("location", `country-${countryCode.toLowerCase()}`);
       params.set("gpMarket", countryCode);
     }
@@ -254,13 +314,14 @@ export function GpShortcutChips({
 
   const goInPerson = () => {
     if (!nearbyCoords) {
-      toast.error(t("gp_shortcut_need_location"));
+      toast.error(
+        t("gp_shortcut_need_location", FALLBACKS.needLocation)
+      );
       return;
     }
 
     trackGpShortcutClick("in_person", { countryCode, mode: "in_person" });
 
-    // Same nearby live set as the counter (doctors with free in-person slots in 2h)
     const params = new URLSearchParams();
     params.set("specialty", GP_SLUG);
     params.set("from", "gp_shortcut");
@@ -297,23 +358,37 @@ export function GpShortcutChips({
       : "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90"
   );
 
-  // Primary chip: "today" when inventory exists, otherwise honest "next" wording
   const hasTodaySlots = todaySlotCount > 0;
   const seeTodayLabel = hasTodaySlots
-    ? t("gp_shortcut_see_today_count", { count: todaySlotCount })
-    : t("gp_shortcut_next_gp");
+    ? t(
+        "gp_shortcut_see_today_count",
+        FALLBACKS.seeTodayCount(todaySlotCount),
+        { count: todaySlotCount }
+      )
+    : t("gp_shortcut_next_gp", FALLBACKS.nextGp);
 
-  // Always show count (including 0) so the chip never "vanishes" visually
-  const availableNowLabel = t("gp_shortcut_available_now_count", {
-    count: gpCount,
-  });
+  const availableNowLabel = t(
+    "gp_shortcut_available_now_count",
+    FALLBACKS.availableNow(gpCount),
+    { count: gpCount }
+  );
 
-  const inPersonLabel = t("gp_shortcut_in_person_count", {
-    count: inPersonDoctorCount,
-  });
+  const inPersonLabel = t(
+    "gp_shortcut_in_person_count",
+    FALLBACKS.inPerson(inPersonDoctorCount),
+    { count: inPersonDoctorCount }
+  );
+
+  const sectionLabel = t(
+    "gp_shortcut_section_label",
+    FALLBACKS.section
+  );
 
   return (
-    <div className={cn("flex flex-col items-center gap-2", className)}>
+    <div
+      className={cn("flex flex-col items-center gap-2", className)}
+      data-testid="gp-shortcut-chips"
+    >
       <p
         className={cn(
           "text-xs font-semibold uppercase tracking-wide",
@@ -322,34 +397,35 @@ export function GpShortcutChips({
             : "text-muted-foreground"
         )}
       >
-        {t("gp_shortcut_section_label")}
+        {sectionLabel}
       </p>
       <div
         className="flex flex-wrap items-center justify-center gap-2"
         role="group"
-        aria-label={t("gp_shortcut_section_label")}
+        aria-label={sectionLabel}
       >
-        {/* Video today when open; otherwise "Next video GP" (no empty same-day trap) */}
         <button
           type="button"
           className={primaryChipClass}
           onClick={() => goVideo("see_today")}
           title={
             hasTodaySlots
-              ? t("gp_shortcut_see_today_title")
-              : t("gp_shortcut_next_gp_title")
+              ? t("gp_shortcut_see_today_title", FALLBACKS.seeTodayTitle)
+              : t("gp_shortcut_next_gp_title", FALLBACKS.nextGpTitle)
           }
         >
           <Stethoscope className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {seeTodayLabel}
         </button>
 
-        {/* Video soon — always visible; pulse only when count > 0 */}
         <button
           type="button"
           className={chipClass}
           onClick={() => goVideo("available_now")}
-          title={t("gp_shortcut_available_now_title")}
+          title={t(
+            "gp_shortcut_available_now_title",
+            FALLBACKS.availableNowTitle
+          )}
         >
           {gpCount > 0 ? (
             <span className="relative flex h-2 w-2 shrink-0">
@@ -357,18 +433,23 @@ export function GpShortcutChips({
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
           ) : (
-            <span className="h-2 w-2 shrink-0 rounded-full bg-white/30" aria-hidden />
+            <span
+              className={cn(
+                "h-2 w-2 shrink-0 rounded-full",
+                variant === "hero" ? "bg-white/30" : "bg-muted-foreground/30"
+              )}
+              aria-hidden
+            />
           )}
           <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {availableNowLabel}
         </button>
 
-        {/* In person — city / nearby only; always visible (same as video soon) */}
         <button
           type="button"
           className={chipClass}
           onClick={goInPerson}
-          title={t("gp_shortcut_in_person_title")}
+          title={t("gp_shortcut_in_person_title", FALLBACKS.inPersonTitle)}
         >
           {inPersonDoctorCount > 0 ? (
             <span className="relative flex h-2 w-2 shrink-0">
@@ -376,7 +457,13 @@ export function GpShortcutChips({
               <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
             </span>
           ) : (
-            <span className="h-2 w-2 shrink-0 rounded-full bg-white/30" aria-hidden />
+            <span
+              className={cn(
+                "h-2 w-2 shrink-0 rounded-full",
+                variant === "hero" ? "bg-white/30" : "bg-muted-foreground/30"
+              )}
+              aria-hidden
+            />
           )}
           <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {inPersonLabel}
@@ -386,9 +473,18 @@ export function GpShortcutChips({
       {variant === "dashboard" && (
         <span className="hidden sm:inline-flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" aria-hidden />
-          {t("gp_shortcut_hint")}
+          {t("gp_shortcut_hint", FALLBACKS.hint)}
         </span>
       )}
     </div>
+  );
+}
+
+/** Public export — never blank out the home hero if chips throw */
+export function GpShortcutChips(props: GpShortcutChipsProps) {
+  return (
+    <ChipsErrorBoundary className={props.className}>
+      <GpShortcutChipsInner {...props} />
+    </ChipsErrorBoundary>
   );
 }
