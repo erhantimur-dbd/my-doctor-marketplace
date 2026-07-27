@@ -133,7 +133,11 @@
     "gp_shortcut_available_now_count": "Disponível agora · {count}",
     "gp_shortcut_near_me": "Perto de mim",
     "gp_shortcut_aria": "Atalhos para marcar um clínico geral",
-    "gp_shortcut_hint": "Clínicos gerais por vídeo no mesmo dia"
+    "gp_shortcut_hint": "Clínicos gerais por vídeo no mesmo dia",
+    "gp_shortcut_see_today_in_person": "Clínico geral perto de si",
+    "gp_shortcut_available_now_in_person": "Perto agora · {count}",
+    "gp_shortcut_hint_in_person": "Clínicos gerais presenciais na sua cidade",
+    "gp_shortcut_need_location": "Escolha uma cidade ou permita a localização para consultas presenciais"
   },
   "doctor": {
     "verified": "Médico Verificado",

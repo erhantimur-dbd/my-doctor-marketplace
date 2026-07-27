@@ -1,9 +1,14 @@
 /**
- * Resolve the patient's market country for GP video shortcuts.
- * Inventory is always country-wide (UK-wide for GB) — never city-radius.
+ * Resolve market / local area for GP shortcuts.
+ *
+ * - Video: country-wide (UK-wide for GB) — never city-radius
+ * - In-person: city + nearby only (never country-wide)
  */
 
 import { findNearestLocation } from "@/lib/utils/geo";
+
+/** In-person GP search radius (km) — city + nearby only */
+export const GP_IN_PERSON_RADIUS_KM = 30;
 
 export interface GpMarketLocation {
   slug: string;
@@ -76,4 +81,85 @@ export function resolveGpMarketCountry(opts: {
   }
 
   return localeToCountryCode(locale);
+}
+
+export type GpLocalArea =
+  | {
+      kind: "place";
+      placeLat: number;
+      placeLng: number;
+      placeName: string;
+      radiusKm: number;
+    }
+  | {
+      kind: "city";
+      locationSlug: string;
+    }
+  | {
+      kind: "missing";
+    };
+
+/**
+ * Local area for in-person GP search — city / nearby only, never country-wide.
+ *
+ * Priority:
+ * 1. Explicit Google Place (borough/street) → lat/lng + radius
+ * 2. City slug from search (not country-xx)
+ * 3. GPS / place coords → nearest catalog city slug
+ * 4. missing — caller should prompt for location
+ */
+export function resolveGpLocalArea(opts: {
+  locations: GpMarketLocation[];
+  locationSlug?: string;
+  placeData?: GpMarketPlace | null;
+  geo?: { latitude: number | null; longitude: number | null };
+}): GpLocalArea {
+  const { locations, locationSlug, placeData, geo } = opts;
+
+  // Precise place pin from search (borough, address, etc.)
+  if (
+    placeData &&
+    Number.isFinite(placeData.lat) &&
+    Number.isFinite(placeData.lng)
+  ) {
+    return {
+      kind: "place",
+      placeLat: placeData.lat,
+      placeLng: placeData.lng,
+      placeName: placeData.name || "Near me",
+      radiusKm: GP_IN_PERSON_RADIUS_KM,
+    };
+  }
+
+  // City selected in the where field (not country-wide)
+  if (
+    locationSlug &&
+    locationSlug !== "all" &&
+    !locationSlug.startsWith("country-")
+  ) {
+    return { kind: "city", locationSlug };
+  }
+
+  // GPS → nearest city in catalog
+  const lat = geo?.latitude ?? null;
+  const lng = geo?.longitude ?? null;
+  if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
+    const nearestSlug = findNearestLocation(
+      { latitude: lat, longitude: lng },
+      locations
+    );
+    if (nearestSlug) {
+      return { kind: "city", locationSlug: nearestSlug };
+    }
+    // Fallback: raw coords with radius if catalog empty
+    return {
+      kind: "place",
+      placeLat: lat,
+      placeLng: lng,
+      placeName: "Near me",
+      radiusKm: GP_IN_PERSON_RADIUS_KM,
+    };
+  }
+
+  return { kind: "missing" };
 }

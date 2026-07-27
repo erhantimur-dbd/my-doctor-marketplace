@@ -1454,6 +1454,7 @@ export function HomeSearchBar({
               placeData={placeData}
               locationSlug={location}
               geo={{ latitude: geo.latitude, longitude: geo.longitude }}
+              consultationType={consultationType}
             />
 
             {/* AI search hint — desktop */}
@@ -1818,6 +1819,7 @@ export function HomeSearchBar({
             placeData={placeData}
             locationSlug={location}
             geo={{ latitude: geo.latitude, longitude: geo.longitude }}
+            consultationType={consultationType}
           />
         )}
       </div>

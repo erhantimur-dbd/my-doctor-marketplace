@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { resolveGpMarketCountry } from "../market-country";
+import {
+  resolveGpLocalArea,
+  resolveGpMarketCountry,
+} from "../market-country";
 
 const locations = [
   {
@@ -86,5 +89,46 @@ describe("resolveGpMarketCountry", () => {
         locationSlug: "rome-it",
       })
     ).toBe("IT");
+  });
+});
+
+describe("resolveGpLocalArea (in-person city/nearby only)", () => {
+  it("uses city slug, never country-wide", () => {
+    expect(
+      resolveGpLocalArea({
+        locations,
+        locationSlug: "manchester-uk",
+      })
+    ).toEqual({ kind: "city", locationSlug: "manchester-uk" });
+  });
+
+  it("treats country-xx as missing so in-person is not UK-wide", () => {
+    expect(
+      resolveGpLocalArea({
+        locations,
+        locationSlug: "country-gb",
+      })
+    ).toEqual({ kind: "missing" });
+  });
+
+  it("uses place coordinates with radius", () => {
+    const area = resolveGpLocalArea({
+      locations,
+      placeData: { lat: 51.5, lng: -0.12, name: "Islington" },
+    });
+    expect(area.kind).toBe("place");
+    if (area.kind === "place") {
+      expect(area.placeName).toBe("Islington");
+      expect(area.radiusKm).toBe(30);
+    }
+  });
+
+  it("maps GPS to nearest city", () => {
+    expect(
+      resolveGpLocalArea({
+        locations,
+        geo: { latitude: 53.48, longitude: -2.24 },
+      })
+    ).toEqual({ kind: "city", locationSlug: "manchester-uk" });
   });
 });
