@@ -59,16 +59,20 @@ export async function getLiveDoctorAvailability(
 }
 
 /**
- * Doctor IDs that match the live "available now" (next 1 hour) badge.
- * Optional specialty slug keeps the Available Now chip and search results in sync.
+ * Doctor IDs with free slots soon (default next 2 hours for GP shortcuts).
+ * Optional specialty + consultation type keep chip counts and search in sync.
  */
-export async function getLiveAvailableDoctorIds(
-  specialtySlug?: string
-): Promise<string[]> {
+export async function getLiveAvailableDoctorIds(opts?: {
+  specialtySlug?: string | null;
+  consultationType?: "video" | "in_person" | null;
+  windowHours?: number;
+}): Promise<string[]> {
   const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc("get_live_available_doctor_ids", {
-    p_specialty_slug: specialtySlug ?? null,
+    p_specialty_slug: opts?.specialtySlug ?? null,
+    p_consultation_type: opts?.consultationType ?? null,
+    p_window_hours: opts?.windowHours ?? 2,
   });
 
   if (error) {
@@ -76,9 +80,11 @@ export async function getLiveAvailableDoctorIds(
     return [];
   }
 
-  // RPC returns UUID[] directly
+  // RPC returns UUID[] — normalise to strings
   if (Array.isArray(data)) {
-    return data.filter((id): id is string => typeof id === "string");
+    return data
+      .map((id) => (id == null ? "" : String(id)))
+      .filter((id) => id.length > 0);
   }
   return [];
 }

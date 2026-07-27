@@ -133,10 +133,13 @@ export interface SearchFilters {
    */
   skill?: string;
   /**
-   * When true, only doctors with free slots in the next hour
-   * (same logic as homepage live badges). Optional specialty narrows further.
+   * When true, only doctors with free slots soon
+   * (same logic as homepage Available Now chip). Optional specialty /
+   * consultationType / liveWindowHours narrow further.
    */
   liveNow?: boolean;
+  /** Hours window for liveNow (default 2) */
+  liveWindowHours?: number;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -186,11 +189,19 @@ export async function searchDoctors(filters: SearchFilters) {
     query = query.eq("provider_type", filters.providerType);
   }
 
-  // Live "available now" (next ~1 hour) — same IDs as homepage live badges
+  // Live "available now" — same IDs as homepage Available Now chip
   if (filters.liveNow) {
     const { data: liveIds, error: liveErr } = await supabase.rpc(
       "get_live_available_doctor_ids",
-      { p_specialty_slug: filters.specialty ?? null }
+      {
+        p_specialty_slug: filters.specialty ?? null,
+        p_consultation_type:
+          filters.consultationType === "video" ||
+          filters.consultationType === "in_person"
+            ? filters.consultationType
+            : null,
+        p_window_hours: filters.liveWindowHours ?? 2,
+      }
     );
 
     if (liveErr) {
@@ -198,14 +209,16 @@ export async function searchDoctors(filters: SearchFilters) {
       return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
     }
 
-    const ids = (liveIds as string[]) || [];
+    const ids = (Array.isArray(liveIds) ? liveIds : [])
+      .map((id) => (id == null ? "" : String(id)))
+      .filter((id) => id.length > 0);
+
     if (ids.length === 0) {
       return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
     }
 
     query = query.in("id", ids);
     // Specialty already applied inside the RPC when provided — avoid double filter
-    // that could diverge; still apply specialty below only when not liveNow.
   }
 
   // Same-day availability filter
@@ -282,7 +295,8 @@ export async function searchDoctors(filters: SearchFilters) {
   if (filters.language) {
     query = query.contains("languages", [filters.language]);
   }
-  if (filters.consultationType) {
+  // liveNow already filtered consultation type in the RPC
+  if (filters.consultationType && !filters.liveNow) {
     query = query.contains("consultation_types", [filters.consultationType]);
   }
   // Proximity search: when a Place (borough, street, etc.) is selected,

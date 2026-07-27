@@ -19,6 +19,8 @@ import {
 } from "@/lib/gp/market-country";
 
 const GP_SLUG = "general-practice";
+/** Align video Available Now with in-person “soon” window */
+const LIVE_WINDOW_HOURS = 2;
 const IN_PERSON_WINDOW_HOURS = 2;
 
 type ChipId = "see_today" | "available_now" | "in_person";
@@ -167,8 +169,13 @@ export function GpShortcutChips({
     let cancelled = false;
     const poll = async () => {
       try {
-        // Available-now count uses the same doctor IDs as the search results
-        const liveIdsPromise = getLiveAvailableDoctorIds(GP_SLUG);
+        // Video Available Now = GPs who offer video with free slots in 2h
+        // (same IDs the chip search will load)
+        const liveIdsPromise = getLiveAvailableDoctorIds({
+          specialtySlug: GP_SLUG,
+          consultationType: "video",
+          windowHours: LIVE_WINDOW_HOURS,
+        });
 
         // In-person counter is nearby-only — skip RPC until we have lat/lng
         const inPersonPromise = nearbyCoords
@@ -206,17 +213,16 @@ export function GpShortcutChips({
     params.set("specialty", GP_SLUG);
     params.set("from", "gp_shortcut");
     params.set("sort", "soonest");
+    params.set("consultationType", "video");
 
     if (chip === "available_now") {
-      // Match the live badge exactly: doctors with free slots in the next hour
-      // (any consultation type). Do NOT force video/country — that was empty
-      // while the badge still showed a count.
+      // Exact same filter as the live count: video GPs with free slots in 2h
       params.set("liveNow", "true");
+      params.set("liveWindowHours", String(LIVE_WINDOW_HOURS));
     } else {
       // Same-day video GPs in the patient's market country
       params.set("availableToday", "true");
       params.set("location", `country-${countryCode.toLowerCase()}`);
-      params.set("consultationType", "video");
       params.set("gpMarket", countryCode);
     }
 
