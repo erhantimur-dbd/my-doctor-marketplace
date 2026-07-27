@@ -1,4 +1,7 @@
 -- Return doctor IDs from in-person GP nearby availability so search can match the counter.
+-- Must drop first: return type changes (adds doctor_ids).
+
+DROP FUNCTION IF EXISTS public.get_gp_in_person_availability(INT, TEXT, DOUBLE PRECISION, DOUBLE PRECISION, DOUBLE PRECISION);
 
 CREATE OR REPLACE FUNCTION public.get_gp_in_person_availability(
   p_window_hours INT DEFAULT 2,
