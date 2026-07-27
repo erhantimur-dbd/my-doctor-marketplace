@@ -1202,6 +1202,8 @@
     "confirm_booking_body": "Voice will never book automatically. Confirm to continue.",
     "welcome_greeting": "欢迎使用 MyDoctors360。",
     "welcome_brief": "我可以根据专科、地区、语言，或视频/面诊帮您寻找私立医生。告诉我您的需求，我们一起搜索并优化结果。",
-    "welcome_banner": "语音助手已就绪 — 说话或输入即可搜索。"
+    "welcome_banner": "按麦克风回复 — 或在下方输入。",
+    "welcome_reply_hint": "我说完后，请按麦克风语音回复，或在聊天中输入。",
+    "reply_prompt_visual": "按麦克风回复 · 或输入消息"
   }
 }

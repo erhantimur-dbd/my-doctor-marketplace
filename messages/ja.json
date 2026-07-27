@@ -1196,6 +1196,8 @@
     "confirm_booking_body": "Voice will never book automatically. Confirm to continue.",
     "welcome_greeting": "MyDoctors360へようこそ。",
     "welcome_brief": "専門、地域、言語、対面またはビデオで民間の医師探しをお手伝いします。ご希望を話してください。一緒に検索・絞り込みます。",
-    "welcome_banner": "音声アシスタント準備完了 — 話しかけるか入力して検索。"
+    "welcome_banner": "マイクを押して返信 — または下に入力。",
+    "welcome_reply_hint": "話し終わったら、マイクを押して音声で返信するか、チャットに入力してください。",
+    "reply_prompt_visual": "マイクを押す · またはメッセージを入力"
   }
 }

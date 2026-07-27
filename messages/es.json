@@ -1196,6 +1196,8 @@
     "confirm_booking_body": "Voice will never book automatically. Confirm to continue.",
     "welcome_greeting": "Bienvenido a MyDoctors360.",
     "welcome_brief": "Puedo ayudarle a encontrar un médico privado por especialidad, ubicación, idioma, o vídeo frente a presencial. Dígame qué necesita y buscaremos juntos.",
-    "welcome_banner": "Asistente de voz listo — hable o escriba para buscar."
+    "welcome_banner": "Pulse el micrófono para responder — o escriba abajo.",
+    "welcome_reply_hint": "Cuando termine de hablar, pulse el micrófono para responder por voz, o escriba en el chat.",
+    "reply_prompt_visual": "Pulse el micrófono · o escriba su mensaje"
   }
 }

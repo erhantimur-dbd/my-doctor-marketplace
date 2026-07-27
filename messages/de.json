@@ -1417,6 +1417,8 @@
     "confirm_booking_body": "Sprache bucht nie automatisch. Bestätigen Sie, um fortzufahren.",
     "welcome_greeting": "Willkommen bei MyDoctors360.",
     "welcome_brief": "Ich helfe Ihnen, einen Privat-Arzt nach Fachgebiet, Ort, Sprache oder Video/Präsenz zu finden. Sagen Sie mir, was Sie brauchen — ich suche und verfeinere die Ergebnisse mit Ihnen.",
-    "welcome_banner": "Sprachassistent bereit — sprechen oder tippen Sie, um zu suchen."
+    "welcome_banner": "Mikrofon drücken zum Antworten — oder unten tippen.",
+    "welcome_reply_hint": "Wenn ich fertig gesprochen habe, drücken Sie das Mikrofon, um per Sprache zu antworten, oder tippen Sie im Chat.",
+    "reply_prompt_visual": "Mikrofon drücken · oder Nachricht tippen"
   }
 }

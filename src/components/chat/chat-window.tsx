@@ -101,15 +101,30 @@ export function ChatWindow() {
   // Voice replies when user opened via voice entry or enabled speaker
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(false);
   const [welcomeBanner, setWelcomeBanner] = useState<string | null>(null);
+  /** After agent TTS: prompt user to press mic or type */
+  const [showReplyPrompt, setShowReplyPrompt] = useState(false);
   const spokenMsgIdsRef = useRef<Set<string>>(new Set());
   const lastSpokenTextRef = useRef<string>("");
   const welcomeTriggeredRef = useRef(false);
   const appliedToolIdsRef = useRef<Set<string>>(new Set());
   const spokenSummaryKeysRef = useRef<Set<string>>(new Set());
+  const ttsWasPlayingRef = useRef(false);
 
   useEffect(() => {
     if (pendingVoiceStart) setVoiceReplyEnabled(true);
   }, [pendingVoiceStart]);
+
+  // When the agent finishes speaking, show visual “press mic or type” cue
+  useEffect(() => {
+    if (tts.isPlaying) {
+      ttsWasPlayingRef.current = true;
+      return;
+    }
+    if (ttsWasPlayingRef.current && voiceReplyEnabled) {
+      ttsWasPlayingRef.current = false;
+      setShowReplyPrompt(true);
+    }
+  }, [tts.isPlaying, voiceReplyEnabled]);
 
   useEffect(() => {
     setMessages(messages as UIMessage[]);
@@ -140,15 +155,20 @@ export function ChatWindow() {
     const text = buildVoiceWelcomeBrief({
       greeting: tVoice("welcome_greeting"),
       brief: tVoice("welcome_brief"),
+      replyHint: tVoice("welcome_reply_hint"),
     });
     welcomeTriggeredRef.current = true;
     setWelcomeBanner(text);
+    // Visual cue immediately (even if TTS is slow/fails)
+    setShowReplyPrompt(true);
     try {
       sessionStorage.setItem(VOICE_WELCOME_SESSION_KEY, "1");
     } catch {
       /* ignore */
     }
     setVoiceReplyEnabled(true);
+    // Do not auto-start the mic — wait until the user presses it after TTS
+    clearPendingVoiceStart();
     void tts.speak(text);
   }, [
     hasAcceptedGdpr,
@@ -156,6 +176,7 @@ export function ChatWindow() {
     voiceReplyEnabled,
     tVoice,
     tts,
+    clearPendingVoiceStart,
   ]);
 
   /**
@@ -573,9 +594,16 @@ export function ChatWindow() {
             <ChatComposer
               onSend={handleSend}
               disabled={isBusy}
-              autoStartVoice={pendingVoiceStart && hasAcceptedGdpr}
+              autoStartVoice={false}
               onAutoStartVoiceConsumed={clearPendingVoiceStart}
-              onVoiceSessionStart={() => setVoiceReplyEnabled(true)}
+              onVoiceSessionStart={() => {
+                setVoiceReplyEnabled(true);
+                setShowReplyPrompt(false);
+              }}
+              showReplyPrompt={
+                showReplyPrompt && voiceReplyEnabled && !isBusy
+              }
+              onReplyPromptConsumed={() => setShowReplyPrompt(false)}
             />
           </>
         )}

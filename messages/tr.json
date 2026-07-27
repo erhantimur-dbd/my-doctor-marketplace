@@ -1417,6 +1417,8 @@
     "confirm_booking_body": "Ses asla otomatik randevu almaz. Devam etmek için onaylayın.",
     "welcome_greeting": "MyDoctors360'a hoş geldiniz.",
     "welcome_brief": "Uzmanlık, konum, dil veya görüntülü/yüz yüze seçenekleriyle özel doktor bulmanıza yardımcı olabilirim. İhtiyacınızı söyleyin; arama ve sonuçları birlikte netleştirelim.",
-    "welcome_banner": "Sesli asistan hazır — aramak için konuşun veya yazın."
+    "welcome_banner": "Yanıt için mikrofona basın — veya aşağıya yazın.",
+    "welcome_reply_hint": "Konuşmam bitince sesle yanıt vermek için mikrofona basın veya sohbete yazın.",
+    "reply_prompt_visual": "Mikrofona basın · veya mesaj yazın"
   }
 }

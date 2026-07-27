@@ -10,7 +10,15 @@ export type VoiceWelcomeCopy = {
   greeting: string;
   /** How the agent can help with search */
   brief: string;
+  /**
+   * Spoken cue after the brief: press mic to reply, or use chat.
+   * Always included so users know not to wait for auto-listen.
+   */
+  replyHint?: string;
 };
+
+export const DEFAULT_VOICE_REPLY_HINT =
+  "When I finish speaking, press the microphone button to reply by voice, or type your answer in the chat.";
 
 /**
  * Build the full spoken/shown welcome brief for the voice agent.
@@ -25,7 +33,9 @@ export function buildVoiceWelcomeBrief(
   const brief =
     copy?.brief?.trim() ||
     "I can help you find a private doctor by specialty, location, language, or video versus in-person. Tell me what you need, and I will search and refine results with you.";
-  return `${greeting} ${brief}`.replace(/\s+/g, " ").trim();
+  const replyHint =
+    copy?.replyHint?.trim() || DEFAULT_VOICE_REPLY_HINT;
+  return `${greeting} ${brief} ${replyHint}`.replace(/\s+/g, " ").trim();
 }
 
 /**
