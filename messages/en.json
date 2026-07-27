@@ -147,7 +147,9 @@
     "gp_shortcut_see_today_count": "Video GP today · {count} open",
     "gp_shortcut_see_today_title": "Video GP appointments still available today across your country (total open slots)",
     "gp_shortcut_available_now": "Video GP · soon",
-    "gp_shortcut_available_now_title": "Video GPs with free appointments in the next 2 hours"
+    "gp_shortcut_available_now_title": "Video GPs with free appointments in the next 2 hours",
+    "gp_shortcut_next_gp": "Next video GP",
+    "gp_shortcut_next_gp_title": "No free video slots left today — browse the next available video GP"
   },
   "doctor": {
     "verified": "Verified Doctor",

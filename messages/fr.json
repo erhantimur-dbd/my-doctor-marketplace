@@ -147,7 +147,9 @@
     "gp_shortcut_see_today_count": "Vidéo aujourd'hui · {count} dispo",
     "gp_shortcut_see_today_title": "Rendez-vous vidéo généraliste encore disponibles aujourd'hui (créneaux ouverts)",
     "gp_shortcut_available_now": "Vidéo · bientôt",
-    "gp_shortcut_available_now_title": "Généralistes en vidéo avec créneaux dans les 2 prochaines heures"
+    "gp_shortcut_available_now_title": "Généralistes en vidéo avec créneaux dans les 2 prochaines heures",
+    "gp_shortcut_next_gp": "Prochain généraliste vidéo",
+    "gp_shortcut_next_gp_title": "Plus de créneaux vidéo aujourd'hui — voir le prochain généraliste disponible"
   },
   "auth": {
     "login_title": "Bon Retour",

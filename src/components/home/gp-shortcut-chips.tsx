@@ -24,7 +24,7 @@ const GP_SLUG = "general-practice";
 const LIVE_WINDOW_HOURS = 2;
 const IN_PERSON_WINDOW_HOURS = 2;
 
-type ChipId = "see_today" | "available_now" | "in_person";
+type ChipId = "see_today" | "available_now" | "in_person" | "next_gp";
 
 export type GpShortcutLocation = GpMarketLocation;
 export type GpShortcutPlace = GpMarketPlace;
@@ -223,7 +223,11 @@ export function GpShortcutChips({
   }, [nearbyCoords, countryCode]);
 
   const goVideo = (chip: "see_today" | "available_now") => {
-    trackGpShortcutClick(chip, { countryCode, mode: "video" });
+    const hasTodaySlots = todaySlotCount > 0;
+    trackGpShortcutClick(
+      chip === "see_today" && !hasTodaySlots ? "next_gp" : chip,
+      { countryCode, mode: "video" }
+    );
     const params = new URLSearchParams();
     params.set("specialty", GP_SLUG);
     params.set("from", "gp_shortcut");
@@ -234,9 +238,13 @@ export function GpShortcutChips({
       // Exact same filter as the live count: video GPs with free slots in 2h
       params.set("liveNow", "true");
       params.set("liveWindowHours", String(LIVE_WINDOW_HOURS));
-    } else {
+    } else if (hasTodaySlots) {
       // Same-day video GPs in the patient's market country
       params.set("availableToday", "true");
+      params.set("location", `country-${countryCode.toLowerCase()}`);
+      params.set("gpMarket", countryCode);
+    } else {
+      // No free slots left today — browse next available video GP (not empty same-day list)
       params.set("location", `country-${countryCode.toLowerCase()}`);
       params.set("gpMarket", countryCode);
     }
@@ -289,11 +297,11 @@ export function GpShortcutChips({
       : "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90"
   );
 
-  // Chips always stay visible; live counts may be zero (still shown)
-  const seeTodayLabel =
-    todaySlotCount > 0
-      ? t("gp_shortcut_see_today_count", { count: todaySlotCount })
-      : t("gp_shortcut_see_today");
+  // Primary chip: "today" when inventory exists, otherwise honest "next" wording
+  const hasTodaySlots = todaySlotCount > 0;
+  const seeTodayLabel = hasTodaySlots
+    ? t("gp_shortcut_see_today_count", { count: todaySlotCount })
+    : t("gp_shortcut_next_gp");
 
   // Always show count (including 0) so the chip never "vanishes" visually
   const availableNowLabel = t("gp_shortcut_available_now_count", {
@@ -321,12 +329,16 @@ export function GpShortcutChips({
         role="group"
         aria-label={t("gp_shortcut_section_label")}
       >
-        {/* Video today — country-wide; count = open appointments (slots) */}
+        {/* Video today when open; otherwise "Next video GP" (no empty same-day trap) */}
         <button
           type="button"
           className={primaryChipClass}
           onClick={() => goVideo("see_today")}
-          title={t("gp_shortcut_see_today_title")}
+          title={
+            hasTodaySlots
+              ? t("gp_shortcut_see_today_title")
+              : t("gp_shortcut_next_gp_title")
+          }
         >
           <Stethoscope className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {seeTodayLabel}

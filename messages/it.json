@@ -145,7 +145,9 @@
     "gp_shortcut_see_today_count": "Video oggi · {count} liberi",
     "gp_shortcut_see_today_title": "Appuntamenti video con medico di base ancora disponibili oggi (slot totali)",
     "gp_shortcut_available_now": "Video · presto",
-    "gp_shortcut_available_now_title": "Medici di base in video con slot nelle prossime 2 ore"
+    "gp_shortcut_available_now_title": "Medici di base in video con slot nelle prossime 2 ore",
+    "gp_shortcut_next_gp": "Prossimo medico in video",
+    "gp_shortcut_next_gp_title": "Nessuno slot video libero oggi — vedi il prossimo medico disponibile"
   },
   "doctor": {
     "verified": "Medico Verificato",
