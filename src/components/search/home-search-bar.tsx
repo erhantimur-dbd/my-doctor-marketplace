@@ -1450,9 +1450,6 @@ export function HomeSearchBar({
               className="mt-4"
               variant="hero"
               initialGpCount={initialGpLiveCount}
-              placeData={placeData}
-              locationSlug={location}
-              geo={{ latitude: geo.latitude, longitude: geo.longitude }}
             />
 
             {/* AI search hint — desktop */}
@@ -1813,9 +1810,6 @@ export function HomeSearchBar({
             className="pt-1"
             variant="dashboard"
             initialGpCount={initialGpLiveCount}
-            placeData={placeData}
-            locationSlug={location}
-            geo={{ latitude: geo.latitude, longitude: geo.longitude }}
           />
         )}
       </div>

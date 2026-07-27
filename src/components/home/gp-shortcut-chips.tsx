@@ -3,30 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { Clock, MapPin, Stethoscope, Video } from "lucide-react";
+import { Clock, Stethoscope, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLiveAvailabilityCounts } from "@/actions/live-availability";
 
 const GP_SLUG = "general-practice";
-const NEAR_ME_RADIUS_KM = "30";
 
-type ChipId = "see_today" | "available_now" | "near_me";
-
-export interface GpShortcutPlace {
-  lat: number;
-  lng: number;
-  name: string;
-}
+type ChipId = "see_today" | "available_now";
 
 interface GpShortcutChipsProps {
   /** Server-rendered live count for general-practice (next hour) */
   initialGpCount?: number;
-  /** Selected Google Place from the home search bar */
-  placeData?: GpShortcutPlace | null;
-  /** Predefined location slug (city) when no place is selected */
-  locationSlug?: string;
-  /** GPS coords when available (for Near me without an explicit place) */
-  geo?: { latitude: number | null; longitude: number | null };
   /**
    * hero — translucent white pills on the gradient
    * dashboard — solid chips on light backgrounds
@@ -56,14 +43,15 @@ function trackGpShortcutClick(chip: ChipId) {
 }
 
 /**
- * One-tap shortcuts into same-day GP search.
- * Video-first for “See a GP today” / “Available now”; location-aware for “Near me”.
+ * One-tap shortcuts into GP search.
+ *
+ * Important: live counts are marketplace-wide (any consultation type, no
+ * location). Chip links must use the same scope — forcing video or the
+ * home search location previously produced empty "no doctors" results
+ * while the badge still showed a count.
  */
 export function GpShortcutChips({
   initialGpCount = 0,
-  placeData = null,
-  locationSlug = "",
-  geo,
   variant = "hero",
   className,
 }: GpShortcutChipsProps) {
@@ -89,54 +77,23 @@ export function GpShortcutChips({
     };
   }, []);
 
-  const hasPlace = !!placeData;
-  const hasLocationSlug = !!locationSlug && locationSlug !== "all";
-  const hasGeo =
-    geo?.latitude != null &&
-    geo?.longitude != null &&
-    Number.isFinite(geo.latitude) &&
-    Number.isFinite(geo.longitude);
-  const showNearMe = hasPlace || hasLocationSlug || hasGeo;
-
-  const buildParams = (opts: {
-    video?: boolean;
-    includeLocation?: boolean;
-  }) => {
+  const go = (chip: ChipId) => {
+    trackGpShortcutClick(chip);
     const params = new URLSearchParams();
     params.set("specialty", GP_SLUG);
-    params.set("availableToday", "true");
-    if (opts.video) params.set("consultationType", "video");
     params.set("from", "gp_shortcut");
 
-    if (opts.includeLocation) {
-      if (placeData) {
-        params.set("placeLat", placeData.lat.toFixed(6));
-        params.set("placeLng", placeData.lng.toFixed(6));
-        params.set("placeName", placeData.name);
-        params.set("radius", NEAR_ME_RADIUS_KM);
-      } else if (hasGeo && geo) {
-        params.set("placeLat", geo.latitude!.toFixed(6));
-        params.set("placeLng", geo.longitude!.toFixed(6));
-        params.set("placeName", t("gp_shortcut_near_me"));
-        params.set("radius", NEAR_ME_RADIUS_KM);
-      } else if (hasLocationSlug) {
-        params.set("location", locationSlug);
-      }
-    } else if (placeData) {
-      // Still pass location on video shortcuts when user already set one
-      params.set("placeLat", placeData.lat.toFixed(6));
-      params.set("placeLng", placeData.lng.toFixed(6));
-      params.set("placeName", placeData.name);
-      params.set("radius", NEAR_ME_RADIUS_KM);
-    } else if (hasLocationSlug) {
-      params.set("location", locationSlug);
+    if (chip === "see_today") {
+      // Same-day GPs, any consultation type (matches real inventory)
+      params.set("availableToday", "true");
+    } else {
+      // "Available now" badge = slots in the next hour (any type).
+      // Prefer same-day list so users still see bookable GPs if the
+      // next-hour set is already booked by the time they land.
+      params.set("availableToday", "true");
+      params.set("sort", "soonest");
     }
 
-    return params;
-  };
-
-  const go = (chip: ChipId, params: URLSearchParams) => {
-    trackGpShortcutClick(chip);
     router.push(`/doctors?${params.toString()}`);
   };
 
@@ -166,7 +123,7 @@ export function GpShortcutChips({
       <button
         type="button"
         className={primaryChipClass}
-        onClick={() => go("see_today", buildParams({ video: true }))}
+        onClick={() => go("see_today")}
       >
         <Stethoscope className="h-3.5 w-3.5 shrink-0" aria-hidden />
         {t("gp_shortcut_see_today")}
@@ -176,7 +133,7 @@ export function GpShortcutChips({
         <button
           type="button"
           className={chipClass}
-          onClick={() => go("available_now", buildParams({ video: true }))}
+          onClick={() => go("available_now")}
         >
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -184,22 +141,6 @@ export function GpShortcutChips({
           </span>
           <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {t("gp_shortcut_available_now_count", { count: gpCount })}
-        </button>
-      )}
-
-      {showNearMe && (
-        <button
-          type="button"
-          className={chipClass}
-          onClick={() =>
-            go(
-              "near_me",
-              buildParams({ video: false, includeLocation: true })
-            )
-          }
-        >
-          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {t("gp_shortcut_near_me")}
         </button>
       )}
 
