@@ -44,8 +44,8 @@ const FALLBACKS = {
   seeToday: "Video GP today",
   seeTodayCount: (n: number) => `Video GP today · ${n} open`,
   seeTodayTitle: "Video GP appointments available today",
-  nextGp: "Next video GP",
-  nextGpTitle: "No free video slots left today — browse the next available video GP",
+  nextGp: "Next GP Appointment",
+  nextGpTitle: "No free slots left today — browse the next available GP appointment",
   availableNow: (n: number) => `Video GP · soon · ${n}`,
   availableNowTitle: "Video GPs with free appointments in the next 2 hours",
   inPerson: (n: number) => `In person nearby · ${n}`,
@@ -145,7 +145,9 @@ function useHomeT() {
 }
 
 /**
- * One-tap GP shortcuts — always visible (counts may be zero).
+ * One-tap GP shortcuts.
+ * Primary chip always shows (today slots or "Next GP Appointment").
+ * Secondary chips hide when their appointment count is zero.
  */
 function GpShortcutChipsInner({
   initialGpCount = 0,
@@ -359,13 +361,14 @@ function GpShortcutChipsInner({
   );
 
   const hasTodaySlots = todaySlotCount > 0;
+  // Prefer explicit FALLBACKS when empty so stale i18n never shows "Next video GP"
   const seeTodayLabel = hasTodaySlots
     ? t(
         "gp_shortcut_see_today_count",
         FALLBACKS.seeTodayCount(todaySlotCount),
         { count: todaySlotCount }
       )
-    : t("gp_shortcut_next_gp", FALLBACKS.nextGp);
+    : FALLBACKS.nextGp;
 
   const availableNowLabel = t(
     "gp_shortcut_available_now_count",
@@ -418,56 +421,40 @@ function GpShortcutChipsInner({
           {seeTodayLabel}
         </button>
 
-        <button
-          type="button"
-          className={chipClass}
-          onClick={() => goVideo("available_now")}
-          title={t(
-            "gp_shortcut_available_now_title",
-            FALLBACKS.availableNowTitle
-          )}
-        >
-          {gpCount > 0 ? (
+        {gpCount > 0 && (
+          <button
+            type="button"
+            className={chipClass}
+            onClick={() => goVideo("available_now")}
+            title={t(
+              "gp_shortcut_available_now_title",
+              FALLBACKS.availableNowTitle
+            )}
+          >
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
-          ) : (
-            <span
-              className={cn(
-                "h-2 w-2 shrink-0 rounded-full",
-                variant === "hero" ? "bg-white/30" : "bg-muted-foreground/30"
-              )}
-              aria-hidden
-            />
-          )}
-          <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {availableNowLabel}
-        </button>
+            <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {availableNowLabel}
+          </button>
+        )}
 
-        <button
-          type="button"
-          className={chipClass}
-          onClick={goInPerson}
-          title={t("gp_shortcut_in_person_title", FALLBACKS.inPersonTitle)}
-        >
-          {inPersonDoctorCount > 0 ? (
+        {inPersonDoctorCount > 0 && (
+          <button
+            type="button"
+            className={chipClass}
+            onClick={goInPerson}
+            title={t("gp_shortcut_in_person_title", FALLBACKS.inPersonTitle)}
+          >
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
             </span>
-          ) : (
-            <span
-              className={cn(
-                "h-2 w-2 shrink-0 rounded-full",
-                variant === "hero" ? "bg-white/30" : "bg-muted-foreground/30"
-              )}
-              aria-hidden
-            />
-          )}
-          <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {inPersonLabel}
-        </button>
+            <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {inPersonLabel}
+          </button>
+        )}
       </div>
 
       {variant === "dashboard" && (

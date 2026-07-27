@@ -146,8 +146,8 @@
     "gp_shortcut_see_today_title": "本日残りのビデオ診療枠（合計）",
     "gp_shortcut_available_now": "ビデオ · まもなく",
     "gp_shortcut_available_now_title": "今後2時間以内に予約できるビデオ診療",
-    "gp_shortcut_next_gp": "次のビデオ診療",
-    "gp_shortcut_next_gp_title": "本日の空き枠はありません — 次に予約できるビデオ診療を表示"
+    "gp_shortcut_next_gp": "Next GP Appointment",
+    "gp_shortcut_next_gp_title": "No free slots left today — browse the next available GP appointment"
   },
   "doctor": {
     "verified": "認証済み医師",

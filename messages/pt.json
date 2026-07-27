@@ -146,8 +146,8 @@
     "gp_shortcut_see_today_title": "Consultas de vídeo de clínico geral ainda disponíveis hoje (total de horários)",
     "gp_shortcut_available_now": "Vídeo · em breve",
     "gp_shortcut_available_now_title": "Clínicos gerais por vídeo com horários nas próximas 2 horas",
-    "gp_shortcut_next_gp": "Próximo clínico por vídeo",
-    "gp_shortcut_next_gp_title": "Sem horários de vídeo hoje — ver o próximo clínico disponível"
+    "gp_shortcut_next_gp": "Next GP Appointment",
+    "gp_shortcut_next_gp_title": "No free slots left today — browse the next available GP appointment"
   },
   "doctor": {
     "verified": "Médico Verificado",

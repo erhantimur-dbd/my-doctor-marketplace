@@ -148,8 +148,8 @@
     "gp_shortcut_see_today_title": "Bugün hâlâ müsait görüntülü aile hekimi randevuları (toplam açık slot)",
     "gp_shortcut_available_now": "Görüntülü · yakında",
     "gp_shortcut_available_now_title": "Önümüzdeki 2 saatte müsait görüntülü aile hekimleri",
-    "gp_shortcut_next_gp": "Sonraki görüntülü hekim",
-    "gp_shortcut_next_gp_title": "Bugün müsait görüntülü randevu yok — bir sonraki müsait hekime bakın"
+    "gp_shortcut_next_gp": "Next GP Appointment",
+    "gp_shortcut_next_gp_title": "No free slots left today — browse the next available GP appointment"
   },
   "auth": {
     "login_title": "Tekrar Hos Geldiniz",

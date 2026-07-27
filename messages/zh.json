@@ -146,8 +146,8 @@
     "gp_shortcut_see_today_title": "今日仍可预约的视频全科号源（总名额）",
     "gp_shortcut_available_now": "视频 · 即将可约",
     "gp_shortcut_available_now_title": "未来2小时内可预约的视频全科医生",
-    "gp_shortcut_next_gp": "下一个视频全科",
-    "gp_shortcut_next_gp_title": "今日暂无空闲视频号源 — 查看下一可预约的视频全科医生"
+    "gp_shortcut_next_gp": "Next GP Appointment",
+    "gp_shortcut_next_gp_title": "No free slots left today — browse the next available GP appointment"
   },
   "doctor": {
     "verified": "认证医生",

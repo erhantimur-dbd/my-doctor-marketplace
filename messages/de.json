@@ -148,8 +148,8 @@
     "gp_shortcut_see_today_title": "Video-Hausarzt-Termine heute noch verfügbar (offene Termine gesamt)",
     "gp_shortcut_available_now": "Video-Hausarzt · bald",
     "gp_shortcut_available_now_title": "Video-Hausärzte mit freien Terminen in den nächsten 2 Stunden",
-    "gp_shortcut_next_gp": "Nächster Video-Hausarzt",
-    "gp_shortcut_next_gp_title": "Heute keine freien Video-Termine — nächsten verfügbaren Video-Hausarzt anzeigen"
+    "gp_shortcut_next_gp": "Next GP Appointment",
+    "gp_shortcut_next_gp_title": "No free slots left today — browse the next available GP appointment"
   },
   "auth": {
     "login_title": "Willkommen zuruck",

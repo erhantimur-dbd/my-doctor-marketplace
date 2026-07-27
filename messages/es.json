@@ -146,8 +146,8 @@
     "gp_shortcut_see_today_title": "Citas de vídeo con médico de cabecera disponibles hoy (total de huecos)",
     "gp_shortcut_available_now": "Vídeo · pronto",
     "gp_shortcut_available_now_title": "Médicos de cabecera por vídeo con citas en las próximas 2 horas",
-    "gp_shortcut_next_gp": "Próximo médico por vídeo",
-    "gp_shortcut_next_gp_title": "No hay citas de vídeo libres hoy — ver el próximo médico disponible"
+    "gp_shortcut_next_gp": "Next GP Appointment",
+    "gp_shortcut_next_gp_title": "No free slots left today — browse the next available GP appointment"
   },
   "doctor": {
     "verified": "Médico Verificado",
