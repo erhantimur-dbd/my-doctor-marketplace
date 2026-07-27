@@ -289,21 +289,20 @@ export function GpShortcutChips({
       : "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90"
   );
 
-  // Chips always stay visible; counts are live and may be zero
+  // Chips always stay visible; live counts may be zero (still shown)
   const seeTodayLabel =
     todaySlotCount > 0
       ? t("gp_shortcut_see_today_count", { count: todaySlotCount })
       : t("gp_shortcut_see_today");
 
-  const availableNowLabel =
-    gpCount > 0
-      ? t("gp_shortcut_available_now_count", { count: gpCount })
-      : t("gp_shortcut_available_now");
+  // Always show count (including 0) so the chip never "vanishes" visually
+  const availableNowLabel = t("gp_shortcut_available_now_count", {
+    count: gpCount,
+  });
 
-  const inPersonLabel =
-    inPersonDoctorCount > 0
-      ? t("gp_shortcut_in_person_count", { count: inPersonDoctorCount })
-      : t("gp_shortcut_in_person");
+  const inPersonLabel = t("gp_shortcut_in_person_count", {
+    count: inPersonDoctorCount,
+  });
 
   return (
     <div className={cn("flex flex-col items-center gap-2", className)}>
@@ -340,28 +339,32 @@ export function GpShortcutChips({
           onClick={() => goVideo("available_now")}
           title={t("gp_shortcut_available_now_title")}
         >
-          {gpCount > 0 && (
+          {gpCount > 0 ? (
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
+          ) : (
+            <span className="h-2 w-2 shrink-0 rounded-full bg-white/30" aria-hidden />
           )}
           <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {availableNowLabel}
         </button>
 
-        {/* In person — city / nearby only; always visible */}
+        {/* In person — city / nearby only; always visible (same as video soon) */}
         <button
           type="button"
           className={chipClass}
           onClick={goInPerson}
           title={t("gp_shortcut_in_person_title")}
         >
-          {inPersonDoctorCount > 0 && (
+          {inPersonDoctorCount > 0 ? (
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
             </span>
+          ) : (
+            <span className="h-2 w-2 shrink-0 rounded-full bg-white/30" aria-hidden />
           )}
           <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
           {inPersonLabel}

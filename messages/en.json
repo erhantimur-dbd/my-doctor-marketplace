@@ -140,7 +140,7 @@
     "gp_shortcut_available_now_in_person": "Nearby now · {count}",
     "gp_shortcut_hint_in_person": "In-person GPs in your city",
     "gp_shortcut_need_location": "Choose a city or allow location to find in-person GPs nearby",
-    "gp_shortcut_in_person": "GP in person nearby",
+    "gp_shortcut_in_person": "In person nearby · 0",
     "gp_shortcut_section_label": "Quick book appointments",
     "gp_shortcut_in_person_count": "In person nearby · {count}",
     "gp_shortcut_in_person_title": "In-person GPs near you with free appointments in the next 2 hours (count is doctors, not slots)",
