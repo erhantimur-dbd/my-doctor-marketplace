@@ -13,11 +13,18 @@ import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
 import { log } from "@/lib/utils/logger";
 
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
 // Stripe coupon ID for referral rewards (100% off for 1 billing period)
 const REFERRAL_COUPON_ID = "REFERRAL_1MO_FREE";
+
+async function getAppUrl(): Promise<string> {
+  try {
+    const { getRequestOrigin } = await import("@/lib/http/origin");
+    return getRequestOrigin();
+  } catch {
+    const { getConfiguredAppOrigin } = await import("@/lib/http/origin");
+    return getConfiguredAppOrigin();
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -132,8 +139,9 @@ export async function sendReferralInvitation(formData: FormData) {
     return { error: safeError(insertError) };
   }
 
-  // Send invitation email
-  const signUpUrl = `${APP_URL}/en/register-doctor?ref=${doctor.referral_code}`;
+  // Send invitation email (same TLD as referrer)
+  const appUrl = await getAppUrl();
+  const signUpUrl = `${appUrl}/en/register-doctor?ref=${doctor.referral_code}`;
   const { subject, html } = doctorReferralInvitationEmail({
     referrerName,
     colleagueName: colleagueName || "",
@@ -170,7 +178,8 @@ export async function sendReferralInvitationAtRegistration(
   });
 
   // Send invitation email
-  const signUpUrl = `${APP_URL}/en/register-doctor?ref=${referralCode}`;
+  const appUrl = await getAppUrl();
+  const signUpUrl = `${appUrl}/en/register-doctor?ref=${referralCode}`;
   const { subject, html } = doctorReferralInvitationEmail({
     referrerName,
     colleagueName,
@@ -523,7 +532,8 @@ export async function sendPatientReferralInvite(email: string) {
 
   // Send invitation email
   const { patientReferralInviteEmail } = await import("@/lib/email/templates");
-  const referralLink = `${APP_URL}/en/register?ref=${existing.referral_code}`;
+  const appUrl = await getAppUrl();
+  const referralLink = `${appUrl}/en/register?ref=${existing.referral_code}`;
   const { subject, html } = patientReferralInviteEmail({
     referrerName,
     referralLink,

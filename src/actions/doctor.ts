@@ -327,10 +327,12 @@ export async function connectStripeAccount() {
       .eq("id", doctor.id);
   }
 
+  const { getRequestOrigin } = await import("@/lib/http/origin");
+  const origin = await getRequestOrigin();
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/payments`,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/payments`,
+    refresh_url: `${origin}/en/doctor-dashboard/payments`,
+    return_url: `${origin}/en/doctor-dashboard/payments`,
     type: "account_onboarding",
   });
 
@@ -439,14 +441,16 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
   );
   const { hasDiscount, referralId } = await checkReferralDiscount(doctor.id);
 
+  const { getRequestOrigin } = await import("@/lib/http/origin");
+  const origin = await getRequestOrigin();
   // Build checkout session options
   const sessionOptions: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { doctor_id: doctor.id },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing`,
+    success_url: `${origin}/en/doctor-dashboard/organization/billing?success=true`,
+    cancel_url: `${origin}/en/doctor-dashboard/organization/billing`,
   };
 
   // Apply manual coupon code (if provided and no referral discount)

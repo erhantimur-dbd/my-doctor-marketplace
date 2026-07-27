@@ -212,6 +212,9 @@ export async function createLicenseCheckout(
     ? quantity
     : tierConfig.includedSeats || 1;
 
+  const { getRequestOrigin } = await import("@/lib/http/origin");
+  const origin = await getRequestOrigin();
+
   const sessionOptions: Record<string, unknown> = {
     customer: customerId,
     mode: "subscription",
@@ -232,8 +235,8 @@ export async function createLicenseCheckout(
         billing_period: billingPeriod,
       },
     },
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing`,
+    success_url: `${origin}/en/doctor-dashboard/organization/billing?success=true`,
+    cancel_url: `${origin}/en/doctor-dashboard/organization/billing`,
   };
 
   // Apply coupon if provided
@@ -277,10 +280,12 @@ export async function manageLicenseBilling() {
   if (!org.stripe_customer_id) return { error: "No billing account found. Please subscribe first." };
 
   const stripe = getStripe();
+  const { getRequestOrigin } = await import("@/lib/http/origin");
+  const origin = await getRequestOrigin();
 
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: org.stripe_customer_id,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/en/doctor-dashboard/organization/billing`,
+    return_url: `${origin}/en/doctor-dashboard/organization/billing`,
   });
 
   return { url: portalSession.url };

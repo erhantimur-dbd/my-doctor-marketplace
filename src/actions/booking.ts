@@ -41,19 +41,8 @@ import { rateLimit } from "@/lib/rate-limit";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") || h.get("host") || "";
-  const proto = h.get("x-forwarded-proto") || "https";
-  const origin = host
-    ? `${proto}://${host}`
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-  // Extract locale from the referer path (e.g. /de/doctors/slug/book)
-  const referer = h.get("referer") || "";
-  const localeMatch = referer.match(/\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/);
-  const locale = localeMatch ? localeMatch[1] : "en";
-
-  return { origin, locale };
+  const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
+  return getRequestOriginAndLocale("en");
 }
 
 const CANCELLABLE_STATUSES = [
@@ -478,6 +467,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
             patientName: parsed.data.guest?.first_name || "there",
             bookingNumber: booking.booking_number,
             locale,
+            origin,
           }).catch(() => {});
         }
       }

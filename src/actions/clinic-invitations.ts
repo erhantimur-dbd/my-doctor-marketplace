@@ -191,13 +191,9 @@ export async function sendClinicInvitation(formData: FormData) {
 
   if (inviteError || !invite) return { error: inviteError?.message || "Failed to create invitation" };
 
-  // Build invite URL
-  const h = await headers();
-  const host = h.get("x-forwarded-host") || h.get("host") || "";
-  const proto = h.get("x-forwarded-proto") || "https";
-  const origin = host
-    ? `${proto}://${host}`
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Build invite URL on the host the owner is using
+  const { getRequestOrigin } = await import("@/lib/http/origin");
+  const origin = await getRequestOrigin();
 
   const inviteUrl = `${origin}/en/invite/${invite.token}`;
 

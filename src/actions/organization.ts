@@ -306,13 +306,9 @@ export async function inviteMember(formData: FormData) {
     });
   }
 
-  // Send invitation email
-  const h = await headers();
-  const host = h.get("x-forwarded-host") || h.get("host") || "";
-  const proto = h.get("x-forwarded-proto") || "https";
-  const origin = host
-    ? `${proto}://${host}`
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  // Send invitation email (same TLD as inviter)
+  const { getRequestOrigin } = await import("@/lib/http/origin");
+  const origin = await getRequestOrigin();
 
   // Get inviter's name
   const { data: inviterProfile } = await adminSupabase

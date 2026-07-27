@@ -1432,16 +1432,8 @@ export async function adminGrantDoctorSubscription(data: {
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
-  const h = await headers();
-  const host = h.get("x-forwarded-host") || h.get("host") || "";
-  const proto = h.get("x-forwarded-proto") || "https";
-  const origin = host
-    ? `${proto}://${host}`
-    : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const referer = h.get("referer") || "";
-  const localeMatch = referer.match(/\/(en|de|tr|fr)(\/|$)/);
-  const locale = localeMatch ? localeMatch[1] : "en";
-  return { origin, locale };
+  const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
+  return getRequestOriginAndLocale("en");
 }
 
 export async function adminSearchPatients(query: string) {

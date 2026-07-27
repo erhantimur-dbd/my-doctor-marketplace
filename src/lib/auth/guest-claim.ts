@@ -13,6 +13,8 @@ export type GuestClaimParams = {
   patientName: string;
   bookingNumber?: string;
   locale?: string;
+  /** Request host origin (.com / .co.uk / .eu); falls back to env */
+  origin?: string;
 };
 
 /** Supabase admin generateLink types we use for guest claim */
@@ -108,8 +110,11 @@ export async function sendGuestAccountClaimEmail(
   }
 
   const locale = params.locale || "en";
-  const origin =
-    process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+  const { getConfiguredAppOrigin } = await import("@/lib/http/origin");
+  const origin = (params.origin || getConfiguredAppOrigin()).replace(
+    /\/$/,
+    ""
+  );
 
   try {
     const primaryType = selectGuestClaimLinkType("magiclink");
