@@ -307,8 +307,12 @@ function GpShortcutChipsInner({
       params.set("location", `country-${countryCode.toLowerCase()}`);
       params.set("gpMarket", countryCode);
     } else {
+      // Next GP Appointment: next 5 days, never same-day-only
       params.set("location", `country-${countryCode.toLowerCase()}`);
       params.set("gpMarket", countryCode);
+      params.set("availableWithinDays", "5");
+      // Explicitly ensure availableToday is not carried over
+      params.delete("availableToday");
     }
 
     router.push(`/doctors?${params.toString()}`);

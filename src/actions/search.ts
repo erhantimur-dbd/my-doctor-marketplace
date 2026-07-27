@@ -145,6 +145,11 @@ export interface SearchFilters {
    * so the doctor list matches the homepage chip counter.
    */
   liveInPersonNearby?: boolean;
+  /**
+   * Only doctors with at least one free slot in the next N days
+   * (for "Next GP Appointment" and similar shortcuts).
+   */
+  availableWithinDays?: number;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -387,32 +392,59 @@ export async function searchDoctors(filters: SearchFilters) {
     }
   }
 
+  // Location filters use location_id (not nested location.* filters) so that
+  // multi-pass sorts (soonest) can safely re-select("id") without dropping embeds.
   if (filters.location) {
     if (isCountryFilter) {
       // Country-level filter (e.g. "country-gb" → country_code "GB")
-      const countryCode = filters.location.replace("country-", "").toUpperCase();
-      query = query.eq("location.country_code", countryCode);
+      const countryCode = filters.location
+        .replace("country-", "")
+        .toUpperCase();
+      const { data: countryLocs } = await supabase
+        .from("locations")
+        .select("id")
+        .eq("country_code", countryCode);
+      const locIds = (countryLocs || []).map((l: { id: string }) => l.id);
+      if (locIds.length === 0) {
+        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      }
+      query = query.in("location_id", locIds);
     } else if (filters.consultationType === "video") {
       // Video consultations: expand to country-level so patients see all
       // doctors in the same country, not just the selected city.
       const { data: loc } = await supabase
         .from("locations")
-        .select("country_code")
+        .select("id, country_code")
         .eq("slug", filters.location)
         .single();
 
-      if (loc) {
-        query = query.eq("location.country_code", loc.country_code);
+      if (loc?.country_code) {
+        const { data: countryLocs } = await supabase
+          .from("locations")
+          .select("id")
+          .eq("country_code", loc.country_code);
+        const locIds = (countryLocs || []).map((l: { id: string }) => l.id);
+        if (locIds.length === 0) {
+          return {
+            doctors: [],
+            total: 0,
+            page: filters.page || 1,
+            perPage: 12,
+          };
+        }
+        query = query.in("location_id", locIds);
+      } else if (loc?.id) {
+        query = query.eq("location_id", loc.id);
       } else {
-        query = query.eq("location.slug", filters.location);
+        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
       }
     } else {
       // In-person / default: prefer proximity-based matching so that
       // nearby cities (e.g. Islington → London doctors) are included.
-      // Falls back to exact slug match if the location has no coordinates.
+      // Falls back to exact location_id match if the location has no coordinates.
       const { data: selectedLoc } = await supabase
         .from("locations")
-        .select("latitude, longitude, country_code")
+        .select("id, latitude, longitude, country_code")
         .eq("slug", filters.location)
         .single();
 
@@ -437,17 +469,34 @@ export async function searchDoctors(filters: SearchFilters) {
                 withinRadius.map((r) => [r.doctor_id, r.distance_km])
               );
             }
-          } else {
-            // No doctors within radius — fall back to same country
-            query = query.eq("location.country_code", selectedLoc.country_code);
+          } else if (selectedLoc.country_code) {
+            // No doctors within radius — fall back to same country via location_id
+            const { data: countryLocs } = await supabase
+              .from("locations")
+              .select("id")
+              .eq("country_code", selectedLoc.country_code);
+            const locIds = (countryLocs || []).map(
+              (l: { id: string }) => l.id
+            );
+            if (locIds.length === 0) {
+              return {
+                doctors: [],
+                total: 0,
+                page: filters.page || 1,
+                perPage: 12,
+              };
+            }
+            query = query.in("location_id", locIds);
           }
-        } else {
-          // RPC failed — fall back to exact slug match
-          query = query.eq("location.slug", filters.location);
+        } else if (selectedLoc.id) {
+          // RPC failed — fall back to exact location_id match
+          query = query.eq("location_id", selectedLoc.id);
         }
+      } else if (selectedLoc?.id) {
+        // No coordinates — fall back to exact location_id match
+        query = query.eq("location_id", selectedLoc.id);
       } else {
-        // No coordinates — fall back to exact slug match
-        query = query.eq("location.slug", filters.location);
+        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
       }
     }
   }
@@ -477,13 +526,16 @@ export async function searchDoctors(filters: SearchFilters) {
     if (filters.consultationType !== "video") {
       query = query.contains("consultation_types", ["video"]);
     }
-    // Remove the location filter for non-launch regions — show all video doctors
-    // We need to re-create the query without the location inner join constraint
-    // Instead, just expand to all launch region doctors offering video
-    query = query.in(
-      "location.country_code",
-      LAUNCH_REGION_CODES as unknown as string[]
-    );
+    // Expand to all launch-region location_ids (avoid nested location.* filters)
+    const { data: launchLocs } = await supabase
+      .from("locations")
+      .select("id")
+      .in("country_code", [...LAUNCH_REGION_CODES]);
+    const launchLocIds = (launchLocs || []).map((l: { id: string }) => l.id);
+    if (launchLocIds.length === 0) {
+      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+    }
+    query = query.in("location_id", launchLocIds);
   }
 
   // Free-text query: match against specialty names, keywords, doctor names, and bio
@@ -595,6 +647,7 @@ export async function searchDoctors(filters: SearchFilters) {
 
   // "Soonest" sort: order by earliest bookable slot (next-available RPC), then page.
   // Doctors with no slots in the window sink to the end.
+  // Location filters use location_id so select("id") is safe (no nested embeds required).
   if (filters.sort === "soonest") {
     // Replace projection to IDs only (builder already has count:exact from initial select).
     // Do not pass a second options arg — TS builder type after chained filters
@@ -606,25 +659,40 @@ export async function searchDoctors(filters: SearchFilters) {
       return { doctors: [], total: 0, page, perPage };
     }
 
-    const allIds = (idRows || []).map((r: { id: string }) => r.id);
-    const total = allIds.length;
+    let allIds = (idRows || []).map((r: { id: string }) => r.id);
 
     if (allIds.length === 0) {
       return { doctors: [], total: 0, page, perPage };
     }
 
     const ctype =
-      filters.consultationType === "video" || filters.consultationType === "in_person"
+      filters.consultationType === "video" ||
+      filters.consultationType === "in_person"
         ? filters.consultationType
         : "in_person";
 
+    // Next GP / similar: only doctors with a free slot in the next N days
+    const withinDays = filters.availableWithinDays ?? 14;
+
     // Prefer requested type; if "all", also check video and take the earlier first slot
     const [availPrimary, availVideo] = await Promise.all([
-      getNextAvailabilityBatch(allIds, ctype),
+      getNextAvailabilityBatch(allIds, ctype, withinDays),
       filters.consultationType
-        ? Promise.resolve({} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>)
-        : getNextAvailabilityBatch(allIds, "video"),
+        ? Promise.resolve(
+            {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>
+          )
+        : getNextAvailabilityBatch(allIds, "video", withinDays),
     ]);
+
+    // When availableWithinDays is set, drop doctors with no slot in the window
+    if (filters.availableWithinDays != null && filters.availableWithinDays > 0) {
+      allIds = allIds.filter(
+        (id) => !!(availPrimary[id]?.date || availVideo[id]?.date)
+      );
+      if (allIds.length === 0) {
+        return { doctors: [], total: 0, page, perPage };
+      }
+    }
 
     const earliestMs = (id: string): number => {
       const a = availPrimary[id]?.slots?.[0]?.start;
@@ -634,7 +702,10 @@ export async function searchDoctors(filters: SearchFilters) {
       return Math.min(ta, tb);
     };
 
-    const orderedIds = [...allIds].sort((a, b) => earliestMs(a) - earliestMs(b));
+    const orderedIds = [...allIds].sort(
+      (a, b) => earliestMs(a) - earliestMs(b)
+    );
+    const total = orderedIds.length;
     const pageIds = orderedIds.slice((page - 1) * perPage, page * perPage);
 
     if (pageIds.length === 0) {
@@ -1090,10 +1161,12 @@ export interface DoctorNextAvailability {
 /**
  * For a list of doctor IDs, returns the next available day + up to 4 slots
  * for each doctor. Single DB round-trip via the batch RPC function.
+ * @param maxDays Lookahead window in days (default 14). Use 5 for Next GP shortcuts.
  */
 export async function getNextAvailabilityBatch(
   doctorIds: string[],
-  consultationType?: string
+  consultationType?: string,
+  maxDays = 14
 ): Promise<Record<string, DoctorNextAvailability>> {
   if (doctorIds.length === 0) return {};
 
@@ -1102,7 +1175,7 @@ export async function getNextAvailabilityBatch(
     "get_next_available_slots_batch",
     {
       p_doctor_ids: doctorIds,
-      p_max_days: 14,
+      p_max_days: maxDays,
       p_max_slots: 4,
       p_consultation_type: consultationType || "in_person",
     }

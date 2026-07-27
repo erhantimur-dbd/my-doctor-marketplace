@@ -75,6 +75,9 @@ export default async function DoctorsPage({
       liveWindowHours: sp.liveWindowHours
         ? Number(sp.liveWindowHours)
         : undefined,
+      availableWithinDays: sp.availableWithinDays
+        ? Number(sp.availableWithinDays)
+        : undefined,
       wheelchairAccessible: sp.wheelchairAccessible === "true",
       userLat: sp.lat ? Number(sp.lat) : undefined,
       userLng: sp.lng ? Number(sp.lng) : undefined,
