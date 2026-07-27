@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Clock, Stethoscope, Video } from "lucide-react";
+import { Building2, Clock, Stethoscope, Video } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { getLiveAvailabilityCounts } from "@/actions/live-availability";
@@ -16,8 +16,7 @@ import {
 
 const GP_SLUG = "general-practice";
 
-type ChipId = "see_today" | "available_now";
-type ConsultationMode = "all" | "in_person" | "video";
+type ChipId = "see_today" | "available_now" | "in_person";
 
 export type GpShortcutLocation = GpMarketLocation;
 export type GpShortcutPlace = GpMarketPlace;
@@ -33,12 +32,6 @@ interface GpShortcutChipsProps {
   locationSlug?: string;
   /** GPS coords when available */
   geo?: { latitude: number | null; longitude: number | null };
-  /**
-   * Consultation type from the home search toggle.
-   * - video / all → country-wide video GPs
-   * - in_person → city / nearby only
-   */
-  consultationType?: ConsultationMode;
   /**
    * hero — translucent white pills on the gradient
    * dashboard — solid chips on light backgrounds
@@ -79,8 +72,8 @@ function trackGpShortcutClick(
 /**
  * One-tap shortcuts into GP search.
  *
- * Video (default): country-wide video GPs (UK-wide for GB).
- * In-person: only the patient's city / nearby radius — never country-wide.
+ * - See a GP today / Available now → country-wide **video** GPs
+ * - GP in person → **city / nearby only** (never country-wide)
  */
 export function GpShortcutChips({
   initialGpCount = 0,
@@ -88,7 +81,6 @@ export function GpShortcutChips({
   placeData = null,
   locationSlug = "",
   geo,
-  consultationType = "all",
   variant = "hero",
   className,
 }: GpShortcutChipsProps) {
@@ -96,8 +88,6 @@ export function GpShortcutChips({
   const locale = useLocale();
   const router = useRouter();
   const [gpCount, setGpCount] = useState(initialGpCount);
-
-  const wantsInPerson = consultationType === "in_person";
 
   const countryCode = useMemo(
     () =>
@@ -140,42 +130,43 @@ export function GpShortcutChips({
     };
   }, []);
 
-  const go = (chip: ChipId) => {
+  const goVideo = (chip: "see_today" | "available_now") => {
+    trackGpShortcutClick(chip, { countryCode, mode: "video" });
     const params = new URLSearchParams();
     params.set("specialty", GP_SLUG);
     params.set("from", "gp_shortcut");
     params.set("availableToday", "true");
+    params.set("location", `country-${countryCode.toLowerCase()}`);
+    params.set("consultationType", "video");
+    params.set("gpMarket", countryCode);
     if (chip === "available_now") {
       params.set("sort", "soonest");
     }
+    router.push(`/doctors?${params.toString()}`);
+  };
 
-    if (wantsInPerson) {
-      // In-person: city / nearby only — never country-wide
-      if (localArea.kind === "missing") {
-        toast.error(t("gp_shortcut_need_location"));
-        return;
-      }
+  const goInPerson = () => {
+    if (localArea.kind === "missing") {
+      toast.error(t("gp_shortcut_need_location"));
+      return;
+    }
 
-      trackGpShortcutClick(chip, {
-        countryCode,
-        mode: "in_person",
-      });
+    trackGpShortcutClick("in_person", { countryCode, mode: "in_person" });
 
-      params.set("consultationType", "in_person");
-      if (localArea.kind === "place") {
-        params.set("placeLat", localArea.placeLat.toFixed(6));
-        params.set("placeLng", localArea.placeLng.toFixed(6));
-        params.set("placeName", localArea.placeName);
-        params.set("radius", String(localArea.radiusKm));
-      } else {
-        params.set("location", localArea.locationSlug);
-      }
+    const params = new URLSearchParams();
+    params.set("specialty", GP_SLUG);
+    params.set("from", "gp_shortcut");
+    params.set("availableToday", "true");
+    params.set("consultationType", "in_person");
+    params.set("sort", "soonest");
+
+    if (localArea.kind === "place") {
+      params.set("placeLat", localArea.placeLat.toFixed(6));
+      params.set("placeLng", localArea.placeLng.toFixed(6));
+      params.set("placeName", localArea.placeName);
+      params.set("radius", String(localArea.radiusKm));
     } else {
-      // Video (default): country-wide market
-      trackGpShortcutClick(chip, { countryCode, mode: "video" });
-      params.set("location", `country-${countryCode.toLowerCase()}`);
-      params.set("consultationType", "video");
-      params.set("gpMarket", countryCode);
+      params.set("location", localArea.locationSlug);
     }
 
     router.push(`/doctors?${params.toString()}`);
@@ -195,14 +186,6 @@ export function GpShortcutChips({
       : "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90"
   );
 
-  const seeTodayLabel = wantsInPerson
-    ? t("gp_shortcut_see_today_in_person")
-    : t("gp_shortcut_see_today");
-
-  const availableLabel = wantsInPerson
-    ? t("gp_shortcut_available_now_in_person", { count: gpCount })
-    : t("gp_shortcut_available_now_count", { count: gpCount });
-
   return (
     <div
       className={cn(
@@ -212,36 +195,45 @@ export function GpShortcutChips({
       role="group"
       aria-label={t("gp_shortcut_aria")}
     >
+      {/* Video — country-wide */}
       <button
         type="button"
         className={primaryChipClass}
-        onClick={() => go("see_today")}
+        onClick={() => goVideo("see_today")}
       >
         <Stethoscope className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        {seeTodayLabel}
+        {t("gp_shortcut_see_today")}
       </button>
 
       {gpCount > 0 && (
         <button
           type="button"
           className={chipClass}
-          onClick={() => go("available_now")}
+          onClick={() => goVideo("available_now")}
         >
           <span className="relative flex h-2 w-2 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
           </span>
           <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {availableLabel}
+          {t("gp_shortcut_available_now_count", { count: gpCount })}
         </button>
       )}
+
+      {/* In person — city / nearby only */}
+      <button
+        type="button"
+        className={chipClass}
+        onClick={goInPerson}
+      >
+        <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        {t("gp_shortcut_in_person")}
+      </button>
 
       {variant === "dashboard" && (
         <span className="hidden sm:inline-flex items-center gap-1 text-xs text-muted-foreground">
           <Clock className="h-3 w-3" aria-hidden />
-          {wantsInPerson
-            ? t("gp_shortcut_hint_in_person")
-            : t("gp_shortcut_hint")}
+          {t("gp_shortcut_hint")}
         </span>
       )}
     </div>

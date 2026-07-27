@@ -137,7 +137,8 @@
     "gp_shortcut_see_today_in_person": "Clínico geral perto de si",
     "gp_shortcut_available_now_in_person": "Perto agora · {count}",
     "gp_shortcut_hint_in_person": "Clínicos gerais presenciais na sua cidade",
-    "gp_shortcut_need_location": "Escolha uma cidade ou permita a localização para consultas presenciais"
+    "gp_shortcut_need_location": "Escolha uma cidade ou permita a localização para consultas presenciais",
+    "gp_shortcut_in_person": "Clínico geral presencial"
   },
   "doctor": {
     "verified": "Médico Verificado",

@@ -139,7 +139,8 @@
     "gp_shortcut_see_today_in_person": "Généraliste près de chez vous",
     "gp_shortcut_available_now_in_person": "À proximité · {count}",
     "gp_shortcut_hint_in_person": "Généralistes en présentiel dans votre ville",
-    "gp_shortcut_need_location": "Choisissez une ville ou autorisez la localisation pour les rendez-vous en présentiel"
+    "gp_shortcut_need_location": "Choisissez une ville ou autorisez la localisation pour les rendez-vous en présentiel",
+    "gp_shortcut_in_person": "Généraliste en présentiel"
   },
   "auth": {
     "login_title": "Bon Retour",

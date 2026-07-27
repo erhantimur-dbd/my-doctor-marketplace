@@ -139,7 +139,8 @@
     "gp_shortcut_see_today_in_person": "See a GP nearby today",
     "gp_shortcut_available_now_in_person": "Nearby now · {count}",
     "gp_shortcut_hint_in_person": "In-person GPs in your city",
-    "gp_shortcut_need_location": "Choose a city or allow location to find in-person GPs nearby"
+    "gp_shortcut_need_location": "Choose a city or allow location to find in-person GPs nearby",
+    "gp_shortcut_in_person": "GP in person nearby"
   },
   "doctor": {
     "verified": "Verified Doctor",

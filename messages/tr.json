@@ -139,7 +139,8 @@
     "gp_shortcut_see_today_in_person": "Yakındaki aile hekimi bugün",
     "gp_shortcut_available_now_in_person": "Yakında · {count}",
     "gp_shortcut_hint_in_person": "Şehrinizdeki yüz yüze aile hekimleri",
-    "gp_shortcut_need_location": "Yüz yüze randevu için bir şehir seçin veya konuma izin verin"
+    "gp_shortcut_need_location": "Yüz yüze randevu için bir şehir seçin veya konuma izin verin",
+    "gp_shortcut_in_person": "Yüz yüze aile hekimi"
   },
   "auth": {
     "login_title": "Tekrar Hos Geldiniz",
