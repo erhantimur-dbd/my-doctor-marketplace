@@ -21,6 +21,11 @@ import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import { useTts } from "@/hooks/use-tts";
 import {
+  useGrokRealtimeVoice,
+  buildLiveToolMessage,
+  buildLiveTextMessage,
+} from "@/hooks/use-grok-realtime-voice";
+import {
   extractAssistantText,
   parseDoctorsSearchPath,
 } from "@/lib/voice/search-url";
@@ -29,6 +34,7 @@ import {
   shouldSpeakVoiceWelcome,
   VOICE_WELCOME_SESSION_KEY,
 } from "@/lib/voice/welcome";
+import { toast } from "sonner";
 import { ChatMessage } from "./chat-message";
 import { ChatComposer } from "./chat-composer";
 import { ChatSuggestions } from "./chat-suggestions";
@@ -36,6 +42,7 @@ import { ChatGdprGate } from "./chat-gdpr-gate";
 import { ChatFilterBar, type AppliedFilters } from "./chat-filter-bar";
 import { ChatShortlistStrip } from "./chat-shortlist-strip";
 import { ChatCompareView } from "./chat-compare-view";
+import { LiveVoiceBar } from "./live-voice-bar";
 
 /**
  * The chat panel has two sizes, controlled by a single toggle in the header:
@@ -81,7 +88,13 @@ export function ChatWindow() {
     return intentFilters;
   }, [intentFilters]);
 
-  const { messages, sendMessage, status, error } = useChat({
+  const {
+    messages,
+    sendMessage,
+    status,
+    error,
+    setMessages: setChatMessages,
+  } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
       prepareSendMessagesRequest: ({ messages: msgs, id, body }) => ({
@@ -98,24 +111,60 @@ export function ChatWindow() {
   });
 
   const tts = useTts({ locale });
-  // Voice replies when user opened via voice entry or enabled speaker
+  // REST TTS path only when NOT in live realtime session
   const [voiceReplyEnabled, setVoiceReplyEnabled] = useState(false);
   const [welcomeBanner, setWelcomeBanner] = useState<string | null>(null);
-  /** After agent TTS: prompt user to press mic or type */
+  /** After agent TTS (push-to-talk fallback): prompt user to press mic or type */
   const [showReplyPrompt, setShowReplyPrompt] = useState(false);
   const spokenMsgIdsRef = useRef<Set<string>>(new Set());
   const lastSpokenTextRef = useRef<string>("");
   const welcomeTriggeredRef = useRef(false);
+  const liveStartedRef = useRef(false);
   const appliedToolIdsRef = useRef<Set<string>>(new Set());
   const spokenSummaryKeysRef = useRef<Set<string>>(new Set());
   const ttsWasPlayingRef = useRef(false);
+
+  const live = useGrokRealtimeVoice({
+    locale,
+    getCurrentFilters: resolveCurrentFilters,
+    onToolResult: ({ name, callId, result }) => {
+      const msg = buildLiveToolMessage(name, callId, result);
+      setChatMessages((prev) => [...prev, msg]);
+      if (!hasAutoExpanded && size === "compact") {
+        setSize("fullscreen");
+        markAutoExpanded();
+      }
+    },
+    onUserTranscript: (text, final) => {
+      if (!final || !text.trim()) return;
+      setChatMessages((prev) => {
+        // Avoid duplicate consecutive same user line
+        const last = prev[prev.length - 1];
+        const lastText =
+          last?.role === "user"
+            ? (last.parts?.find((p) => p.type === "text") as { text?: string })
+                ?.text
+            : "";
+        if (lastText === text.trim()) return prev;
+        return [...prev, buildLiveTextMessage("user", text.trim())];
+      });
+    },
+    onError: (code) => {
+      if (code === "not-allowed") toast.error(tVoice("error_permission"));
+      else if (code === "not-configured" || code === "session-failed")
+        toast.error(tVoice("live.error_session"));
+      else if (code !== "realtime-error") toast.error(tVoice("live.error_generic"));
+    },
+  });
 
   useEffect(() => {
     if (pendingVoiceStart) setVoiceReplyEnabled(true);
   }, [pendingVoiceStart]);
 
-  // When the agent finishes speaking, show visual “press mic or type” cue
+  // When the agent finishes REST TTS, show visual “press mic or type” cue
+  // (fallback path only — skip when live session is active)
   useEffect(() => {
+    if (live.isLive) return;
     if (tts.isPlaying) {
       ttsWasPlayingRef.current = true;
       return;
@@ -124,22 +173,27 @@ export function ChatWindow() {
       ttsWasPlayingRef.current = false;
       setShowReplyPrompt(true);
     }
-  }, [tts.isPlaying, voiceReplyEnabled]);
+  }, [tts.isPlaying, voiceReplyEnabled, live.isLive]);
 
   useEffect(() => {
     setMessages(messages as UIMessage[]);
   }, [messages, setMessages]);
 
   /**
-   * Voice session welcome: when user starts voice (launcher mic / pendingVoiceStart)
-   * after GDPR, show + speak MyDoctors360 search brief once per session.
-   * Text still appears if TTS fails. Never books.
+   * Live voice: launcher mic / pendingVoiceStart after GDPR starts
+   * Grok Realtime session (continuous conversation).
    */
   useEffect(() => {
     if (!hasAcceptedGdpr) return;
-    if (!pendingVoiceStart && !voiceReplyEnabled) return;
-    if (welcomeTriggeredRef.current) return;
+    if (!pendingVoiceStart) return;
+    if (liveStartedRef.current) return;
     if (typeof window === "undefined") return;
+
+    liveStartedRef.current = true;
+    clearPendingVoiceStart();
+    setVoiceReplyEnabled(true);
+    setShowReplyPrompt(false);
+    tts.stop();
 
     let already: string | null = null;
     try {
@@ -147,36 +201,35 @@ export function ChatWindow() {
     } catch {
       already = null;
     }
-    if (!shouldSpeakVoiceWelcome(already)) {
-      welcomeTriggeredRef.current = true;
-      return;
-    }
 
-    const text = buildVoiceWelcomeBrief({
-      greeting: tVoice("welcome_greeting"),
-      brief: tVoice("welcome_brief"),
-      replyHint: tVoice("welcome_reply_hint"),
-    });
-    welcomeTriggeredRef.current = true;
-    setWelcomeBanner(text);
-    // Visual cue immediately (even if TTS is slow/fails)
-    setShowReplyPrompt(true);
+    const welcome = shouldSpeakVoiceWelcome(already)
+      ? buildVoiceWelcomeBrief({
+          greeting: tVoice("welcome_greeting"),
+          brief: tVoice("welcome_brief"),
+          replyHint: tVoice("live.welcome_reply_hint"),
+        })
+      : tVoice("live.welcome_short");
+
+    setWelcomeBanner(welcome);
     try {
       sessionStorage.setItem(VOICE_WELCOME_SESSION_KEY, "1");
     } catch {
       /* ignore */
     }
-    setVoiceReplyEnabled(true);
-    // Do not auto-start the mic — wait until the user presses it after TTS
-    clearPendingVoiceStart();
-    void tts.speak(text);
+
+    if (!hasAutoExpanded && size === "compact") {
+      setSize("fullscreen");
+      markAutoExpanded();
+    }
+
+    void live.start({ welcomeText: welcome });
+    // Intentionally omit `live` object — liveStartedRef guards double-start
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     hasAcceptedGdpr,
     pendingVoiceStart,
-    voiceReplyEnabled,
-    tVoice,
-    tts,
     clearPendingVoiceStart,
+    tVoice,
   ]);
 
   /**
@@ -221,8 +274,9 @@ export function ChatWindow() {
     }
   }, [messages, status, pathname, prepareApply, markApplied, router]);
 
-  // Speak "why these doctors" summary from tools, else assistant text
+  // REST TTS path: speak tool summary / assistant text (disabled during live)
   useEffect(() => {
+    if (live.isLive) return;
     if (!voiceReplyEnabled) return;
     if (status !== "ready") return;
 
@@ -260,7 +314,7 @@ export function ChatWindow() {
     spokenMsgIdsRef.current.add(last.id);
     lastSpokenTextRef.current = text;
     void tts.speak(text.slice(0, 800));
-  }, [messages, status, voiceReplyEnabled, tts, welcomeBanner]);
+  }, [messages, status, voiceReplyEnabled, tts, welcomeBanner, live.isLive]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -298,16 +352,50 @@ export function ChatWindow() {
   }, [messages, status]);
 
   const handleBook = useCallback(() => {
+    live.stop();
     close();
-  }, [close]);
+  }, [close, live]);
+
+  const handleClose = useCallback(() => {
+    live.stop();
+    close();
+  }, [close, live]);
 
   const handleSend = (text: string) => {
     if (!hasAutoExpanded && size === "compact") {
       setSize("fullscreen");
       markAutoExpanded();
     }
+    // During live voice, typed messages still go through text chat pipeline
+    // (realtime is audio-primary; typing is a parallel channel)
     sendMessage({ text });
   };
+
+  const handleStartLiveVoice = useCallback(() => {
+    setVoiceReplyEnabled(true);
+    setShowReplyPrompt(false);
+    tts.stop();
+    liveStartedRef.current = true;
+    const welcome = buildVoiceWelcomeBrief({
+      greeting: tVoice("welcome_greeting"),
+      brief: tVoice("welcome_brief"),
+      replyHint: tVoice("live.welcome_reply_hint"),
+    });
+    setWelcomeBanner(welcome);
+    if (!hasAutoExpanded && size === "compact") {
+      setSize("fullscreen");
+      markAutoExpanded();
+    }
+    void live.start({ welcomeText: welcome });
+  }, [
+    tts,
+    live,
+    tVoice,
+    hasAutoExpanded,
+    size,
+    setSize,
+    markAutoExpanded,
+  ]);
 
   const handleRefine = (filters: AppliedFilters) => {
     const parts: string[] = [];
@@ -390,7 +478,7 @@ export function ChatWindow() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          onClick={close}
+          onClick={handleClose}
         />
       )}
 
@@ -474,7 +562,7 @@ export function ChatWindow() {
             </button>
             <button
               type="button"
-              onClick={close}
+              onClick={handleClose}
               aria-label={t("close")}
               className="rounded-full p-1.5 hover:bg-white/15"
             >
@@ -591,19 +679,34 @@ export function ChatWindow() {
               </div>
             )}
 
+            {live.isLive ? (
+              <LiveVoiceBar
+                status={live.status}
+                isMuted={live.isMuted}
+                captions={live.captions}
+                onMuteToggle={() => live.setMuted(!live.isMuted)}
+                onEnd={() => {
+                  live.stop();
+                  liveStartedRef.current = false;
+                  setShowReplyPrompt(true);
+                }}
+              />
+            ) : null}
+
             <ChatComposer
               onSend={handleSend}
               disabled={isBusy}
               autoStartVoice={false}
               onAutoStartVoiceConsumed={clearPendingVoiceStart}
-              onVoiceSessionStart={() => {
-                setVoiceReplyEnabled(true);
-                setShowReplyPrompt(false);
-              }}
+              onVoiceSessionStart={handleStartLiveVoice}
               showReplyPrompt={
-                showReplyPrompt && voiceReplyEnabled && !isBusy
+                !live.isLive &&
+                showReplyPrompt &&
+                voiceReplyEnabled &&
+                !isBusy
               }
               onReplyPromptConsumed={() => setShowReplyPrompt(false)}
+              liveMode={live.isLive}
             />
           </>
         )}

@@ -1422,6 +1422,27 @@
     "welcome_brief": "I can help you find a private doctor by specialty, location, language, or video versus in-person. Tell me what you need and I will search and refine results with you.",
     "welcome_reply_hint": "When I finish speaking, press the microphone button to reply by voice, or type your answer in the chat.",
     "welcome_banner": "Press the mic to reply by voice — or type below.",
-    "reply_prompt_visual": "Press the mic to reply · or type your message"
+    "reply_prompt_visual": "Press the mic to reply · or type your message",
+    "live": {
+      "connecting": "Connecting…",
+      "live": "Live conversation",
+      "listening": "Listening…",
+      "speaking": "Assistant speaking…",
+      "thinking": "Working on that…",
+      "error": "Voice connection issue",
+      "hint": "Speak naturally — no need to press the mic each turn",
+      "you": "You",
+      "assistant": "Assistant",
+      "mute": "Mute microphone",
+      "unmute": "Unmute microphone",
+      "end": "End",
+      "start": "Start live voice",
+      "start_prompt": "Tap the mic for a live conversation",
+      "type_while_live": "Type while on the call…",
+      "welcome_reply_hint": "Just speak after the tone — I'll keep listening.",
+      "welcome_short": "I'm listening. What specialty or city do you need?",
+      "error_session": "Could not start live voice. Check your connection and try again.",
+      "error_generic": "Live voice had a problem. You can still type."
+    }
   }
 }

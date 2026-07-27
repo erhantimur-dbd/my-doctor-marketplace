@@ -35,9 +35,12 @@ interface ChatComposerProps {
   /**
    * After the agent speaks: highlight mic + show “press mic or type” cue.
    * Cleared when the user starts recording or sends text.
+   * Not used during live realtime mode.
    */
   showReplyPrompt?: boolean;
   onReplyPromptConsumed?: () => void;
+  /** Live realtime session active — hide push-to-talk primary */
+  liveMode?: boolean;
 }
 
 export function ChatComposer({
@@ -48,6 +51,7 @@ export function ChatComposer({
   onVoiceSessionStart,
   showReplyPrompt = false,
   onReplyPromptConsumed,
+  liveMode = false,
 }: ChatComposerProps) {
   const t = useTranslations("chat.composer");
   const tVoice = useTranslations("voice");
@@ -77,22 +81,27 @@ export function ChatComposer({
     },
   });
 
+  /** Start live realtime (preferred) after privacy; parent starts Grok Realtime */
   const startVoice = useCallback(() => {
-    if (disabled || stt.isProcessing) return;
+    if (disabled || liveMode || stt.isProcessing) return;
     onReplyPromptConsumed?.();
-    onVoiceSessionStart?.();
     try {
       const raw = localStorage.getItem(VOICE_PRIVACY_STORAGE_KEY);
       if (hasAcceptedVoicePrivacy(raw)) {
-        toast.message(tVoice("mic_listening"));
-        void stt.start();
+        onVoiceSessionStart?.();
         return;
       }
     } catch {
       // fall through to privacy
     }
     setShowPrivacy(true);
-  }, [disabled, stt, tVoice, onVoiceSessionStart, onReplyPromptConsumed]);
+  }, [
+    disabled,
+    liveMode,
+    stt.isProcessing,
+    onVoiceSessionStart,
+    onReplyPromptConsumed,
+  ]);
 
   // Do not auto-start STT while the agent is speaking — user must press mic.
   // Consume the flag so pendingVoiceStart does not stick.
@@ -150,14 +159,17 @@ export function ChatComposer({
               /* ignore */
             }
             setShowPrivacy(false);
-            toast.message(tVoice("mic_listening"));
-            void stt.start();
+            // Prefer live realtime session (parent starts Grok Realtime)
+            onVoiceSessionStart?.();
           }}
           onDecline={() => setShowPrivacy(false)}
         />
       )}
       <div className="border-t border-border bg-background">
-        {showReplyPrompt && !stt.isRecording && !stt.isProcessing && (
+        {showReplyPrompt &&
+          !liveMode &&
+          !stt.isRecording &&
+          !stt.isProcessing && (
           <div
             className="flex items-center gap-2 border-b border-primary/15 bg-primary/5 px-3 py-1.5 text-[11px] leading-snug text-primary"
             role="status"
@@ -166,13 +178,14 @@ export function ChatComposer({
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
               <Mic className="h-3 w-3" strokeWidth={2.5} />
             </span>
-            <span className="font-medium">{tVoice("reply_prompt_visual")}</span>
+            <span className="font-medium">{tVoice("live.start_prompt")}</span>
           </div>
         )}
         <form
           onSubmit={handleSubmit}
           className="flex items-center gap-2 px-2.5 py-2"
         >
+          {!liveMode && (
           <button
             type="button"
             onClick={handleMicClick}
@@ -181,15 +194,15 @@ export function ChatComposer({
               stt.isRecording
                 ? tVoice("mic_listening")
                 : showReplyPrompt
-                  ? tVoice("reply_prompt_visual")
-                  : t("voice_input")
+                  ? tVoice("live.start_prompt")
+                  : tVoice("live.start")
             }
             title={
               stt.isRecording
                 ? tVoice("mic_listening")
                 : showReplyPrompt
-                  ? tVoice("reply_prompt_visual")
-                  : t("voice_input")
+                  ? tVoice("live.start_prompt")
+                  : tVoice("live.start")
             }
             className={cn(
               "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
@@ -219,6 +232,7 @@ export function ChatComposer({
               />
             )}
           </button>
+          )}
           <div className="relative flex-1">
             <textarea
               ref={textareaRef}
@@ -230,11 +244,13 @@ export function ChatComposer({
               onKeyDown={handleKeyDown}
               onInput={handleInput}
               placeholder={
-                stt.isRecording
-                  ? tVoice("mic_listening")
-                  : showReplyPrompt
-                    ? tVoice("reply_prompt_visual")
-                    : t("placeholder")
+                liveMode
+                  ? tVoice("live.type_while_live")
+                  : stt.isRecording
+                    ? tVoice("mic_listening")
+                    : showReplyPrompt
+                      ? tVoice("live.start_prompt")
+                      : t("placeholder")
               }
               rows={1}
               disabled={disabled || stt.isRecording}

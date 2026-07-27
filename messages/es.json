@@ -1198,6 +1198,27 @@
     "welcome_brief": "Puedo ayudarle a encontrar un médico privado por especialidad, ubicación, idioma, o vídeo frente a presencial. Dígame qué necesita y buscaremos juntos.",
     "welcome_banner": "Pulse el micrófono para responder — o escriba abajo.",
     "welcome_reply_hint": "Cuando termine de hablar, pulse el micrófono para responder por voz, o escriba en el chat.",
-    "reply_prompt_visual": "Pulse el micrófono · o escriba su mensaje"
+    "reply_prompt_visual": "Pulse el micrófono · o escriba su mensaje",
+    "live": {
+      "connecting": "Conectando…",
+      "live": "Conversación en vivo",
+      "listening": "Escuchando…",
+      "speaking": "El asistente habla…",
+      "thinking": "Un momento…",
+      "error": "Voice connection issue",
+      "hint": "Hable con naturalidad — no pulse el micrófono en cada turno",
+      "you": "Usted",
+      "assistant": "Asistente",
+      "mute": "Silenciar micrófono",
+      "unmute": "Activar micrófono",
+      "end": "Finalizar",
+      "start": "Iniciar voz en vivo",
+      "start_prompt": "Toque el micrófono para conversar en vivo",
+      "type_while_live": "Escriba durante la llamada…",
+      "welcome_reply_hint": "Just speak after the tone — I'll keep listening.",
+      "welcome_short": "I'm listening. What specialty or city do you need?",
+      "error_session": "Could not start live voice. Check your connection and try again.",
+      "error_generic": "Live voice had a problem. You can still type."
+    }
   }
 }

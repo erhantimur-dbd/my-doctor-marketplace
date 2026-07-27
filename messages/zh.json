@@ -1204,6 +1204,27 @@
     "welcome_brief": "我可以根据专科、地区、语言，或视频/面诊帮您寻找私立医生。告诉我您的需求，我们一起搜索并优化结果。",
     "welcome_banner": "按麦克风回复 — 或在下方输入。",
     "welcome_reply_hint": "我说完后，请按麦克风语音回复，或在聊天中输入。",
-    "reply_prompt_visual": "按麦克风回复 · 或输入消息"
+    "reply_prompt_visual": "按麦克风回复 · 或输入消息",
+    "live": {
+      "connecting": "连接中…",
+      "live": "实时对话",
+      "listening": "正在听…",
+      "speaking": "助手正在说话…",
+      "thinking": "处理中…",
+      "error": "Voice connection issue",
+      "hint": "自然说话即可 — 无需每轮点击麦克风",
+      "you": "您",
+      "assistant": "助手",
+      "mute": "静音",
+      "unmute": "取消静音",
+      "end": "结束",
+      "start": "开始实时语音",
+      "start_prompt": "点击麦克风开始实时对话",
+      "type_while_live": "通话中输入…",
+      "welcome_reply_hint": "Just speak after the tone — I'll keep listening.",
+      "welcome_short": "I'm listening. What specialty or city do you need?",
+      "error_session": "Could not start live voice. Check your connection and try again.",
+      "error_generic": "Live voice had a problem. You can still type."
+    }
   }
 }

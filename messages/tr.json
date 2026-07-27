@@ -1419,6 +1419,27 @@
     "welcome_brief": "Uzmanlık, konum, dil veya görüntülü/yüz yüze seçenekleriyle özel doktor bulmanıza yardımcı olabilirim. İhtiyacınızı söyleyin; arama ve sonuçları birlikte netleştirelim.",
     "welcome_banner": "Yanıt için mikrofona basın — veya aşağıya yazın.",
     "welcome_reply_hint": "Konuşmam bitince sesle yanıt vermek için mikrofona basın veya sohbete yazın.",
-    "reply_prompt_visual": "Mikrofona basın · veya mesaj yazın"
+    "reply_prompt_visual": "Mikrofona basın · veya mesaj yazın",
+    "live": {
+      "connecting": "Bağlanıyor…",
+      "live": "Canlı konuşma",
+      "listening": "Dinliyorum…",
+      "speaking": "Asistan konuşuyor…",
+      "thinking": "İşleniyor…",
+      "error": "Voice connection issue",
+      "hint": "Doğal konuşun — her seferinde mikrofona basmanız gerekmez",
+      "you": "Siz",
+      "assistant": "Asistan",
+      "mute": "Mikrofonu kapat",
+      "unmute": "Mikrofonu aç",
+      "end": "Bitir",
+      "start": "Canlı sesi başlat",
+      "start_prompt": "Canlı konuşma için mikrofona dokunun",
+      "type_while_live": "Görüşürken yazın…",
+      "welcome_reply_hint": "Just speak after the tone — I'll keep listening.",
+      "welcome_short": "I'm listening. What specialty or city do you need?",
+      "error_session": "Could not start live voice. Check your connection and try again.",
+      "error_generic": "Live voice had a problem. You can still type."
+    }
   }
 }

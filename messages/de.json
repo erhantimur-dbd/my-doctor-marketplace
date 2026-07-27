@@ -1419,6 +1419,27 @@
     "welcome_brief": "Ich helfe Ihnen, einen Privat-Arzt nach Fachgebiet, Ort, Sprache oder Video/Präsenz zu finden. Sagen Sie mir, was Sie brauchen — ich suche und verfeinere die Ergebnisse mit Ihnen.",
     "welcome_banner": "Mikrofon drücken zum Antworten — oder unten tippen.",
     "welcome_reply_hint": "Wenn ich fertig gesprochen habe, drücken Sie das Mikrofon, um per Sprache zu antworten, oder tippen Sie im Chat.",
-    "reply_prompt_visual": "Mikrofon drücken · oder Nachricht tippen"
+    "reply_prompt_visual": "Mikrofon drücken · oder Nachricht tippen",
+    "live": {
+      "connecting": "Verbinden…",
+      "live": "Live-Gespräch",
+      "listening": "Ich höre zu…",
+      "speaking": "Assistent spricht…",
+      "thinking": "Einen Moment…",
+      "error": "Voice connection issue",
+      "hint": "Einfach sprechen — Mikrofon nicht jedes Mal drücken",
+      "you": "Sie",
+      "assistant": "Assistent",
+      "mute": "Mikrofon stumm",
+      "unmute": "Mikrofon an",
+      "end": "Beenden",
+      "start": "Live-Sprache starten",
+      "start_prompt": "Mikrofon tippen für Live-Gespräch",
+      "type_while_live": "Während des Gesprächs tippen…",
+      "welcome_reply_hint": "Just speak after the tone — I'll keep listening.",
+      "welcome_short": "I'm listening. What specialty or city do you need?",
+      "error_session": "Could not start live voice. Check your connection and try again.",
+      "error_generic": "Live voice had a problem. You can still type."
+    }
   }
 }
