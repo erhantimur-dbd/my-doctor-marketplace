@@ -67,23 +67,31 @@ export interface GpInPersonAvailability {
 
 /**
  * Live count of in-person GP slots (and doctors) in the next N hours.
- * Prefer local radius when lat/lng known; else market country; else global.
+ * Nearby only — requires lat/lng. Returns zeros without coordinates.
  */
-export async function getGpInPersonAvailability(opts?: {
+export async function getGpInPersonAvailability(opts: {
   windowHours?: number;
-  countryCode?: string | null;
-  lat?: number | null;
-  lng?: number | null;
-  radiusKm?: number | null;
+  lat: number;
+  lng: number;
+  radiusKm?: number;
 }): Promise<GpInPersonAvailability> {
+  if (
+    opts.lat == null ||
+    opts.lng == null ||
+    !Number.isFinite(opts.lat) ||
+    !Number.isFinite(opts.lng)
+  ) {
+    return { doctorCount: 0, slotCount: 0 };
+  }
+
   const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc("get_gp_in_person_availability", {
-    p_window_hours: opts?.windowHours ?? 2,
-    p_country_code: opts?.countryCode ?? null,
-    p_lat: opts?.lat ?? null,
-    p_lng: opts?.lng ?? null,
-    p_radius_km: opts?.radiusKm ?? null,
+    p_window_hours: opts.windowHours ?? 2,
+    p_country_code: null, // never country-wide for in-person counts
+    p_lat: opts.lat,
+    p_lng: opts.lng,
+    p_radius_km: opts.radiusKm ?? 30,
   });
 
   if (error || !data) {

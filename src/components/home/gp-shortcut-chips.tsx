@@ -124,14 +124,17 @@ export function GpShortcutChips({
     [locations, locationSlug, placeData, geo]
   );
 
-  // Scope for in-person live count: prefer nearby, else market country
-  const inPersonQuery = useMemo(() => {
+  // Nearby-only coords for in-person live count (never country-wide)
+  const nearbyCoords = useMemo((): {
+    lat: number;
+    lng: number;
+    radiusKm: number;
+  } | null => {
     if (localArea.kind === "place") {
       return {
         lat: localArea.placeLat,
         lng: localArea.placeLng,
         radiusKm: localArea.radiusKm,
-        countryCode: null as string | null,
       };
     }
     if (localArea.kind === "city") {
@@ -141,31 +144,44 @@ export function GpShortcutChips({
           lat: city.latitude,
           lng: city.longitude,
           radiusKm: GP_IN_PERSON_RADIUS_KM,
-          countryCode: null as string | null,
         };
       }
     }
-    return {
-      lat: null as number | null,
-      lng: null as number | null,
-      radiusKm: null as number | null,
-      countryCode,
-    };
-  }, [localArea, locations, countryCode]);
+    // GPS without resolved city still counts as nearby
+    if (
+      geo?.latitude != null &&
+      geo?.longitude != null &&
+      Number.isFinite(geo.latitude) &&
+      Number.isFinite(geo.longitude)
+    ) {
+      return {
+        lat: geo.latitude,
+        lng: geo.longitude,
+        radiusKm: GP_IN_PERSON_RADIUS_KM,
+      };
+    }
+    return null;
+  }, [localArea, locations, geo]);
 
   useEffect(() => {
     let cancelled = false;
     const poll = async () => {
       try {
+        const countsPromise = getLiveAvailabilityCounts();
+
+        // In-person counter is nearby-only — skip RPC until we have lat/lng
+        const inPersonPromise = nearbyCoords
+          ? getGpInPersonAvailability({
+              windowHours: IN_PERSON_WINDOW_HOURS,
+              lat: nearbyCoords.lat,
+              lng: nearbyCoords.lng,
+              radiusKm: nearbyCoords.radiusKm,
+            })
+          : Promise.resolve({ doctorCount: 0, slotCount: 0 });
+
         const [counts, inPerson] = await Promise.all([
-          getLiveAvailabilityCounts(),
-          getGpInPersonAvailability({
-            windowHours: IN_PERSON_WINDOW_HOURS,
-            countryCode: inPersonQuery.countryCode,
-            lat: inPersonQuery.lat,
-            lng: inPersonQuery.lng,
-            radiusKm: inPersonQuery.radiusKm,
-          }),
+          countsPromise,
+          inPersonPromise,
         ]);
         if (!cancelled) {
           setGpCount(counts[GP_SLUG] ?? 0);
@@ -181,7 +197,7 @@ export function GpShortcutChips({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [inPersonQuery]);
+  }, [nearbyCoords]);
 
   const goVideo = (chip: "see_today" | "available_now") => {
     trackGpShortcutClick(chip, { countryCode, mode: "video" });

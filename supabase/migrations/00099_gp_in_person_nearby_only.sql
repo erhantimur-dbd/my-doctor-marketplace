@@ -1,3 +1,5 @@
+-- Enforce nearby-only: in-person GP live counts require lat/lng (no country-wide fallback).
+
 -- Live count of in-person GP appointment slots in the next N hours
 -- (default 2). Optional country or lat/lng radius for local scope.
 
