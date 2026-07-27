@@ -181,12 +181,17 @@ export async function searchDoctors(filters: SearchFilters) {
     .eq("is_active", true);
 
   // License filter: only show doctors with active org licenses (or legacy subscriptions)
-  // Skip for live shortcut modes so homepage counters and results stay in sync
-  if (!filters.liveNow && !filters.liveInPersonNearby) {
-    const { data: licensedIds } = await supabase.rpc("get_licensed_doctor_ids");
-    if (licensedIds && licensedIds.length > 0) {
-      query = query.in("id", licensedIds);
-    }
+  // Skip applying to primary query for live shortcut modes so chip counts match results.
+  // Still load IDs for fallback queries below.
+  const { data: licensedIdsRaw } = await supabase.rpc("get_licensed_doctor_ids");
+  const licensedIds = (licensedIdsRaw as string[] | null) || null;
+  if (
+    !filters.liveNow &&
+    !filters.liveInPersonNearby &&
+    licensedIds &&
+    licensedIds.length > 0
+  ) {
+    query = query.in("id", licensedIds);
   }
 
   // Provider type filter (doctor vs testing_service)
