@@ -132,13 +132,14 @@
     "gp_shortcut_see_today": "Ver un médico de cabecera hoy",
     "gp_shortcut_available_now_count": "Disponible ahora · {count}",
     "gp_shortcut_near_me": "Cerca de mí",
-    "gp_shortcut_aria": "Enlaces rápidos para reservar un médico de cabecera",
+    "gp_shortcut_aria": "Reserva rápida de citas",
     "gp_shortcut_hint": "Médicos de cabecera por vídeo hoy",
     "gp_shortcut_see_today_in_person": "Médico de cabecera cerca hoy",
     "gp_shortcut_available_now_in_person": "Cerca ahora · {count}",
     "gp_shortcut_hint_in_person": "Médicos de cabecera en tu ciudad",
     "gp_shortcut_need_location": "Elige una ciudad o permite la ubicación para médicos presenciales cerca",
-    "gp_shortcut_in_person": "Médico de cabecera presencial"
+    "gp_shortcut_in_person": "Médico de cabecera presencial",
+    "gp_shortcut_section_label": "Reserva rápida de citas"
   },
   "doctor": {
     "verified": "Médico Verificado",

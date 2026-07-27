@@ -187,48 +187,57 @@ export function GpShortcutChips({
   );
 
   return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center justify-center gap-2",
-        className
-      )}
-      role="group"
-      aria-label={t("gp_shortcut_aria")}
-    >
-      {/* Video — country-wide */}
-      <button
-        type="button"
-        className={primaryChipClass}
-        onClick={() => goVideo("see_today")}
+    <div className={cn("flex flex-col items-center gap-2", className)}>
+      <p
+        className={cn(
+          "text-xs font-semibold uppercase tracking-wide",
+          variant === "hero"
+            ? "text-white/80 drop-shadow-sm"
+            : "text-muted-foreground"
+        )}
       >
-        <Stethoscope className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        {t("gp_shortcut_see_today")}
-      </button>
+        {t("gp_shortcut_section_label")}
+      </p>
+      <div
+        className="flex flex-wrap items-center justify-center gap-2"
+        role="group"
+        aria-label={t("gp_shortcut_section_label")}
+      >
+        {/* Video — country-wide */}
+        <button
+          type="button"
+          className={primaryChipClass}
+          onClick={() => goVideo("see_today")}
+        >
+          <Stethoscope className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {t("gp_shortcut_see_today")}
+        </button>
 
-      {gpCount > 0 && (
+        {gpCount > 0 && (
+          <button
+            type="button"
+            className={chipClass}
+            onClick={() => goVideo("available_now")}
+          >
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {t("gp_shortcut_available_now_count", { count: gpCount })}
+          </button>
+        )}
+
+        {/* In person — city / nearby only */}
         <button
           type="button"
           className={chipClass}
-          onClick={() => goVideo("available_now")}
+          onClick={goInPerson}
         >
-          <span className="relative flex h-2 w-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-          </span>
-          <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {t("gp_shortcut_available_now_count", { count: gpCount })}
+          <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {t("gp_shortcut_in_person")}
         </button>
-      )}
-
-      {/* In person — city / nearby only */}
-      <button
-        type="button"
-        className={chipClass}
-        onClick={goInPerson}
-      >
-        <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        {t("gp_shortcut_in_person")}
-      </button>
+      </div>
 
       {variant === "dashboard" && (
         <span className="hidden sm:inline-flex items-center gap-1 text-xs text-muted-foreground">

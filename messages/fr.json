@@ -134,13 +134,14 @@
     "gp_shortcut_see_today": "Voir un généraliste aujourd'hui",
     "gp_shortcut_available_now_count": "Disponible maintenant · {count}",
     "gp_shortcut_near_me": "Près de moi",
-    "gp_shortcut_aria": "Liens rapides pour réserver un généraliste",
+    "gp_shortcut_aria": "Réservation rapide",
     "gp_shortcut_hint": "Généralistes en vidéo le jour même",
     "gp_shortcut_see_today_in_person": "Généraliste près de chez vous",
     "gp_shortcut_available_now_in_person": "À proximité · {count}",
     "gp_shortcut_hint_in_person": "Généralistes en présentiel dans votre ville",
     "gp_shortcut_need_location": "Choisissez une ville ou autorisez la localisation pour les rendez-vous en présentiel",
-    "gp_shortcut_in_person": "Généraliste en présentiel"
+    "gp_shortcut_in_person": "Généraliste en présentiel",
+    "gp_shortcut_section_label": "Réservation rapide"
   },
   "auth": {
     "login_title": "Bon Retour",

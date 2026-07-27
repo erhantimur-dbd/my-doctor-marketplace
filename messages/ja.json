@@ -132,13 +132,14 @@
     "gp_shortcut_see_today": "今日かかりつけ医を予約",
     "gp_shortcut_available_now_count": "今すぐ予約可 · {count}",
     "gp_shortcut_near_me": "近くの医師",
-    "gp_shortcut_aria": "かかりつけ医のクイック予約",
+    "gp_shortcut_aria": "かんたん予約",
     "gp_shortcut_hint": "当日ビデオ診療のかかりつけ医",
     "gp_shortcut_see_today_in_person": "近くのかかりつけ医（本日）",
     "gp_shortcut_available_now_in_person": "近くで今すぐ · {count}",
     "gp_shortcut_hint_in_person": "お住まいの地域の対面診療",
     "gp_shortcut_need_location": "対面のかかりつけ医を探すには都市を選ぶか位置情報を許可してください",
-    "gp_shortcut_in_person": "対面のかかりつけ医"
+    "gp_shortcut_in_person": "対面のかかりつけ医",
+    "gp_shortcut_section_label": "かんたん予約"
   },
   "doctor": {
     "verified": "認証済み医師",

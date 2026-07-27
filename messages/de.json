@@ -134,13 +134,14 @@
     "gp_shortcut_see_today": "Heute einen Hausarzt buchen",
     "gp_shortcut_available_now_count": "Jetzt verfügbar · {count}",
     "gp_shortcut_near_me": "In meiner Nähe",
-    "gp_shortcut_aria": "Schnelllinks für Hausarzt-Termine",
+    "gp_shortcut_aria": "Termine schnell buchen",
     "gp_shortcut_hint": "Video-Hausärzte noch heute",
     "gp_shortcut_see_today_in_person": "Hausarzt in der Nähe heute",
     "gp_shortcut_available_now_in_person": "In der Nähe · {count}",
     "gp_shortcut_hint_in_person": "Hausärzte vor Ort in Ihrer Stadt",
     "gp_shortcut_need_location": "Wählen Sie eine Stadt oder erlauben Sie den Standort für Hausärzte vor Ort",
-    "gp_shortcut_in_person": "Hausarzt vor Ort"
+    "gp_shortcut_in_person": "Hausarzt vor Ort",
+    "gp_shortcut_section_label": "Termine schnell buchen"
   },
   "auth": {
     "login_title": "Willkommen zuruck",

@@ -132,13 +132,14 @@
     "gp_shortcut_see_today": "今天预约全科医生",
     "gp_shortcut_available_now_count": "现可预约 · {count}",
     "gp_shortcut_near_me": "附近",
-    "gp_shortcut_aria": "全科医生快捷预约",
+    "gp_shortcut_aria": "快速预约",
     "gp_shortcut_hint": "当日视频全科医生",
     "gp_shortcut_see_today_in_person": "附近全科医生（今日）",
     "gp_shortcut_available_now_in_person": "附近可约 · {count}",
     "gp_shortcut_hint_in_person": "您所在城市的面对面全科医生",
     "gp_shortcut_need_location": "请选择城市或允许定位以查找附近的面对面全科医生",
-    "gp_shortcut_in_person": "面对面全科医生"
+    "gp_shortcut_in_person": "面对面全科医生",
+    "gp_shortcut_section_label": "快速预约"
   },
   "doctor": {
     "verified": "认证医生",
