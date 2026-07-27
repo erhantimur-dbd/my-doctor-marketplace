@@ -16,8 +16,11 @@ describe("doctor signup flow contracts", () => {
     const vercel = read("vercel.json");
     expect(middleware).toContain('"/register-doctor"');
     expect(middleware).toContain('"/doctor-dashboard"');
+    // Enterprise CTA + footer Support must not dead-end on coming-soon
+    expect(middleware).toContain('"/support"');
     expect(vercel).toMatch(/register-doctor/);
     expect(vercel).toMatch(/doctor-dashboard/);
+    expect(vercel).toMatch(/support/);
     // Patient home still gated (no bare "/" allow in COMING_SOON list after soft-launch restore)
     const allowBlock = middleware.slice(
       middleware.indexOf("COMING_SOON_ALLOWED_PREFIXES"),

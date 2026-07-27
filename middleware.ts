@@ -70,6 +70,7 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   "/how-it-works",
   "/how-it-works/",
   "/contact",
+  "/support",
   "/help-center",
   "/help-center/",
   // Legal pages linked from auth/registration flows

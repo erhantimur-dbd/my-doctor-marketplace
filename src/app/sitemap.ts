@@ -27,6 +27,7 @@ const SOFT_LAUNCH_PUBLIC_PAGES = [
   "/pricing",
   "/how-it-works",
   "/contact",
+  "/support",
   "/help-center",
   "/terms",
   "/privacy",
