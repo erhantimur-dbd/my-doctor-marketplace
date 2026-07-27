@@ -58,6 +58,31 @@ export async function getLiveDoctorAvailability(
   return result;
 }
 
+/**
+ * Doctor IDs that match the live "available now" (next 1 hour) badge.
+ * Optional specialty slug keeps the Available Now chip and search results in sync.
+ */
+export async function getLiveAvailableDoctorIds(
+  specialtySlug?: string
+): Promise<string[]> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc("get_live_available_doctor_ids", {
+    p_specialty_slug: specialtySlug ?? null,
+  });
+
+  if (error) {
+    console.error("Live available doctor IDs query failed:", error?.message);
+    return [];
+  }
+
+  // RPC returns UUID[] directly
+  if (Array.isArray(data)) {
+    return data.filter((id): id is string => typeof id === "string");
+  }
+  return [];
+}
+
 export interface GpInPersonAvailability {
   /** Distinct GPs with ≥1 free in-person slot in the window */
   doctorCount: number;

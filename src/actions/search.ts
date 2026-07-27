@@ -132,6 +132,11 @@ export interface SearchFilters {
    * Filters to doctors who have self-declared this skill in doctor_skills.
    */
   skill?: string;
+  /**
+   * When true, only doctors with free slots in the next hour
+   * (same logic as homepage live badges). Optional specialty narrows further.
+   */
+  liveNow?: boolean;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -168,9 +173,12 @@ export async function searchDoctors(filters: SearchFilters) {
     .eq("is_active", true);
 
   // License filter: only show doctors with active org licenses (or legacy subscriptions)
-  const { data: licensedIds } = await supabase.rpc("get_licensed_doctor_ids");
-  if (licensedIds && licensedIds.length > 0) {
-    query = query.in("id", licensedIds);
+  // Skip for liveNow so homepage badge counts and search results use the same set
+  if (!filters.liveNow) {
+    const { data: licensedIds } = await supabase.rpc("get_licensed_doctor_ids");
+    if (licensedIds && licensedIds.length > 0) {
+      query = query.in("id", licensedIds);
+    }
   }
 
   // Provider type filter (doctor vs testing_service)
@@ -178,8 +186,30 @@ export async function searchDoctors(filters: SearchFilters) {
     query = query.eq("provider_type", filters.providerType);
   }
 
+  // Live "available now" (next ~1 hour) — same IDs as homepage live badges
+  if (filters.liveNow) {
+    const { data: liveIds, error: liveErr } = await supabase.rpc(
+      "get_live_available_doctor_ids",
+      { p_specialty_slug: filters.specialty ?? null }
+    );
+
+    if (liveErr) {
+      log.error("Live-now availability RPC error:", { err: liveErr });
+      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+    }
+
+    const ids = (liveIds as string[]) || [];
+    if (ids.length === 0) {
+      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+    }
+
+    query = query.in("id", ids);
+    // Specialty already applied inside the RPC when provided — avoid double filter
+    // that could diverge; still apply specialty below only when not liveNow.
+  }
+
   // Same-day availability filter
-  if (filters.availableToday) {
+  if (filters.availableToday && !filters.liveNow) {
     const { data: doctorIds, error: rpcError } = await supabase.rpc(
       "get_doctor_ids_available_today"
     );
@@ -215,7 +245,8 @@ export async function searchDoctors(filters: SearchFilters) {
   }
 
   // Specialty filter — two-step: resolve slug → specialty ID → matching doctor IDs
-  if (filters.specialty) {
+  // Skip when liveNow already filtered by specialty in the RPC (avoids empty intersections)
+  if (filters.specialty && !filters.liveNow) {
     const { data: specRow } = await supabase
       .from("specialties")
       .select("id")

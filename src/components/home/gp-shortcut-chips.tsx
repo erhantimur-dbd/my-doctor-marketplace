@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   getGpInPersonAvailability,
-  getLiveAvailabilityCounts,
+  getLiveAvailableDoctorIds,
 } from "@/actions/live-availability";
 import {
   GP_IN_PERSON_RADIUS_KM,
@@ -167,7 +167,8 @@ export function GpShortcutChips({
     let cancelled = false;
     const poll = async () => {
       try {
-        const countsPromise = getLiveAvailabilityCounts();
+        // Available-now count uses the same doctor IDs as the search results
+        const liveIdsPromise = getLiveAvailableDoctorIds(GP_SLUG);
 
         // In-person counter is nearby-only — skip RPC until we have lat/lng
         const inPersonPromise = nearbyCoords
@@ -179,12 +180,12 @@ export function GpShortcutChips({
             })
           : Promise.resolve({ doctorCount: 0, slotCount: 0 });
 
-        const [counts, inPerson] = await Promise.all([
-          countsPromise,
+        const [liveIds, inPerson] = await Promise.all([
+          liveIdsPromise,
           inPersonPromise,
         ]);
         if (!cancelled) {
-          setGpCount(counts[GP_SLUG] ?? 0);
+          setGpCount(liveIds.length);
           setInPersonSlotCount(inPerson.slotCount);
         }
       } catch {
@@ -204,13 +205,21 @@ export function GpShortcutChips({
     const params = new URLSearchParams();
     params.set("specialty", GP_SLUG);
     params.set("from", "gp_shortcut");
-    params.set("availableToday", "true");
-    params.set("location", `country-${countryCode.toLowerCase()}`);
-    params.set("consultationType", "video");
-    params.set("gpMarket", countryCode);
+    params.set("sort", "soonest");
+
     if (chip === "available_now") {
-      params.set("sort", "soonest");
+      // Match the live badge exactly: doctors with free slots in the next hour
+      // (any consultation type). Do NOT force video/country — that was empty
+      // while the badge still showed a count.
+      params.set("liveNow", "true");
+    } else {
+      // Same-day video GPs in the patient's market country
+      params.set("availableToday", "true");
+      params.set("location", `country-${countryCode.toLowerCase()}`);
+      params.set("consultationType", "video");
+      params.set("gpMarket", countryCode);
     }
+
     router.push(`/doctors?${params.toString()}`);
   };
 
