@@ -367,6 +367,39 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       stripeChargeCents
     );
 
+    // Tag GP-pool bookings for reassignment + display rules
+    let isGpPool = false;
+    let displayDoctorAs: "named" | "generic_gp" | null = null;
+    try {
+      const { data: primarySpec } = await supabase
+        .from("doctor_specialties")
+        .select("specialty:specialties!inner(slug)")
+        .eq("doctor_id", doctor.id)
+        .eq("is_primary", true)
+        .maybeSingle();
+      const spec = primarySpec?.specialty as
+        | { slug?: string }
+        | { slug?: string }[]
+        | null;
+      const slug = Array.isArray(spec) ? spec[0]?.slug : spec?.slug;
+      if (slug === "general-practice") {
+        isGpPool = true;
+        if (doctor.organization_id) {
+          const { count } = await supabase
+            .from("doctors")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", doctor.organization_id)
+            .eq("is_active", true)
+            .eq("verification_status", "verified");
+          displayDoctorAs = (count ?? 0) >= 2 ? "generic_gp" : "named";
+        } else {
+          displayDoctorAs = "named";
+        }
+      }
+    } catch {
+      // non-fatal — booking still works without GP flags
+    }
+
     // Insert booking with pending_payment status
     const { data: booking, error: bookingError } = await writeClient
       .from("bookings")
@@ -396,6 +429,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         dependent_name: isGuest ? null : parsed.data.dependent_name || null,
         organization_id: doctor.organization_id || null,
         is_guest: isGuest,
+        is_gp_pool: isGpPool,
+        display_doctor_as: displayDoctorAs,
       })
       .select("id, booking_number")
       .single();

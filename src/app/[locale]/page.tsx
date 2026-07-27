@@ -84,7 +84,12 @@ export default async function HomePage() {
 
           {/* Real search bar */}
           <div className="relative z-20 mt-10">
-            <HomeSearchBar specialties={specialties} locations={locations} featuredDoctors={featuredDoctors} />
+            <HomeSearchBar
+              specialties={specialties}
+              locations={locations}
+              featuredDoctors={featuredDoctors}
+              initialGpLiveCount={liveCounts["general-practice"] ?? 0}
+            />
           </div>
 
           {/* Trust indicators */}

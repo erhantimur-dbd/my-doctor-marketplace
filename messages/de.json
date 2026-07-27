@@ -130,7 +130,12 @@
     "voice_stop": "Aufnahme stoppen",
     "voice_search_hint": "Sprechen zum Suchen (Grok). Für den Sprachassistenten den Chat-Mic nutzen.",
     "voice_search_applied": "Suche mit Ihrer Stimme…",
-    "voice_error_generic": "Sprachsuche fehlgeschlagen. Bitte erneut versuchen."
+    "voice_error_generic": "Sprachsuche fehlgeschlagen. Bitte erneut versuchen.",
+    "gp_shortcut_see_today": "Heute einen Hausarzt buchen",
+    "gp_shortcut_available_now_count": "Jetzt verfügbar · {count}",
+    "gp_shortcut_near_me": "In meiner Nähe",
+    "gp_shortcut_aria": "Schnelllinks für Hausarzt-Termine",
+    "gp_shortcut_hint": "Video-Hausärzte noch heute"
   },
   "auth": {
     "login_title": "Willkommen zuruck",

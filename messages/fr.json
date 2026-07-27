@@ -130,7 +130,12 @@
     "voice_stop": "Stop listening",
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
-    "voice_error_generic": "Voice search failed. Please try again."
+    "voice_error_generic": "Voice search failed. Please try again.",
+    "gp_shortcut_see_today": "Voir un généraliste aujourd'hui",
+    "gp_shortcut_available_now_count": "Disponible maintenant · {count}",
+    "gp_shortcut_near_me": "Près de moi",
+    "gp_shortcut_aria": "Liens rapides pour réserver un généraliste",
+    "gp_shortcut_hint": "Généralistes en vidéo le jour même"
   },
   "auth": {
     "login_title": "Bon Retour",

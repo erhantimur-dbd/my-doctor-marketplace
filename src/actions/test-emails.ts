@@ -41,6 +41,20 @@ const SAMPLE_DATA = {
       bookingNumber: "BK-TEST-001",
       videoRoomUrl: `${APP_URL}/room/test-room`,
     }),
+  doctorNewBooking: () =>
+    templates.doctorNewBookingEmail({
+      doctorName: "Sarah",
+      patientName: "John Doe",
+      date: "Mon, 1 Apr",
+      time: "10:00",
+      consultationType: "Video Consultation",
+      bookingNumber: "BK-TEST-001",
+      amount: 120,
+      currency: "GBP",
+      isUrgent: true,
+      minutesUntil: 35,
+      dashboardUrl: `${APP_URL}/en/doctor-dashboard/bookings`,
+    }),
   welcome: () =>
     templates.welcomeEmail({ name: "John" }),
   doctorVerified: () =>

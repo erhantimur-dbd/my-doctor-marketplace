@@ -128,7 +128,12 @@
     "voice_stop": "Stop listening",
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
-    "voice_error_generic": "Voice search failed. Please try again."
+    "voice_error_generic": "Voice search failed. Please try again.",
+    "gp_shortcut_see_today": "今天预约全科医生",
+    "gp_shortcut_available_now_count": "现可预约 · {count}",
+    "gp_shortcut_near_me": "附近",
+    "gp_shortcut_aria": "全科医生快捷预约",
+    "gp_shortcut_hint": "当日视频全科医生"
   },
   "doctor": {
     "verified": "认证医生",

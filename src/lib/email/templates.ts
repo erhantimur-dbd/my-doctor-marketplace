@@ -230,6 +230,220 @@ export function bookingConfirmationEmail({
 }
 
 // ---------------------------------------------------------------------------
+// Doctor — New Booking Notification
+// ---------------------------------------------------------------------------
+
+interface DoctorNewBookingParams {
+  doctorName: string;
+  patientName: string;
+  date: string;
+  time: string;
+  consultationType: string;
+  bookingNumber: string;
+  amount: number;
+  currency: string;
+  /** When true, appointment starts within ~1 hour — urgent framing */
+  isUrgent?: boolean;
+  minutesUntil?: number | null;
+  dashboardUrl?: string;
+  clinicName?: string | null;
+  address?: string | null;
+}
+
+export function doctorNewBookingEmail({
+  doctorName,
+  patientName,
+  date,
+  time,
+  consultationType,
+  bookingNumber,
+  amount,
+  currency,
+  isUrgent = false,
+  minutesUntil = null,
+  dashboardUrl,
+  clinicName,
+  address,
+}: DoctorNewBookingParams): { subject: string; html: string } {
+  const timeLabel = time?.slice(0, 5) || time;
+  const subject = isUrgent
+    ? `URGENT: New booking in ${minutesUntil != null && minutesUntil <= 60 ? `${Math.max(1, Math.round(minutesUntil))} min` : "under an hour"} — ${bookingNumber}`
+    : `New booking — ${bookingNumber}`;
+
+  const dashUrl =
+    dashboardUrl || `${APP_URL}/en/doctor-dashboard/bookings`;
+
+  const urgentBlock = isUrgent
+    ? `
+    <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0 0 4px; font-size: 14px; font-weight: 700; color: #991b1b;">
+        Starting soon
+      </p>
+      <p style="margin: 0; font-size: 13px; color: #991b1b; line-height: 1.5;">
+        This appointment is within the next hour${
+          minutesUntil != null
+            ? ` (about ${Math.max(1, Math.round(minutesUntil))} minutes)`
+            : ""
+        }. Please prepare to see the patient.
+      </p>
+    </div>`
+    : "";
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">
+      ${isUrgent ? "Urgent: New Booking" : "New Booking"}
+    </h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi Dr. ${doctorName}, ${patientName} has booked an appointment with you.
+      Payment has been received and the booking is confirmed.
+    </p>
+
+    ${urgentBlock}
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+      <tr>
+        <td style="padding: 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            ${infoRow("Booking Number", bookingNumber)}
+            ${infoRow("Patient", patientName)}
+            ${infoRow("Date", date)}
+            ${infoRow("Time", timeLabel)}
+            ${infoRow("Consultation", consultationType)}
+            ${clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
+            ${infoRow("Amount", `${currency} ${amount.toFixed(2)}`)}
+          </table>
+        </td>
+      </tr>
+    </table>
+
+    ${button(isUrgent ? "Open Booking Now" : "View in Dashboard", dashUrl)}
+
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      You can manage this appointment from your doctor dashboard. To change email or SMS alerts, visit Settings → Notification Preferences.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
+// GP reassignment — patient notified of new doctor (same time)
+// ---------------------------------------------------------------------------
+
+export function gpReassignedPatientEmail(params: {
+  patientName: string;
+  bookingNumber: string;
+  date: string;
+  time: string;
+  displayAsGeneric: boolean;
+  doctorName: string;
+  consultationType: string;
+  dashboardUrl: string;
+}): { subject: string; html: string } {
+  const subject = `Your GP appointment is confirmed with a new doctor — ${params.bookingNumber}`;
+  const who = params.displayAsGeneric
+    ? "A GP will contact you at your appointment time"
+    : params.doctorName;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">GP reassigned</h2>
+    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${params.patientName}, your original GP could not take this appointment.
+      We have assigned another GP at the <strong>same date and time</strong>.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border-radius: 6px; margin-bottom: 24px;">
+      <tr><td style="padding: 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${infoRow("Booking", params.bookingNumber)}
+          ${infoRow("Date", params.date)}
+          ${infoRow("Time", params.time)}
+          ${infoRow("GP", who)}
+          ${infoRow("Type", params.consultationType)}
+        </table>
+      </td></tr>
+    </table>
+    ${button("View booking", params.dashboardUrl)}
+  `);
+  return { subject, html };
+}
+
+export function gpAlternateSlotsEmail(params: {
+  patientName: string;
+  bookingNumber: string;
+  originalDate: string;
+  originalTime: string;
+  offers: { label: string; url: string }[];
+  declineUrl: string;
+  expiresHours: number;
+}): { subject: string; html: string } {
+  const subject = `Action needed: choose a new GP time — ${params.bookingNumber}`;
+  const offerBlocks = params.offers
+    .map(
+      (o) => `
+      <tr><td style="padding: 8px 0;">
+        <a href="${o.url}" style="display:inline-block;padding:12px 16px;background:${BRAND_COLOR};color:#fff;border-radius:6px;text-decoration:none;font-size:14px;font-weight:600;">
+          ${o.label}
+        </a>
+      </td></tr>`
+    )
+    .join("");
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Choose a new GP slot</h2>
+    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${params.patientName}, your GP cannot make the appointment on
+      <strong>${params.originalDate}</strong> at <strong>${params.originalTime}</strong>.
+      Please pick one of the options below within ${params.expiresHours} hours, or decline for a full refund.
+    </p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+      ${offerBlocks}
+    </table>
+    <p style="margin: 0 0 8px; font-size: 13px; color: #6b7280;">
+      Prefer a refund instead?
+      <a href="${params.declineUrl}" style="color:${BRAND_COLOR};">Decline all options</a>
+    </p>
+  `);
+  return { subject, html };
+}
+
+export function gpReassignmentRefundEmail(params: {
+  patientName: string;
+  bookingNumber: string;
+  refundAmount: number;
+  currency: string;
+}): { subject: string; html: string } {
+  const subject = `Refund issued — ${params.bookingNumber}`;
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Full refund</h2>
+    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${params.patientName}, we could not place you with another GP for booking
+      <strong>${params.bookingNumber}</strong>. A full refund of
+      <strong>${params.currency} ${params.refundAmount.toFixed(2)}</strong>
+      has been initiated (bank refunds typically take 3–5 business days).
+    </p>
+    ${button("Book another GP", `${APP_URL}/en/doctors?specialty=general-practice&availableToday=true`)}
+  `);
+  return { subject, html };
+}
+
+export function gpReassignedAwayDoctorEmail(params: {
+  doctorName: string;
+  bookingNumber: string;
+  patientName: string;
+}): { subject: string; html: string } {
+  const subject = `Booking reassigned — ${params.bookingNumber}`;
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Booking reassigned</h2>
+    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi Dr. ${params.doctorName}, booking <strong>${params.bookingNumber}</strong>
+      for ${params.patientName} has been reassigned to another GP. Payment for this
+      appointment will not be paid out to you.
+    </p>
+  `);
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
 // Booking Cancellation
 // ---------------------------------------------------------------------------
 

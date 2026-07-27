@@ -130,7 +130,12 @@
     "voice_stop": "Dinlemeyi durdur",
     "voice_search_hint": "Aramak için konuşun (Grok). Konuşan asistan için sohbet mikrofounu kullanın.",
     "voice_search_applied": "Sesinizle aranıyor…",
-    "voice_error_generic": "Sesli arama başarısız. Lütfen tekrar deneyin."
+    "voice_error_generic": "Sesli arama başarısız. Lütfen tekrar deneyin.",
+    "gp_shortcut_see_today": "Bugün aile hekimi bul",
+    "gp_shortcut_available_now_count": "Şu an müsait · {count}",
+    "gp_shortcut_near_me": "Yakınımda",
+    "gp_shortcut_aria": "Aile hekimi randevusu için hızlı bağlantılar",
+    "gp_shortcut_hint": "Aynı gün görüntülü aile hekimleri"
   },
   "auth": {
     "login_title": "Tekrar Hos Geldiniz",

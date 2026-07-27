@@ -61,6 +61,7 @@ import {
 } from "@/lib/location/match-location";
 import { useSearchIntentStore } from "@/stores/search-intent-store";
 import { toast } from "sonner";
+import { GpShortcutChips } from "@/components/home/gp-shortcut-chips";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
 const specialtyIconMap: Record<string, React.ElementType> = {
@@ -110,6 +111,8 @@ interface HomeSearchBarProps {
   initialLocation?: string;
   initialConsultationType?: "all" | "in_person" | "video";
   compact?: boolean;
+  /** Live GP (general-practice) availability count for hero shortcut chips */
+  initialGpLiveCount?: number;
 }
 
 // Popular specialties shown on focus before typing
@@ -145,6 +148,7 @@ export function HomeSearchBar({
   initialLocation = "",
   initialConsultationType = "all",
   compact = false,
+  initialGpLiveCount = 0,
 }: HomeSearchBarProps) {
   const t = useTranslations("home");
   const tSpec = useTranslations("specialty");
@@ -1441,6 +1445,16 @@ export function HomeSearchBar({
               ))}
             </div>
 
+            {/* GP instant-book shortcuts — desktop */}
+            <GpShortcutChips
+              className="mt-4"
+              variant="hero"
+              initialGpCount={initialGpLiveCount}
+              placeData={placeData}
+              locationSlug={location}
+              geo={{ latitude: geo.latitude, longitude: geo.longitude }}
+            />
+
             {/* AI search hint — desktop */}
             <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-white/80 drop-shadow-sm">
               <Sparkles className="h-3 w-3 shrink-0" />
@@ -1792,6 +1806,18 @@ export function HomeSearchBar({
           {t("search_button")}
           <Sparkles className="ml-1.5 h-3 w-3 opacity-50" />
         </Button>
+
+        {/* GP instant-book shortcuts — mobile */}
+        {!compact && (
+          <GpShortcutChips
+            className="pt-1"
+            variant="dashboard"
+            initialGpCount={initialGpLiveCount}
+            placeData={placeData}
+            locationSlug={location}
+            geo={{ latitude: geo.latitude, longitude: geo.longitude }}
+          />
+        )}
       </div>
     </div>
   );

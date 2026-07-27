@@ -130,7 +130,12 @@
     "voice_stop": "Stop listening",
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
-    "voice_error_generic": "Voice search failed. Please try again."
+    "voice_error_generic": "Voice search failed. Please try again.",
+    "gp_shortcut_see_today": "See a GP today",
+    "gp_shortcut_available_now_count": "Available now · {count}",
+    "gp_shortcut_near_me": "Near me",
+    "gp_shortcut_aria": "Quick links to book a GP",
+    "gp_shortcut_hint": "Same-day video GPs"
   },
   "doctor": {
     "verified": "Verified Doctor",

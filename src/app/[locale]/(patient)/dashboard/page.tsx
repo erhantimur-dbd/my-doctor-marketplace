@@ -20,6 +20,7 @@ import {
   Bell,
   Video,
   MapPin,
+  Stethoscope,
 } from "lucide-react";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { patientDashboardSteps } from "@/components/shared/onboarding-steps";
@@ -111,6 +112,13 @@ export default async function PatientDashboard() {
 
   const quickActions = [
     {
+      href: "/doctors?specialty=general-practice&availableToday=true&consultationType=video&from=gp_shortcut" as const,
+      icon: Stethoscope,
+      label: "See a GP today",
+      description: "Same-day video GP appointments",
+      color: "bg-teal-50 text-teal-600",
+    },
+    {
       href: "/doctors" as const,
       icon: Search,
       label: "Find a Doctor",
@@ -150,7 +158,7 @@ export default async function PatientDashboard() {
 
       {/* Quick Actions */}
       <div data-tour="patient-quick-actions">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {quickActions.map((action) => (
             <Link key={action.href} href={action.href}>
               <Card className="h-full transition-shadow hover:shadow-md">
@@ -188,9 +196,17 @@ export default async function PatientDashboard() {
               <p className="mt-3 text-muted-foreground">
                 No upcoming appointments
               </p>
-              <Button className="mt-4" asChild>
-                <Link href="/doctors">Find a Doctor</Link>
-              </Button>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                <Button asChild>
+                  <Link href="/doctors?specialty=general-practice&availableToday=true&consultationType=video&from=gp_shortcut">
+                    <Stethoscope className="mr-2 h-4 w-4" />
+                    See a GP today
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <Link href="/doctors">Find a Doctor</Link>
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
