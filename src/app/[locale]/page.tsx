@@ -22,6 +22,10 @@ import {
 import { SpecialtyMarquee } from "@/components/shared/specialty-marquee";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { HowItWorksSection } from "@/components/home/how-it-works-section";
+import { FeaturedDoctorsSection } from "@/components/home/featured-doctors-section";
+import { SameDayBanner } from "@/components/home/same-day-banner";
+import { ForDoctorsCta } from "@/components/home/for-doctors-cta";
+import { ChatWidget } from "@/components/chat/chat-widget";
 import { CONDITION_HUBS } from "@/lib/constants/condition-hubs";
 
 const allSpecialties = [
@@ -59,19 +63,24 @@ export default async function HomePage() {
     getSpecialties(),
     getLocations(),
     getLiveAvailabilityCounts(),
-    getFeaturedDoctors(5),
+    getFeaturedDoctors(8),
   ]);
+
+  const liveAvailabilityTotal = Object.values(liveCounts).reduce(
+    (sum, n) => sum + (typeof n === "number" ? n : 0),
+    0
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
 
       {/* Hero */}
-      <section className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800 px-4 pt-20 pb-40 md:pt-32 md:pb-56">
+      <section className="relative bg-gradient-to-br from-primary via-primary/90 to-teal-600 dark:from-primary/80 dark:via-primary/70 dark:to-teal-800 px-4 pt-16 pb-24 md:pt-24 md:pb-32">
         {/* Radial highlight overlay */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_-20%,rgba(255,255,255,0.12),transparent_60%)]" />
         {/* Bottom fade to background */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 md:h-64 bg-gradient-to-b from-transparent to-background" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 md:h-40 bg-gradient-to-b from-transparent to-background" />
         <HeroSpecialtyIcons hideOnMobile variant="dark" />
 
         <div className="relative container mx-auto text-center">
@@ -83,17 +92,17 @@ export default async function HomePage() {
           </p>
 
           {/* Real search bar */}
-          <div className="relative z-20 mt-10">
+          <div className="relative z-20 mt-8">
             <HomeSearchBar
               specialties={specialties}
               locations={locations}
-              featuredDoctors={featuredDoctors}
+              featuredDoctors={featuredDoctors.slice(0, 5)}
               initialGpLiveCount={liveCounts["general-practice"] ?? 0}
             />
           </div>
 
           {/* Trust indicators */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-white">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-white">
             <div className="flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 backdrop-blur-sm">
               <Shield className="h-4 w-4 fill-green-400 text-green-400 drop-shadow-sm" />
               <span>{t("verified_doctors")}</span>
@@ -155,7 +164,7 @@ export default async function HomePage() {
       </section>
 
       {/* Popular Specialties — animated marquee */}
-      <section className="px-4 py-16 md:py-24">
+      <section className="px-4 py-12 md:py-16">
         <div className="container mx-auto">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold md:text-3xl">
@@ -176,6 +185,90 @@ export default async function HomePage() {
             }))}
             initialCounts={liveCounts}
           />
+        </div>
+      </section>
+
+      {/* Same-day / live availability urgency */}
+      <SameDayBanner count={liveAvailabilityTotal} />
+
+      {/* Featured doctors */}
+      <FeaturedDoctorsSection doctors={featuredDoctors} />
+
+      {/* How It Works — Enhanced */}
+      <HowItWorksSection />
+
+      {/* Why Choose MyDoctors360 */}
+      <section className="px-4 py-16 md:py-24">
+        <div className="container mx-auto">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold md:text-3xl">
+              {t("why_choose_title")}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+              {t("why_choose_subtitle")}
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                icon: Shield,
+                title: t("why_verified_title"),
+                desc: t("why_verified_desc"),
+                color: { bg: "bg-emerald-50", text: "text-emerald-600" },
+              },
+              {
+                icon: CreditCard,
+                title: t("why_pricing_title"),
+                desc: t("why_pricing_desc"),
+                color: { bg: "bg-blue-50", text: "text-blue-600" },
+              },
+              {
+                icon: Clock,
+                title: t("why_booking_title"),
+                desc: t("why_booking_desc"),
+                color: { bg: "bg-amber-50", text: "text-amber-600" },
+              },
+              {
+                icon: Globe,
+                title: t("why_cross_border_title"),
+                desc: t("why_cross_border_desc"),
+                color: { bg: "bg-teal-50", text: "text-teal-600" },
+              },
+              {
+                icon: Star,
+                title: t("why_reviews_title"),
+                desc: t("why_reviews_desc"),
+                color: { bg: "bg-yellow-50", text: "text-yellow-600" },
+              },
+              {
+                icon: MessageSquare,
+                title: t("why_reminders_title"),
+                desc: t("why_reminders_desc"),
+                color: { bg: "bg-violet-50", text: "text-violet-600" },
+              },
+            ].map((benefit) => (
+              <Card key={benefit.title} className="border bg-background transition-shadow hover:shadow-md">
+                <CardContent className="flex flex-col items-center p-6 text-center">
+                  <div className={`rounded-xl ${benefit.color.bg} p-3`}>
+                    <benefit.icon className={`h-6 w-6 ${benefit.color.text}`} />
+                  </div>
+                  <h3 className="mt-4 font-semibold">{benefit.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {benefit.desc}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="mt-10 text-center">
+            <Button size="lg" className="rounded-full" asChild>
+              <Link href="/doctors">
+                {t("why_choose_cta")} <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 
@@ -287,85 +380,11 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* How It Works — Enhanced */}
-      <HowItWorksSection />
-
-      {/* Why Choose MyDoctors360 */}
-      <section className="px-4 py-16 md:py-24">
-        <div className="container mx-auto">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold md:text-3xl">
-              {t("why_choose_title")}
-            </h2>
-            <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-              {t("why_choose_subtitle")}
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: Shield,
-                title: t("why_verified_title"),
-                desc: t("why_verified_desc"),
-                color: { bg: "bg-emerald-50", text: "text-emerald-600" },
-              },
-              {
-                icon: CreditCard,
-                title: t("why_pricing_title"),
-                desc: t("why_pricing_desc"),
-                color: { bg: "bg-blue-50", text: "text-blue-600" },
-              },
-              {
-                icon: Clock,
-                title: t("why_booking_title"),
-                desc: t("why_booking_desc"),
-                color: { bg: "bg-amber-50", text: "text-amber-600" },
-              },
-              {
-                icon: Globe,
-                title: t("why_cross_border_title"),
-                desc: t("why_cross_border_desc"),
-                color: { bg: "bg-teal-50", text: "text-teal-600" },
-              },
-              {
-                icon: Star,
-                title: t("why_reviews_title"),
-                desc: t("why_reviews_desc"),
-                color: { bg: "bg-yellow-50", text: "text-yellow-600" },
-              },
-              {
-                icon: MessageSquare,
-                title: t("why_reminders_title"),
-                desc: t("why_reminders_desc"),
-                color: { bg: "bg-violet-50", text: "text-violet-600" },
-              },
-            ].map((benefit) => (
-              <Card key={benefit.title} className="border bg-background transition-shadow hover:shadow-md">
-                <CardContent className="flex flex-col items-center p-6 text-center">
-                  <div className={`rounded-xl ${benefit.color.bg} p-3`}>
-                    <benefit.icon className={`h-6 w-6 ${benefit.color.text}`} />
-                  </div>
-                  <h3 className="mt-4 font-semibold">{benefit.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {benefit.desc}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="mt-10 text-center">
-            <Button size="lg" className="rounded-full" asChild>
-              <Link href="/doctors">
-                {t("why_choose_cta")} <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      {/* For doctors CTA */}
+      <ForDoctorsCta />
 
       <Footer />
+      <ChatWidget />
     </div>
   );
 }

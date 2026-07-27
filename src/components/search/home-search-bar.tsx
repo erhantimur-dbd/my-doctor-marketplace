@@ -44,6 +44,10 @@ import { parseNaturalLanguageSearch } from "@/actions/ai";
 import { getSpecialtyColor } from "@/lib/constants/specialty-colors";
 import { SYMPTOMS } from "@/lib/constants/symptoms";
 import { MEDICAL_TESTS } from "@/lib/constants/medical-tests";
+import {
+  POPULAR_CONDITION_IDS,
+  SEARCH_BAR_CONDITION_IDS,
+} from "@/lib/constants/popular-conditions";
 import { matchSymptoms, matchTests } from "@/lib/utils/search-matcher";
 import type { SearchMatch } from "@/lib/utils/search-matcher";
 import { useGrokStt } from "@/hooks/use-grok-stt";
@@ -62,6 +66,7 @@ import {
 import { useSearchIntentStore } from "@/stores/search-intent-store";
 import { toast } from "sonner";
 import { GpShortcutChips } from "@/components/home/gp-shortcut-chips";
+import { Link } from "@/i18n/navigation";
 
 /* ── Slug → Icon map (matches homepage + specialties page) ─ */
 const specialtyIconMap: Record<string, React.ElementType> = {
@@ -125,12 +130,6 @@ const POPULAR_SLUGS = [
   "psychology",
   "ophthalmology",
 ];
-
-// Curated popular conditions & procedures (ids must exist in SYMPTOMS / MEDICAL_TESTS)
-const POPULAR_CONDITION_IDS = {
-  symptoms: ["back_pain", "knee_pain", "headache", "acne", "anxiety"],
-  tests: ["mri", "ultrasound", "blood_glucose", "allergy_blood_test"],
-} as const;
 
 type SuggestionItem =
   | { type: "specialty"; slug: string; label: string }
@@ -217,6 +216,30 @@ export function HomeSearchBar({
       }));
     const testItems: SearchMatch[] = MEDICAL_TESTS
       .filter((t) => (POPULAR_CONDITION_IDS.tests as readonly string[]).includes(t.id))
+      .map((t) => ({
+        type: "test" as const,
+        id: t.id,
+        labelKey: t.labelKey,
+        specialtySlug: t.primarySpecialty,
+        score: 100,
+      }));
+    // Keep dropdown compact: show first 9 of the expanded popular set
+    return [...symptomItems, ...testItems].slice(0, 9);
+  }, []);
+
+  // Always-visible quick chips under the search bar (homepage only)
+  const searchBarChips = useMemo<SearchMatch[]>(() => {
+    const symptomItems: SearchMatch[] = SYMPTOMS
+      .filter((s) => (SEARCH_BAR_CONDITION_IDS.symptoms as readonly string[]).includes(s.id))
+      .map((s) => ({
+        type: "symptom" as const,
+        id: s.id,
+        labelKey: s.labelKey,
+        specialtySlug: s.primarySpecialty,
+        score: 100,
+      }));
+    const testItems: SearchMatch[] = MEDICAL_TESTS
+      .filter((t) => (SEARCH_BAR_CONDITION_IDS.tests as readonly string[]).includes(t.id))
       .map((t) => ({
         type: "test" as const,
         id: t.id,
@@ -1461,6 +1484,33 @@ export function HomeSearchBar({
               <Sparkles className="h-3 w-3 shrink-0" />
               <span>{t("ai_search_hint")}</span>
             </p>
+
+            {/* Always-visible popular condition chips */}
+            {searchBarChips.length > 0 && (
+              <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                <span className="text-xs font-medium text-white/70">
+                  {t("search_popular_label")}
+                </span>
+                {searchBarChips.map((chip) => {
+                  const label =
+                    chip.type === "symptom"
+                      ? tSymptom(chip.labelKey.replace("symptom.", ""))
+                      : tTest(chip.labelKey.replace("test.", ""));
+                  const params = new URLSearchParams();
+                  if (chip.specialtySlug) params.set("specialty", chip.specialtySlug);
+                  params.set("query", label);
+                  return (
+                    <Link
+                      key={`${chip.type}-${chip.id}`}
+                      href={`/doctors?${params.toString()}`}
+                      className="rounded-full border border-white/25 bg-white/10 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/20"
+                    >
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
 
@@ -1794,6 +1844,30 @@ export function HomeSearchBar({
               <Sparkles className="h-3 w-3 shrink-0" />
               <span>{t("ai_search_hint")}</span>
             </p>
+
+            {/* Popular condition chips — mobile */}
+            {searchBarChips.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center gap-1.5">
+                {searchBarChips.slice(0, 6).map((chip) => {
+                  const label =
+                    chip.type === "symptom"
+                      ? tSymptom(chip.labelKey.replace("symptom.", ""))
+                      : tTest(chip.labelKey.replace("test.", ""));
+                  const params = new URLSearchParams();
+                  if (chip.specialtySlug) params.set("specialty", chip.specialtySlug);
+                  params.set("query", label);
+                  return (
+                    <Link
+                      key={`${chip.type}-${chip.id}`}
+                      href={`/doctors?${params.toString()}`}
+                      className="rounded-full border bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-muted"
+                    >
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </>
         )}
 

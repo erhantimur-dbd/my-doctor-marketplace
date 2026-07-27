@@ -60,7 +60,7 @@ export const CONDITION_HUBS: readonly ConditionHub[] = [
   },
   {
     slug: "womens-health",
-        title: "Womens health",
+        title: "Women's health",
     description: "Gynaecology specialists for menopause, PCOS, fertility, and routine care.",
     specialtySlug: "gynecology",
     searchQuery: "women health",
