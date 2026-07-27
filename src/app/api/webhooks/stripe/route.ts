@@ -19,6 +19,7 @@ import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
 import { creditWallet, debitWallet } from "@/lib/wallet";
 import { createNotification } from "@/lib/notifications";
+import { notifyDoctorOfNewBooking } from "@/lib/notifications/doctor-new-booking";
 import { earnPoints } from "@/lib/points";
 import Stripe from "stripe";
 
@@ -553,14 +554,14 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // ── In-app notifications: booking confirmed ──
+          // ── In-app + doctor email/SMS notifications ──
           if (patient && doctorProfile) {
             const doctorName = `${doctorProfile.first_name} ${doctorProfile.last_name}`;
             const dateStr = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
               day: "numeric", month: "short",
             });
 
-            // Notify patient
+            // Notify patient (in-app)
             createNotification({
               userId: booking.patient_id,
               type: "booking_confirmed",
@@ -570,23 +571,24 @@ export async function POST(request: NextRequest) {
               metadata: { booking_id: bookingId },
             }).catch((err) => console.error("Booking confirmed notification (patient):", err));
 
-            // Notify doctor of new booking
-            const { data: doctorUser } = await supabase
-              .from("doctors")
-              .select("profile_id")
-              .eq("id", booking.doctor_id)
-              .single();
-
-            if (doctorUser) {
-              createNotification({
-                userId: doctorUser.profile_id,
-                type: "new_booking",
-                title: "New Booking",
-                message: `${patient.first_name} ${patient.last_name} booked an appointment on ${dateStr} at ${booking.start_time?.slice(0, 5)}.`,
-                channels: ["in_app"],
-                metadata: { booking_id: bookingId },
-              }).catch((err) => console.error("New booking notification (doctor):", err));
-            }
+            // Notify doctor: in-app + email (default on) + SMS if opted-in & within 1 hour
+            notifyDoctorOfNewBooking({
+              bookingId,
+              doctorId: booking.doctor_id,
+              patientId: booking.patient_id,
+              patientFirstName: patient.first_name,
+              patientLastName: patient.last_name,
+              appointmentDate: booking.appointment_date,
+              startTime: booking.start_time,
+              consultationType: booking.consultation_type,
+              bookingNumber: booking.booking_number,
+              totalAmountCents: booking.total_amount_cents,
+              currency: booking.currency,
+              clinicName: doctor?.clinic_name,
+              address: doctor?.address,
+            }).catch((err) =>
+              console.error("New booking notification (doctor):", err)
+            );
           }
 
           // ── P0: Referral points — reward both referrer and referred on first booking ──

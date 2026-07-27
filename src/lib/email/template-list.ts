@@ -4,6 +4,7 @@ export type TemplateKey =
   | "bookingConfirmation"
   | "bookingCancellation"
   | "bookingReminder"
+  | "doctorNewBooking"
   | "rescheduleRequest"
   | "rescheduleResponse"
   | "adminBookingPaymentLink"
@@ -34,6 +35,7 @@ export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string 
   { key: "bookingConfirmation", label: "Booking Confirmation", category: "Booking" },
   { key: "bookingCancellation", label: "Booking Cancellation", category: "Booking" },
   { key: "bookingReminder", label: "Booking Reminder", category: "Booking" },
+  { key: "doctorNewBooking", label: "New Booking (→ Doctor)", category: "Booking" },
   { key: "rescheduleRequest", label: "Reschedule Request (→ Doctor)", category: "Booking" },
   { key: "rescheduleResponse", label: "Reschedule Approved (→ Patient)", category: "Booking" },
   { key: "adminBookingPaymentLink", label: "Admin Payment Link", category: "Booking" },

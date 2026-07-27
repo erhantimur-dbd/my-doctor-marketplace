@@ -40,6 +40,7 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { respondToReschedule } from "@/actions/reschedule";
 import { saveVisitSummary } from "@/actions/booking";
+import { doctorCantMakeGpAppointment } from "@/actions/gp-reassignment";
 import { toast } from "sonner";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,7 +130,7 @@ function BookingsContent() {
     const { data } = await supabase
       .from("bookings")
       .select(
-        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
+        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, is_gp_pool, gp_reassignment_status, display_doctor_as, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
       )
       .eq("doctor_id", doctor.id)
       .order("appointment_date", { ascending: false })
@@ -261,11 +262,31 @@ function BookingsContent() {
     return minsBefore <= 10 && minsBefore >= -60;
   }
 
+  async function handleGpCantMakeIt(bookingId: string) {
+    if (
+      !confirm(
+        "Reassign this GP appointment to another available GP at the same time if possible? If none are free, the patient will be offered alternatives or a full refund."
+      )
+    ) {
+      return;
+    }
+    setActionLoading(bookingId);
+    const result = await doctorCantMakeGpAppointment(bookingId);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success(result.message || "Done");
+    }
+    await loadData();
+    setActionLoading(null);
+  }
+
   function renderBookingTable(
     rows: BookingRow[],
     showActions: boolean,
     showVideoButton: boolean = false,
-    showSummaryAction: boolean = false
+    showSummaryAction: boolean = false,
+    showGpReassign: boolean = false
   ) {
     if (rows.length === 0) {
       return (
@@ -288,7 +309,7 @@ function BookingsContent() {
             <TableHead>Status</TableHead>
             <TableHead>Amount</TableHead>
             {showVideoButton && <TableHead>Appointment</TableHead>}
-            {(showActions || showSummaryAction) && (
+            {(showActions || showSummaryAction || showGpReassign) && (
               <TableHead className="text-right">Actions</TableHead>
             )}
           </TableRow>
@@ -298,6 +319,11 @@ function BookingsContent() {
             <TableRow key={booking.id}>
               <TableCell className="font-mono text-sm">
                 {booking.booking_number}
+                {booking.is_gp_pool && (
+                  <Badge variant="secondary" className="ml-2 text-[10px]">
+                    GP
+                  </Badge>
+                )}
               </TableCell>
               <TableCell>
                 <div>
@@ -407,8 +433,35 @@ function BookingsContent() {
                   </Button>
                 </TableCell>
               )}
-              {showSummaryAction && booking.status !== "completed" && (
+              {showSummaryAction && booking.status !== "completed" && !showGpReassign && (
                 <TableCell />
+              )}
+              {showGpReassign && (
+                <TableCell className="text-right">
+                  {booking.is_gp_pool &&
+                  ["confirmed", "approved"].includes(booking.status) &&
+                  !["pending_patient_choice", "auto_reassigned"].includes(
+                    booking.gp_reassignment_status
+                  ) ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-amber-700 border-amber-300"
+                      disabled={actionLoading === booking.id}
+                      onClick={() => handleGpCantMakeIt(booking.id)}
+                    >
+                      {actionLoading === booking.id ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : null}
+                      Can&apos;t make it
+                    </Button>
+                  ) : booking.gp_reassignment_status ===
+                    "pending_patient_choice" ? (
+                    <span className="text-xs text-muted-foreground">
+                      Awaiting patient
+                    </span>
+                  ) : null}
+                </TableCell>
               )}
             </TableRow>
           ))}
@@ -515,7 +568,7 @@ function BookingsContent() {
         <TabsContent value="upcoming" className="mt-4">
           <Card>
             <CardContent className="p-0">
-              {renderBookingTable(upcomingBookings, false, true)}
+              {renderBookingTable(upcomingBookings, false, true, false, true)}
             </CardContent>
           </Card>
         </TabsContent>

@@ -103,9 +103,9 @@ export default function SettingsPage() {
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [savedPersonal, setSavedPersonal] = useState(false);
 
-  // Notifications
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsNotifications, setSmsNotifications] = useState(false);
+  // Notifications — email always on; SMS default on (can opt out)
+  const [emailNotifications] = useState(true);
+  const [smsNotifications, setSmsNotifications] = useState(true);
   const [whatsappNotifications, setWhatsappNotifications] = useState(false);
   const [savingNotifications, setSavingNotifications] = useState(false);
   const [savedNotifications, setSavedNotifications] = useState(false);
@@ -182,7 +182,9 @@ export default function SettingsPage() {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("first_name, last_name, phone, notification_whatsapp")
+      .select(
+        "first_name, last_name, phone, notification_email, notification_sms, notification_whatsapp"
+      )
       .eq("id", user.id)
       .single();
 
@@ -190,6 +192,8 @@ export default function SettingsPage() {
       setFirstName(profile.first_name || "");
       setLastName(profile.last_name || "");
       setPhone(profile.phone || "");
+      // Email always on; SMS default on (null → true for doctors)
+      setSmsNotifications(profile.notification_sms !== false);
       setWhatsappNotifications(profile.notification_whatsapp ?? false);
     }
 
@@ -303,9 +307,9 @@ export default function SettingsPage() {
   const hasValidPhone = phone?.startsWith("+") && phone.replace(/\s/g, "").length >= 8;
 
   async function saveNotificationPrefs() {
-    if (whatsappNotifications && !hasValidPhone) {
+    if ((whatsappNotifications || smsNotifications) && !hasValidPhone) {
       alert(
-        "Please add your phone number with country code (e.g., +49 123 456 7890) in Personal Information to enable WhatsApp notifications."
+        "Please add your phone number with country code (e.g., +44 7700 900000) in Personal Information to enable SMS or WhatsApp notifications."
       );
       return;
     }
@@ -317,7 +321,11 @@ export default function SettingsPage() {
     const supabase = createSupabase();
     const { error } = await supabase
       .from("profiles")
-      .update({ notification_whatsapp: whatsappNotifications })
+      .update({
+        notification_email: true, // required — cannot be disabled
+        notification_sms: smsNotifications,
+        notification_whatsapp: whatsappNotifications,
+      })
       .eq("id", userId);
 
     setSavingNotifications(false);
@@ -545,20 +553,17 @@ export default function SettingsPage() {
             <div>
               <p className="font-medium">Email Notifications</p>
               <p className="text-sm text-muted-foreground">
-                Receive booking confirmations and reminders via email
+                Required for all bookings — so you are notified even when offline
               </p>
             </div>
-            <Switch
-              checked={emailNotifications}
-              onCheckedChange={setEmailNotifications}
-            />
+            <Switch checked={emailNotifications} disabled aria-readonly />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium">SMS Notifications</p>
               <p className="text-sm text-muted-foreground">
-                Get text messages for urgent updates and reminders
+                Text alerts for every new booking (on by default; you can turn off)
               </p>
             </div>
             <Switch
@@ -566,6 +571,15 @@ export default function SettingsPage() {
               onCheckedChange={setSmsNotifications}
             />
           </div>
+          {smsNotifications && !hasValidPhone && (
+            <div className="flex items-start gap-2 rounded-md bg-amber-50 p-3 dark:bg-amber-950/30">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                Add your phone number with country code (e.g., +44 7700 900000)
+                above to receive SMS for new bookings.
+              </p>
+            </div>
+          )}
           <Separator />
           <div className="flex items-center justify-between">
             <div>

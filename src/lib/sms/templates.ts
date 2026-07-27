@@ -102,3 +102,41 @@ export function paymentLinkSms({
 }: PaymentLinkParams): string {
   return `${BRAND}: Hi ${patientName}, please complete your ${amount} payment for booking ${bookingNumber}. Check your email for the payment link.`;
 }
+
+// ---------------------------------------------------------------------------
+// Doctor — New / Urgent Booking
+// ---------------------------------------------------------------------------
+
+interface DoctorNewBookingSmsParams {
+  doctorName: string;
+  patientName: string;
+  date: string; // "15 Apr"
+  time: string; // "10:00"
+  bookingNumber: string;
+  isUrgent?: boolean;
+  minutesUntil?: number | null;
+}
+
+/**
+ * Notify a doctor of a new booking. Keep short for single SMS segment when possible.
+ * Urgent variant is used when the appointment starts within ~1 hour.
+ */
+export function doctorNewBookingSms({
+  doctorName,
+  patientName,
+  date,
+  time,
+  bookingNumber,
+  isUrgent = false,
+  minutesUntil = null,
+}: DoctorNewBookingSmsParams): string {
+  const timeLabel = time?.slice(0, 5) || time;
+  if (isUrgent) {
+    const when =
+      minutesUntil != null && minutesUntil > 0
+        ? `in ~${Math.max(1, Math.round(minutesUntil))} min`
+        : "soon";
+    return `${BRAND}: Dr. ${doctorName}, URGENT new booking ${when}: ${patientName} at ${timeLabel} (${date}). Ref: ${bookingNumber}`;
+  }
+  return `${BRAND}: Dr. ${doctorName}, new booking: ${patientName} on ${date} at ${timeLabel}. Ref: ${bookingNumber}`;
+}
