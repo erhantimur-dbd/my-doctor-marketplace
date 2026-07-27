@@ -129,8 +129,8 @@
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
     "voice_error_generic": "Voice search failed. Please try again.",
-    "gp_shortcut_see_today": "Ver un médico de cabecera hoy",
-    "gp_shortcut_available_now_count": "Disponible ahora · {count}",
+    "gp_shortcut_see_today": "Vídeo hoy",
+    "gp_shortcut_available_now_count": "Vídeo · pronto · {count}",
     "gp_shortcut_near_me": "Cerca de mí",
     "gp_shortcut_aria": "Reserva rápida de citas",
     "gp_shortcut_hint": "Médicos de cabecera por vídeo hoy",
@@ -142,8 +142,10 @@
     "gp_shortcut_section_label": "Reserva rápida de citas",
     "gp_shortcut_in_person_count": "Presencial cerca · {count}",
     "gp_shortcut_in_person_title": "Citas presenciales de médico de cabecera en las próximas 2 horas cerca de ti",
-    "gp_shortcut_see_today_count": "Médico hoy · {count} libres",
-    "gp_shortcut_see_today_title": "Citas de vídeo con médico de cabecera disponibles hoy (total de huecos)"
+    "gp_shortcut_see_today_count": "Vídeo hoy · {count} libres",
+    "gp_shortcut_see_today_title": "Citas de vídeo con médico de cabecera disponibles hoy (total de huecos)",
+    "gp_shortcut_available_now": "Vídeo · pronto",
+    "gp_shortcut_available_now_title": "Médicos de cabecera por vídeo con citas en las próximas 2 horas"
   },
   "doctor": {
     "verified": "Médico Verificado",

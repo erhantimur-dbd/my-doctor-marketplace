@@ -129,8 +129,8 @@
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
     "voice_error_generic": "Voice search failed. Please try again.",
-    "gp_shortcut_see_today": "今日かかりつけ医を予約",
-    "gp_shortcut_available_now_count": "今すぐ予約可 · {count}",
+    "gp_shortcut_see_today": "ビデオ本日",
+    "gp_shortcut_available_now_count": "ビデオ · まもなく · {count}",
     "gp_shortcut_near_me": "近くの医師",
     "gp_shortcut_aria": "かんたん予約",
     "gp_shortcut_hint": "当日ビデオ診療のかかりつけ医",
@@ -142,8 +142,10 @@
     "gp_shortcut_section_label": "かんたん予約",
     "gp_shortcut_in_person_count": "対面・近く · {count}",
     "gp_shortcut_in_person_title": "今後2時間以内に近くで予約できる対面のかかりつけ医",
-    "gp_shortcut_see_today_count": "本日かかりつけ医 · {count}枠",
-    "gp_shortcut_see_today_title": "本日残りのビデオ診療枠（合計）"
+    "gp_shortcut_see_today_count": "ビデオ本日 · {count}枠",
+    "gp_shortcut_see_today_title": "本日残りのビデオ診療枠（合計）",
+    "gp_shortcut_available_now": "ビデオ · まもなく",
+    "gp_shortcut_available_now_title": "今後2時間以内に予約できるビデオ診療"
   },
   "doctor": {
     "verified": "認証済み医師",

@@ -129,8 +129,8 @@
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
     "voice_error_generic": "Voice search failed. Please try again.",
-    "gp_shortcut_see_today": "Ver um clínico geral hoje",
-    "gp_shortcut_available_now_count": "Disponível agora · {count}",
+    "gp_shortcut_see_today": "Vídeo hoje",
+    "gp_shortcut_available_now_count": "Vídeo · em breve · {count}",
     "gp_shortcut_near_me": "Perto de mim",
     "gp_shortcut_aria": "Marcar consultas rapidamente",
     "gp_shortcut_hint": "Clínicos gerais por vídeo no mesmo dia",
@@ -142,8 +142,10 @@
     "gp_shortcut_section_label": "Marcar consultas rapidamente",
     "gp_shortcut_in_person_count": "Presencial · {count}",
     "gp_shortcut_in_person_title": "Consultas presenciais de clínico geral nas próximas 2 horas perto de si",
-    "gp_shortcut_see_today_count": "Clínico hoje · {count} abertas",
-    "gp_shortcut_see_today_title": "Consultas de vídeo de clínico geral ainda disponíveis hoje (total de horários)"
+    "gp_shortcut_see_today_count": "Vídeo hoje · {count} abertas",
+    "gp_shortcut_see_today_title": "Consultas de vídeo de clínico geral ainda disponíveis hoje (total de horários)",
+    "gp_shortcut_available_now": "Vídeo · em breve",
+    "gp_shortcut_available_now_title": "Clínicos gerais por vídeo com horários nas próximas 2 horas"
   },
   "doctor": {
     "verified": "Médico Verificado",

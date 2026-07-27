@@ -131,8 +131,8 @@
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
     "voice_error_generic": "Voice search failed. Please try again.",
-    "gp_shortcut_see_today": "Voir un généraliste aujourd'hui",
-    "gp_shortcut_available_now_count": "Disponible maintenant · {count}",
+    "gp_shortcut_see_today": "Vidéo aujourd'hui",
+    "gp_shortcut_available_now_count": "Vidéo · bientôt · {count}",
     "gp_shortcut_near_me": "Près de moi",
     "gp_shortcut_aria": "Réservation rapide",
     "gp_shortcut_hint": "Généralistes en vidéo le jour même",
@@ -144,8 +144,10 @@
     "gp_shortcut_section_label": "Réservation rapide",
     "gp_shortcut_in_person_count": "Présentiel · {count}",
     "gp_shortcut_in_person_title": "Rendez-vous généraliste en présentiel dans les 2 prochaines heures près de vous",
-    "gp_shortcut_see_today_count": "Généraliste aujourd'hui · {count} dispo",
-    "gp_shortcut_see_today_title": "Rendez-vous vidéo généraliste encore disponibles aujourd'hui (créneaux ouverts)"
+    "gp_shortcut_see_today_count": "Vidéo aujourd'hui · {count} dispo",
+    "gp_shortcut_see_today_title": "Rendez-vous vidéo généraliste encore disponibles aujourd'hui (créneaux ouverts)",
+    "gp_shortcut_available_now": "Vidéo · bientôt",
+    "gp_shortcut_available_now_title": "Généralistes en vidéo avec créneaux dans les 2 prochaines heures"
   },
   "auth": {
     "login_title": "Bon Retour",

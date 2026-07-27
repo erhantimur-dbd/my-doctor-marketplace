@@ -131,8 +131,8 @@
     "voice_search_hint": "Aramak için konuşun (Grok). Konuşan asistan için sohbet mikrofounu kullanın.",
     "voice_search_applied": "Sesinizle aranıyor…",
     "voice_error_generic": "Sesli arama başarısız. Lütfen tekrar deneyin.",
-    "gp_shortcut_see_today": "Bugün aile hekimi bul",
-    "gp_shortcut_available_now_count": "Şu an müsait · {count}",
+    "gp_shortcut_see_today": "Görüntülü bugün",
+    "gp_shortcut_available_now_count": "Görüntülü · yakında · {count}",
     "gp_shortcut_near_me": "Yakınımda",
     "gp_shortcut_aria": "Hızlı randevu al",
     "gp_shortcut_hint": "Aynı gün görüntülü aile hekimleri",
@@ -144,8 +144,10 @@
     "gp_shortcut_section_label": "Hızlı randevu al",
     "gp_shortcut_in_person_count": "Yüz yüze · {count}",
     "gp_shortcut_in_person_title": "Yakınınızda önümüzdeki 2 saatte yüz yüze aile hekimi randevuları",
-    "gp_shortcut_see_today_count": "Bugün aile hekimi · {count} açık",
-    "gp_shortcut_see_today_title": "Bugün hâlâ müsait görüntülü aile hekimi randevuları (toplam açık slot)"
+    "gp_shortcut_see_today_count": "Görüntülü bugün · {count} açık",
+    "gp_shortcut_see_today_title": "Bugün hâlâ müsait görüntülü aile hekimi randevuları (toplam açık slot)",
+    "gp_shortcut_available_now": "Görüntülü · yakında",
+    "gp_shortcut_available_now_title": "Önümüzdeki 2 saatte müsait görüntülü aile hekimleri"
   },
   "auth": {
     "login_title": "Tekrar Hos Geldiniz",

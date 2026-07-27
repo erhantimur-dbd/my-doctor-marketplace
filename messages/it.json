@@ -129,8 +129,8 @@
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
     "voice_error_generic": "Voice search failed. Please try again.",
-    "gp_shortcut_see_today": "Prenota un medico di base oggi",
-    "gp_shortcut_available_now_count": "Disponibile ora · {count}",
+    "gp_shortcut_see_today": "Video oggi",
+    "gp_shortcut_available_now_count": "Video · presto · {count}",
     "gp_shortcut_near_me": "Vicino a me",
     "gp_shortcut_aria": "Prenota appuntamenti in fretta",
     "gp_shortcut_hint": "Medici di base in video oggi",
@@ -142,8 +142,10 @@
     "gp_shortcut_section_label": "Prenota appuntamenti in fretta",
     "gp_shortcut_in_person_count": "In presenza · {count}",
     "gp_shortcut_in_person_title": "Appuntamenti medico di base in presenza nelle prossime 2 ore vicino a te",
-    "gp_shortcut_see_today_count": "Medico oggi · {count} liberi",
-    "gp_shortcut_see_today_title": "Appuntamenti video con medico di base ancora disponibili oggi (slot totali)"
+    "gp_shortcut_see_today_count": "Video oggi · {count} liberi",
+    "gp_shortcut_see_today_title": "Appuntamenti video con medico di base ancora disponibili oggi (slot totali)",
+    "gp_shortcut_available_now": "Video · presto",
+    "gp_shortcut_available_now_title": "Medici di base in video con slot nelle prossime 2 ore"
   },
   "doctor": {
     "verified": "Medico Verificato",

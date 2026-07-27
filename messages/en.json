@@ -131,8 +131,8 @@
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
     "voice_error_generic": "Voice search failed. Please try again.",
-    "gp_shortcut_see_today": "See a GP today",
-    "gp_shortcut_available_now_count": "Available now · {count}",
+    "gp_shortcut_see_today": "Video GP today",
+    "gp_shortcut_available_now_count": "Video GP · soon · {count}",
     "gp_shortcut_near_me": "Near me",
     "gp_shortcut_aria": "Quick book appointments",
     "gp_shortcut_hint": "Same-day video GPs",
@@ -144,8 +144,10 @@
     "gp_shortcut_section_label": "Quick book appointments",
     "gp_shortcut_in_person_count": "In person nearby · {count}",
     "gp_shortcut_in_person_title": "In-person GPs near you with free appointments in the next 2 hours (count is doctors, not slots)",
-    "gp_shortcut_see_today_count": "See a GP today · {count} open",
-    "gp_shortcut_see_today_title": "Video GP appointments still available today across your country (total open slots)"
+    "gp_shortcut_see_today_count": "Video GP today · {count} open",
+    "gp_shortcut_see_today_title": "Video GP appointments still available today across your country (total open slots)",
+    "gp_shortcut_available_now": "Video GP · soon",
+    "gp_shortcut_available_now_title": "Video GPs with free appointments in the next 2 hours"
   },
   "doctor": {
     "verified": "Verified Doctor",

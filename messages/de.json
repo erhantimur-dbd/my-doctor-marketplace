@@ -131,8 +131,8 @@
     "voice_search_hint": "Sprechen zum Suchen (Grok). Für den Sprachassistenten den Chat-Mic nutzen.",
     "voice_search_applied": "Suche mit Ihrer Stimme…",
     "voice_error_generic": "Sprachsuche fehlgeschlagen. Bitte erneut versuchen.",
-    "gp_shortcut_see_today": "Heute einen Hausarzt buchen",
-    "gp_shortcut_available_now_count": "Jetzt verfügbar · {count}",
+    "gp_shortcut_see_today": "Video-Hausarzt heute",
+    "gp_shortcut_available_now_count": "Video-Hausarzt · bald · {count}",
     "gp_shortcut_near_me": "In meiner Nähe",
     "gp_shortcut_aria": "Termine schnell buchen",
     "gp_shortcut_hint": "Video-Hausärzte noch heute",
@@ -144,8 +144,10 @@
     "gp_shortcut_section_label": "Termine schnell buchen",
     "gp_shortcut_in_person_count": "Vor Ort · {count} Arzt",
     "gp_shortcut_in_person_title": "Persönliche Hausarzt-Termine in den nächsten 2 Stunden in Ihrer Nähe",
-    "gp_shortcut_see_today_count": "Heute Hausarzt · {count} frei",
-    "gp_shortcut_see_today_title": "Video-Hausarzt-Termine heute noch verfügbar (offene Termine gesamt)"
+    "gp_shortcut_see_today_count": "Video-Hausarzt heute · {count} frei",
+    "gp_shortcut_see_today_title": "Video-Hausarzt-Termine heute noch verfügbar (offene Termine gesamt)",
+    "gp_shortcut_available_now": "Video-Hausarzt · bald",
+    "gp_shortcut_available_now_title": "Video-Hausärzte mit freien Terminen in den nächsten 2 Stunden"
   },
   "auth": {
     "login_title": "Willkommen zuruck",

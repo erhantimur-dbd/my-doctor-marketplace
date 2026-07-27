@@ -129,8 +129,8 @@
     "voice_search_hint": "Speak to search (Grok). For a full talking assistant, use the AI chat mic.",
     "voice_search_applied": "Searching with your voice…",
     "voice_error_generic": "Voice search failed. Please try again.",
-    "gp_shortcut_see_today": "今天预约全科医生",
-    "gp_shortcut_available_now_count": "现可预约 · {count}",
+    "gp_shortcut_see_today": "视频今日",
+    "gp_shortcut_available_now_count": "视频 · 即将可约 · {count}",
     "gp_shortcut_near_me": "附近",
     "gp_shortcut_aria": "快速预约",
     "gp_shortcut_hint": "当日视频全科医生",
@@ -142,8 +142,10 @@
     "gp_shortcut_section_label": "快速预约",
     "gp_shortcut_in_person_count": "附近面诊 · {count}",
     "gp_shortcut_in_person_title": "未来2小时内您附近可预约的面对面全科医生",
-    "gp_shortcut_see_today_count": "今日全科 · {count}个名额",
-    "gp_shortcut_see_today_title": "今日仍可预约的视频全科号源（总名额）"
+    "gp_shortcut_see_today_count": "视频今日 · {count}个名额",
+    "gp_shortcut_see_today_title": "今日仍可预约的视频全科号源（总名额）",
+    "gp_shortcut_available_now": "视频 · 即将可约",
+    "gp_shortcut_available_now_title": "未来2小时内可预约的视频全科医生"
   },
   "doctor": {
     "verified": "认证医生",

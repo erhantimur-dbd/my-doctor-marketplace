@@ -289,10 +289,16 @@ export function GpShortcutChips({
       : "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90"
   );
 
+  // Chips always stay visible; counts are live and may be zero
   const seeTodayLabel =
     todaySlotCount > 0
       ? t("gp_shortcut_see_today_count", { count: todaySlotCount })
       : t("gp_shortcut_see_today");
+
+  const availableNowLabel =
+    gpCount > 0
+      ? t("gp_shortcut_available_now_count", { count: gpCount })
+      : t("gp_shortcut_available_now");
 
   const inPersonLabel =
     inPersonDoctorCount > 0
@@ -327,22 +333,24 @@ export function GpShortcutChips({
           {seeTodayLabel}
         </button>
 
-        {gpCount > 0 && (
-          <button
-            type="button"
-            className={chipClass}
-            onClick={() => goVideo("available_now")}
-          >
+        {/* Video soon — always visible; pulse only when count > 0 */}
+        <button
+          type="button"
+          className={chipClass}
+          onClick={() => goVideo("available_now")}
+          title={t("gp_shortcut_available_now_title")}
+        >
+          {gpCount > 0 && (
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
             </span>
-            <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {t("gp_shortcut_available_now_count", { count: gpCount })}
-          </button>
-        )}
+          )}
+          <Video className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {availableNowLabel}
+        </button>
 
-        {/* In person — city / nearby only; live slot count next 2h */}
+        {/* In person — city / nearby only; always visible */}
         <button
           type="button"
           className={chipClass}
