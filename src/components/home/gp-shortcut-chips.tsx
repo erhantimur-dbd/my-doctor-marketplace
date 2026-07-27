@@ -1,19 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Clock, Stethoscope, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getLiveAvailabilityCounts } from "@/actions/live-availability";
+import {
+  resolveGpMarketCountry,
+  type GpMarketLocation,
+  type GpMarketPlace,
+} from "@/lib/gp/market-country";
 
 const GP_SLUG = "general-practice";
 
 type ChipId = "see_today" | "available_now";
 
+export type GpShortcutLocation = GpMarketLocation;
+export type GpShortcutPlace = GpMarketPlace;
+
 interface GpShortcutChipsProps {
   /** Server-rendered live count for general-practice (next hour) */
   initialGpCount?: number;
+  /** Locations catalog (same as home search) for country resolution */
+  locations?: GpShortcutLocation[];
+  /** Selected Google Place from the home search bar */
+  placeData?: GpShortcutPlace | null;
+  /** Predefined location slug selected in search (city or country-xx) */
+  locationSlug?: string;
+  /** GPS coords when available */
+  geo?: { latitude: number | null; longitude: number | null };
   /**
    * hero — translucent white pills on the gradient
    * dashboard — solid chips on light backgrounds
@@ -22,7 +38,7 @@ interface GpShortcutChipsProps {
   className?: string;
 }
 
-function trackGpShortcutClick(chip: ChipId) {
+function trackGpShortcutClick(chip: ChipId, countryCode: string) {
   if (typeof window === "undefined") return;
   try {
     const w = window as Window & {
@@ -33,9 +49,13 @@ function trackGpShortcutClick(chip: ChipId) {
     w.dataLayer.push({
       event: "gp_shortcut_click",
       gp_shortcut_chip: chip,
+      gp_country: countryCode,
     });
     if (typeof w.gtag === "function") {
-      w.gtag("event", "gp_shortcut_click", { chip });
+      w.gtag("event", "gp_shortcut_click", {
+        chip,
+        country: countryCode,
+      });
     }
   } catch {
     // analytics is best-effort
@@ -45,19 +65,34 @@ function trackGpShortcutClick(chip: ChipId) {
 /**
  * One-tap shortcuts into GP search.
  *
- * Important: live counts are marketplace-wide (any consultation type, no
- * location). Chip links must use the same scope — forcing video or the
- * home search location previously produced empty "no doctors" results
- * while the badge still showed a count.
+ * Video GPs are country-wide (e.g. entire UK for GB users). Region is
+ * detected from search location, GPS, or locale — never city-only radius.
  */
 export function GpShortcutChips({
   initialGpCount = 0,
+  locations = [],
+  placeData = null,
+  locationSlug = "",
+  geo,
   variant = "hero",
   className,
 }: GpShortcutChipsProps) {
   const t = useTranslations("home");
+  const locale = useLocale();
   const router = useRouter();
   const [gpCount, setGpCount] = useState(initialGpCount);
+
+  const countryCode = useMemo(
+    () =>
+      resolveGpMarketCountry({
+        locale,
+        locations,
+        locationSlug,
+        placeData,
+        geo,
+      }),
+    [locale, locations, locationSlug, placeData, geo]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -78,21 +113,19 @@ export function GpShortcutChips({
   }, []);
 
   const go = (chip: ChipId) => {
-    trackGpShortcutClick(chip);
+    trackGpShortcutClick(chip, countryCode);
     const params = new URLSearchParams();
     params.set("specialty", GP_SLUG);
     params.set("from", "gp_shortcut");
-
-    if (chip === "see_today") {
-      // Same-day GPs, any consultation type (matches real inventory)
-      params.set("availableToday", "true");
-    } else {
-      // "Available now" badge = slots in the next hour (any type).
-      // Prefer same-day list so users still see bookable GPs if the
-      // next-hour set is already booked by the time they land.
-      params.set("availableToday", "true");
+    // Country-wide video GPs — UK-wide for GB, Italy-wide for IT, etc.
+    // Never city radius: video consults can be fulfilled nationally.
+    params.set("location", `country-${countryCode.toLowerCase()}`);
+    params.set("consultationType", "video");
+    params.set("availableToday", "true");
+    if (chip === "available_now") {
       params.set("sort", "soonest");
     }
+    params.set("gpMarket", countryCode);
 
     router.push(`/doctors?${params.toString()}`);
   };
