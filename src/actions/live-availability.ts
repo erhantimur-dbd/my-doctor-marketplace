@@ -94,11 +94,14 @@ export interface GpInPersonAvailability {
   doctorCount: number;
   /** Free in-person appointment slots in the window */
   slotCount: number;
+  /** Doctor IDs matching the nearby live count (for search sync) */
+  doctorIds: string[];
 }
 
 /**
- * Live count of in-person GP slots (and doctors) in the next N hours.
+ * Live count of in-person GP doctors/slots in the next N hours.
  * Nearby only — requires lat/lng. Returns zeros without coordinates.
+ * doctorCount is what the chip should display (search lists doctors, not slots).
  */
 export async function getGpInPersonAvailability(opts: {
   windowHours?: number;
@@ -106,13 +109,19 @@ export async function getGpInPersonAvailability(opts: {
   lng: number;
   radiusKm?: number;
 }): Promise<GpInPersonAvailability> {
+  const empty: GpInPersonAvailability = {
+    doctorCount: 0,
+    slotCount: 0,
+    doctorIds: [],
+  };
+
   if (
     opts.lat == null ||
     opts.lng == null ||
     !Number.isFinite(opts.lat) ||
     !Number.isFinite(opts.lng)
   ) {
-    return { doctorCount: 0, slotCount: 0 };
+    return empty;
   }
 
   const supabase = createAdminClient();
@@ -127,15 +136,20 @@ export async function getGpInPersonAvailability(opts: {
 
   if (error || !data) {
     console.error("GP in-person availability query failed:", error?.message);
-    return { doctorCount: 0, slotCount: 0 };
+    return empty;
   }
 
   // RPC returns a single row (or array of one row depending on client)
   const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return { doctorCount: 0, slotCount: 0 };
+  if (!row) return empty;
+
+  const doctorIds = (Array.isArray(row.doctor_ids) ? row.doctor_ids : [])
+    .map((id: unknown) => (id == null ? "" : String(id)))
+    .filter((id: string) => id.length > 0);
 
   return {
-    doctorCount: Number(row.doctor_count ?? 0),
+    doctorCount: Number(row.doctor_count ?? doctorIds.length ?? 0),
     slotCount: Number(row.slot_count ?? 0),
+    doctorIds,
   };
 }

@@ -143,7 +143,7 @@
     "gp_shortcut_in_person": "GP in person nearby",
     "gp_shortcut_section_label": "Quick book appointments",
     "gp_shortcut_in_person_count": "In person nearby · {count}",
-    "gp_shortcut_in_person_title": "In-person GP appointments free in the next 2 hours near you"
+    "gp_shortcut_in_person_title": "In-person GPs near you with free appointments in the next 2 hours (count is doctors, not slots)"
   },
   "doctor": {
     "verified": "Verified Doctor",

@@ -99,7 +99,8 @@ export function GpShortcutChips({
   const locale = useLocale();
   const router = useRouter();
   const [gpCount, setGpCount] = useState(initialGpCount);
-  const [inPersonSlotCount, setInPersonSlotCount] = useState(
+  // Doctor count (not slots) so the number matches the search results list
+  const [inPersonDoctorCount, setInPersonDoctorCount] = useState(
     initialInPersonSlotCount
   );
 
@@ -185,7 +186,11 @@ export function GpShortcutChips({
               lng: nearbyCoords.lng,
               radiusKm: nearbyCoords.radiusKm,
             })
-          : Promise.resolve({ doctorCount: 0, slotCount: 0 });
+          : Promise.resolve({
+              doctorCount: 0,
+              slotCount: 0,
+              doctorIds: [] as string[],
+            });
 
         const [liveIds, inPerson] = await Promise.all([
           liveIdsPromise,
@@ -193,7 +198,8 @@ export function GpShortcutChips({
         ]);
         if (!cancelled) {
           setGpCount(liveIds.length);
-          setInPersonSlotCount(inPerson.slotCount);
+          // Display doctors, not free slots (one GP can have multiple slots)
+          setInPersonDoctorCount(inPerson.doctorCount);
         }
       } catch {
         // keep last known counts
@@ -230,28 +236,32 @@ export function GpShortcutChips({
   };
 
   const goInPerson = () => {
-    if (localArea.kind === "missing") {
+    if (!nearbyCoords) {
       toast.error(t("gp_shortcut_need_location"));
       return;
     }
 
     trackGpShortcutClick("in_person", { countryCode, mode: "in_person" });
 
+    // Same nearby live set as the counter (doctors with free in-person slots in 2h)
     const params = new URLSearchParams();
     params.set("specialty", GP_SLUG);
     params.set("from", "gp_shortcut");
-    params.set("availableToday", "true");
     params.set("consultationType", "in_person");
     params.set("sort", "soonest");
-
-    if (localArea.kind === "place") {
-      params.set("placeLat", localArea.placeLat.toFixed(6));
-      params.set("placeLng", localArea.placeLng.toFixed(6));
-      params.set("placeName", localArea.placeName);
-      params.set("radius", String(localArea.radiusKm));
-    } else {
-      params.set("location", localArea.locationSlug);
-    }
+    params.set("liveInPersonNearby", "true");
+    params.set("liveWindowHours", String(IN_PERSON_WINDOW_HOURS));
+    params.set("placeLat", nearbyCoords.lat.toFixed(6));
+    params.set("placeLng", nearbyCoords.lng.toFixed(6));
+    params.set("radius", String(nearbyCoords.radiusKm));
+    params.set(
+      "placeName",
+      localArea.kind === "place"
+        ? localArea.placeName
+        : localArea.kind === "city"
+          ? localArea.locationSlug
+          : "Nearby"
+    );
 
     router.push(`/doctors?${params.toString()}`);
   };
@@ -271,8 +281,8 @@ export function GpShortcutChips({
   );
 
   const inPersonLabel =
-    inPersonSlotCount > 0
-      ? t("gp_shortcut_in_person_count", { count: inPersonSlotCount })
+    inPersonDoctorCount > 0
+      ? t("gp_shortcut_in_person_count", { count: inPersonDoctorCount })
       : t("gp_shortcut_in_person");
 
   return (
@@ -324,7 +334,7 @@ export function GpShortcutChips({
           onClick={goInPerson}
           title={t("gp_shortcut_in_person_title")}
         >
-          {inPersonSlotCount > 0 && (
+          {inPersonDoctorCount > 0 && (
             <span className="relative flex h-2 w-2 shrink-0">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />

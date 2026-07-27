@@ -140,6 +140,11 @@ export interface SearchFilters {
   liveNow?: boolean;
   /** Hours window for liveNow (default 2) */
   liveWindowHours?: number;
+  /**
+   * Nearby in-person live search: use get_gp_in_person_availability IDs
+   * so the doctor list matches the homepage chip counter.
+   */
+  liveInPersonNearby?: boolean;
 }
 
 export async function searchDoctors(filters: SearchFilters) {
@@ -176,8 +181,8 @@ export async function searchDoctors(filters: SearchFilters) {
     .eq("is_active", true);
 
   // License filter: only show doctors with active org licenses (or legacy subscriptions)
-  // Skip for liveNow so homepage badge counts and search results use the same set
-  if (!filters.liveNow) {
+  // Skip for live shortcut modes so homepage counters and results stay in sync
+  if (!filters.liveNow && !filters.liveInPersonNearby) {
     const { data: licensedIds } = await supabase.rpc("get_licensed_doctor_ids");
     if (licensedIds && licensedIds.length > 0) {
       query = query.in("id", licensedIds);
@@ -190,7 +195,7 @@ export async function searchDoctors(filters: SearchFilters) {
   }
 
   // Live "available now" — same IDs as homepage Available Now chip
-  if (filters.liveNow) {
+  if (filters.liveNow && !filters.liveInPersonNearby) {
     const { data: liveIds, error: liveErr } = await supabase.rpc(
       "get_live_available_doctor_ids",
       {
@@ -221,8 +226,46 @@ export async function searchDoctors(filters: SearchFilters) {
     // Specialty already applied inside the RPC when provided — avoid double filter
   }
 
+  // Nearby in-person GP live set — same IDs as "In person nearby" chip counter
+  if (
+    filters.liveInPersonNearby &&
+    filters.placeLat != null &&
+    filters.placeLng != null
+  ) {
+    const { data: nearbyRows, error: nearbyErr } = await supabase.rpc(
+      "get_gp_in_person_availability",
+      {
+        p_window_hours: filters.liveWindowHours ?? 2,
+        p_country_code: null,
+        p_lat: filters.placeLat,
+        p_lng: filters.placeLng,
+        p_radius_km: filters.radius ?? 10,
+      }
+    );
+
+    if (nearbyErr) {
+      log.error("Live in-person nearby RPC error:", { err: nearbyErr });
+      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+    }
+
+    const row = Array.isArray(nearbyRows) ? nearbyRows[0] : nearbyRows;
+    const ids = (Array.isArray(row?.doctor_ids) ? row.doctor_ids : [])
+      .map((id: unknown) => (id == null ? "" : String(id)))
+      .filter((id: string) => id.length > 0);
+
+    if (ids.length === 0) {
+      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+    }
+
+    query = query.in("id", ids);
+  }
+
   // Same-day availability filter
-  if (filters.availableToday && !filters.liveNow) {
+  if (
+    filters.availableToday &&
+    !filters.liveNow &&
+    !filters.liveInPersonNearby
+  ) {
     const { data: doctorIds, error: rpcError } = await supabase.rpc(
       "get_doctor_ids_available_today"
     );
@@ -259,7 +302,7 @@ export async function searchDoctors(filters: SearchFilters) {
 
   // Specialty filter — two-step: resolve slug → specialty ID → matching doctor IDs
   // Skip when liveNow already filtered by specialty in the RPC (avoids empty intersections)
-  if (filters.specialty && !filters.liveNow) {
+  if (filters.specialty && !filters.liveNow && !filters.liveInPersonNearby) {
     const { data: specRow } = await supabase
       .from("specialties")
       .select("id")
@@ -295,18 +338,24 @@ export async function searchDoctors(filters: SearchFilters) {
   if (filters.language) {
     query = query.contains("languages", [filters.language]);
   }
-  // liveNow already filtered consultation type in the RPC
-  if (filters.consultationType && !filters.liveNow) {
+  // liveNow / liveInPersonNearby already filtered consultation type in the RPC
+  if (
+    filters.consultationType &&
+    !filters.liveNow &&
+    !filters.liveInPersonNearby
+  ) {
     query = query.contains("consultation_types", [filters.consultationType]);
   }
   // Proximity search: when a Place (borough, street, etc.) is selected,
   // filter doctors within the given radius of those coordinates.
   // This replaces the predefined location filter.
+  // Skip when liveInPersonNearby already applied the radius in the RPC.
   let proximityDistances: Map<string, number> | undefined;
   if (
     filters.placeLat != null &&
     filters.placeLng != null &&
-    !filters.location
+    !filters.location &&
+    !filters.liveInPersonNearby
   ) {
     const radius = filters.radius || 25;
     const { data: ordered, error: rpcError } = await supabase.rpc(

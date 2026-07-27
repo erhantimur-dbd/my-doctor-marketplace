@@ -142,7 +142,7 @@
     "gp_shortcut_need_location": "Wählen Sie eine Stadt oder erlauben Sie den Standort für Hausärzte vor Ort",
     "gp_shortcut_in_person": "Hausarzt vor Ort",
     "gp_shortcut_section_label": "Termine schnell buchen",
-    "gp_shortcut_in_person_count": "Vor Ort · {count}",
+    "gp_shortcut_in_person_count": "Vor Ort · {count} Arzt",
     "gp_shortcut_in_person_title": "Persönliche Hausarzt-Termine in den nächsten 2 Stunden in Ihrer Nähe"
   },
   "auth": {

@@ -140,7 +140,7 @@
     "gp_shortcut_need_location": "対面のかかりつけ医を探すには都市を選ぶか位置情報を許可してください",
     "gp_shortcut_in_person": "対面のかかりつけ医",
     "gp_shortcut_section_label": "かんたん予約",
-    "gp_shortcut_in_person_count": "近くで対面 · {count}",
+    "gp_shortcut_in_person_count": "対面・近く · {count}",
     "gp_shortcut_in_person_title": "今後2時間以内に近くで予約できる対面のかかりつけ医"
   },
   "doctor": {

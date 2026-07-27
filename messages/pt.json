@@ -140,7 +140,7 @@
     "gp_shortcut_need_location": "Escolha uma cidade ou permita a localização para consultas presenciais",
     "gp_shortcut_in_person": "Clínico geral presencial",
     "gp_shortcut_section_label": "Marcar consultas rapidamente",
-    "gp_shortcut_in_person_count": "Presencial perto · {count}",
+    "gp_shortcut_in_person_count": "Presencial · {count}",
     "gp_shortcut_in_person_title": "Consultas presenciais de clínico geral nas próximas 2 horas perto de si"
   },
   "doctor": {
