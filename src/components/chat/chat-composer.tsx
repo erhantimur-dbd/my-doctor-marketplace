@@ -238,9 +238,11 @@ export function ChatComposer({
               }
               rows={1}
               disabled={disabled || stt.isRecording}
-              style={{ minHeight: "36px" }}
+              style={{ minHeight: "40px", fontSize: "16px" }}
               className={cn(
-                "block w-full resize-none rounded-full border border-border bg-muted/40 px-3.5 py-1.5 text-[13px] leading-[22px]",
+                // 16px minimum: iOS Safari zooms the viewport when focused inputs
+                // are smaller than 16px, which clips the floating chat widget.
+                "block w-full resize-none rounded-full border border-border bg-muted/40 px-3.5 py-2 text-base leading-snug",
                 "placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30",
                 "disabled:cursor-not-allowed disabled:opacity-60"
               )}
