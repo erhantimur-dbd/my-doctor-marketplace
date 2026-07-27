@@ -91,7 +91,7 @@ export async function getGpInPersonAvailability(opts: {
     p_country_code: null, // never country-wide for in-person counts
     p_lat: opts.lat,
     p_lng: opts.lng,
-    p_radius_km: opts.radiusKm ?? 30,
+    p_radius_km: opts.radiusKm ?? 10,
   });
 
   if (error || !data) {

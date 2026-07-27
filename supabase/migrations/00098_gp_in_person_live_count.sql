@@ -20,7 +20,7 @@ DECLARE
   v_now TIMESTAMPTZ := NOW();
   v_window INTERVAL := make_interval(hours => GREATEST(COALESCE(p_window_hours, 2), 1));
   v_country TEXT := NULLIF(UPPER(TRIM(p_country_code)), '');
-  v_radius DOUBLE PRECISION := COALESCE(p_radius_km, 30);
+  v_radius DOUBLE PRECISION := COALESCE(p_radius_km, 10);
 BEGIN
   -- Nearby-only: require lat/lng. No coordinates → zero counts.
   IF p_lat IS NULL OR p_lng IS NULL THEN

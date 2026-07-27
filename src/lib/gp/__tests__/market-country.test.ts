@@ -119,7 +119,7 @@ describe("resolveGpLocalArea (in-person city/nearby only)", () => {
     expect(area.kind).toBe("place");
     if (area.kind === "place") {
       expect(area.placeName).toBe("Islington");
-      expect(area.radiusKm).toBe(30);
+      expect(area.radiusKm).toBe(10);
     }
   });
 

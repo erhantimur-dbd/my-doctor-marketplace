@@ -1,7 +1,4 @@
--- Enforce nearby-only: in-person GP live counts require lat/lng (no country-wide fallback).
-
--- Live count of in-person GP appointment slots in the next N hours
--- (default 2). Optional country or lat/lng radius for local scope.
+-- Default in-person GP live-count radius: 10 km (was 30).
 
 CREATE OR REPLACE FUNCTION public.get_gp_in_person_availability(
   p_window_hours INT DEFAULT 2,
@@ -48,7 +45,6 @@ BEGIN
         v_country IS NULL
         OR UPPER(COALESCE(l.country_code, '')) = v_country
       )
-      -- Must be within radius of the patient's coordinates
       AND l.latitude IS NOT NULL
       AND l.longitude IS NOT NULL
       AND (
@@ -62,7 +58,6 @@ BEGIN
         )
       ) <= v_radius
   ),
-  -- Today and tomorrow local calendar days (window may cross midnight)
   day_offsets AS (
     SELECT 0 AS day_offset
     UNION ALL
@@ -133,8 +128,3 @@ BEGIN
   FROM free_slots fs;
 END;
 $$;
-
-COMMENT ON FUNCTION public.get_gp_in_person_availability IS
-  'Count in-person GP free slots in the next N hours (default 2) within lat/lng radius only. Returns zeros without coordinates.';
-
-GRANT EXECUTE ON FUNCTION public.get_gp_in_person_availability TO anon, authenticated, service_role;

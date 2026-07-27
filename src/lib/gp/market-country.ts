@@ -8,7 +8,7 @@
 import { findNearestLocation } from "@/lib/utils/geo";
 
 /** In-person GP search radius (km) — city + nearby only */
-export const GP_IN_PERSON_RADIUS_KM = 30;
+export const GP_IN_PERSON_RADIUS_KM = 10;
 
 export interface GpMarketLocation {
   slug: string;
