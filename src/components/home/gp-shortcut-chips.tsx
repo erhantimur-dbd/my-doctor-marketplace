@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   getGpInPersonAvailability,
+  getGpVideoTodaySlotCount,
   getLiveAvailableDoctorIds,
 } from "@/actions/live-availability";
 import {
@@ -81,9 +82,9 @@ function trackGpShortcutClick(
 /**
  * One-tap shortcuts into GP search.
  *
- * - See a GP today / Available now → country-wide **video** GPs
- * - GP in person → **city / nearby only** (never country-wide)
- * - In-person chip shows free slots in the next 2 hours (live)
+ * - See a GP today → country-wide **video**; chip shows total **open appointments today**
+ * - Available now → video GPs with free slots in next 2h (**doctor** count)
+ * - In person nearby → **doctor** count within 10km / 2h
  */
 export function GpShortcutChips({
   initialGpCount = 0,
@@ -98,8 +99,11 @@ export function GpShortcutChips({
   const t = useTranslations("home");
   const locale = useLocale();
   const router = useRouter();
+  /** Available now — doctors with video slots in next 2h */
   const [gpCount, setGpCount] = useState(initialGpCount);
-  // Doctor count (not slots) so the number matches the search results list
+  /** See a GP today — total free video appointment slots remaining today */
+  const [todaySlotCount, setTodaySlotCount] = useState(0);
+  /** In person nearby — doctors (not slots) */
   const [inPersonDoctorCount, setInPersonDoctorCount] = useState(
     initialInPersonSlotCount
   );
@@ -171,11 +175,15 @@ export function GpShortcutChips({
     const poll = async () => {
       try {
         // Video Available Now = GPs who offer video with free slots in 2h
-        // (same IDs the chip search will load)
         const liveIdsPromise = getLiveAvailableDoctorIds({
           specialtySlug: GP_SLUG,
           consultationType: "video",
           windowHours: LIVE_WINDOW_HOURS,
+        });
+
+        // See a GP today = total free video appointments left today (country)
+        const todaySlotsPromise = getGpVideoTodaySlotCount({
+          countryCode,
         });
 
         // In-person counter is nearby-only — skip RPC until we have lat/lng
@@ -192,13 +200,14 @@ export function GpShortcutChips({
               doctorIds: [] as string[],
             });
 
-        const [liveIds, inPerson] = await Promise.all([
+        const [liveIds, todaySlots, inPerson] = await Promise.all([
           liveIdsPromise,
+          todaySlotsPromise,
           inPersonPromise,
         ]);
         if (!cancelled) {
           setGpCount(liveIds.length);
-          // Display doctors, not free slots (one GP can have multiple slots)
+          setTodaySlotCount(todaySlots.slotCount);
           setInPersonDoctorCount(inPerson.doctorCount);
         }
       } catch {
@@ -211,7 +220,7 @@ export function GpShortcutChips({
       cancelled = true;
       clearInterval(interval);
     };
-  }, [nearbyCoords]);
+  }, [nearbyCoords, countryCode]);
 
   const goVideo = (chip: "see_today" | "available_now") => {
     trackGpShortcutClick(chip, { countryCode, mode: "video" });
@@ -280,6 +289,11 @@ export function GpShortcutChips({
       : "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90"
   );
 
+  const seeTodayLabel =
+    todaySlotCount > 0
+      ? t("gp_shortcut_see_today_count", { count: todaySlotCount })
+      : t("gp_shortcut_see_today");
+
   const inPersonLabel =
     inPersonDoctorCount > 0
       ? t("gp_shortcut_in_person_count", { count: inPersonDoctorCount })
@@ -302,14 +316,15 @@ export function GpShortcutChips({
         role="group"
         aria-label={t("gp_shortcut_section_label")}
       >
-        {/* Video — country-wide */}
+        {/* Video today — country-wide; count = open appointments (slots) */}
         <button
           type="button"
           className={primaryChipClass}
           onClick={() => goVideo("see_today")}
+          title={t("gp_shortcut_see_today_title")}
         >
           <Stethoscope className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {t("gp_shortcut_see_today")}
+          {seeTodayLabel}
         </button>
 
         {gpCount > 0 && (

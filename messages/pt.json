@@ -141,7 +141,9 @@
     "gp_shortcut_in_person": "Clínico geral presencial",
     "gp_shortcut_section_label": "Marcar consultas rapidamente",
     "gp_shortcut_in_person_count": "Presencial · {count}",
-    "gp_shortcut_in_person_title": "Consultas presenciais de clínico geral nas próximas 2 horas perto de si"
+    "gp_shortcut_in_person_title": "Consultas presenciais de clínico geral nas próximas 2 horas perto de si",
+    "gp_shortcut_see_today_count": "Clínico hoje · {count} abertas",
+    "gp_shortcut_see_today_title": "Consultas de vídeo de clínico geral ainda disponíveis hoje (total de horários)"
   },
   "doctor": {
     "verified": "Médico Verificado",

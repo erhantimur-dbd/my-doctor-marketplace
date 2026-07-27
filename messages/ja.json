@@ -141,7 +141,9 @@
     "gp_shortcut_in_person": "対面のかかりつけ医",
     "gp_shortcut_section_label": "かんたん予約",
     "gp_shortcut_in_person_count": "対面・近く · {count}",
-    "gp_shortcut_in_person_title": "今後2時間以内に近くで予約できる対面のかかりつけ医"
+    "gp_shortcut_in_person_title": "今後2時間以内に近くで予約できる対面のかかりつけ医",
+    "gp_shortcut_see_today_count": "本日かかりつけ医 · {count}枠",
+    "gp_shortcut_see_today_title": "本日残りのビデオ診療枠（合計）"
   },
   "doctor": {
     "verified": "認証済み医師",

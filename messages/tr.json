@@ -143,7 +143,9 @@
     "gp_shortcut_in_person": "Yüz yüze aile hekimi",
     "gp_shortcut_section_label": "Hızlı randevu al",
     "gp_shortcut_in_person_count": "Yüz yüze · {count}",
-    "gp_shortcut_in_person_title": "Yakınınızda önümüzdeki 2 saatte yüz yüze aile hekimi randevuları"
+    "gp_shortcut_in_person_title": "Yakınınızda önümüzdeki 2 saatte yüz yüze aile hekimi randevuları",
+    "gp_shortcut_see_today_count": "Bugün aile hekimi · {count} açık",
+    "gp_shortcut_see_today_title": "Bugün hâlâ müsait görüntülü aile hekimi randevuları (toplam açık slot)"
   },
   "auth": {
     "login_title": "Tekrar Hos Geldiniz",

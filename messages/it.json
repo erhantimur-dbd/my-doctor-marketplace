@@ -141,7 +141,9 @@
     "gp_shortcut_in_person": "Medico di base in presenza",
     "gp_shortcut_section_label": "Prenota appuntamenti in fretta",
     "gp_shortcut_in_person_count": "In presenza · {count}",
-    "gp_shortcut_in_person_title": "Appuntamenti medico di base in presenza nelle prossime 2 ore vicino a te"
+    "gp_shortcut_in_person_title": "Appuntamenti medico di base in presenza nelle prossime 2 ore vicino a te",
+    "gp_shortcut_see_today_count": "Medico oggi · {count} liberi",
+    "gp_shortcut_see_today_title": "Appuntamenti video con medico di base ancora disponibili oggi (slot totali)"
   },
   "doctor": {
     "verified": "Medico Verificato",

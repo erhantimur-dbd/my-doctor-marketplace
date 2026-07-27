@@ -141,7 +141,9 @@
     "gp_shortcut_in_person": "Médico de cabecera presencial",
     "gp_shortcut_section_label": "Reserva rápida de citas",
     "gp_shortcut_in_person_count": "Presencial cerca · {count}",
-    "gp_shortcut_in_person_title": "Citas presenciales de médico de cabecera en las próximas 2 horas cerca de ti"
+    "gp_shortcut_in_person_title": "Citas presenciales de médico de cabecera en las próximas 2 horas cerca de ti",
+    "gp_shortcut_see_today_count": "Médico hoy · {count} libres",
+    "gp_shortcut_see_today_title": "Citas de vídeo con médico de cabecera disponibles hoy (total de huecos)"
   },
   "doctor": {
     "verified": "Médico Verificado",

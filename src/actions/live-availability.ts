@@ -89,6 +89,33 @@ export async function getLiveAvailableDoctorIds(opts?: {
   return [];
 }
 
+/**
+ * Free video GP appointment slots remaining today (country-wide when country set).
+ * Used on "See a GP today" to show total open appointments, not doctor count.
+ */
+export async function getGpVideoTodaySlotCount(opts?: {
+  countryCode?: string | null;
+}): Promise<{ doctorCount: number; slotCount: number }> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc("get_gp_video_today_slot_count", {
+    p_country_code: opts?.countryCode ?? null,
+  });
+
+  if (error || !data) {
+    console.error("GP video today slot count failed:", error?.message);
+    return { doctorCount: 0, slotCount: 0 };
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return { doctorCount: 0, slotCount: 0 };
+
+  return {
+    doctorCount: Number(row.doctor_count ?? 0),
+    slotCount: Number(row.slot_count ?? 0),
+  };
+}
+
 export interface GpInPersonAvailability {
   /** Distinct GPs with ≥1 free in-person slot in the window */
   doctorCount: number;

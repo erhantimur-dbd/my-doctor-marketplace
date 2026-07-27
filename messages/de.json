@@ -143,7 +143,9 @@
     "gp_shortcut_in_person": "Hausarzt vor Ort",
     "gp_shortcut_section_label": "Termine schnell buchen",
     "gp_shortcut_in_person_count": "Vor Ort · {count} Arzt",
-    "gp_shortcut_in_person_title": "Persönliche Hausarzt-Termine in den nächsten 2 Stunden in Ihrer Nähe"
+    "gp_shortcut_in_person_title": "Persönliche Hausarzt-Termine in den nächsten 2 Stunden in Ihrer Nähe",
+    "gp_shortcut_see_today_count": "Heute Hausarzt · {count} frei",
+    "gp_shortcut_see_today_title": "Video-Hausarzt-Termine heute noch verfügbar (offene Termine gesamt)"
   },
   "auth": {
     "login_title": "Willkommen zuruck",

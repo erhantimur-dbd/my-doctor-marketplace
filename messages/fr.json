@@ -143,7 +143,9 @@
     "gp_shortcut_in_person": "Généraliste en présentiel",
     "gp_shortcut_section_label": "Réservation rapide",
     "gp_shortcut_in_person_count": "Présentiel · {count}",
-    "gp_shortcut_in_person_title": "Rendez-vous généraliste en présentiel dans les 2 prochaines heures près de vous"
+    "gp_shortcut_in_person_title": "Rendez-vous généraliste en présentiel dans les 2 prochaines heures près de vous",
+    "gp_shortcut_see_today_count": "Généraliste aujourd'hui · {count} dispo",
+    "gp_shortcut_see_today_title": "Rendez-vous vidéo généraliste encore disponibles aujourd'hui (créneaux ouverts)"
   },
   "auth": {
     "login_title": "Bon Retour",
