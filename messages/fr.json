@@ -141,7 +141,9 @@
     "gp_shortcut_hint_in_person": "Généralistes en présentiel dans votre ville",
     "gp_shortcut_need_location": "Choisissez une ville ou autorisez la localisation pour les rendez-vous en présentiel",
     "gp_shortcut_in_person": "Généraliste en présentiel",
-    "gp_shortcut_section_label": "Réservation rapide"
+    "gp_shortcut_section_label": "Réservation rapide",
+    "gp_shortcut_in_person_count": "Présentiel près de vous · {count}",
+    "gp_shortcut_in_person_title": "Rendez-vous généraliste en présentiel dans les 2 prochaines heures près de vous"
   },
   "auth": {
     "login_title": "Bon Retour",

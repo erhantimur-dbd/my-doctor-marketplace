@@ -141,7 +141,9 @@
     "gp_shortcut_hint_in_person": "Şehrinizdeki yüz yüze aile hekimleri",
     "gp_shortcut_need_location": "Yüz yüze randevu için bir şehir seçin veya konuma izin verin",
     "gp_shortcut_in_person": "Yüz yüze aile hekimi",
-    "gp_shortcut_section_label": "Hızlı randevu al"
+    "gp_shortcut_section_label": "Hızlı randevu al",
+    "gp_shortcut_in_person_count": "Yüz yüze yakında · {count}",
+    "gp_shortcut_in_person_title": "Yakınınızda önümüzdeki 2 saatte yüz yüze aile hekimi randevuları"
   },
   "auth": {
     "login_title": "Tekrar Hos Geldiniz",

@@ -139,7 +139,9 @@
     "gp_shortcut_hint_in_person": "Médicos de cabecera en tu ciudad",
     "gp_shortcut_need_location": "Elige una ciudad o permite la ubicación para médicos presenciales cerca",
     "gp_shortcut_in_person": "Médico de cabecera presencial",
-    "gp_shortcut_section_label": "Reserva rápida de citas"
+    "gp_shortcut_section_label": "Reserva rápida de citas",
+    "gp_shortcut_in_person_count": "Presencial cerca · {count}",
+    "gp_shortcut_in_person_title": "Citas presenciales de médico de cabecera en las próximas 2 horas cerca de ti"
   },
   "doctor": {
     "verified": "Médico Verificado",

@@ -139,7 +139,9 @@
     "gp_shortcut_hint_in_person": "Medici di base in presenza nella tua città",
     "gp_shortcut_need_location": "Scegli una città o consenti la posizione per i medici in presenza",
     "gp_shortcut_in_person": "Medico di base in presenza",
-    "gp_shortcut_section_label": "Prenota appuntamenti in fretta"
+    "gp_shortcut_section_label": "Prenota appuntamenti in fretta",
+    "gp_shortcut_in_person_count": "In presenza vicino · {count}",
+    "gp_shortcut_in_person_title": "Appuntamenti medico di base in presenza nelle prossime 2 ore vicino a te"
   },
   "doctor": {
     "verified": "Medico Verificato",

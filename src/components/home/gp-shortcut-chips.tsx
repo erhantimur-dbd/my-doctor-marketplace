@@ -6,8 +6,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { Building2, Clock, Stethoscope, Video } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getLiveAvailabilityCounts } from "@/actions/live-availability";
 import {
+  getGpInPersonAvailability,
+  getLiveAvailabilityCounts,
+} from "@/actions/live-availability";
+import {
+  GP_IN_PERSON_RADIUS_KM,
   resolveGpLocalArea,
   resolveGpMarketCountry,
   type GpMarketLocation,
@@ -15,6 +19,7 @@ import {
 } from "@/lib/gp/market-country";
 
 const GP_SLUG = "general-practice";
+const IN_PERSON_WINDOW_HOURS = 2;
 
 type ChipId = "see_today" | "available_now" | "in_person";
 
@@ -24,6 +29,8 @@ export type GpShortcutPlace = GpMarketPlace;
 interface GpShortcutChipsProps {
   /** Server-rendered live count for general-practice (next hour) */
   initialGpCount?: number;
+  /** Optional SSR seed for in-person slot count (next 2h) */
+  initialInPersonSlotCount?: number;
   /** Locations catalog (same as home search) for country / city resolution */
   locations?: GpShortcutLocation[];
   /** Selected Google Place from the home search bar */
@@ -74,9 +81,11 @@ function trackGpShortcutClick(
  *
  * - See a GP today / Available now → country-wide **video** GPs
  * - GP in person → **city / nearby only** (never country-wide)
+ * - In-person chip shows free slots in the next 2 hours (live)
  */
 export function GpShortcutChips({
   initialGpCount = 0,
+  initialInPersonSlotCount = 0,
   locations = [],
   placeData = null,
   locationSlug = "",
@@ -88,6 +97,9 @@ export function GpShortcutChips({
   const locale = useLocale();
   const router = useRouter();
   const [gpCount, setGpCount] = useState(initialGpCount);
+  const [inPersonSlotCount, setInPersonSlotCount] = useState(
+    initialInPersonSlotCount
+  );
 
   const countryCode = useMemo(
     () =>
@@ -112,14 +124,55 @@ export function GpShortcutChips({
     [locations, locationSlug, placeData, geo]
   );
 
+  // Scope for in-person live count: prefer nearby, else market country
+  const inPersonQuery = useMemo(() => {
+    if (localArea.kind === "place") {
+      return {
+        lat: localArea.placeLat,
+        lng: localArea.placeLng,
+        radiusKm: localArea.radiusKm,
+        countryCode: null as string | null,
+      };
+    }
+    if (localArea.kind === "city") {
+      const city = locations.find((l) => l.slug === localArea.locationSlug);
+      if (city?.latitude != null && city?.longitude != null) {
+        return {
+          lat: city.latitude,
+          lng: city.longitude,
+          radiusKm: GP_IN_PERSON_RADIUS_KM,
+          countryCode: null as string | null,
+        };
+      }
+    }
+    return {
+      lat: null as number | null,
+      lng: null as number | null,
+      radiusKm: null as number | null,
+      countryCode,
+    };
+  }, [localArea, locations, countryCode]);
+
   useEffect(() => {
     let cancelled = false;
     const poll = async () => {
       try {
-        const counts = await getLiveAvailabilityCounts();
-        if (!cancelled) setGpCount(counts[GP_SLUG] ?? 0);
+        const [counts, inPerson] = await Promise.all([
+          getLiveAvailabilityCounts(),
+          getGpInPersonAvailability({
+            windowHours: IN_PERSON_WINDOW_HOURS,
+            countryCode: inPersonQuery.countryCode,
+            lat: inPersonQuery.lat,
+            lng: inPersonQuery.lng,
+            radiusKm: inPersonQuery.radiusKm,
+          }),
+        ]);
+        if (!cancelled) {
+          setGpCount(counts[GP_SLUG] ?? 0);
+          setInPersonSlotCount(inPerson.slotCount);
+        }
       } catch {
-        // keep last known count
+        // keep last known counts
       }
     };
     poll();
@@ -128,7 +181,7 @@ export function GpShortcutChips({
       cancelled = true;
       clearInterval(interval);
     };
-  }, []);
+  }, [inPersonQuery]);
 
   const goVideo = (chip: "see_today" | "available_now") => {
     trackGpShortcutClick(chip, { countryCode, mode: "video" });
@@ -186,6 +239,11 @@ export function GpShortcutChips({
       : "border-primary/30 bg-primary text-primary-foreground hover:bg-primary/90"
   );
 
+  const inPersonLabel =
+    inPersonSlotCount > 0
+      ? t("gp_shortcut_in_person_count", { count: inPersonSlotCount })
+      : t("gp_shortcut_in_person");
+
   return (
     <div className={cn("flex flex-col items-center gap-2", className)}>
       <p
@@ -228,14 +286,21 @@ export function GpShortcutChips({
           </button>
         )}
 
-        {/* In person — city / nearby only */}
+        {/* In person — city / nearby only; live slot count next 2h */}
         <button
           type="button"
           className={chipClass}
           onClick={goInPerson}
+          title={t("gp_shortcut_in_person_title")}
         >
+          {inPersonSlotCount > 0 && (
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+            </span>
+          )}
           <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {t("gp_shortcut_in_person")}
+          {inPersonLabel}
         </button>
       </div>
 

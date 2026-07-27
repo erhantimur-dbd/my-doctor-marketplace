@@ -57,3 +57,46 @@ export async function getLiveDoctorAvailability(
   }
   return result;
 }
+
+export interface GpInPersonAvailability {
+  /** Distinct GPs with ≥1 free in-person slot in the window */
+  doctorCount: number;
+  /** Free in-person appointment slots in the window */
+  slotCount: number;
+}
+
+/**
+ * Live count of in-person GP slots (and doctors) in the next N hours.
+ * Prefer local radius when lat/lng known; else market country; else global.
+ */
+export async function getGpInPersonAvailability(opts?: {
+  windowHours?: number;
+  countryCode?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  radiusKm?: number | null;
+}): Promise<GpInPersonAvailability> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc("get_gp_in_person_availability", {
+    p_window_hours: opts?.windowHours ?? 2,
+    p_country_code: opts?.countryCode ?? null,
+    p_lat: opts?.lat ?? null,
+    p_lng: opts?.lng ?? null,
+    p_radius_km: opts?.radiusKm ?? null,
+  });
+
+  if (error || !data) {
+    console.error("GP in-person availability query failed:", error?.message);
+    return { doctorCount: 0, slotCount: 0 };
+  }
+
+  // RPC returns a single row (or array of one row depending on client)
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return { doctorCount: 0, slotCount: 0 };
+
+  return {
+    doctorCount: Number(row.doctor_count ?? 0),
+    slotCount: Number(row.slot_count ?? 0),
+  };
+}
