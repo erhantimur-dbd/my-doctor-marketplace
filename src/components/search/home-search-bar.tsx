@@ -179,14 +179,17 @@ export function HomeSearchBar({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [doctorResults, setDoctorResults] = useState<DoctorSuggestion[]>([]);
   const [isPending, startTransition] = useTransition();
+  // Separate from autocomplete: stays true during App Router soft nav to /doctors
+  const [isNavPending, startNavTransition] = useTransition();
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const mobileInputRef = useRef<HTMLInputElement>(null);
 
-  // AI search loading state (triggered by Search button for NL routing)
+  // AI parse loading (NL routing) + navigation pending = busy search button
   const [aiLoading, setAiLoading] = useState(false);
+  const isSearchBusy = aiLoading || isNavPending;
 
   // Validation: flag when user clicks Search with empty query
   const [missingInputWarning, setMissingInputWarning] = useState(false);
@@ -467,6 +470,16 @@ export function HomeSearchBar({
     geo.requestPosition();
   };
 
+  /** Soft-nav to results; isNavPending keeps the search button spinning until paint. */
+  const navigateToResults = useCallback(
+    (path: string) => {
+      startNavTransition(() => {
+        router.push(path);
+      });
+    },
+    [router]
+  );
+
   const runSearchWithQuery = useCallback(
     (rawQuery: string) => {
       setShowSuggestions(false);
@@ -517,9 +530,16 @@ export function HomeSearchBar({
       }
 
       const qs = params.toString();
-      router.push(`/doctors${qs ? `?${qs}` : ""}`);
+      navigateToResults(`/doctors${qs ? `?${qs}` : ""}`);
     },
-    [location, consultationType, router, specialties, placeData, addSearch]
+    [
+      location,
+      consultationType,
+      specialties,
+      placeData,
+      addSearch,
+      navigateToResults,
+    ]
   );
 
   const handleSearch = useCallback(() => {
@@ -656,7 +676,7 @@ export function HomeSearchBar({
           } catch {
             /* ignore */
           }
-          router.push(path);
+          navigateToResults(path);
         } else {
           // AI unavailable: still map city in phrase → Where + URL
           const locFromText = matchLocationFromSearchText(text, locations);
@@ -676,7 +696,7 @@ export function HomeSearchBar({
             params.set("location", location);
           if (consultationType !== "all")
             params.set("consultationType", consultationType);
-          router.push(`/doctors?${params.toString()}`);
+          navigateToResults(`/doctors?${params.toString()}`);
         }
       } catch {
         const locFromText = matchLocationFromSearchText(text, locations);
@@ -691,11 +711,12 @@ export function HomeSearchBar({
             params.set("query", text);
           }
           params.set("location", locFromText);
-          router.push(`/doctors?${params.toString()}`);
+          navigateToResults(`/doctors?${params.toString()}`);
         } else {
           runSearchWithQuery(text);
         }
       } finally {
+        // Parse done; navigation spinner continues via isNavPending
         setAiLoading(false);
       }
     },
@@ -704,7 +725,6 @@ export function HomeSearchBar({
       locale,
       location,
       placeData,
-      router,
       runSearchWithQuery,
       addSearch,
       locations,
@@ -712,6 +732,7 @@ export function HomeSearchBar({
       consultationType,
       setIntentFilters,
       markIntentApplied,
+      navigateToResults,
     ]
   );
 
@@ -765,8 +786,9 @@ export function HomeSearchBar({
           placeLat: placeData?.lat,
           placeLng: placeData?.lng,
         });
-        router.push(`/doctors?${params.toString()}`);
+        // Keep spinner via isNavPending until results page paints (do not clear aiLoading early)
         setAiLoading(false);
+        navigateToResults(`/doctors?${params.toString()}`);
         return;
       }
 
@@ -780,8 +802,8 @@ export function HomeSearchBar({
       placeData,
       location,
       consultationType,
-      router,
       addSearch,
+      navigateToResults,
     ]
   );
 
@@ -1433,15 +1455,21 @@ export function HomeSearchBar({
               <Button
                 size="icon"
                 aria-label={t("search_button")}
+                aria-busy={isSearchBusy}
                 className={cn(
                   "rounded-full shadow-lg",
                   compact ? "h-11 w-11" : "h-14 w-14"
                 )}
                 onClick={() => handleSmartSearch()}
-                disabled={aiLoading}
+                disabled={isSearchBusy}
               >
-                {aiLoading ? (
-                  <Loader2 className={cn("animate-spin", compact ? "h-4 w-4" : "h-5 w-5")} />
+                {isSearchBusy ? (
+                  <Loader2
+                    className={cn(
+                      "animate-spin",
+                      compact ? "h-4 w-4" : "h-5 w-5"
+                    )}
+                  />
                 ) : (
                   <Search className={cn(compact ? "h-4 w-4" : "h-5 w-5")} />
                 )}
@@ -1879,14 +1907,21 @@ export function HomeSearchBar({
         )}
 
         {/* Search button — AI-powered */}
-        <Button className="h-11 w-full rounded-lg" onClick={() => handleSmartSearch()} disabled={aiLoading}>
-          {aiLoading ? (
+        <Button
+          className="h-11 w-full rounded-lg"
+          onClick={() => handleSmartSearch()}
+          disabled={isSearchBusy}
+          aria-busy={isSearchBusy}
+        >
+          {isSearchBusy ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <Search className="mr-1.5 h-4 w-4" />
           )}
           {t("search_button")}
-          <Sparkles className="ml-1.5 h-3 w-3 opacity-50" />
+          {!isSearchBusy && (
+            <Sparkles className="ml-1.5 h-3 w-3 opacity-50" />
+          )}
         </Button>
 
         {/* GP instant-book shortcuts — mobile */}
