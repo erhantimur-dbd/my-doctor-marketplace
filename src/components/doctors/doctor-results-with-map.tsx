@@ -28,6 +28,8 @@ interface DoctorResultsWithMapProps {
   doctors: Doctor[];
   locale: string;
   availability?: Record<string, DoctorMultiDayAvailability>;
+  /** Reserve slot column with skeleton until multi-day enrich finishes */
+  availabilityLoading?: boolean;
   centerLocation?: { lat: number; lng: number; city: string; countryCode?: string };
   matchScores?: Record<string, { score: number; reasons: string[] }>;
   distances?: Record<string, number>;
@@ -39,6 +41,7 @@ export function DoctorResultsWithMap({
   doctors,
   locale,
   availability,
+  availabilityLoading = false,
   centerLocation,
   matchScores,
   distances,
@@ -137,7 +140,12 @@ export function DoctorResultsWithMap({
               locale={locale}
               isHighlighted={hoveredDoctorId === doctor.id}
               onHover={setHoveredDoctorId}
-              availability={availability ? (availability[doctor.id] || null) : undefined}
+              availability={
+                availability
+                  ? availability[doctor.id] || null
+                  : undefined
+              }
+              availabilityLoading={availabilityLoading}
               matchScore={matchScores?.[doctor.id]?.score}
               matchReasons={matchScores?.[doctor.id]?.reasons}
               distanceKm={distances?.[doctor.id]}

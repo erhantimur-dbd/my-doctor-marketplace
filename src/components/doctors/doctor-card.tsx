@@ -78,12 +78,31 @@ interface DoctorCardProps {
   distanceKm?: number;
   /** Show "Available Now" live badge inside the card */
   liveAvailable?: boolean;
+  /**
+   * Parent is still loading multi-day slots (deferred enrich).
+   * Reserve the availability column with a skeleton so the card does not
+   * jump from compact → expanded when times arrive (refresh layout shift).
+   */
+  availabilityLoading?: boolean;
   /** Top patient skill endorsements (Doctify-style trust) */
   topEndorsements?: { label: string; count: number }[];
 }
 
 export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
-  function DoctorCard({ doctor, locale = "en", isHighlighted, onHover, availability, matchScore, matchReasons, compact, distanceKm, liveAvailable, topEndorsements }, ref) {
+  function DoctorCard({
+    doctor,
+    locale = "en",
+    isHighlighted,
+    onHover,
+    availability,
+    matchScore,
+    matchReasons,
+    compact,
+    distanceKm,
+    liveAvailable,
+    availabilityLoading = false,
+    topEndorsements,
+  }, ref) {
     const router = useRouter();
     const { currency: displayCurrency, convert } = useCurrency();
     const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -152,12 +171,24 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
       setLoadingAvailability(false);
     };
 
+    // Show type toggle once we have loaded availability (not while initial skeleton)
     const showTypeToggle =
       doctor.consultation_types &&
       doctor.consultation_types.length > 1 &&
-      availability !== undefined;
+      availability !== undefined &&
+      !availabilityLoading;
 
-    const hasAvailability = availability !== undefined;
+    // Reserve right-hand slot column while parent is still enriching so refresh
+    // does not jump from compact tile → expanded times (video repro).
+    const hasAvailability =
+      availability !== undefined || availabilityLoading;
+
+    const showSlotSkeleton =
+      availabilityLoading ||
+      loadingAvailability ||
+      (hasAvailability &&
+        availability === undefined &&
+        !cardAvailability);
 
     return (
       <div
@@ -514,10 +545,25 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       </div>
                     )}
 
-                    {/* Multi-Day Availability */}
-                    {loadingAvailability ? (
-                      <div className="flex h-20 items-center justify-center">
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    {/* Multi-Day Availability (skeleton while deferred enrich loads) */}
+                    {showSlotSkeleton || loadingAvailability ? (
+                      <div className="space-y-2" aria-busy="true" aria-label="Loading available times">
+                        <div className="flex gap-1.5">
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="h-7 w-14 animate-pulse rounded-md bg-muted"
+                            />
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="h-9 animate-pulse rounded-md bg-muted"
+                            />
+                          ))}
+                        </div>
                       </div>
                     ) : cardAvailability && cardAvailability.days.length > 0 ? (
                       <div>

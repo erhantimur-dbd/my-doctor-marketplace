@@ -28,21 +28,22 @@ describe("doctors page critical path", () => {
     expect(src).toContain("\"use client\"");
   });
 
-  it("passes undefined availability until enrichment ready (not empty {} → null)", () => {
+  it("passes availabilityLoading so cards reserve slot column (no expand jump)", () => {
     const src = readFileSync(deferredPath, "utf8");
-    // Must not start with useState({}) which makes hasAvailability true with null
-    expect(src).toMatch(
-      /useState<\s*Record<string,\s*DoctorMultiDayAvailability>\s*\|\s*undefined\s*>\(\s*undefined\s*\)/
-    );
-    expect(src).toContain("availability === undefined");
+    expect(src).toContain("availabilityLoading={loading}");
+    expect(src).toContain("doctorIdsKey");
   });
 
-  it("DoctorCard syncs cardAvailability when availability prop updates", () => {
+  it("DoctorCard syncs availability prop and supports loading skeleton", () => {
     const src = readFileSync(cardPath, "utf8");
     // useEffect that applies parent availability after deferred fetch
-    expect(src).toMatch(/useEffect\(\s*\(\)\s*=>\s*\{[\s\S]*setCardAvailability\(availability\)/);
+    expect(src).toMatch(
+      /useEffect\(\s*\(\)\s*=>\s*\{[\s\S]*setCardAvailability\(availability\)/
+    );
     expect(src).toMatch(/},\s*\[availability\]\s*\)/);
     expect(src).toContain("localTypeOverrideRef");
+    expect(src).toContain("availabilityLoading");
+    expect(src).toContain("showSlotSkeleton");
   });
 
   it("doctors page does not await getMultiDayAvailabilityBatch on server", () => {

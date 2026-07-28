@@ -5,11 +5,10 @@
  * status in the browser so the symptom-search critical path is not blocked by
  * batch slot RPCs on the server.
  *
- * Until enrichment finishes, pass `availability={undefined}` so DoctorCard
- * hides the slot strip (undefined !== null). After load, pass real data;
- * DoctorCard syncs via useEffect on the availability prop.
+ * While enriching, pass availabilityLoading so cards reserve the slot column
+ * with a skeleton (no compact→expand jump on refresh).
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
 import {
@@ -46,7 +45,6 @@ export function DoctorListWithDeferredAvailability({
   topEndorsements = {},
   withMap = true,
 }: Props) {
-  // undefined = not loaded yet (hide strip); Record = enrichment complete
   const [availability, setAvailability] = useState<
     Record<string, DoctorMultiDayAvailability> | undefined
   >(undefined);
@@ -55,8 +53,15 @@ export function DoctorListWithDeferredAvailability({
   >({});
   const [enrichmentReady, setEnrichmentReady] = useState(false);
 
+  // Stable key so parent re-renders with a new array identity do not re-fetch
+  // and collapse the slot panel mid-session.
+  const doctorIdsKey = useMemo(
+    () => doctors.map((d) => d.id).join(","),
+    [doctors]
+  );
+
   useEffect(() => {
-    const ids = doctors.map((d) => d.id);
+    const ids = doctorIdsKey ? doctorIdsKey.split(",").filter(Boolean) : [];
     if (ids.length === 0) {
       setAvailability({});
       setEnrichmentReady(true);
@@ -65,7 +70,8 @@ export function DoctorListWithDeferredAvailability({
 
     let cancelled = false;
     setEnrichmentReady(false);
-    setAvailability(undefined);
+    // Keep previous availability visible while re-fetching (no collapse flash).
+    // Only undefined on first mount of this key.
     (async () => {
       try {
         const [avail, live] = await Promise.all([
@@ -78,7 +84,6 @@ export function DoctorListWithDeferredAvailability({
         }
       } catch {
         if (!cancelled) {
-          // Failed enrich: empty map so cards can show waitlist, not stuck loading
           setAvailability({});
         }
       } finally {
@@ -89,38 +94,28 @@ export function DoctorListWithDeferredAvailability({
     return () => {
       cancelled = true;
     };
-  }, [doctors, consultationType]);
+  }, [doctorIdsKey, consultationType]);
+
+  const loading = !enrichmentReady;
 
   if (withMap) {
     return (
-      <div className="relative">
-        {!enrichmentReady && doctors.length > 0 && (
-          <p className="mb-2 text-xs text-muted-foreground" aria-live="polite">
-            Loading available times…
-          </p>
-        )}
-        <DoctorResultsWithMap
-          doctors={doctors}
-          locale={locale}
-          // undefined until ready → cards omit slot column; then real map
-          availability={availability}
-          centerLocation={centerLocation}
-          matchScores={matchScores}
-          distances={distances}
-          liveAvailability={liveAvailability}
-          topEndorsements={topEndorsements}
-        />
-      </div>
+      <DoctorResultsWithMap
+        doctors={doctors}
+        locale={locale}
+        availability={availability}
+        availabilityLoading={loading}
+        centerLocation={centerLocation}
+        matchScores={matchScores}
+        distances={distances}
+        liveAvailability={liveAvailability}
+        topEndorsements={topEndorsements}
+      />
     );
   }
 
   return (
     <div className="space-y-5">
-      {!enrichmentReady && doctors.length > 0 && (
-        <p className="text-xs text-muted-foreground" aria-live="polite">
-          Loading available times…
-        </p>
-      )}
       {doctors.map((doctor) => (
         <div key={doctor.id}>
           <DoctorCard
@@ -131,6 +126,7 @@ export function DoctorListWithDeferredAvailability({
                 ? undefined
                 : availability[doctor.id] || null
             }
+            availabilityLoading={loading}
             matchScore={matchScores?.[doctor.id]?.score}
             matchReasons={matchScores?.[doctor.id]?.reasons}
             distanceKm={distances?.[doctor.id]}
