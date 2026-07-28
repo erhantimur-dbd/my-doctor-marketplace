@@ -48,8 +48,12 @@ export function buildEmptyStateSuggestions(
     });
   }
 
-  // Always offer soonest multi-day when user may be stuck on time filters
-  if (!base.availableToday && base.sort !== "soonest") {
+  // Offer soonest multi-day when user has intent but not already sorted soonest
+  if (
+    !base.availableToday &&
+    base.sort !== "soonest" &&
+    (base.specialty || base.query || base.skill || base.location || base.placeLat)
+  ) {
     push("sort-soonest", "Sort by soonest appointment", {
       sort: "soonest",
       availableWithinDays: 14,

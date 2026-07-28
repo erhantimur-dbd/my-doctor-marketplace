@@ -356,12 +356,68 @@ export function buildChatTools(locale: string, context: ChatToolsContext = {}) {
           soonestNote,
         });
 
+        const matchMode =
+          "matchMode" in result
+            ? ((result as { matchMode?: string }).matchMode ?? "exact")
+            : "exact";
+        const waitlistPrompt =
+          "waitlistPrompt" in result
+            ? ((result as { waitlistPrompt?: unknown }).waitlistPrompt ?? null)
+            : null;
+        const fallbackApplied =
+          ("fallbackApplied" in result
+            ? (result as { fallbackApplied?: string | null }).fallbackApplied
+            : null) || null;
+
+        // Actionable next steps when thin/recovered/empty
+        const suggestions: {
+          type: string;
+          label: string;
+          hint: string;
+        }[] = [];
+        if (total <= 2 || matchMode !== "exact") {
+          if (consultationType === "in_person") {
+            suggestions.push({
+              type: "try_video",
+              label: "Try video consultation",
+              hint: "Many specialists offer video if in-person is scarce nearby.",
+            });
+          }
+          if (locationSlug) {
+            suggestions.push({
+              type: "remove_location",
+              label: "Search without location",
+              hint: "Broaden to all regions (or switch to video).",
+            });
+          }
+          if (specialty && specialty !== "general-practice") {
+            suggestions.push({
+              type: "try_gp",
+              label: "Try General Practice",
+              hint: "A GP can often help first or refer you.",
+            });
+          }
+          if (doctors.length === 0 || waitlistPrompt) {
+            suggestions.push({
+              type: "waitlist",
+              label: specialty
+                ? `Join the ${specialty.replace(/-/g, " ")} waitlist`
+                : "Join a waitlist",
+              hint: "Get notified when specialists open new appointment slots.",
+            });
+          }
+        }
+
         return {
           ok: true as const,
           doctors,
           total,
           searchPath,
           spokenSummary,
+          matchMode,
+          waitlistPrompt,
+          fallbackApplied,
+          suggestions,
           filters: {
             specialty,
             query,
@@ -376,9 +432,6 @@ export function buildChatTools(locale: string, context: ChatToolsContext = {}) {
             sort: filters.sort,
             providerType,
           },
-          fallbackApplied: ("fallbackApplied" in result
-            ? (result as { fallbackApplied?: string | null }).fallbackApplied
-            : null) || null,
         };
       },
     }),

@@ -10,106 +10,20 @@ import {
   isLaunchRegion,
   LAUNCH_REGION_CODES,
 } from "@/lib/constants/launch-regions";
-import {
-  getRelatedSpecialtySlugs,
-  specialtySlugToLabel,
-} from "@/lib/constants/related-specialties";
+import { specialtySlugToLabel } from "@/lib/constants/related-specialties";
 import { log } from "@/lib/utils/logger";
-
-/** UUID that never matches — forces zero exact hits into recovery. */
-const NO_MATCH_ID = "00000000-0000-0000-0000-000000000000";
-
-// Common symptom/keyword → [primary GP, specialist] mapping for free-text search.
-// GP is always included as the first port of call; specialist is shown as an option.
-const KEYWORD_SPECIALTY_MAP: Record<string, { primary: string; specialist: string }> = {
-  // General symptoms → GP first, specialist secondary
-  headache: { primary: "general-practice", specialist: "neurology" },
-  migraine: { primary: "general-practice", specialist: "neurology" },
-  dizzy: { primary: "general-practice", specialist: "neurology" },
-  seizure: { primary: "general-practice", specialist: "neurology" },
-  sick: { primary: "general-practice", specialist: "gastroenterology" },
-  nausea: { primary: "general-practice", specialist: "gastroenterology" },
-  tired: { primary: "general-practice", specialist: "endocrinology" },
-  fatigue: { primary: "general-practice", specialist: "endocrinology" },
-  fever: { primary: "general-practice", specialist: "general-practice" },
-  pain: { primary: "general-practice", specialist: "general-practice" },
-  // Skin
-  skin: { primary: "general-practice", specialist: "dermatology" },
-  rash: { primary: "general-practice", specialist: "dermatology" },
-  acne: { primary: "dermatology", specialist: "dermatology" },
-  eczema: { primary: "dermatology", specialist: "dermatology" },
-  // Heart
-  heart: { primary: "general-practice", specialist: "cardiology" },
-  chest: { primary: "general-practice", specialist: "cardiology" },
-  palpitations: { primary: "general-practice", specialist: "cardiology" },
-  // Musculoskeletal
-  bone: { primary: "general-practice", specialist: "orthopedics" },
-  joint: { primary: "general-practice", specialist: "orthopedics" },
-  knee: { primary: "general-practice", specialist: "orthopedics" },
-  back: { primary: "general-practice", specialist: "orthopedics" },
-  fracture: { primary: "general-practice", specialist: "orthopedics" },
-  // Eye
-  eye: { primary: "general-practice", specialist: "ophthalmology" },
-  vision: { primary: "general-practice", specialist: "ophthalmology" },
-  sight: { primary: "general-practice", specialist: "ophthalmology" },
-  // Ear/Nose/Throat
-  ear: { primary: "general-practice", specialist: "ent" },
-  nose: { primary: "general-practice", specialist: "ent" },
-  throat: { primary: "general-practice", specialist: "ent" },
-  hearing: { primary: "general-practice", specialist: "ent" },
-  sinus: { primary: "general-practice", specialist: "ent" },
-  // Digestive
-  stomach: { primary: "general-practice", specialist: "gastroenterology" },
-  digestive: { primary: "general-practice", specialist: "gastroenterology" },
-  gut: { primary: "general-practice", specialist: "gastroenterology" },
-  ibs: { primary: "gastroenterology", specialist: "gastroenterology" },
-  // Endocrine
-  diabetes: { primary: "general-practice", specialist: "endocrinology" },
-  thyroid: { primary: "general-practice", specialist: "endocrinology" },
-  hormone: { primary: "general-practice", specialist: "endocrinology" },
-  // Respiratory
-  lung: { primary: "general-practice", specialist: "pulmonology" },
-  breathing: { primary: "general-practice", specialist: "pulmonology" },
-  asthma: { primary: "general-practice", specialist: "pulmonology" },
-  cough: { primary: "general-practice", specialist: "pulmonology" },
-  // Oncology
-  cancer: { primary: "general-practice", specialist: "oncology" },
-  tumor: { primary: "general-practice", specialist: "oncology" },
-  lump: { primary: "general-practice", specialist: "oncology" },
-  // Pediatrics
-  child: { primary: "pediatrics", specialist: "pediatrics" },
-  baby: { primary: "pediatrics", specialist: "pediatrics" },
-  infant: { primary: "pediatrics", specialist: "pediatrics" },
-  // Dental
-  teeth: { primary: "dentistry", specialist: "dentistry" },
-  dental: { primary: "dentistry", specialist: "dentistry" },
-  tooth: { primary: "dentistry", specialist: "dentistry" },
-  // Mental health
-  anxiety: { primary: "general-practice", specialist: "psychology" },
-  depression: { primary: "general-practice", specialist: "psychology" },
-  mental: { primary: "general-practice", specialist: "psychiatry" },
-  stress: { primary: "general-practice", specialist: "psychology" },
-  // Women's health
-  pregnancy: { primary: "gynecology", specialist: "gynecology" },
-  period: { primary: "general-practice", specialist: "gynecology" },
-  fertility: { primary: "gynecology", specialist: "gynecology" },
-  // Urinary
-  urine: { primary: "general-practice", specialist: "urology" },
-  bladder: { primary: "general-practice", specialist: "urology" },
-  kidney: { primary: "general-practice", specialist: "nephrology" },
-  // Allergy
-  allergy: { primary: "general-practice", specialist: "allergy" },
-  allergic: { primary: "general-practice", specialist: "allergy" },
-  hayfever: { primary: "general-practice", specialist: "allergy" },
-  // Lifestyle
-  weight: { primary: "general-practice", specialist: "nutrition" },
-  diet: { primary: "nutrition", specialist: "nutrition" },
-  obesity: { primary: "general-practice", specialist: "nutrition" },
-  // Physio
-  physiotherapy: { primary: "physiotherapy", specialist: "physiotherapy" },
-  physio: { primary: "physiotherapy", specialist: "physiotherapy" },
-  rehab: { primary: "physiotherapy", specialist: "physiotherapy" },
-};
+import {
+  NO_MATCH_ID,
+  KEYWORD_SPECIALTY_MAP,
+  rankDoctorsByInventory,
+  buildEarliestMsFn,
+  isUserExplicitSort,
+  shouldRunRecovery,
+  fullyBookedBanner,
+  platformEmptyBanner,
+  relatedSpecialtiesForRecovery,
+  widenRadiusSteps,
+} from "@/lib/search";
 
 export interface SearchFilters {
   specialty?: string;
@@ -1136,22 +1050,21 @@ export async function searchDoctors(filters: SearchFilters) {
     };
   }
 
-  const shouldRunFallback =
-    (!data || data.length === 0) &&
-    !!(
-      filters.query ||
-      filters.specialty ||
-      filters.skill ||
-      filters.availableToday ||
-      filters.liveNow ||
-      filters.liveInPersonNearby ||
-      filters.placeLat ||
-      filters.location ||
-      textFilterApplied ||
-      matchedSpecialtySlug ||
-      softFailures.length > 0 ||
-      filters.sort === "soonest"
-    );
+  const shouldRunFallback = shouldRunRecovery({
+    dataEmpty: !data || data.length === 0,
+    specialty: filters.specialty,
+    query: filters.query,
+    skill: filters.skill,
+    availableToday: filters.availableToday,
+    liveNow: filters.liveNow,
+    liveInPersonNearby: filters.liveInPersonNearby,
+    placeLat: filters.placeLat,
+    location: filters.location,
+    textFilterApplied,
+    matchedSpecialtySlug,
+    softFailures,
+    sort: filters.sort,
+  });
 
   if (shouldRunFallback) {
     const hasGeo = !!(filters.placeLat || filters.location);
@@ -1183,10 +1096,7 @@ export async function searchDoctors(filters: SearchFilters) {
         (!fallbackData || fallbackData.length === 0)
       ) {
         const baseRadius = filters.radius || 25;
-        for (const wideRadius of [
-          Math.max(baseRadius * 2, 50),
-          Math.max(baseRadius * 4, 100),
-        ]) {
+        for (const wideRadius of widenRadiusSteps(baseRadius)) {
           const { data: ordered } = await supabase.rpc(
             "sort_doctors_by_distance",
             { p_lat: filters.placeLat, p_lng: filters.placeLng }
@@ -1264,9 +1174,7 @@ export async function searchDoctors(filters: SearchFilters) {
       if (!fallbackData || fallbackData.length === 0) {
         // Prefer true related specialties; keep GP out of specialist empty-states
         // so acne ≠ dentist/GP dump. Expansion chips still offer GP separately.
-        const related = getRelatedSpecialtySlugs(primarySpecialty).filter(
-          (s) => s !== "general-practice"
-        );
+        const related = relatedSpecialtiesForRecovery(primarySpecialty);
         if (related.length > 0) {
           const locIds = fbCountry
             ? await locationIdsForCountry(fbCountry)
@@ -1296,9 +1204,10 @@ export async function searchDoctors(filters: SearchFilters) {
       // Step 5: still empty — platform empty for this specialty (waitlist UI)
       if (!fallbackData || fallbackData.length === 0) {
         matchMode = "platform_empty";
-        fallbackApplied =
-          timeExpandedBanner ||
-          `No bookable ${specialtyLabel} specialists match right now. Join the waitlist and we'll notify you when openings appear.`;
+        fallbackApplied = platformEmptyBanner(
+          primarySpecialty,
+          timeExpandedBanner
+        );
       } else if (timeExpandedBanner && !fallbackApplied) {
         fallbackApplied = timeExpandedBanner;
         matchMode = matchMode === "exact" ? "time_expanded" : matchMode;
@@ -1429,12 +1338,8 @@ export async function searchDoctors(filters: SearchFilters) {
   // When proximity search is active, sort by distance (nearest first) by default
   // — unless we will re-rank by inventory (marketplace default).
   let finalDoctors = (resultData || []) as Record<string, unknown>[];
-  const userExplicitSort = ["price_asc", "price_desc", "rating", "nearest", "best_match"].includes(
-    filters.sort || ""
-  );
-  // Inventory-first for featured/soonest/default (not price/rating/nearest)
   const shouldInventoryRank =
-    !userExplicitSort && finalDoctors.length > 0;
+    !isUserExplicitSort(filters.sort) && finalDoctors.length > 0;
 
   if (
     proximityDistances &&
@@ -1449,9 +1354,8 @@ export async function searchDoctors(filters: SearchFilters) {
     );
   }
 
-  // ── Inventory-first ranking (marketplace Phase B) ──────────────
-  // has_slot DESC → next_slot ASC → distance ASC → rating DESC → featured DESC
-  // Fully booked same-specialty doctors stay in the list (bottom) for waitlist.
+  // ── Inventory-first ranking (marketplace Phase B/C) ─────────────
+  // Pure rank helper + batch availability. Fully booked stay at bottom.
   let doctorIdsFullyBooked: string[] = [];
   if (shouldInventoryRank) {
     const ids = finalDoctors.map((d) => d.id as string);
@@ -1470,51 +1374,26 @@ export async function searchDoctors(filters: SearchFilters) {
         : getNextAvailabilityBatch(ids, "video", withinDays),
     ]);
 
-    const earliestMs = (id: string): number => {
-      const a = availPrimary[id]?.slots?.[0]?.start;
-      const b = availVideo[id]?.slots?.[0]?.start;
-      const ta = a ? new Date(a).getTime() : Infinity;
-      const tb = b ? new Date(b).getTime() : Infinity;
-      return Math.min(ta, tb);
-    };
-    const hasSlot = (id: string) => earliestMs(id) < Infinity;
+    const earliestMs = buildEarliestMsFn(availPrimary, availVideo);
+    const ranked = rankDoctorsByInventory(
+      finalDoctors.map((d) => ({
+        ...d,
+        id: d.id as string,
+        avg_rating: d.avg_rating as number | null,
+        is_featured: d.is_featured as boolean | null,
+      })),
+      earliestMs,
+      proximityDistances
+    );
+    finalDoctors = ranked.ranked;
+    doctorIdsFullyBooked = ranked.doctorIdsFullyBooked;
 
-    doctorIdsFullyBooked = ids.filter((id) => !hasSlot(id));
-
-    finalDoctors = [...finalDoctors].sort((a, b) => {
-      const idA = a.id as string;
-      const idB = b.id as string;
-      const slotA = hasSlot(idA) ? 1 : 0;
-      const slotB = hasSlot(idB) ? 1 : 0;
-      if (slotB !== slotA) return slotB - slotA;
-
-      const tA = earliestMs(idA);
-      const tB = earliestMs(idB);
-      if (tA !== tB) return tA - tB;
-
-      if (proximityDistances && proximityDistances.size > 0) {
-        const dA = proximityDistances.get(idA) ?? Infinity;
-        const dB = proximityDistances.get(idB) ?? Infinity;
-        if (dA !== dB) return dA - dB;
-      }
-
-      const ratingA = Number(a.avg_rating) || 0;
-      const ratingB = Number(b.avg_rating) || 0;
-      if (ratingB !== ratingA) return ratingB - ratingA;
-
-      const featA = a.is_featured ? 1 : 0;
-      const featB = b.is_featured ? 1 : 0;
-      return featB - featA;
-    });
-
-    // If every returned doctor is fully booked, surface a clear banner
     if (
       doctorIdsFullyBooked.length === finalDoctors.length &&
       finalDoctors.length > 0 &&
       !fallbackApplied
     ) {
-      const label = specialtyLabel || "these";
-      fallbackApplied = `No open slots for ${label} specialists in the next ${withinDays} days. Join a waitlist below — we'll notify you when appointments open.`;
+      fallbackApplied = fullyBookedBanner(specialtyLabel, withinDays);
       matchMode = matchMode === "exact" ? "time_expanded" : matchMode;
     }
   }
