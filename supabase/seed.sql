@@ -342,6 +342,9 @@ ON CONFLICT DO NOTHING;
 
 -- ============================================================================
 -- 7b. DOCTOR SUBSCRIPTIONS (demo: all doctors on Professional plan)
+-- Search only lists doctors with an active org license (get_licensed_doctor_ids).
+-- After migration 00048, licenses are derived from doctor_subscriptions — so EVERY
+-- seed doctor must have a subscription or they never appear in search (even if featured).
 -- ============================================================================
 INSERT INTO public.doctor_subscriptions (doctor_id, stripe_subscription_id, stripe_customer_id, plan_id, status, current_period_start, current_period_end) VALUES
   ('e0000000-0000-0000-0000-000000000001', 'sub_seed_001', 'cus_seed_001', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
@@ -349,7 +352,14 @@ INSERT INTO public.doctor_subscriptions (doctor_id, stripe_subscription_id, stri
   ('e0000000-0000-0000-0000-000000000003', 'sub_seed_003', 'cus_seed_003', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
   ('e0000000-0000-0000-0000-000000000004', 'sub_seed_004', 'cus_seed_004', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
   ('e0000000-0000-0000-0000-000000000005', 'sub_seed_005', 'cus_seed_005', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
-  ('e0000000-0000-0000-0000-000000000006', 'sub_seed_006', 'cus_seed_006', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days')
+  ('e0000000-0000-0000-0000-000000000006', 'sub_seed_006', 'cus_seed_006', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  -- UK batch (must be licensed or search hides them — including featured Dr. Hughes)
+  ('e0000000-0000-0000-0000-000000000007', 'sub_seed_007', 'cus_seed_007', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-000000000008', 'sub_seed_008', 'cus_seed_008', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-000000000009', 'sub_seed_009', 'cus_seed_009', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-00000000000a', 'sub_seed_00a', 'cus_seed_00a', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-00000000000b', 'sub_seed_00b', 'cus_seed_00b', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days'),
+  ('e0000000-0000-0000-0000-00000000000c', 'sub_seed_00c', 'cus_seed_00c', 'professional', 'active', NOW() - INTERVAL '15 days', NOW() + INTERVAL '15 days')
 ON CONFLICT DO NOTHING;
 
 -- ============================================================================
@@ -916,6 +926,76 @@ UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/men
 UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/women/17.jpg' WHERE id = 'c0000000-0000-0000-0000-000000000003';  -- Emma Wilson
 
 -- ============================================================================
+-- ORG + LICENSE BACKFILL FOR SEED DOCTORS
+-- Search uses get_licensed_doctor_ids() (licenses only — no legacy subscriptions).
+-- Migration 00048 only ran once; re-seed and UK doctors need licenses here.
+-- ============================================================================
+
+-- Create org for any seed doctor missing one
+INSERT INTO public.organizations (id, name, slug, base_currency, email, created_at)
+SELECT
+  gen_random_uuid(),
+  COALESCE(d.clinic_name, 'Dr. ' || p.first_name || ' ' || p.last_name || ' Practice'),
+  d.slug || '-org',
+  d.base_currency,
+  p.email,
+  d.created_at
+FROM public.doctors d
+JOIN public.profiles p ON p.id = d.profile_id
+WHERE d.id::TEXT LIKE 'e0000000-0000-0000-0000-%'
+  AND d.organization_id IS NULL
+  AND NOT EXISTS (SELECT 1 FROM public.organizations o WHERE o.slug = d.slug || '-org');
+
+UPDATE public.doctors d
+SET organization_id = o.id
+FROM public.organizations o
+WHERE o.slug = d.slug || '-org'
+  AND d.organization_id IS NULL
+  AND d.id::TEXT LIKE 'e0000000-0000-0000-0000-%';
+
+-- Owner memberships
+INSERT INTO public.organization_members (organization_id, user_id, role, status, accepted_at, created_at)
+SELECT d.organization_id, d.profile_id, 'owner', 'active', NOW(), d.created_at
+FROM public.doctors d
+WHERE d.id::TEXT LIKE 'e0000000-0000-0000-0000-%'
+  AND d.organization_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM public.organization_members m
+    WHERE m.organization_id = d.organization_id AND m.user_id = d.profile_id
+  );
+
+-- Active starter licenses for seed orgs that have none in a searchable status
+INSERT INTO public.licenses (
+  organization_id, tier, status, max_seats, used_seats,
+  stripe_subscription_id, current_period_start, current_period_end, created_at
+)
+SELECT
+  d.organization_id,
+  'starter',
+  'active',
+  1,
+  1,
+  'sub_seed_license_' || d.slug,
+  NOW() - INTERVAL '15 days',
+  NOW() + INTERVAL '1 year',
+  NOW()
+FROM public.doctors d
+WHERE d.id::TEXT LIKE 'e0000000-0000-0000-0000-%'
+  AND d.organization_id IS NOT NULL
+  AND NOT EXISTS (
+    SELECT 1 FROM public.licenses l
+    WHERE l.organization_id = d.organization_id
+      AND l.status IN ('active', 'trialing', 'past_due')
+  );
+
+-- Featured boost needs a window so expiry logic is testable
+UPDATE public.doctors
+SET featured_until = NOW() + INTERVAL '30 days'
+WHERE is_featured = TRUE
+  AND featured_until IS NULL
+  AND id::TEXT LIKE 'e0000000-0000-0000-0000-%';
+
+-- ============================================================================
 -- SUMMARY:
 -- 27 locations | 24 specialties | 5 platform settings
 -- 3 patients:  sarah.johnson@example.com, michael.chen@example.com, emma.wilson@example.com
@@ -925,4 +1005,5 @@ UPDATE public.profiles SET avatar_url = 'https://randomuser.me/api/portraits/wom
 -- 11 bookings (8 completed, 3 upcoming) | 8 reviews | 6 favorites
 -- Full 7-day availability for all UK doctors (in_person + video) for testing
 -- UK doctors: London(2), Manchester(1), Birmingham(1), Edinburgh(1), Leeds(1), Bristol(1)
+-- All seed doctors get active org licenses so they appear in search (incl. featured)
 -- ============================================================================

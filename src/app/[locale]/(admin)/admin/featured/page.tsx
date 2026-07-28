@@ -56,6 +56,13 @@ export default async function AdminFeaturedPage() {
         <h1 className="text-2xl font-bold">Featured Listings</h1>
       </div>
 
+      <p className="text-sm text-muted-foreground max-w-2xl">
+        Featured is a paid package visibility boost. Featured doctors pin to the
+        top of search results (then ranked by nearest, rating, or the active
+        sort). Boosts expire automatically after the end date. Only doctors on
+        Starter or higher can be featured.
+      </p>
+
       <Card>
         <CardHeader>
           <CardTitle>Currently Featured ({featured?.length || 0})</CardTitle>
@@ -68,12 +75,24 @@ export default async function AdminFeaturedPage() {
                 <TableHead>Rating</TableHead>
                 <TableHead>Bookings</TableHead>
                 <TableHead>Featured Until</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {featured?.map(
-                (doc: any) => (
+                (doc: any) => {
+                  const until = doc.featured_until
+                    ? new Date(doc.featured_until)
+                    : null;
+                  const isExpired = until ? until.getTime() < Date.now() : false;
+                  const daysLeft =
+                    until && !isExpired
+                      ? Math.ceil(
+                          (until.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                        )
+                      : null;
+                  return (
                   <TableRow key={doc.id}>
                     <TableCell className="font-medium">
                       {doc.profile.first_name} {doc.profile.last_name}
@@ -84,9 +103,23 @@ export default async function AdminFeaturedPage() {
                     </TableCell>
                     <TableCell>{doc.total_bookings}</TableCell>
                     <TableCell>
-                      {doc.featured_until
-                        ? new Date(doc.featured_until).toLocaleDateString()
+                      {until
+                        ? until.toLocaleDateString()
                         : "Indefinite"}
+                      {daysLeft != null && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          ({daysLeft}d left)
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isExpired ? (
+                        <Badge variant="destructive">Expired</Badge>
+                      ) : (
+                        <Badge className="bg-amber-500/15 text-amber-700 hover:bg-amber-500/15">
+                          Active boost
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Link href={`/admin/doctors/${doc.id}`}>
@@ -96,12 +129,13 @@ export default async function AdminFeaturedPage() {
                       </Link>
                     </TableCell>
                   </TableRow>
-                )
+                  );
+                }
               )}
               {(!featured || featured.length === 0) && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={6}
                     className="py-8 text-center text-muted-foreground"
                   >
                     No featured doctors

@@ -42,7 +42,8 @@ const BENEFITS = [
   {
     icon: TrendingUp,
     title: "Grow your practice",
-    description: "Harness trust to drive visibility, enquiries and sustainable growth.",
+    description:
+      "Harness trust to drive visibility, enquiries and sustainable growth. Paid plans include a Featured profile boost that pins you to the top of matching search results.",
   },
   {
     icon: Target,

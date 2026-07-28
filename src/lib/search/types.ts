@@ -58,5 +58,7 @@ export type InventoryRankDoctor = {
   id: string;
   avg_rating?: number | null;
   is_featured?: boolean | null;
+  /** ISO timestamp; null/undefined = no expiry while is_featured is true */
+  featured_until?: string | null;
   [key: string]: unknown;
 };

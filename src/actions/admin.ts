@@ -327,6 +327,24 @@ export async function toggleDoctorFeatured(
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };
 
+  // Featured is a paid package visibility boost — free-tier doctors cannot be featured
+  if (isFeatured) {
+    const { getDoctorLicense } = await import("@/lib/license/check");
+    const license = await getDoctorLicense(supabase, doctorId);
+    const paidTiers = new Set([
+      "starter",
+      "professional",
+      "clinic",
+      "enterprise",
+    ]);
+    if (!license || !paidTiers.has(license.tier)) {
+      return {
+        error:
+          "Featured profile boost is included with paid packages (Starter and above). Upgrade this doctor’s licence first.",
+      };
+    }
+  }
+
   const updateData: Record<string, unknown> = {
     is_featured: isFeatured,
   };
@@ -348,6 +366,7 @@ export async function toggleDoctorFeatured(
   await logAdminAction(supabase, user.id, isFeatured ? "doctor_featured" : "doctor_unfeatured", "doctor", doctorId);
 
   revalidatePath("/admin/doctors");
+  revalidatePath("/admin/featured");
   return { success: true };
 }
 

@@ -123,12 +123,12 @@ export function DoctorResultsWithMap({
     <div
       className={
         hasMapData
-          ? "grid grid-cols-1 lg:grid-cols-[3fr_2fr] xl:grid-cols-[13fr_7fr] gap-6"
-          : ""
+          ? "grid w-full min-w-0 grid-cols-1 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-cols-[minmax(0,13fr)_minmax(0,7fr)] gap-6"
+          : "w-full min-w-0"
       }
     >
       {/* Doctor list — full width on mobile; left column on desktop */}
-      <div className="min-w-0 space-y-3 lg:space-y-3">
+      <div className="min-w-0 max-w-full space-y-3 overflow-x-hidden lg:space-y-3">
         {doctors.map((doctor) => (
           <div key={doctor.id}>
             <DoctorCard

@@ -11,6 +11,8 @@ import {
 import {
   rankDoctorsByInventory,
   buildEarliestMsFn,
+  pinActiveFeaturedFirst,
+  isActivelyFeatured,
 } from "@/lib/search/rank";
 import {
   recoveryStepsFor,
@@ -84,9 +86,11 @@ describe("default marketplace sort", () => {
 });
 
 describe("inventory ranking", () => {
-  it("puts bookable doctors before fully booked", () => {
+  it("pins active featured above non-featured even when featured is fully booked", () => {
+    // Paid Featured boost always pins first among filter-matching results;
+    // inventory (soonest) is secondary within each featured/organic group.
     const doctors = [
-      { id: "a", avg_rating: 5, is_featured: true },
+      { id: "a", avg_rating: 5, is_featured: true, featured_until: null },
       { id: "b", avg_rating: 3, is_featured: false },
       { id: "c", avg_rating: 4, is_featured: false },
     ];
@@ -99,14 +103,14 @@ describe("inventory ranking", () => {
       doctors,
       earliestMs
     );
-    expect(ranked.map((d) => d.id)).toEqual(["b", "c", "a"]);
+    expect(ranked.map((d) => d.id)).toEqual(["a", "b", "c"]);
     expect(doctorIdsFullyBooked).toEqual(["a"]);
   });
 
-  it("among bookable, sorts soonest first then distance", () => {
+  it("among organic bookable, sorts soonest first then distance", () => {
     const doctors = [
-      { id: "far-soon", avg_rating: 5 },
-      { id: "near-later", avg_rating: 5 },
+      { id: "far-soon", avg_rating: 5, is_featured: false },
+      { id: "near-later", avg_rating: 5, is_featured: false },
     ];
     const earliestMs = (id: string) =>
       id === "far-soon"
@@ -116,13 +120,69 @@ describe("inventory ranking", () => {
       ["far-soon", 80],
       ["near-later", 5],
     ]);
-    // soonest wins over distance
+    // soonest wins over distance within same featured tier
     const { ranked } = rankDoctorsByInventory(
       doctors,
       earliestMs,
       distances
     );
     expect(ranked[0].id).toBe("far-soon");
+  });
+
+  it("pins featured later-slot above non-featured sooner-slot (GP soonest default)", () => {
+    const doctors = [
+      {
+        id: "james",
+        avg_rating: 4,
+        is_featured: false,
+        featured_until: null,
+      },
+      {
+        id: "william",
+        avg_rating: 4.3,
+        is_featured: true,
+        featured_until: "2026-08-28T00:00:00.000Z",
+      },
+    ];
+    const earliestMs = (id: string) =>
+      id === "james"
+        ? Date.parse("2026-07-29T08:00:00Z")
+        : Date.parse("2026-07-30T10:00:00Z");
+    const { ranked } = rankDoctorsByInventory(
+      doctors,
+      earliestMs,
+      undefined,
+      new Date("2026-07-28T12:00:00.000Z")
+    );
+    expect(ranked.map((d) => d.id)).toEqual(["william", "james"]);
+  });
+
+  it("treats expired featured as organic", () => {
+    const doctors = [
+      {
+        id: "expired",
+        avg_rating: 5,
+        is_featured: true,
+        featured_until: "2026-01-01T00:00:00.000Z",
+      },
+      {
+        id: "organic",
+        avg_rating: 3,
+        is_featured: false,
+        featured_until: null,
+      },
+    ];
+    const earliestMs = (id: string) =>
+      id === "organic"
+        ? Date.parse("2026-07-29T08:00:00Z")
+        : Date.parse("2026-08-01T08:00:00Z");
+    const { ranked } = rankDoctorsByInventory(
+      doctors,
+      earliestMs,
+      undefined,
+      new Date("2026-07-28T12:00:00.000Z")
+    );
+    expect(ranked.map((d) => d.id)).toEqual(["organic", "expired"]);
   });
 
   it("buildEarliestMsFn picks min of in-person and video", () => {
@@ -136,6 +196,33 @@ describe("inventory ranking", () => {
     );
     expect(fn("d1")).toBe(Date.parse("2026-08-05T12:00:00Z"));
     expect(fn("missing")).toBe(Infinity);
+  });
+
+  it("pinActiveFeaturedFirst stable-partitions featured ahead of organic", () => {
+    const now = new Date("2026-07-28T12:00:00.000Z");
+    const doctors = [
+      { id: "j", is_featured: false, featured_until: null },
+      {
+        id: "w",
+        is_featured: true,
+        featured_until: "2026-08-27T21:02:43.64555+00",
+      },
+      {
+        id: "expired",
+        is_featured: true,
+        featured_until: "2026-04-14T16:00:00Z",
+      },
+    ];
+    const pinned = pinActiveFeaturedFirst(doctors, now);
+    expect(pinned.map((d) => d.id)).toEqual(["w", "j", "expired"]);
+    expect(pinned[0].is_featured).toBe(true);
+    expect(pinned[2].is_featured).toBe(false); // expired cleared
+    expect(
+      isActivelyFeatured(
+        { is_featured: true, featured_until: "2026-08-27 21:02:43.64555+00" },
+        now
+      )
+    ).toBe(true);
   });
 });
 

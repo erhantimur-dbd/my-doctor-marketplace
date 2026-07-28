@@ -17,13 +17,55 @@ import {
   KEYWORD_SPECIALTY_MAP,
   rankDoctorsByInventory,
   buildEarliestMsFn,
+  pinActiveFeaturedFirst,
+  normalizeFeaturedFlag,
   isUserExplicitSort,
   shouldRunRecovery,
   fullyBookedBanner,
   platformEmptyBanner,
   relatedSpecialtiesForRecovery,
   widenRadiusSteps,
+  type InventoryRankDoctor,
 } from "@/lib/search";
+
+/** Build match % map when scoring context is present; does not re-order doctors. */
+function buildMatchScoresMap(
+  doctors: Record<string, unknown>[],
+  filters: SearchFilters
+): Record<string, { score: number; reasons: string[] }> | undefined {
+  if (!doctors.length) return undefined;
+  const context: MatchContext = {
+    preferredSpecialty: filters.specialty,
+    preferredLanguage: filters.language,
+    maxBudget: filters.maxPrice ? filters.maxPrice * 100 : undefined,
+    consultationType: filters.consultationType,
+  };
+  if (
+    !context.preferredSpecialty &&
+    !context.preferredLanguage &&
+    !context.maxBudget
+  ) {
+    return undefined;
+  }
+  const doctorInputs: DoctorMatchInput[] = doctors.map((d) => ({
+    id: d.id as string,
+    avg_rating: d.avg_rating as number | null,
+    total_reviews: d.total_reviews as number,
+    languages: (d.languages || []) as string[],
+    consultation_types: (d.consultation_types || []) as string[],
+    consultation_fee_cents: d.consultation_fee_cents as number,
+    video_consultation_fee_cents: d.video_consultation_fee_cents as number | null,
+    ai_sentiment_tags: (d.ai_sentiment_tags || []) as string[],
+    specialties: (d.specialties || []) as DoctorMatchInput["specialties"],
+  }));
+  const scored = scoreDoctors(doctorInputs, context);
+  if (scored.length === 0) return undefined;
+  const matchScores: Record<string, { score: number; reasons: string[] }> = {};
+  for (const s of scored) {
+    matchScores[s.doctorId] = { score: s.matchScore, reasons: s.matchReasons };
+  }
+  return matchScores;
+}
 
 export interface SearchFilters {
   specialty?: string;
@@ -683,9 +725,35 @@ export async function searchDoctors(filters: SearchFilters) {
             return Math.min(ta, tb);
           };
 
-          const orderedIds = [...allIds].sort(
-            (a, b) => earliestMs(a) - earliestMs(b)
+          // Paid Featured boost pins above organic; within each group sort soonest.
+          const { data: flagRows } = await supabase
+            .from("doctors")
+            .select("id, is_featured, featured_until, avg_rating")
+            .in("id", allIds);
+          const flagById = new Map(
+            (flagRows || []).map(
+              (r: {
+                id: string;
+                is_featured: boolean | null;
+                featured_until: string | null;
+                avg_rating: number | null;
+              }) => [r.id, r]
+            )
           );
+          const { ranked: rankedFlagDocs } = rankDoctorsByInventory(
+            allIds.map((id) => {
+              const f = flagById.get(id);
+              return {
+                id,
+                is_featured: f?.is_featured ?? false,
+                featured_until: f?.featured_until ?? null,
+                avg_rating: f?.avg_rating ?? 0,
+              };
+            }),
+            earliestMs,
+            proximityDistances
+          );
+          const orderedIds = rankedFlagDocs.map((d) => d.id);
           const total = orderedIds.length;
           const pageIds = orderedIds.slice(
             (page - 1) * perPage,
@@ -718,11 +786,13 @@ export async function searchDoctors(filters: SearchFilters) {
               softFailures.push("soonest_page_error");
             } else {
               const idIndexMap = new Map(pageIds.map((id, i) => [id, i]));
-              const sorted = (pageData || []).sort(
-                (a: Record<string, unknown>, b: Record<string, unknown>) =>
-                  (idIndexMap.get(a.id as string) ?? Infinity) -
-                  (idIndexMap.get(b.id as string) ?? Infinity)
-              );
+              const sorted = pinActiveFeaturedFirst(
+                ((pageData || []) as Record<string, unknown>[]).sort(
+                  (a, b) =>
+                    (idIndexMap.get(a.id as string) ?? Infinity) -
+                    (idIndexMap.get(b.id as string) ?? Infinity)
+                ) as InventoryRankDoctor[]
+              ) as Record<string, unknown>[];
 
               soonestHandled = true;
               // Track fully booked (no slot in window) for waitlist prompt
@@ -736,7 +806,7 @@ export async function searchDoctors(filters: SearchFilters) {
                 total,
                 page,
                 perPage,
-                matchScores: undefined,
+                matchScores: buildMatchScoresMap(sorted, filters),
                 distances: undefined,
                 outsideLaunchRegion,
                 searchCountryCode,
@@ -1011,11 +1081,33 @@ export async function searchDoctors(filters: SearchFilters) {
         const tb = b ? new Date(b).getTime() : Infinity;
         return Math.min(ta, tb);
       };
-      const withSlots = ids.filter((id) => earliestMs(id) < Infinity);
-      const ordered = [
-        ...withSlots.sort((a, b) => earliestMs(a) - earliestMs(b)),
-        ...ids.filter((id) => !withSlots.includes(id)),
-      ];
+      const { data: flagRows } = await supabase
+        .from("doctors")
+        .select("id, is_featured, featured_until, avg_rating")
+        .in("id", ids);
+      const flagById = new Map(
+        (flagRows || []).map(
+          (r: {
+            id: string;
+            is_featured: boolean | null;
+            featured_until: string | null;
+            avg_rating: number | null;
+          }) => [r.id, r]
+        )
+      );
+      const { ranked: rankedDocs } = rankDoctorsByInventory(
+        ids.map((id) => {
+          const f = flagById.get(id);
+          return {
+            id,
+            is_featured: f?.is_featured ?? false,
+            featured_until: f?.featured_until ?? null,
+            avg_rating: f?.avg_rating ?? 0,
+          };
+        }),
+        earliestMs
+      );
+      const ordered = rankedDocs.map((d) => d.id);
       const pageIds = ordered.slice(0, perPage);
       if (pageIds.length === 0) return { rows: [], count: 0 };
 
@@ -1027,10 +1119,12 @@ export async function searchDoctors(filters: SearchFilters) {
         .eq("is_active", true);
 
       const idx = new Map(pageIds.map((id, i) => [id, i]));
-      const sorted = (pageData || []).sort(
-        (a: Record<string, unknown>, b: Record<string, unknown>) =>
-          (idx.get(a.id as string) ?? Infinity) -
-          (idx.get(b.id as string) ?? Infinity)
+      const sorted = pinActiveFeaturedFirst(
+        ((pageData || []) as Record<string, unknown>[]).sort(
+          (a, b) =>
+            (idx.get(a.id as string) ?? Infinity) -
+            (idx.get(b.id as string) ?? Infinity)
+        ) as InventoryRankDoctor[]
       );
       return {
         rows: sorted as Record<string, unknown>[],
@@ -1300,12 +1394,17 @@ export async function searchDoctors(filters: SearchFilters) {
     const scored = scoreDoctors(doctorInputs, context);
     const scoreMap = new Map(scored.map((s) => [s.doctorId, s]));
 
-    // Sort doctors by match score
-    const sorted = [...resultData].sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-      const scoreA = scoreMap.get(a.id as string)?.matchScore ?? 0;
-      const scoreB = scoreMap.get(b.id as string)?.matchScore ?? 0;
-      return scoreB - scoreA;
-    });
+    // Sort by match score, then pin paid Featured boosts to the top
+    const sortedByScore = [...resultData].sort(
+      (a: Record<string, unknown>, b: Record<string, unknown>) => {
+        const scoreA = scoreMap.get(a.id as string)?.matchScore ?? 0;
+        const scoreB = scoreMap.get(b.id as string)?.matchScore ?? 0;
+        return scoreB - scoreA;
+      }
+    );
+    const sorted = pinActiveFeaturedFirst(
+      sortedByScore as InventoryRankDoctor[]
+    ) as Record<string, unknown>[];
 
     // Build match score map for the client
     const matchScores: Record<string, { score: number; reasons: string[] }> = {};
@@ -1385,11 +1484,14 @@ export async function searchDoctors(filters: SearchFilters) {
         id: d.id as string,
         avg_rating: d.avg_rating as number | null,
         is_featured: d.is_featured as boolean | null,
+        featured_until: d.featured_until as string | null,
       })),
       earliestMs,
       proximityDistances
     );
-    finalDoctors = ranked.ranked;
+    finalDoctors = pinActiveFeaturedFirst(
+      ranked.ranked as InventoryRankDoctor[]
+    ) as Record<string, unknown>[];
     doctorIdsFullyBooked = ranked.doctorIdsFullyBooked;
 
     if (
@@ -1439,12 +1541,16 @@ export async function searchDoctors(filters: SearchFilters) {
         }
       : null;
 
+  finalDoctors = pinActiveFeaturedFirst(
+    finalDoctors as InventoryRankDoctor[]
+  ) as Record<string, unknown>[];
+
   return {
     doctors: finalDoctors,
     total: resultCount || 0,
     page,
     perPage,
-    matchScores: undefined,
+    matchScores: buildMatchScoresMap(finalDoctors, filters),
     distances,
     outsideLaunchRegion,
     searchCountryCode,

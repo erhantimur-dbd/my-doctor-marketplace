@@ -655,6 +655,16 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                 )}
               </div>
             </div>
+
+          {/* Match % — bottom-left of full tile */}
+          {matchScore != null && matchScore > 0 && (
+            <Badge
+              className="absolute bottom-4 left-5 z-10 bg-primary/10 text-primary hover:bg-primary/10 text-xs font-medium shadow-sm pointer-events-none"
+              aria-label={`${matchScore} percent match`}
+            >
+              {matchScore}% Match
+            </Badge>
+          )}
           </div>
 
         {/* Full Availability Calendar Modal */}
