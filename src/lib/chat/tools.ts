@@ -196,7 +196,9 @@ export function buildChatTools(locale: string, context: ChatToolsContext = {}) {
           maxPrice: maxPrice ?? undefined,
           minRating: minRating ?? undefined,
           availableToday: availableToday === true ? true : undefined,
-          sort: sort || (availableToday ? "soonest" : "featured"),
+          sort:
+            sort ||
+            (availableToday || specialty || skill ? "soonest" : "featured"),
           providerType: providerType || undefined,
           page: 1,
         };

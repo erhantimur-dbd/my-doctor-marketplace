@@ -263,7 +263,7 @@ export function DoctorSearchFilters({
         handleSortChange(value || "featured");
         return;
       }
-      // Conversion: "Available today" implies soonest-first ranking
+      // Conversion: time filters + specialty intent imply soonest-first ranking
       if (key === "availableToday" && value === "true") {
         const params = new URLSearchParams();
         Object.entries(currentFilters).forEach(([k, v]) => {
@@ -273,6 +273,21 @@ export function DoctorSearchFilters({
         if (!currentFilters.sort || currentFilters.sort === "featured") {
           params.set("sort", "soonest");
         }
+        params.delete("page");
+        router.push(`${pathname}?${params.toString()}`);
+        return;
+      }
+      if (
+        (key === "specialty" || key === "skill") &&
+        value &&
+        (!currentFilters.sort || currentFilters.sort === "featured")
+      ) {
+        const params = new URLSearchParams();
+        Object.entries(currentFilters).forEach(([k, v]) => {
+          if (v && k !== "page") params.set(k, v);
+        });
+        params.set(key, value);
+        params.set("sort", "soonest");
         params.delete("page");
         router.push(`${pathname}?${params.toString()}`);
         return;

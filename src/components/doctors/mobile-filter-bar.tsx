@@ -167,7 +167,15 @@ export function MobileFilterBar({
 
       {/* Sort dropdown — labelled for discoverability */}
       <Select
-        value={currentFilters.sort || "featured"}
+        value={
+          currentFilters.sort ||
+          (currentFilters.specialty ||
+          currentFilters.skill ||
+          currentFilters.query ||
+          currentFilters.availableToday
+            ? "soonest"
+            : "featured")
+        }
         onValueChange={(v) => updateFilter("sort", v)}
       >
         <SelectTrigger

@@ -811,6 +811,12 @@ export async function searchDoctors(filters: SearchFilters) {
               );
 
               soonestHandled = true;
+              // Track fully booked (no slot in window) for waitlist prompt
+              const fullyBooked = orderedIds.filter(
+                (id) => earliestMs(id) === Infinity
+              );
+              const primarySpecForWaitlist =
+                filters.specialty || matchedSpecialtySlug || null;
               return {
                 doctors: sorted,
                 total,
@@ -825,7 +831,15 @@ export async function searchDoctors(filters: SearchFilters) {
                 matchMode: timeExpandedBanner
                   ? ("time_expanded" as const)
                   : ("exact" as const),
-                waitlistPrompt: null,
+                waitlistPrompt:
+                  primarySpecForWaitlist && fullyBooked.length > 0
+                    ? {
+                        specialtySlug: primarySpecForWaitlist,
+                        doctorIdsFullyBooked: fullyBooked.slice(0, 12),
+                      }
+                    : primarySpecForWaitlist && sorted.length === 0
+                      ? { specialtySlug: primarySpecForWaitlist }
+                      : null,
               };
             }
           }
@@ -1413,13 +1427,96 @@ export async function searchDoctors(filters: SearchFilters) {
   }
 
   // When proximity search is active, sort by distance (nearest first) by default
-  let finalDoctors = resultData || [];
-  if (proximityDistances && proximityDistances.size > 0 && filters.sort !== "rating" && filters.sort !== "price_asc" && filters.sort !== "price_desc" && filters.sort !== "soonest") {
+  // — unless we will re-rank by inventory (marketplace default).
+  let finalDoctors = (resultData || []) as Record<string, unknown>[];
+  const userExplicitSort = ["price_asc", "price_desc", "rating", "nearest", "best_match"].includes(
+    filters.sort || ""
+  );
+  // Inventory-first for featured/soonest/default (not price/rating/nearest)
+  const shouldInventoryRank =
+    !userExplicitSort && finalDoctors.length > 0;
+
+  if (
+    proximityDistances &&
+    proximityDistances.size > 0 &&
+    !shouldInventoryRank &&
+    filters.sort !== "soonest"
+  ) {
     finalDoctors = [...finalDoctors].sort(
-      (a: Record<string, unknown>, b: Record<string, unknown>) =>
+      (a, b) =>
         (proximityDistances!.get(a.id as string) ?? Infinity) -
         (proximityDistances!.get(b.id as string) ?? Infinity)
     );
+  }
+
+  // ── Inventory-first ranking (marketplace Phase B) ──────────────
+  // has_slot DESC → next_slot ASC → distance ASC → rating DESC → featured DESC
+  // Fully booked same-specialty doctors stay in the list (bottom) for waitlist.
+  let doctorIdsFullyBooked: string[] = [];
+  if (shouldInventoryRank) {
+    const ids = finalDoctors.map((d) => d.id as string);
+    const ctype =
+      filters.consultationType === "video" ||
+      filters.consultationType === "in_person"
+        ? filters.consultationType
+        : "in_person";
+    const withinDays = Math.max(filters.availableWithinDays ?? 14, 14);
+    const [availPrimary, availVideo] = await Promise.all([
+      getNextAvailabilityBatch(ids, ctype, withinDays),
+      filters.consultationType
+        ? Promise.resolve(
+            {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>
+          )
+        : getNextAvailabilityBatch(ids, "video", withinDays),
+    ]);
+
+    const earliestMs = (id: string): number => {
+      const a = availPrimary[id]?.slots?.[0]?.start;
+      const b = availVideo[id]?.slots?.[0]?.start;
+      const ta = a ? new Date(a).getTime() : Infinity;
+      const tb = b ? new Date(b).getTime() : Infinity;
+      return Math.min(ta, tb);
+    };
+    const hasSlot = (id: string) => earliestMs(id) < Infinity;
+
+    doctorIdsFullyBooked = ids.filter((id) => !hasSlot(id));
+
+    finalDoctors = [...finalDoctors].sort((a, b) => {
+      const idA = a.id as string;
+      const idB = b.id as string;
+      const slotA = hasSlot(idA) ? 1 : 0;
+      const slotB = hasSlot(idB) ? 1 : 0;
+      if (slotB !== slotA) return slotB - slotA;
+
+      const tA = earliestMs(idA);
+      const tB = earliestMs(idB);
+      if (tA !== tB) return tA - tB;
+
+      if (proximityDistances && proximityDistances.size > 0) {
+        const dA = proximityDistances.get(idA) ?? Infinity;
+        const dB = proximityDistances.get(idB) ?? Infinity;
+        if (dA !== dB) return dA - dB;
+      }
+
+      const ratingA = Number(a.avg_rating) || 0;
+      const ratingB = Number(b.avg_rating) || 0;
+      if (ratingB !== ratingA) return ratingB - ratingA;
+
+      const featA = a.is_featured ? 1 : 0;
+      const featB = b.is_featured ? 1 : 0;
+      return featB - featA;
+    });
+
+    // If every returned doctor is fully booked, surface a clear banner
+    if (
+      doctorIdsFullyBooked.length === finalDoctors.length &&
+      finalDoctors.length > 0 &&
+      !fallbackApplied
+    ) {
+      const label = specialtyLabel || "these";
+      fallbackApplied = `No open slots for ${label} specialists in the next ${withinDays} days. Join a waitlist below — we'll notify you when appointments open.`;
+      matchMode = matchMode === "exact" ? "time_expanded" : matchMode;
+    }
   }
 
   // Build distance map for client
@@ -1427,7 +1524,7 @@ export async function searchDoctors(filters: SearchFilters) {
   if (proximityDistances && proximityDistances.size > 0) {
     distances = {};
     for (const d of finalDoctors) {
-      const id = (d as Record<string, unknown>).id as string;
+      const id = d.id as string;
       const dist = proximityDistances.get(id);
       if (dist != null) distances[id] = Math.round(dist * 10) / 10;
     }
@@ -1448,8 +1545,15 @@ export async function searchDoctors(filters: SearchFilters) {
     (matchMode === "platform_empty" ||
       matchMode === "empty" ||
       matchMode === "related" ||
-      finalDoctors.length === 0)
-      ? { specialtySlug: primarySpecialty }
+      finalDoctors.length === 0 ||
+      doctorIdsFullyBooked.length > 0)
+      ? {
+          specialtySlug: primarySpecialty,
+          doctorIdsFullyBooked:
+            doctorIdsFullyBooked.length > 0
+              ? doctorIdsFullyBooked.slice(0, 12)
+              : undefined,
+        }
       : null;
 
   return {

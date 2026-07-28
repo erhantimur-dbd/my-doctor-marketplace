@@ -65,10 +65,19 @@ export default async function DoctorsPage({
       language: sp.language,
       consultationType: sp.consultationType,
       query: sp.query,
-      // Conversion: when filtering "available today", default to soonest-first
+      // Marketplace default: inventory-first when user has intent (specialty /
+      // query / time chips). Featured only for open browse with no intent.
       sort:
         sp.sort ||
-        (sp.availableToday === "true" ? "soonest" : "featured"),
+        (sp.availableToday === "true" ||
+        sp.liveNow === "true" ||
+        sp.liveInPersonNearby === "true" ||
+        sp.availableWithinDays ||
+        sp.specialty ||
+        sp.skill ||
+        sp.query
+          ? "soonest"
+          : "featured"),
       page: sp.page ? Number(sp.page) : 1,
       availableToday: sp.availableToday === "true",
       liveNow: sp.liveNow === "true",
@@ -293,11 +302,17 @@ export default async function DoctorsPage({
             resultCount={result.total}
           />
 
-          {/* Specialty waitlist — empty or related-only specialty search */}
+          {/* Specialty waitlist — empty, related-only, or fully booked inventory */}
           {sp.specialty &&
             (result.doctors.length === 0 ||
               result.matchMode === "empty" ||
-              result.matchMode === "related") && (
+              result.matchMode === "related" ||
+              result.matchMode === "platform_empty" ||
+              !!(
+                result.waitlistPrompt &&
+                "doctorIdsFullyBooked" in result.waitlistPrompt &&
+                result.waitlistPrompt.doctorIdsFullyBooked?.length
+              )) && (
               <SpecialtyWaitlistCta
                 specialtySlug={sp.specialty}
                 countryCode={result.searchCountryCode}

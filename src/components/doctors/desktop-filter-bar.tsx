@@ -179,7 +179,15 @@ export function DesktopFilterBar({
 
       {/* Sort — labelled so "Soonest available" is discoverable */}
       <Select
-        value={currentFilters.sort || "featured"}
+        value={
+          currentFilters.sort ||
+          (currentFilters.specialty ||
+          currentFilters.skill ||
+          currentFilters.query ||
+          currentFilters.availableToday
+            ? "soonest"
+            : "featured")
+        }
         onValueChange={handleSortChange}
       >
         <SelectTrigger
