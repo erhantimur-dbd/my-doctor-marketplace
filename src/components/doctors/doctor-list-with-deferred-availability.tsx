@@ -4,6 +4,10 @@
  * Renders doctor cards immediately, then loads multi-day availability + live
  * status in the browser so the symptom-search critical path is not blocked by
  * batch slot RPCs on the server.
+ *
+ * Until enrichment finishes, pass `availability={undefined}` so DoctorCard
+ * hides the slot strip (undefined !== null). After load, pass real data;
+ * DoctorCard syncs via useEffect on the availability prop.
  */
 import { useEffect, useState } from "react";
 import { DoctorCard } from "@/components/doctors/doctor-card";
@@ -28,9 +32,7 @@ interface Props {
   };
   matchScores?: Record<string, { score: number; reasons: string[] }>;
   distances?: Record<string, number>;
-  /** Optional preloaded endorsements (cheap; still from server) */
   topEndorsements?: Record<string, { label: string; count: number }[]>;
-  /** When true use map+list layout; false = stacked cards only */
   withMap?: boolean;
 }
 
@@ -44,9 +46,10 @@ export function DoctorListWithDeferredAvailability({
   topEndorsements = {},
   withMap = true,
 }: Props) {
+  // undefined = not loaded yet (hide strip); Record = enrichment complete
   const [availability, setAvailability] = useState<
-    Record<string, DoctorMultiDayAvailability>
-  >({});
+    Record<string, DoctorMultiDayAvailability> | undefined
+  >(undefined);
   const [liveAvailability, setLiveAvailability] = useState<
     Record<string, boolean>
   >({});
@@ -62,6 +65,7 @@ export function DoctorListWithDeferredAvailability({
 
     let cancelled = false;
     setEnrichmentReady(false);
+    setAvailability(undefined);
     (async () => {
       try {
         const [avail, live] = await Promise.all([
@@ -69,11 +73,12 @@ export function DoctorListWithDeferredAvailability({
           getLiveDoctorAvailability(ids),
         ]);
         if (!cancelled) {
-          setAvailability(avail);
-          setLiveAvailability(live);
+          setAvailability(avail ?? {});
+          setLiveAvailability(live ?? {});
         }
       } catch {
         if (!cancelled) {
+          // Failed enrich: empty map so cards can show waitlist, not stuck loading
           setAvailability({});
         }
       } finally {
@@ -86,10 +91,6 @@ export function DoctorListWithDeferredAvailability({
     };
   }, [doctors, consultationType]);
 
-  // Pass per-doctor availability: null until enriched (card shows empty/waitlist strip),
-  // then real multi-day data. Using {} keys so column is always present.
-  const availForCards = availability;
-
   if (withMap) {
     return (
       <div className="relative">
@@ -101,7 +102,8 @@ export function DoctorListWithDeferredAvailability({
         <DoctorResultsWithMap
           doctors={doctors}
           locale={locale}
-          availability={availForCards}
+          // undefined until ready → cards omit slot column; then real map
+          availability={availability}
           centerLocation={centerLocation}
           matchScores={matchScores}
           distances={distances}
@@ -124,7 +126,11 @@ export function DoctorListWithDeferredAvailability({
           <DoctorCard
             doctor={doctor}
             locale={locale}
-            availability={availForCards[doctor.id] || null}
+            availability={
+              availability === undefined
+                ? undefined
+                : availability[doctor.id] || null
+            }
             matchScore={matchScores?.[doctor.id]?.score}
             matchReasons={matchScores?.[doctor.id]?.reasons}
             distanceKm={distances?.[doctor.id]}

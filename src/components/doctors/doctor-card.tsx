@@ -93,7 +93,20 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
     );
     const [cardAvailability, setCardAvailability] = useState(availability);
     const [loadingAvailability, setLoadingAvailability] = useState(false);
+    /** When true, ignore parent availability prop (user switched in-person/video). */
+    const localTypeOverrideRef = useRef(false);
     const dayScrollRef = useRef<HTMLDivElement>(null);
+
+    // Sync when parent later provides multi-day data (deferred client enrich).
+    // Without this, useState(availability) freezes on the first undefined/null.
+    useEffect(() => {
+      if (localTypeOverrideRef.current) return;
+      setCardAvailability(availability);
+      if (availability?.consultationType) {
+        setActiveConsultationType(availability.consultationType);
+      }
+      setSelectedDayIndex(0);
+    }, [availability]);
 
     // Featured 5-star review for the modal
     const [featuredReview, setFeaturedReview] = useState<{
@@ -107,7 +120,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
           if (review) setFeaturedReview(review);
         });
       }
-    }, [showFullAvailability, doctor.id, doctor.total_reviews]);
+    }, [showFullAvailability, doctor.id, doctor.total_reviews, featuredReview]);
 
     const isTestingService = doctor.provider_type === "testing_service";
     const primarySpecialty = doctor.specialties?.find((s) => s.is_primary)
@@ -126,6 +139,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
 
     const handleConsultationTypeChange = async (newType: string) => {
       if (newType === activeConsultationType) return;
+      localTypeOverrideRef.current = true;
       setActiveConsultationType(newType);
       setSelectedDayIndex(0);
       setLoadingAvailability(true);
