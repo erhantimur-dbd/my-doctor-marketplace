@@ -14,6 +14,7 @@ import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-m
 import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
 import { SmartEmptyStateFromParams } from "@/components/search/smart-empty-state";
+import { SpecialtyWaitlistCta } from "@/components/search/specialty-waitlist-cta";
 import { RecentlyViewedCarousel } from "@/components/doctors/recently-viewed-carousel";
 import { CompareProviderWrapper } from "@/components/doctors/compare-provider-wrapper";
 import { RegionNotAvailableBanner } from "@/components/search/region-not-available-banner";
@@ -289,6 +290,17 @@ export default async function DoctorsPage({
             suggestions={expansionSuggestions}
             resultCount={result.total}
           />
+
+          {/* Specialty waitlist — empty or related-only specialty search */}
+          {sp.specialty &&
+            (result.doctors.length === 0 ||
+              result.matchMode === "empty" ||
+              result.matchMode === "related") && (
+              <SpecialtyWaitlistCta
+                specialtySlug={sp.specialty}
+                countryCode={result.searchCountryCode}
+              />
+            )}
 
           {/* Live availability legend */}
           {result.doctors.length > 0 && Object.values(liveStatus).some(Boolean) && (

@@ -10,6 +10,10 @@ import {
   isLaunchRegion,
   LAUNCH_REGION_CODES,
 } from "@/lib/constants/launch-regions";
+import {
+  getRelatedSpecialtySlugs,
+  specialtySlugToLabel,
+} from "@/lib/constants/related-specialties";
 import { log } from "@/lib/utils/logger";
 
 // Common symptom/keyword → [primary GP, specialist] mapping for free-text search.
@@ -830,96 +834,382 @@ export async function searchDoctors(filters: SearchFilters) {
     return { doctors: [], total: 0, page, perPage, matchScores: undefined };
   }
 
-  // ── Zero-result fallback chain ─────────────────────────────────
-  // If the full filter pipeline returned 0 results, progressively relax
-  // filters to ensure the user always sees something useful.
+  // ── Zero-result fallback chain (specialty-preserving) ──────────
+  // NEVER drop specialty to fill with unrelated doctors (e.g. dentists
+  // for a dermatology/acne search). Expand geography and surface the
+  // same specialty with upcoming availability instead.
   let fallbackApplied: string | null = null;
+  let matchMode: "exact" | "widened" | "country" | "related" | "empty" =
+    data && data.length > 0 ? "exact" : "empty";
   let fallbackData = data;
   let fallbackCount = count;
 
-  if ((!data || data.length === 0) && (filters.query || filters.specialty || textFilterApplied || matchedSpecialtySlug)) {
-    // Fallback 1: Drop text/specialty filter, keep location/proximity
-    const hasLocationFilter = !!(filters.placeLat || filters.location);
-    if (hasLocationFilter) {
-      let fbQuery = supabase
+  const primarySpecialty =
+    filters.specialty || matchedSpecialtySlug || null;
+  const specialtyLabel = primarySpecialty
+    ? specialtySlugToLabel(primarySpecialty)
+    : null;
+
+  const doctorSelectFb = `*,
+    profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+    location:locations(city, country_code, slug, latitude, longitude),
+    specialties:doctor_specialties(specialty:specialties(id, name_key, slug), is_primary),
+    photos:doctor_photos(storage_path, alt_text, is_primary)`;
+
+  async function doctorIdsForSpecialtySlugs(
+    slugs: string[]
+  ): Promise<string[]> {
+    if (slugs.length === 0) return [];
+    const { data: specRows } = await supabase
+      .from("specialties")
+      .select("id, slug")
+      .in("slug", slugs);
+    if (!specRows?.length) return [];
+    const { data: matchRows } = await supabase
+      .from("doctor_specialties")
+      .select("doctor_id")
+      .in(
+        "specialty_id",
+        specRows.map((s: { id: string }) => s.id)
+      );
+    return [
+      ...new Set(
+        (matchRows || []).map((r: { doctor_id: string }) => r.doctor_id)
+      ),
+    ];
+  }
+
+  async function locationIdsForCountry(
+    countryCode: string
+  ): Promise<string[]> {
+    const { data: rows } = await supabase
+      .from("locations")
+      .select("id")
+      .eq("country_code", countryCode);
+    return (rows || []).map((r: { id: string }) => r.id);
+  }
+
+  async function fetchSpecialtyDoctors(opts: {
+    specialtySlugs: string[];
+    doctorIdPool?: string[];
+    locationIds?: string[];
+    consultationType?: string;
+    orderSoonest?: boolean;
+  }): Promise<{ rows: Record<string, unknown>[]; count: number }> {
+    let doctorIds = await doctorIdsForSpecialtySlugs(opts.specialtySlugs);
+    if (doctorIds.length === 0) return { rows: [], count: 0 };
+
+    if (opts.doctorIdPool && opts.doctorIdPool.length > 0) {
+      const pool = new Set(opts.doctorIdPool);
+      doctorIds = doctorIds.filter((id) => pool.has(id));
+      if (doctorIds.length === 0) return { rows: [], count: 0 };
+    }
+
+    if (licensedIds && licensedIds.length > 0) {
+      const lic = new Set(licensedIds as string[]);
+      doctorIds = doctorIds.filter((id) => lic.has(id));
+      if (doctorIds.length === 0) return { rows: [], count: 0 };
+    }
+
+    let q = supabase
+      .from("doctors")
+      .select(doctorSelectFb, { count: "exact" })
+      .eq("verification_status", "verified")
+      .eq("is_active", true)
+      .in("id", doctorIds);
+
+    if (opts.locationIds && opts.locationIds.length > 0) {
+      q = q.in("location_id", opts.locationIds);
+    }
+    if (opts.consultationType) {
+      q = q.contains("consultation_types", [opts.consultationType]);
+    }
+    if (filters.language) {
+      q = q.contains("languages", [filters.language]);
+    }
+    if (filters.providerType) {
+      q = q.eq("provider_type", filters.providerType);
+    }
+
+    if (opts.orderSoonest) {
+      const { data: idRows, error: idErr } = await q.select("id");
+      if (idErr || !idRows?.length) return { rows: [], count: 0 };
+      const ids = idRows.map((r: { id: string }) => r.id);
+      const ctype =
+        opts.consultationType === "video" ||
+        opts.consultationType === "in_person"
+          ? opts.consultationType
+          : "in_person";
+      // Prefer requested type; when unrestricted, also consider video so
+      // future appointments surface even if in-person is further out.
+      const [availPrimary, availVideo] = await Promise.all([
+        getNextAvailabilityBatch(ids, ctype, 14),
+        opts.consultationType
+          ? Promise.resolve(
+              {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>
+            )
+          : getNextAvailabilityBatch(ids, "video", 14),
+      ]);
+      const earliestMs = (id: string): number => {
+        const a = availPrimary[id]?.slots?.[0]?.start;
+        const b = availVideo[id]?.slots?.[0]?.start;
+        const ta = a ? new Date(a).getTime() : Infinity;
+        const tb = b ? new Date(b).getTime() : Infinity;
+        return Math.min(ta, tb);
+      };
+      const withSlots = ids.filter((id) => earliestMs(id) < Infinity);
+      const ordered = [
+        ...withSlots.sort((a, b) => earliestMs(a) - earliestMs(b)),
+        ...ids.filter((id) => !withSlots.includes(id)),
+      ];
+      const pageIds = ordered.slice(0, perPage);
+      if (pageIds.length === 0) return { rows: [], count: 0 };
+
+      const { data: pageData } = await supabase
         .from("doctors")
-        .select(
-          `*,
-           profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
-           location:locations(city, country_code, slug, latitude, longitude),
-           specialties:doctor_specialties(specialty:specialties(id, name_key, slug), is_primary),
-           photos:doctor_photos(storage_path, alt_text, is_primary)`,
-          { count: "exact" }
-        )
+        .select(doctorSelectFb)
+        .in("id", pageIds)
         .eq("verification_status", "verified")
         .eq("is_active", true);
 
-      // Re-apply license filter
-      if (licensedIds && licensedIds.length > 0) {
-        fbQuery = fbQuery.in("id", licensedIds);
-      }
-
-      // Re-apply proximity if available
-      if (proximityDistances && proximityDistances.size > 0) {
-        fbQuery = fbQuery.in("id", [...proximityDistances.keys()]);
-      } else if (filters.location && !isCountryFilter) {
-        // Expand to country level
-        const { data: locRow } = await supabase
-          .from("locations")
-          .select("country_code")
-          .eq("slug", filters.location)
-          .single();
-        if (locRow) {
-          fbQuery = fbQuery.eq("location.country_code", locRow.country_code);
-        }
-      }
-
-      fbQuery = fbQuery
-        .order("is_featured", { ascending: false })
-        .order("avg_rating", { ascending: false })
-        .range(0, perPage - 1);
-
-      const fbResult = await fbQuery;
-      if (fbResult.data && fbResult.data.length > 0) {
-        fallbackData = fbResult.data;
-        fallbackCount = fbResult.count;
-        fallbackApplied = matchedSpecialtySlug
-          ? `No ${matchedSpecialtySlug.replace(/-/g, " ")} specialists found nearby. Showing all nearby doctors.`
-          : "No exact matches found. Showing nearby doctors instead.";
-      }
+      const idx = new Map(pageIds.map((id, i) => [id, i]));
+      const sorted = (pageData || []).sort(
+        (a: Record<string, unknown>, b: Record<string, unknown>) =>
+          (idx.get(a.id as string) ?? Infinity) -
+          (idx.get(b.id as string) ?? Infinity)
+      );
+      return {
+        rows: sorted as Record<string, unknown>[],
+        count: ordered.length,
+      };
     }
 
-    // Fallback 2: If still 0 and had proximity, expand to country
-    if (!fallbackData || fallbackData.length === 0) {
-      if (filters.placeLat != null) {
-        let fbQuery2 = supabase
-          .from("doctors")
-          .select(
-            `*,
-             profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
-             location:locations!inner(city, country_code, slug, latitude, longitude),
-             specialties:doctor_specialties(specialty:specialties(id, name_key, slug), is_primary),
-             photos:doctor_photos(storage_path, alt_text, is_primary)`,
-            { count: "exact" }
+    q = q
+      .order("is_featured", { ascending: false })
+      .order("avg_rating", { ascending: false })
+      .range(0, perPage - 1);
+
+    const res = await q;
+    return {
+      rows: (res.data || []) as Record<string, unknown>[],
+      count: res.count || 0,
+    };
+  }
+
+  const shouldRunFallback =
+    (!data || data.length === 0) &&
+    !!(
+      filters.query ||
+      filters.specialty ||
+      filters.skill ||
+      filters.availableToday ||
+      filters.placeLat ||
+      filters.location ||
+      textFilterApplied ||
+      matchedSpecialtySlug
+    );
+
+  if (shouldRunFallback) {
+    const hasGeo = !!(filters.placeLat || filters.location);
+
+    // Resolve country for geographic expansion (never hardcode unless place-only)
+    let fbCountry =
+      searchCountryCode ||
+      (isCountryFilter
+        ? filters.location!.replace("country-", "").toUpperCase()
+        : null);
+
+    if (!fbCountry && filters.location && !isCountryFilter) {
+      const { data: locRow } = await supabase
+        .from("locations")
+        .select("country_code")
+        .eq("slug", filters.location)
+        .single();
+      fbCountry = locRow?.country_code || null;
+    }
+    if (!fbCountry && filters.placeLat != null) {
+      fbCountry = "GB";
+    }
+
+    if (primarySpecialty) {
+      // Step 1: Same specialty, widen proximity radius — sort by soonest
+      if (
+        filters.placeLat != null &&
+        filters.placeLng != null &&
+        (!fallbackData || fallbackData.length === 0)
+      ) {
+        const baseRadius = filters.radius || 25;
+        for (const wideRadius of [
+          Math.max(baseRadius * 2, 50),
+          Math.max(baseRadius * 4, 100),
+        ]) {
+          const { data: ordered } = await supabase.rpc(
+            "sort_doctors_by_distance",
+            { p_lat: filters.placeLat, p_lng: filters.placeLng }
+          );
+          if (!ordered) break;
+          const within = (
+            ordered as { doctor_id: string; distance_km: number }[]
           )
+            .filter((r) => r.distance_km <= wideRadius)
+            .map((r) => r.doctor_id);
+          if (within.length === 0) continue;
+
+          const res = await fetchSpecialtyDoctors({
+            specialtySlugs: [primarySpecialty],
+            doctorIdPool: within,
+            consultationType: filters.consultationType,
+            orderSoonest: true,
+          });
+          if (res.rows.length > 0) {
+            fallbackData = res.rows;
+            fallbackCount = res.count;
+            matchMode = "widened";
+            fallbackApplied = `No ${specialtyLabel} specialists within ${baseRadius} km. Expanded search to ${wideRadius} km — showing ${specialtyLabel} with upcoming availability.`;
+            proximityDistances = new Map(
+              (ordered as { doctor_id: string; distance_km: number }[])
+                .filter((r) => r.distance_km <= wideRadius)
+                .map((r) => [r.doctor_id, r.distance_km])
+            );
+            break;
+          }
+        }
+      }
+
+      // Step 2: Same specialty, country-wide, soonest availability
+      if ((!fallbackData || fallbackData.length === 0) && fbCountry) {
+        const locIds = await locationIdsForCountry(fbCountry);
+        const res = await fetchSpecialtyDoctors({
+          specialtySlugs: [primarySpecialty],
+          locationIds: locIds.length > 0 ? locIds : undefined,
+          consultationType: filters.consultationType,
+          orderSoonest: true,
+        });
+        if (res.rows.length > 0) {
+          fallbackData = res.rows;
+          fallbackCount = res.count;
+          matchMode = "country";
+          fallbackApplied = hasGeo
+            ? `No ${specialtyLabel} specialists nearby. Showing ${specialtyLabel} across ${fbCountry === "GB" ? "the UK" : fbCountry} with upcoming availability.`
+            : `Showing ${specialtyLabel} specialists with upcoming availability.`;
+        }
+      }
+
+      // Step 3: Same specialty, video across launch regions
+      if (!fallbackData || fallbackData.length === 0) {
+        const { data: launchLocs } = await supabase
+          .from("locations")
+          .select("id")
+          .in("country_code", [...LAUNCH_REGION_CODES]);
+        const launchIds = (launchLocs || []).map((l: { id: string }) => l.id);
+        const res = await fetchSpecialtyDoctors({
+          specialtySlugs: [primarySpecialty],
+          locationIds: launchIds.length > 0 ? launchIds : undefined,
+          consultationType: "video",
+          orderSoonest: true,
+        });
+        if (res.rows.length > 0) {
+          fallbackData = res.rows;
+          fallbackCount = res.count;
+          matchMode = "country";
+          fallbackApplied = `No local ${specialtyLabel} specialists. Showing ${specialtyLabel} available for video consultation.`;
+        }
+      }
+
+      // Step 4: Related specialties only (explicitly labelled — never random nearby)
+      if (!fallbackData || fallbackData.length === 0) {
+        // Prefer true related specialties; keep GP out of specialist empty-states
+        // so acne ≠ dentist/GP dump. Expansion chips still offer GP separately.
+        const related = getRelatedSpecialtySlugs(primarySpecialty).filter(
+          (s) => s !== "general-practice"
+        );
+        if (related.length > 0) {
+          const locIds = fbCountry
+            ? await locationIdsForCountry(fbCountry)
+            : undefined;
+          const res = await fetchSpecialtyDoctors({
+            specialtySlugs: related.slice(0, 3),
+            locationIds: locIds && locIds.length > 0 ? locIds : undefined,
+            consultationType: filters.consultationType,
+            orderSoonest: true,
+          });
+          if (res.rows.length > 0) {
+            fallbackData = res.rows;
+            fallbackCount = res.count;
+            matchMode = "related";
+            const labels = related
+              .slice(0, 2)
+              .map(specialtySlugToLabel)
+              .join(", ");
+            fallbackApplied = `No ${specialtyLabel} specialists available right now. Showing related care: ${labels}.`;
+            if (!specialistSuggestion) {
+              specialistSuggestion = related[0];
+            }
+          }
+        }
+      }
+
+      // Step 5: still empty — leave empty so UI can show specialty waitlist
+      if (!fallbackData || fallbackData.length === 0) {
+        matchMode = "empty";
+        fallbackApplied = null;
+      }
+    } else {
+      // No specialty inferred (generic free text) — nearby any as last resort only
+      if (
+        (filters.placeLat || filters.location) &&
+        proximityDistances &&
+        proximityDistances.size > 0
+      ) {
+        let fbQuery = supabase
+          .from("doctors")
+          .select(doctorSelectFb, { count: "exact" })
           .eq("verification_status", "verified")
           .eq("is_active", true)
-          .eq("location.country_code", "GB"); // Default to GB for now
-
+          .in("id", [...proximityDistances.keys()]);
         if (licensedIds && licensedIds.length > 0) {
-          fbQuery2 = fbQuery2.in("id", licensedIds);
+          fbQuery = fbQuery.in("id", licensedIds as string[]);
         }
-
-        fbQuery2 = fbQuery2
+        if (filters.providerType) {
+          fbQuery = fbQuery.eq("provider_type", filters.providerType);
+        }
+        fbQuery = fbQuery
           .order("is_featured", { ascending: false })
           .order("avg_rating", { ascending: false })
           .range(0, perPage - 1);
-
-        const fbResult2 = await fbQuery2;
-        if (fbResult2.data && fbResult2.data.length > 0) {
-          fallbackData = fbResult2.data;
-          fallbackCount = fbResult2.count;
-          fallbackApplied = "No doctors found in your area. Showing doctors across the country.";
+        const fbResult = await fbQuery;
+        if (fbResult.data && fbResult.data.length > 0) {
+          fallbackData = fbResult.data;
+          fallbackCount = fbResult.count;
+          matchMode = "widened";
+          fallbackApplied =
+            "No exact matches found. Showing nearby doctors instead.";
+        }
+      } else if (fbCountry) {
+        // Country-level any for non-specialty empty searches
+        const locIds = await locationIdsForCountry(fbCountry);
+        if (locIds.length > 0) {
+          let fbQuery = supabase
+            .from("doctors")
+            .select(doctorSelectFb, { count: "exact" })
+            .eq("verification_status", "verified")
+            .eq("is_active", true)
+            .in("location_id", locIds);
+          if (licensedIds && licensedIds.length > 0) {
+            fbQuery = fbQuery.in("id", licensedIds as string[]);
+          }
+          fbQuery = fbQuery
+            .order("is_featured", { ascending: false })
+            .order("avg_rating", { ascending: false })
+            .range(0, perPage - 1);
+          const fbResult = await fbQuery;
+          if (fbResult.data && fbResult.data.length > 0) {
+            fallbackData = fbResult.data;
+            fallbackCount = fbResult.count;
+            matchMode = "country";
+            fallbackApplied =
+              "No exact matches nearby. Showing doctors across the country.";
+          }
         }
       }
     }
@@ -965,7 +1255,7 @@ export async function searchDoctors(filters: SearchFilters) {
       matchScores[s.doctorId] = { score: s.matchScore, reasons: s.matchReasons };
     }
 
-    return { doctors: sorted, total: resultCount || 0, page, perPage, matchScores, fallbackApplied, specialistSuggestion };
+    return { doctors: sorted, total: resultCount || 0, page, perPage, matchScores, fallbackApplied, specialistSuggestion, matchMode };
   }
 
   // When proximity search is active, sort by distance (nearest first) by default
@@ -989,7 +1279,7 @@ export async function searchDoctors(filters: SearchFilters) {
     }
   }
 
-  return { doctors: finalDoctors, total: resultCount || 0, page, perPage, matchScores: undefined, distances, outsideLaunchRegion, searchCountryCode, fallbackApplied, specialistSuggestion };
+  return { doctors: finalDoctors, total: resultCount || 0, page, perPage, matchScores: undefined, distances, outsideLaunchRegion, searchCountryCode, fallbackApplied, specialistSuggestion, matchMode };
 }
 
 export async function getSpecialties() {

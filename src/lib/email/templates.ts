@@ -1819,6 +1819,95 @@ export function availabilityAlertEmail({
 }
 
 // ---------------------------------------------------------------------------
+// Specialty waitlist joined confirmation
+// ---------------------------------------------------------------------------
+
+interface SpecialtyWaitlistJoinedParams {
+  patientName: string;
+  specialtyLabel: string;
+  searchUrl: string;
+}
+
+export function specialtyWaitlistJoinedEmail({
+  patientName,
+  specialtyLabel,
+  searchUrl,
+}: SpecialtyWaitlistJoinedParams): { subject: string; html: string } {
+  const subject = `You're on the waitlist for ${specialtyLabel}`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">You're on the waitlist</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, we'll email you when a <strong>${specialtyLabel}</strong> specialist
+      opens new appointment slots on MyDoctors360.
+    </p>
+
+    <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 13px; color: #166534; line-height: 1.5;">
+        You can still browse ${specialtyLabel} specialists anytime — new slots may appear before we notify you.
+      </p>
+    </div>
+
+    ${button(`Browse ${specialtyLabel}`, searchUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you did not request this, you can ignore this email.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
+// Specialty waitlist availability alert
+// ---------------------------------------------------------------------------
+
+interface SpecialtyAvailabilityAlertParams {
+  patientName: string;
+  specialtyLabel: string;
+  doctorName: string;
+  bookingUrl: string;
+  unsubscribeUrl?: string;
+}
+
+export function specialtyAvailabilityAlertEmail({
+  patientName,
+  specialtyLabel,
+  doctorName,
+  bookingUrl,
+  unsubscribeUrl,
+}: SpecialtyAvailabilityAlertParams): { subject: string; html: string } {
+  const subject = `New ${specialtyLabel} availability — ${doctorName}`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Good News!</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, a <strong>${specialtyLabel}</strong> specialist you were waiting for
+      now has openings. <strong>${doctorName}</strong> has new appointment slots available.
+    </p>
+
+    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 12px 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
+        Slots are first-come, first-served. Book soon if the times work for you.
+      </p>
+    </div>
+
+    ${button("Book Now", bookingUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      You received this email because you joined the ${specialtyLabel} waitlist.
+      ${
+        unsubscribeUrl
+          ? `<br/><a href="${unsubscribeUrl}" style="color: #6b7280; text-decoration: underline;">Unsubscribe from these alerts</a>`
+          : ""
+      }
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
 // Satisfaction Survey Email (sent 24h after completed appointment)
 // ---------------------------------------------------------------------------
 
