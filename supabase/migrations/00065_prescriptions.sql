@@ -39,24 +39,24 @@ ALTER TABLE prescriptions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY prescriptions_doctor_select ON prescriptions
   FOR SELECT TO authenticated
   USING (doctor_id IN (
-    SELECT id FROM doctors WHERE user_id = auth.uid()
+    SELECT id FROM doctors WHERE profile_id = auth.uid()
   ));
 
 -- Doctors can insert prescriptions
 CREATE POLICY prescriptions_doctor_insert ON prescriptions
   FOR INSERT TO authenticated
   WITH CHECK (doctor_id IN (
-    SELECT id FROM doctors WHERE user_id = auth.uid()
+    SELECT id FROM doctors WHERE profile_id = auth.uid()
   ));
 
 -- Doctors can update their own prescriptions
 CREATE POLICY prescriptions_doctor_update ON prescriptions
   FOR UPDATE TO authenticated
   USING (doctor_id IN (
-    SELECT id FROM doctors WHERE user_id = auth.uid()
+    SELECT id FROM doctors WHERE profile_id = auth.uid()
   ))
   WITH CHECK (doctor_id IN (
-    SELECT id FROM doctors WHERE user_id = auth.uid()
+    SELECT id FROM doctors WHERE profile_id = auth.uid()
   ));
 
 -- Patients can view their own prescriptions

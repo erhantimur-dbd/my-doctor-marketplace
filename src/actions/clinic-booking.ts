@@ -104,7 +104,7 @@ export async function adminCancelBooking(formData: FormData) {
   if (booking.stripe_payment_intent_id && booking.paid_at) {
     // Admin cancellations: always full refund (clinic takes responsibility)
     refundAmountCents = booking.payment_mode === "deposit"
-      ? (booking.deposit_amount_cents ?? 0) + (booking.platform_fee_cents ?? 0)
+      ? (booking.deposit_amount_cents ?? 0)
       : booking.total_amount_cents;
 
     if (refundAmountCents > 0) {
@@ -289,8 +289,8 @@ export async function adminRescheduleBooking(formData: FormData) {
       status: "pending_reschedule_payment",
       currency: booking.currency,
       consultation_fee_cents: newFee,
-      platform_fee_cents: Math.round(newFee * 0.15),
-      total_amount_cents: newFee + Math.round(newFee * 0.15),
+      platform_fee_cents: 0,
+      total_amount_cents: newFee,
       organization_id: org.id,
       clinic_location_id: parsed.data.new_clinic_location_id ?? booking.clinic_location_id,
       rescheduled_from_booking_id: booking.id,
