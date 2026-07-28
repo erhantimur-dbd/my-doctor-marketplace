@@ -188,7 +188,7 @@ export async function updateAvailabilitySchedule(formData: FormData) {
     if (error) return { error: safeError(error) };
   }
 
-  // Phase 4: waitlist auto-notify when doctor adds/opens schedule (Pro+)
+  // Waitlist auto-notify when doctor adds/opens schedule
   try {
     const { data: profile } = await supabase
       .from("profiles")

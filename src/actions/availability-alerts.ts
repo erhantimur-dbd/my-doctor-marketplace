@@ -10,19 +10,41 @@ import {
   specialtyWaitlistJoinedEmail,
   specialtyAvailabilityAlertEmail,
 } from "@/lib/email/templates";
-import { rateLimit } from "@/lib/rate-limit";
 import { log } from "@/lib/utils/logger";
+import { rateLimit } from "@/lib/rate-limit";
+import { headers } from "next/headers";
+import { z } from "zod/v4";
 import { specialtySlugToLabel } from "@/lib/constants/related-specialties";
-import {
-  doctorHasWaitlistAutoNotify,
-  doctorTierHasWaitlistAutoNotify,
-  getDoctorLicense,
-} from "@/lib/license/check";
-// Pro+ waitlist also aligned with hasFeature("waitlist_auto_notify")
+
+const guestSubscribeSchema = z.object({
+  doctorId: z.string().uuid(),
+  email: z.string().email().max(255),
+  name: z.string().max(120).optional().nullable(),
+  consent: z.literal(true),
+  source: z.string().max(40).optional(),
+  // Bots fill this; allow any string so we can silent-succeed after parse
+  honeypot: z.string().max(200).optional().nullable(),
+});
+
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
+async function clientIp(): Promise<string> {
+  try {
+    const h = await headers();
+    return (
+      h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      h.get("x-real-ip") ||
+      "unknown"
+    );
+  } catch {
+    return "unknown";
+  }
+}
 
 /**
- * Subscribe to notifications when a doctor has new availability.
- * Pro+ doctor licence required (waitlist auto-notify feature).
+ * Logged-in patient: one-click subscribe (no Pro gate — interest capture for all doctors).
  */
 export async function subscribeToAvailability(
   doctorId: string
@@ -32,10 +54,15 @@ export async function subscribeToAvailability(
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { success: false, error: "You must be logged in." };
+  if (!user) {
+    return {
+      success: false,
+      error: "login_required",
+    };
+  }
 
-  // Verify doctor exists
-  const { data: doctor } = await supabase
+  const admin = createAdminClient();
+  const { data: doctor } = await admin
     .from("doctors")
     .select("id")
     .eq("id", doctorId)
@@ -43,22 +70,16 @@ export async function subscribeToAvailability(
 
   if (!doctor) return { success: false, error: "Doctor not found." };
 
-  // Pro plan only (Phase 4 waitlist auto-notify)
-  const eligible = await doctorHasWaitlistAutoNotify(supabase, doctorId);
-  if (!eligible) {
-    return {
-      success: false,
-      error:
-        "Waitlist alerts are available when this doctor is on a Professional or higher plan.",
-    };
-  }
-
-  // Insert alert (upsert to avoid duplicates) — re-arm by clearing notified_at
-  const { error } = await supabase.from("availability_alerts").upsert(
+  const { error } = await admin.from("availability_alerts").upsert(
     {
       patient_id: user.id,
       doctor_id: doctorId,
+      guest_email: null,
+      guest_name: null,
       notified_at: null,
+      consented_at: new Date().toISOString(),
+      source: "doctor_card",
+      unsubscribe_token: crypto.randomUUID(),
     },
     { onConflict: "patient_id,doctor_id" }
   );
@@ -69,11 +90,118 @@ export async function subscribeToAvailability(
   }
 
   revalidatePath("/", "layout");
+  revalidatePath("/doctor-dashboard/waitlist");
   return { success: true };
 }
 
 /**
- * Unsubscribe from a doctor's availability notifications.
+ * Guest (no account): capture email interest for a doctor with no open slots.
+ */
+export async function subscribeAsGuest(input: {
+  doctorId: string;
+  email: string;
+  name?: string | null;
+  consent: boolean;
+  source?: string;
+  honeypot?: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  const parsed = guestSubscribeSchema.safeParse({
+    ...input,
+    consent: input.consent === true ? true : undefined,
+    honeypot: input.honeypot || "",
+  });
+
+  if (!parsed.success) {
+    const msg = parsed.error.issues[0]?.message || "Invalid input";
+    if (msg.toLowerCase().includes("consent") || !input.consent) {
+      return { success: false, error: "Please agree to receive availability emails." };
+    }
+    return { success: false, error: "Please enter a valid email address." };
+  }
+
+  // Honeypot tripped
+  if (parsed.data.honeypot) {
+    return { success: true }; // silent success for bots
+  }
+
+  const ip = await clientIp();
+  const email = normalizeEmail(parsed.data.email);
+
+  const { limited: ipLimited } = await rateLimit(
+    `avail-alert-ip:${ip}`,
+    10,
+    60 * 60 * 1000
+  );
+  if (ipLimited) {
+    return { success: false, error: "Too many requests. Please try again later." };
+  }
+
+  const { limited: emailLimited } = await rateLimit(
+    `avail-alert-email:${email}`,
+    5,
+    60 * 60 * 1000
+  );
+  if (emailLimited) {
+    return { success: false, error: "Too many requests for this email. Please try again later." };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: doctor } = await admin
+    .from("doctors")
+    .select("id")
+    .eq("id", parsed.data.doctorId)
+    .single();
+
+  if (!doctor) return { success: false, error: "Doctor not found." };
+
+  // Re-arm existing guest row or insert new
+  const { data: existing } = await admin
+    .from("availability_alerts")
+    .select("id")
+    .eq("doctor_id", parsed.data.doctorId)
+    .ilike("guest_email", email)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await admin
+      .from("availability_alerts")
+      .update({
+        guest_name: parsed.data.name?.trim() || null,
+        notified_at: null,
+        consented_at: new Date().toISOString(),
+        source: parsed.data.source || "doctor_card",
+      })
+      .eq("id", existing.id);
+
+    if (error) {
+      log.error("[AvailabilityAlerts] Guest re-arm error:", { err: error });
+      return { success: false, error: "Failed to subscribe." };
+    }
+  } else {
+    const { error } = await admin.from("availability_alerts").insert({
+      patient_id: null,
+      doctor_id: parsed.data.doctorId,
+      guest_email: email,
+      guest_name: parsed.data.name?.trim() || null,
+      notified_at: null,
+      consented_at: new Date().toISOString(),
+      source: parsed.data.source || "doctor_card",
+      unsubscribe_token: crypto.randomUUID(),
+    });
+
+    if (error) {
+      log.error("[AvailabilityAlerts] Guest subscribe error:", { err: error });
+      return { success: false, error: "Failed to subscribe." };
+    }
+  }
+
+  revalidatePath("/doctor-dashboard/waitlist");
+  return { success: true };
+}
+
+/**
+ * Logged-in unsubscribe.
  */
 export async function unsubscribeFromAvailability(
   doctorId: string
@@ -85,7 +213,8 @@ export async function unsubscribeFromAvailability(
 
   if (!user) return { success: false, error: "You must be logged in." };
 
-  const { error } = await supabase
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("availability_alerts")
     .delete()
     .eq("patient_id", user.id)
@@ -97,21 +226,66 @@ export async function unsubscribeFromAvailability(
   }
 
   revalidatePath("/", "layout");
+  revalidatePath("/doctor-dashboard/waitlist");
   return { success: true };
 }
 
 /**
- * Check if the current user is subscribed to a doctor's availability.
+ * Guest unsubscribe via email token (no login).
+ */
+export async function unsubscribeByToken(
+  token: string
+): Promise<{ success: boolean; error?: string; doctorName?: string }> {
+  if (!token || token.length < 10) {
+    return { success: false, error: "Invalid unsubscribe link." };
+  }
+
+  const admin = createAdminClient();
+  const { data: row } = await admin
+    .from("availability_alerts")
+    .select(
+      `id, doctor:doctors(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+    )
+    .eq("unsubscribe_token", token)
+    .maybeSingle();
+
+  if (!row) return { success: false, error: "This link is invalid or already used." };
+
+  const doctor: any = Array.isArray(row.doctor) ? row.doctor[0] : row.doctor;
+  const profile: any = doctor?.profile
+    ? Array.isArray(doctor.profile)
+      ? doctor.profile[0]
+      : doctor.profile
+    : null;
+  const doctorName = profile
+    ? `${profile.first_name || ""} ${profile.last_name || ""}`.trim()
+    : "this doctor";
+
+  const { error } = await admin
+    .from("availability_alerts")
+    .delete()
+    .eq("id", row.id);
+
+  if (error) {
+    log.error("[AvailabilityAlerts] Token unsubscribe error:", { err: error });
+    return { success: false, error: "Failed to unsubscribe." };
+  }
+
+  return { success: true, doctorName };
+}
+
+/**
+ * Check if current user is subscribed (logged-in only).
  */
 export async function getAvailabilityAlert(
   doctorId: string
-): Promise<{ subscribed: boolean }> {
+): Promise<{ subscribed: boolean; isLoggedIn: boolean }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { subscribed: false };
+  if (!user) return { subscribed: false, isLoggedIn: false };
 
   const { data } = await supabase
     .from("availability_alerts")
@@ -120,13 +294,89 @@ export async function getAvailabilityAlert(
     .eq("doctor_id", doctorId)
     .maybeSingle();
 
-  return { subscribed: !!data };
+  return { subscribed: !!data, isLoggedIn: true };
 }
 
 /**
- * Notify patients who have subscribed to a doctor's availability.
- * Called when a doctor adds new availability slots.
- * Should be called from a cron job or availability update action.
+ * Doctor portal: list people waiting for this doctor's availability.
+ */
+export async function getDoctorWaitlist(): Promise<{
+  error?: string;
+  waiting: Array<{
+    id: string;
+    name: string;
+    email: string;
+    status: "waiting" | "notified";
+    createdAt: string;
+    notifiedAt: string | null;
+    isGuest: boolean;
+  }>;
+  waitingCount: number;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated", waiting: [], waitingCount: 0 };
+
+  const admin = createAdminClient();
+  const { data: doctor } = await admin
+    .from("doctors")
+    .select("id")
+    .eq("profile_id", user.id)
+    .single();
+
+  if (!doctor) return { error: "Doctor profile not found", waiting: [], waitingCount: 0 };
+
+  const { data: rows, error } = await admin
+    .from("availability_alerts")
+    .select(
+      `
+      id, guest_email, guest_name, patient_id, notified_at, created_at,
+      patient:profiles!availability_alerts_patient_id_fkey(first_name, last_name, email)
+    `
+    )
+    .eq("doctor_id", doctor.id)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    log.error("[AvailabilityAlerts] Doctor waitlist error:", { err: error });
+    return { error: "Failed to load waitlist", waiting: [], waitingCount: 0 };
+  }
+
+  const waiting = (rows || []).map((row) => {
+    const patient: any = Array.isArray(row.patient)
+      ? row.patient[0]
+      : row.patient;
+    const isGuest = !row.patient_id;
+    const name = isGuest
+      ? row.guest_name || "Guest"
+      : [patient?.first_name, patient?.last_name].filter(Boolean).join(" ") ||
+        "Patient";
+    const email = isGuest
+      ? row.guest_email || ""
+      : patient?.email || "";
+
+    return {
+      id: row.id,
+      name,
+      email,
+      status: (row.notified_at ? "notified" : "waiting") as "waiting" | "notified",
+      createdAt: row.created_at,
+      notifiedAt: row.notified_at,
+      isGuest,
+    };
+  });
+
+  const waitingCount = waiting.filter((w) => w.status === "waiting").length;
+  return { waiting, waitingCount };
+}
+
+/**
+ * Notify patients/guests subscribed to a doctor's availability.
+ * Called when a doctor gains new open slots (e.g. cancellation).
  */
 export async function notifyAvailabilitySubscribers(
   doctorId: string,
@@ -135,60 +385,72 @@ export async function notifyAvailabilitySubscribers(
 ): Promise<{ notifiedCount: number }> {
   const admin = createAdminClient();
 
-  // Specialty waitlist is platform-wide (not Pro-gated) — always try.
-  await notifySpecialtyWaitlistsForDoctor(doctorId, doctorName, doctorSlug).catch(
-    (err) => log.error("Specialty waitlist fan-out failed", { err, doctorId })
-  );
-
-  // Per-doctor waitlist requires Pro+ licence
-  const license = await getDoctorLicense(admin, doctorId);
-  if (!doctorTierHasWaitlistAutoNotify(license?.tier)) {
-    return { notifiedCount: 0 };
-  }
-
-  // Fetch un-notified alerts with patient profile for email
+  // Interest capture is open to all doctors — always notify waiters
   const { data: alerts } = await admin
     .from("availability_alerts")
-    .select("id, patient_id, patient:profiles!availability_alerts_patient_id_fkey(first_name, email)")
+    .select(
+      `
+      id, patient_id, guest_email, guest_name, unsubscribe_token,
+      patient:profiles!availability_alerts_patient_id_fkey(first_name, email)
+    `
+    )
     .eq("doctor_id", doctorId)
     .is("notified_at", null);
 
   if (!alerts || alerts.length === 0) return { notifiedCount: 0 };
 
-  const bookingUrl = `${process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com"}/en/doctors/${doctorSlug}/book`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+  const bookingUrl = `${appUrl}/en/doctors/${doctorSlug}/book`;
   let notifiedCount = 0;
 
   for (const alert of alerts) {
     try {
-      const patient: any = Array.isArray(alert.patient) ? alert.patient[0] : alert.patient;
+      const patient: any = Array.isArray(alert.patient)
+        ? alert.patient[0]
+        : alert.patient;
 
-      // In-app notification
-      await createNotification({
-        userId: alert.patient_id,
-        type: "availability_alert",
-        title: "Doctor Now Available",
-        message: `${doctorName} has new appointment slots available. Book now before they fill up!`,
-        channels: ["in_app", "email"],
-        metadata: {
-          doctorId,
-          doctorSlug,
-          doctorName,
-        },
-      });
+      const isGuest = !alert.patient_id;
+      const email = isGuest
+        ? alert.guest_email
+        : patient?.email;
+      const firstName = isGuest
+        ? alert.guest_name?.split(/\s+/)[0] || "there"
+        : patient?.first_name || "there";
 
-      // Email notification
-      if (patient?.email) {
+      // In-app only for registered patients
+      if (alert.patient_id) {
+        await createNotification({
+          userId: alert.patient_id,
+          type: "availability_alert",
+          title: "Doctor Now Available",
+          message: `${doctorName} has new appointment slots available. Book now before they fill up!`,
+          channels: ["in_app"],
+          metadata: {
+            doctorId,
+            doctorSlug,
+            doctorName,
+          },
+        });
+      }
+
+      if (email) {
+        const unsubUrl = alert.unsubscribe_token
+          ? `${appUrl}/en/unsubscribe-availability?token=${alert.unsubscribe_token}`
+          : undefined;
         const { subject, html } = availabilityAlertEmail({
-          patientName: patient.first_name || "there",
+          patientName: firstName,
           doctorName,
           bookingUrl,
+          unsubscribeUrl: unsubUrl,
         });
-        sendEmail({ to: patient.email, subject, html }).catch((err) =>
-          log.error("Availability alert email failed", { err, patientId: alert.patient_id })
+        sendEmail({ to: email, subject, html }).catch((err) =>
+          log.error("Availability alert email failed", {
+            err,
+            alertId: alert.id,
+          })
         );
       }
 
-      // Mark as notified
       await admin
         .from("availability_alerts")
         .update({ notified_at: new Date().toISOString() })
@@ -196,15 +458,22 @@ export async function notifyAvailabilitySubscribers(
 
       notifiedCount++;
     } catch (err) {
-      log.error("Availability alert notification error", { err, patientId: alert.patient_id });
+      log.error("Availability alert notification error", {
+        err,
+        alertId: alert.id,
+      });
     }
   }
+
+  // Also fan out specialty waitlists for this doctor's specialties
+  notifySpecialtyWaitlistsForDoctor(doctorId, doctorName, doctorSlug).catch(
+    (err) => log.error("Specialty waitlist fan-out failed", { err, doctorId })
+  );
 
   return { notifiedCount };
 }
 
-
-// ── Specialty-level waitlist ──────────────────────────────────────
+// ── Specialty-level demand / waitlist ─────────────────────────────
 
 const SPECIALTY_NOTIFY_DEBOUNCE_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -212,19 +481,26 @@ export interface JoinSpecialtyWaitlistInput {
   specialtySlug: string;
   email?: string;
   name?: string;
-  countryCode?: string;
+  countryCode?: string | null;
+  placeName?: string | null;
+  placeLat?: number | null;
+  placeLng?: number | null;
   consultationType?: "in_person" | "video" | null;
+  source?: string;
+  consent?: boolean;
+  honeypot?: string | null;
 }
 
 /**
- * Join a specialty waitlist (e.g. dermatology). Guests need email + name.
- * Not Pro-gated — this is patient demand signal for the platform.
+ * Join specialty waitlist (e.g. gynecology in Islington).
+ * Guests need email + name + consent. Captures location for admin recruiting.
  */
 export async function joinSpecialtyWaitlist(
   input: JoinSpecialtyWaitlistInput
 ): Promise<{ success: boolean; error?: string }> {
-  const { specialtySlug, email, name, countryCode, consultationType } = input;
+  if (input.honeypot) return { success: true }; // silent bot success
 
+  const specialtySlug = input.specialtySlug?.trim();
   if (!specialtySlug) {
     return { success: false, error: "Specialty is required." };
   }
@@ -234,23 +510,35 @@ export async function joinSpecialtyWaitlist(
     data: { user },
   } = await supabase.auth.getUser();
 
-  const guestEmail = email?.trim().toLowerCase() || null;
-  const guestName = name?.trim() || null;
+  const guestEmail = input.email?.trim().toLowerCase() || null;
+  const guestName = input.name?.trim() || null;
 
   if (!user && !guestEmail) {
     return {
       success: false,
-      error: "Please enter your email to join the waitlist.",
+      error: "Please enter your email so we can notify you.",
     };
   }
   if (!user && guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) {
     return { success: false, error: "Please enter a valid email address." };
   }
-  if (!user && !guestName) {
-    return { success: false, error: "Please enter your name." };
+  if (!user && input.consent !== true) {
+    return {
+      success: false,
+      error: "Please agree to receive availability emails.",
+    };
   }
 
   if (!user && guestEmail) {
+    const ip = await clientIp();
+    const { limited: ipLimited } = await rateLimit(
+      `specialty-waitlist-ip:${ip}`,
+      10,
+      60 * 60 * 1000
+    );
+    if (ipLimited) {
+      return { success: false, error: "Too many requests. Please try again later." };
+    }
     const { limited } = await rateLimit(
       `specialty-waitlist:${guestEmail}`,
       5,
@@ -269,11 +557,16 @@ export async function joinSpecialtyWaitlist(
     specialty_slug: specialtySlug,
     patient_id: user?.id ?? null,
     guest_email: user ? null : guestEmail,
-    guest_name: user ? null : guestName,
-    country_code: countryCode || null,
-    consultation_type: consultationType || null,
+    guest_name: user ? guestName : guestName || null,
+    country_code: input.countryCode || null,
+    place_name: input.placeName?.trim() || null,
+    place_lat: input.placeLat ?? null,
+    place_lng: input.placeLng ?? null,
+    consultation_type: input.consultationType || null,
+    source: input.source || "search_empty",
     status: "active",
     last_notified_at: null,
+    updated_at: new Date().toISOString(),
   };
 
   let error;
@@ -291,7 +584,10 @@ export async function joinSpecialtyWaitlist(
         .update(row)
         .eq("id", existing.id));
     } else {
-      ({ error } = await admin.from("specialty_waitlist").insert(row));
+      ({ error } = await admin.from("specialty_waitlist").insert({
+        ...row,
+        unsubscribe_token: crypto.randomUUID(),
+      }));
     }
   } else {
     const { data: existing } = await admin
@@ -307,23 +603,15 @@ export async function joinSpecialtyWaitlist(
         .update(row)
         .eq("id", existing.id));
     } else {
-      ({ error } = await admin.from("specialty_waitlist").insert(row));
+      ({ error } = await admin.from("specialty_waitlist").insert({
+        ...row,
+        unsubscribe_token: crypto.randomUUID(),
+      }));
     }
   }
 
   if (error) {
     log.error("[SpecialtyWaitlist] Join error:", { err: error });
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { code?: string }).code === "42P01"
-    ) {
-      return {
-        success: false,
-        error: "Waitlist is temporarily unavailable. Please try again later.",
-      };
-    }
     return {
       success: false,
       error: "Failed to join waitlist. Please try again.",
@@ -340,10 +628,10 @@ export async function joinSpecialtyWaitlist(
 
   if (toEmail) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
-    const searchUrl = `${appUrl}/en-GB/doctors?specialty=${encodeURIComponent(specialtySlug)}&sort=soonest`;
+    const searchUrl = `${appUrl}/en/doctors?specialty=${encodeURIComponent(specialtySlug)}&sort=soonest`;
     try {
       const { subject, html } = specialtyWaitlistJoinedEmail({
-        patientName: toName,
+        patientName: String(toName),
         specialtyLabel,
         searchUrl,
       });
@@ -355,14 +643,12 @@ export async function joinSpecialtyWaitlist(
     }
   }
 
-  revalidatePath("/", "layout");
-  revalidatePath("/dashboard/alerts");
+  revalidatePath("/admin/waitlist");
   return { success: true };
 }
 
 /**
- * Notify specialty waitlist subscribers when any doctor in that specialty
- * opens slots. Debounced 24h per alert.
+ * Notify specialty waitlist subscribers when any doctor in that specialty opens slots.
  */
 export async function notifySpecialtyWaitlist(
   specialtySlug: string,
@@ -397,7 +683,7 @@ export async function notifySpecialtyWaitlist(
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
-  const bookingUrl = `${appUrl}/en-GB/doctors/${doctorSlug}/book`;
+  const bookingUrl = `${appUrl}/en/doctors/${doctorSlug}/book`;
   const now = Date.now();
   let notifiedCount = 0;
 
@@ -408,18 +694,15 @@ export async function notifySpecialtyWaitlist(
         if (now - last < SPECIALTY_NOTIFY_DEBOUNCE_MS) continue;
       }
 
-      const patient = Array.isArray(alert.patient)
+      const patient: any = Array.isArray(alert.patient)
         ? alert.patient[0]
         : alert.patient;
       const patientName =
-        (patient as { first_name?: string } | null)?.first_name ||
-        alert.guest_name ||
-        "there";
-      const toEmail =
-        (patient as { email?: string } | null)?.email || alert.guest_email;
+        patient?.first_name || alert.guest_name || "there";
+      const toEmail = patient?.email || alert.guest_email;
 
       const unsubUrl = alert.unsubscribe_token
-        ? `${appUrl}/en-GB/unsubscribe-waitlist?token=${alert.unsubscribe_token}&type=specialty`
+        ? `${appUrl}/en/unsubscribe-waitlist?token=${alert.unsubscribe_token}&type=specialty`
         : undefined;
 
       if (alert.patient_id) {
@@ -428,12 +711,8 @@ export async function notifySpecialtyWaitlist(
           type: "availability_alert",
           title: `${specialtyLabel} now available`,
           message: `${doctorName} (${specialtyLabel}) has new appointment slots. Book before they fill up!`,
-          channels: ["in_app", "email"],
-          metadata: {
-            specialtySlug,
-            doctorSlug,
-            doctorName,
-          },
+          channels: ["in_app"],
+          metadata: { specialtySlug, doctorSlug, doctorName },
         });
       }
 
@@ -473,9 +752,6 @@ export async function notifySpecialtyWaitlist(
   return { notifiedCount };
 }
 
-/**
- * After a doctor opens slots, also notify specialty waitlists for their specialties.
- */
 export async function notifySpecialtyWaitlistsForDoctor(
   doctorId: string,
   doctorName: string,
@@ -490,9 +766,10 @@ export async function notifySpecialtyWaitlistsForDoctor(
 
     const slugs = new Set<string>();
     for (const row of specs || []) {
-      const s = Array.isArray(row.specialty) ? row.specialty[0] : row.specialty;
-      const slug = (s as { slug?: string } | null)?.slug;
-      if (slug) slugs.add(slug);
+      const s: any = Array.isArray(row.specialty)
+        ? row.specialty[0]
+        : row.specialty;
+      if (s?.slug) slugs.add(s.slug);
     }
     for (const slug of slugs) {
       await notifySpecialtyWaitlist(slug, doctorName, doctorSlug);
@@ -502,18 +779,17 @@ export async function notifySpecialtyWaitlistsForDoctor(
   }
 }
 
-/**
- * Public unsubscribe for specialty waitlist via token.
- */
 export async function unsubscribeSpecialtyWaitlistByToken(
   token: string
 ): Promise<{ success: boolean; error?: string }> {
-  if (!token) return { success: false, error: "Invalid link." };
+  if (!token || token.length < 10) {
+    return { success: false, error: "Invalid unsubscribe link." };
+  }
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("specialty_waitlist")
-    .update({ status: "unsubscribed" })
+    .update({ status: "unsubscribed", updated_at: new Date().toISOString() })
     .eq("unsubscribe_token", token)
     .select("id")
     .maybeSingle();
@@ -527,9 +803,110 @@ export async function unsubscribeSpecialtyWaitlistByToken(
   return { success: true };
 }
 
-/** Public unsubscribe via token (specialty waitlist). */
-export async function unsubscribeByToken(
-  token: string
-): Promise<{ success: boolean; error?: string }> {
-  return unsubscribeSpecialtyWaitlistByToken(token);
+/**
+ * Admin: specialty demand signals for recruiting (where patients wait).
+ */
+export async function getSpecialtyDemandForAdmin(): Promise<{
+  error?: string;
+  rows: Array<{
+    id: string;
+    specialtySlug: string;
+    name: string;
+    email: string;
+    placeName: string | null;
+    countryCode: string | null;
+    status: string;
+    createdAt: string;
+    isGuest: boolean;
+  }>;
+  summary: Array<{
+    specialtySlug: string;
+    placeName: string | null;
+    countryCode: string | null;
+    count: number;
+  }>;
+  totalActive: number;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "Not authenticated", rows: [], summary: [], totalActive: 0 };
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") {
+    return { error: "Not authorized", rows: [], summary: [], totalActive: 0 };
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("specialty_waitlist")
+    .select(
+      `
+      id, specialty_slug, guest_email, guest_name, patient_id,
+      place_name, country_code, status, created_at,
+      patient:profiles!specialty_waitlist_patient_id_fkey(first_name, last_name, email)
+    `
+    )
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (error) {
+    log.error("[SpecialtyWaitlist] Admin load error:", { err: error });
+    return { error: "Failed to load demand", rows: [], summary: [], totalActive: 0 };
+  }
+
+  const rows = (data || []).map((row) => {
+    const patient: any = Array.isArray(row.patient)
+      ? row.patient[0]
+      : row.patient;
+    const isGuest = !row.patient_id;
+    const name = isGuest
+      ? row.guest_name || "Guest"
+      : [patient?.first_name, patient?.last_name].filter(Boolean).join(" ") ||
+        "Patient";
+    const email = isGuest ? row.guest_email || "" : patient?.email || "";
+    return {
+      id: row.id,
+      specialtySlug: row.specialty_slug,
+      name,
+      email,
+      placeName: row.place_name,
+      countryCode: row.country_code,
+      status: row.status,
+      createdAt: row.created_at,
+      isGuest,
+    };
+  });
+
+  const active = rows.filter((r) => r.status === "active");
+  const keyCount = new Map<string, {
+    specialtySlug: string;
+    placeName: string | null;
+    countryCode: string | null;
+    count: number;
+  }>();
+  for (const r of active) {
+    const key = `${r.specialtySlug}|${r.placeName || ""}|${r.countryCode || ""}`;
+    const prev = keyCount.get(key);
+    if (prev) prev.count += 1;
+    else {
+      keyCount.set(key, {
+        specialtySlug: r.specialtySlug,
+        placeName: r.placeName,
+        countryCode: r.countryCode,
+        count: 1,
+      });
+    }
+  }
+  const summary = [...keyCount.values()].sort((a, b) => b.count - a.count);
+
+  return { rows, summary, totalActive: active.length };
 }
+

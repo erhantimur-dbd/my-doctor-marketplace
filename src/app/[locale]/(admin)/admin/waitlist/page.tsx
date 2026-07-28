@@ -6,6 +6,7 @@ import {
   getAdminLaunchNotifications,
   getWaitlistAnalytics,
 } from "@/actions/waitlist";
+import { getSpecialtyDemandForAdmin } from "@/actions/availability-alerts";
 
 export default async function AdminWaitlistPage() {
   const supabase = await createClient();
@@ -21,24 +22,31 @@ export default async function AdminWaitlistPage() {
     .single();
   if (profile?.role !== "admin") redirect("/en");
 
-  const [doctorsRes, patientsRes, analyticsRes] = await Promise.all([
+  const [doctorsRes, patientsRes, analyticsRes, demandRes] = await Promise.all([
     getAdminWaitlistDoctors(),
     getAdminLaunchNotifications(),
     getWaitlistAnalytics(),
+    getSpecialtyDemandForAdmin(),
   ]);
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Waitlist Management</h1>
+        <h1 className="text-2xl font-bold">Waitlist &amp; demand</h1>
         <p className="text-sm text-muted-foreground">
-          Track doctors and patients waiting for launch in new regions
+          Patient specialty demand (recruiting signal), doctor waitlists, and
+          launch-region interest
         </p>
       </div>
       <WaitlistDashboard
         doctors={doctorsRes.data || []}
         patients={patientsRes.data || []}
         analytics={analyticsRes.data}
+        specialtyDemand={{
+          rows: demandRes.rows,
+          summary: demandRes.summary,
+          totalActive: demandRes.totalActive,
+        }}
       />
     </div>
   );

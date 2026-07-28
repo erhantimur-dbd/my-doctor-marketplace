@@ -22,6 +22,7 @@ import {
 import { localeMap } from "@/lib/utils/date";
 import { formatSlotTime } from "@/lib/utils/availability";
 import { cn } from "@/lib/utils";
+import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 
 interface AvailabilityCalendarProps {
   doctorId: string;
@@ -209,6 +210,9 @@ export function AvailabilityCalendar({
     consultationTypes && consultationTypes.length > 1;
 
   const dateFnsLocale = localeMap[locale] || localeMap.en;
+  const hasOpenDates =
+    !loadingDates && availableDates.some((d) => d.slotCount > 0);
+  const showEmptyMonthCta = !loadingDates && !hasOpenDates;
 
   return (
     <div className={cn("space-y-3", compact && "space-y-1.5 flex flex-col h-full")}>
@@ -312,9 +316,20 @@ export function AvailabilityCalendar({
         </span>
       </div>
 
+      {/* Empty month — capture guest interest without forcing signup */}
+      {showEmptyMonthCta && (
+        <div className="space-y-3 rounded-lg border border-dashed bg-muted/30 p-4 text-center">
+          <p className="text-sm text-muted-foreground">
+            No open appointments this month. Leave your email and we&apos;ll
+            notify you when slots appear — no account needed.
+          </p>
+          <NotifyMeButton doctorId={doctorId} />
+        </div>
+      )}
+
       {/* Time slots section */}
       <div className={compact ? "min-h-[60px] flex-1 overflow-y-auto" : "min-h-[80px]"}>
-        {!selectedDate && (
+        {!selectedDate && !showEmptyMonthCta && (
           <div className={cn(
             "flex items-center justify-center rounded-md border border-dashed",
             compact ? "h-14" : "h-20"

@@ -4,43 +4,47 @@ import { useState, useEffect, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Bell, Loader2, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Bell, Loader2, CheckCircle2, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "@/i18n/navigation";
 import { joinSpecialtyWaitlist } from "@/actions/availability-alerts";
 import { createClient } from "@/lib/supabase/client";
 import { specialtySlugToLabel } from "@/lib/constants/related-specialties";
 
 interface SpecialtyWaitlistCtaProps {
   specialtySlug: string;
-  /** Optional country filter for the alert (e.g. GB) */
   countryCode?: string | null;
+  placeName?: string | null;
+  placeLat?: number | null;
+  placeLng?: number | null;
+  /** Inline form (default) vs compact banner — always one capture surface */
+  variant?: "form" | "compact";
   className?: string;
 }
 
 /**
- * Empty-state CTA: "Notify me when a dermatologist has openings".
- * Guests provide name + email; logged-in users one-click join.
+ * Single intent-capture surface for specialty demand.
+ * Guests: name + email + consent. Logged-in: one-click.
+ * Feeds admin recruiting dashboard (specialty × location).
  */
 export function SpecialtyWaitlistCta({
   specialtySlug,
   countryCode,
+  placeName,
+  placeLat,
+  placeLng,
+  variant = "form",
   className,
 }: SpecialtyWaitlistCtaProps) {
   const label = specialtySlugToLabel(specialtySlug);
-  const [open, setOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [joined, setJoined] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -54,13 +58,19 @@ export function SpecialtyWaitlistCta({
       .catch(() => setLoaded(true));
   }, []);
 
-  function doJoin(opts?: { name?: string; email?: string }) {
+  function doJoin(opts?: { name?: string; email?: string; consent?: boolean }) {
     startTransition(async () => {
       const result = await joinSpecialtyWaitlist({
         specialtySlug,
         name: opts?.name,
         email: opts?.email,
         countryCode: countryCode || undefined,
+        placeName: placeName || undefined,
+        placeLat: placeLat ?? undefined,
+        placeLng: placeLng ?? undefined,
+        source: "search_empty",
+        consent: isLoggedIn ? true : opts?.consent === true,
+        honeypot,
       });
       if (result.error) {
         toast.error(result.error);
@@ -68,131 +78,173 @@ export function SpecialtyWaitlistCta({
       }
       setJoined(true);
       toast.success(
-        `You're on the ${label} waitlist — we'll email you when specialists open slots.`
+        `You're on the ${label} list — we'll email you when specialists open slots.`
       );
-      setTimeout(() => setOpen(false), 1500);
     });
   }
 
-  if (!loaded) return null;
-
-  if (joined) {
+  if (!loaded) {
     return (
       <div
-        className={`flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 ${className || ""}`}
+        className={`flex h-24 items-center justify-center rounded-xl border bg-muted/30 ${className || ""}`}
       >
-        <CheckCircle2 className="h-4 w-4 shrink-0" />
-        <span>
-          You&apos;re on the {label} waitlist — we&apos;ll email you when new
-          appointments open.
-        </span>
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
+  if (joined) {
+    return (
+      <div
+        className={`flex items-start gap-3 rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-left text-green-900 dark:border-green-900/40 dark:bg-green-950/30 dark:text-green-100 ${className || ""}`}
+      >
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
+        <div>
+          <p className="font-medium">You&apos;re on the {label} list</p>
+          <p className="mt-0.5 text-sm text-green-800/80 dark:text-green-200/80">
+            We&apos;ll email you when a {label} specialist opens new appointments
+            {placeName ? ` near ${placeName}` : ""}.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Logged-in: compact one-click
   if (isLoggedIn) {
     return (
       <div
-        className={`flex flex-col items-stretch gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${className || ""}`}
+        className={`rounded-xl border border-primary/15 bg-primary/5 px-5 py-5 text-left ${className || ""}`}
       >
-        <p className="text-sm text-amber-900">
-          No {label} specialists match right now. Get notified when one opens
-          new appointments.
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-foreground">
+              Get notified when {label} opens up
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              No specialists match your search right now. We&apos;ll email you as
+              soon as one has openings
+              {placeName ? ` near ${placeName}` : ""}.
+            </p>
+          </div>
+          <Button
+            onClick={() => doJoin()}
+            disabled={isPending}
+            className="shrink-0 gap-2"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Bell className="h-4 w-4" />
+            )}
+            Notify me
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Guest: full inline form (not a second/third banner)
+  return (
+    <div
+      className={`rounded-xl border border-primary/15 bg-gradient-to-br from-primary/[0.06] to-teal-500/[0.04] px-5 py-5 text-left shadow-sm ${className || ""}`}
+    >
+      <div className="mb-4">
+        <p className="text-base font-semibold text-foreground">
+          Tell us you&apos;re looking for {label}
         </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Leave your details and we&apos;ll email you when appointments open. No
+          account required — this also helps us recruit specialists where
+          patients are waiting.
+        </p>
+        {placeName && (
+          <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" />
+            {placeName}
+            {label ? ` · ${label}` : ""}
+          </p>
+        )}
+      </div>
+
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          doJoin({ name: name.trim(), email: email.trim(), consent });
+        }}
+        className="space-y-3"
+      >
+        <input
+          type="text"
+          name="company"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+          className="hidden"
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden
+        />
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="demand-name">Name</Label>
+            <Input
+              id="demand-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Jane Smith"
+              maxLength={120}
+              autoComplete="name"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="demand-email">Email</Label>
+            <Input
+              id="demand-email"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              autoComplete="email"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-start gap-2">
+          <Checkbox
+            id="demand-consent"
+            checked={consent}
+            onCheckedChange={(v) => setConsent(v === true)}
+          />
+          <Label
+            htmlFor="demand-consent"
+            className="text-sm font-normal leading-snug text-muted-foreground"
+          >
+            Email me when a {label} specialist has openings. See our{" "}
+            <Link
+              href="/privacy"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Privacy Policy
+            </Link>
+            .
+          </Label>
+        </div>
+
         <Button
-          size="sm"
-          onClick={() => doJoin()}
-          disabled={isPending}
-          className="shrink-0 gap-2"
+          type="submit"
+          disabled={isPending || !consent || !email.trim()}
+          className="w-full gap-2 sm:w-auto"
         >
           {isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Bell className="h-4 w-4" />
           )}
-          Notify me when a {label} opens slots
+          {variant === "compact" ? "Notify me" : "Notify me when slots open"}
         </Button>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`flex flex-col items-stretch gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${className || ""}`}
-    >
-      <p className="text-sm text-amber-900">
-        No {label} specialists match right now. Get notified when one opens new
-        appointments.
-      </p>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>
-          <Button size="sm" className="shrink-0 gap-2">
-            <Bell className="h-4 w-4" />
-            Notify me when a {label} opens slots
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Join the {label} waitlist</DialogTitle>
-            <DialogDescription>
-              We&apos;ll email you when a {label} specialist opens new
-              appointment slots. No account needed.
-            </DialogDescription>
-          </DialogHeader>
-          {joined ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <CheckCircle2 className="h-10 w-10 text-green-600" />
-              <p className="font-medium">You&apos;re on the list</p>
-              <p className="text-sm text-muted-foreground">
-                Check your inbox for a confirmation.
-              </p>
-            </div>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                doJoin({ name: name.trim(), email: email.trim() });
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-2">
-                <Label htmlFor="specialty-waitlist-name">Name</Label>
-                <Input
-                  id="specialty-waitlist-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
-                  required
-                  autoComplete="name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="specialty-waitlist-email">Email</Label>
-                <Input
-                  id="specialty-waitlist-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  autoComplete="email"
-                />
-              </div>
-              <Button type="submit" className="w-full gap-2" disabled={isPending}>
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Bell className="h-4 w-4" />
-                )}
-                Join waitlist
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                No account needed. Unsubscribe anytime from the email.
-              </p>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      </form>
     </div>
   );
 }

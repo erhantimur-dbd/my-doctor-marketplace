@@ -1793,8 +1793,18 @@ export function availabilityAlertEmail({
   patientName,
   doctorName,
   bookingUrl,
-}: AvailabilityAlertParams): { subject: string; html: string } {
+  unsubscribeUrl,
+}: AvailabilityAlertParams & { unsubscribeUrl?: string }): {
+  subject: string;
+  html: string;
+} {
   const subject = `New Availability — Dr. ${doctorName} has an opening`;
+
+  const unsub = unsubscribeUrl
+    ? `<p style="margin: 16px 0 0; font-size: 12px; color: #9ca3af; line-height: 1.5;">
+        <a href="${unsubscribeUrl}" style="color: #6b7280; text-decoration: underline;">Unsubscribe from alerts for this doctor</a>
+      </p>`
+    : "";
 
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Good News!</h2>
@@ -1811,15 +1821,16 @@ export function availabilityAlertEmail({
     ${button("Book Now", bookingUrl)}
 
     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
-      You received this email because you signed up for availability alerts for Dr. ${doctorName}.
+      You received this email because you asked to be notified when Dr. ${doctorName} has openings.
     </p>
+    ${unsub}
   `);
 
   return { subject, html };
 }
 
 // ---------------------------------------------------------------------------
-// Specialty waitlist joined confirmation
+// Specialty waitlist — join confirmation
 // ---------------------------------------------------------------------------
 
 interface SpecialtyWaitlistJoinedParams {
@@ -1859,7 +1870,7 @@ export function specialtyWaitlistJoinedEmail({
 }
 
 // ---------------------------------------------------------------------------
-// Specialty waitlist availability alert
+// Specialty waitlist — availability opened
 // ---------------------------------------------------------------------------
 
 interface SpecialtyAvailabilityAlertParams {
@@ -1879,6 +1890,10 @@ export function specialtyAvailabilityAlertEmail({
 }: SpecialtyAvailabilityAlertParams): { subject: string; html: string } {
   const subject = `New ${specialtyLabel} availability — ${doctorName}`;
 
+  const unsub = unsubscribeUrl
+    ? `<br/><a href="${unsubscribeUrl}" style="color: #6b7280; text-decoration: underline;">Unsubscribe from these alerts</a>`
+    : "";
+
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Good News!</h2>
     <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
@@ -1896,11 +1911,7 @@ export function specialtyAvailabilityAlertEmail({
 
     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       You received this email because you joined the ${specialtyLabel} waitlist.
-      ${
-        unsubscribeUrl
-          ? `<br/><a href="${unsubscribeUrl}" style="color: #6b7280; text-decoration: underline;">Unsubscribe from these alerts</a>`
-          : ""
-      }
+      ${unsub}
     </p>
   `);
 

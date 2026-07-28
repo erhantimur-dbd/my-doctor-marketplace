@@ -15,35 +15,45 @@ interface SmartEmptyStateProps {
   description?: string;
   specialtySlug?: string | null;
   countryCode?: string | null;
+  placeName?: string | null;
+  placeLat?: number | null;
+  placeLng?: number | null;
 }
 
 /**
- * Zero-results panel with one-tap filter relaxations + specialty waitlist.
- * Never a naked dead-end for specialty searches.
- * Server-component safe (no client hooks except nested waitlist CTA).
+ * Zero-results panel: one clear message + one intent form + filter chips.
+ * Never stack multiple waitlist banners.
  */
 export function SmartEmptyState({
   suggestions,
   title = "No matching appointments right now",
-  description = "Try a wider time window, video consultation, or join the waitlist — we’ll notify you when slots open.",
+  description = "Try a wider area or different filters — or leave your email and we’ll notify you when slots open.",
   specialtySlug,
   countryCode,
+  placeName,
+  placeLat,
+  placeLng,
 }: SmartEmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-muted-foreground/20 py-16 text-center px-4">
+    <div className="mx-auto flex max-w-xl flex-col items-center rounded-2xl border border-dashed border-muted-foreground/20 bg-card px-5 py-12 text-center sm:px-8">
       <div className="mb-3 rounded-full bg-muted p-4">
         <Search className="h-6 w-6 text-muted-foreground" />
       </div>
-      <p className="text-lg font-medium">{title}</p>
-      <p className="mt-1 max-w-md text-sm text-muted-foreground">{description}</p>
+      <p className="text-lg font-semibold tracking-tight">{title}</p>
+      <p className="mt-1.5 max-w-md text-sm text-muted-foreground">{description}</p>
+
       {specialtySlug && (
-        <div className="mt-6 w-full max-w-lg text-left">
+        <div className="mt-6 w-full max-w-md text-left">
           <SpecialtyWaitlistCta
             specialtySlug={specialtySlug}
             countryCode={countryCode}
+            placeName={placeName}
+            placeLat={placeLat}
+            placeLng={placeLng}
           />
         </div>
       )}
+
       {suggestions.length > 0 && (
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           {suggestions.map((s) => (
@@ -72,6 +82,14 @@ export function SmartEmptyStateFromParams({
   countryCode?: string | null;
 }) {
   const specialty = searchParams.specialty ?? null;
+  const placeName = searchParams.placeName ?? null;
+  const placeLat = searchParams.placeLat
+    ? Number(searchParams.placeLat)
+    : null;
+  const placeLng = searchParams.placeLng
+    ? Number(searchParams.placeLng)
+    : null;
+
   const filters: DoctorsSearchFilters = {
     query: searchParams.query ?? null,
     specialty,
@@ -82,21 +100,23 @@ export function SmartEmptyStateFromParams({
     minPrice: searchParams.minPrice ? Number(searchParams.minPrice) : null,
     maxPrice: searchParams.maxPrice ? Number(searchParams.maxPrice) : null,
     minRating: searchParams.minRating ? Number(searchParams.minRating) : null,
-    availableToday:
-      searchParams.availableToday === "true" ? true : null,
+    availableToday: searchParams.availableToday === "true" ? true : null,
     sort: searchParams.sort ?? null,
-    placeLat: searchParams.placeLat ? Number(searchParams.placeLat) : null,
-    placeLng: searchParams.placeLng ? Number(searchParams.placeLng) : null,
-    placeName: searchParams.placeName ?? null,
+    placeLat,
+    placeLng,
+    placeName,
     radius: searchParams.radius ? Number(searchParams.radius) : null,
   };
   const suggestions = buildEmptyStateSuggestions(filters);
 
-  const title = specialty
-    ? `No bookable ${specialtySlugToLabel(specialty)} appointments match these filters`
+  const label = specialty ? specialtySlugToLabel(specialty) : null;
+  const title = label
+    ? `No ${label} specialists available right now`
     : "No matching appointments right now";
-  const description = specialty
-    ? "We keep the same specialty — try next week, video, a wider area, or join the waitlist below."
+  const description = label
+    ? placeName
+      ? `We couldn't find bookable ${label} appointments near ${placeName}. Leave your email below — or try a wider area.`
+      : `We couldn't find bookable ${label} appointments with these filters. Leave your email below — or try adjusting search.`
     : "Try adjusting filters, switching to video, or removing location to see more options.";
 
   return (
@@ -106,6 +126,9 @@ export function SmartEmptyStateFromParams({
       description={description}
       specialtySlug={specialty}
       countryCode={countryCode}
+      placeName={placeName}
+      placeLat={placeLat}
+      placeLng={placeLng}
     />
   );
 }

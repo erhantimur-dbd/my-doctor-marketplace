@@ -276,8 +276,9 @@ export default async function DoctorsPage({
             />
           )}
 
-          {/* Fallback applied banner */}
-          {result.fallbackApplied && (
+          {/* Fallback applied banner — only when we still have results to show.
+              When empty, the single intent form below owns the message (no triple banners). */}
+          {result.fallbackApplied && result.doctors.length > 0 && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               {result.fallbackApplied}
             </div>
@@ -300,16 +301,18 @@ export default async function DoctorsPage({
           )}
 
           {/* Smart expansion suggestions for AI searches with few results */}
-          <SearchExpansionBanner
-            suggestions={expansionSuggestions}
-            resultCount={result.total}
-          />
+          {result.doctors.length > 0 && (
+            <SearchExpansionBanner
+              suggestions={expansionSuggestions}
+              resultCount={result.total}
+            />
+          )}
 
-          {/* Specialty waitlist — empty, related-only, or fully booked inventory */}
+          {/* Specialty demand form for non-empty soft failures only (related /
+              fully booked). Zero results use a single form inside SmartEmptyState. */}
           {sp.specialty &&
-            (result.doctors.length === 0 ||
-              result.matchMode === "empty" ||
-              result.matchMode === "related" ||
+            result.doctors.length > 0 &&
+            (result.matchMode === "related" ||
               result.matchMode === "platform_empty" ||
               !!(
                 result.waitlistPrompt &&
@@ -319,6 +322,9 @@ export default async function DoctorsPage({
               <SpecialtyWaitlistCta
                 specialtySlug={sp.specialty}
                 countryCode={result.searchCountryCode}
+                placeName={sp.placeName}
+                placeLat={sp.placeLat ? Number(sp.placeLat) : null}
+                placeLng={sp.placeLng ? Number(sp.placeLng) : null}
               />
             )}
 

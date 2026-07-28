@@ -136,9 +136,7 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
             {t("booking_unavailable_body")}
           </p>
           <div className="flex flex-col gap-2 pt-2">
-            {user && (
-              <NotifyMeButton doctorId={doctor.id} />
-            )}
+            <NotifyMeButton doctorId={doctor.id} />
             <Button variant="outline" asChild className="w-full">
               <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
             </Button>
@@ -172,7 +170,7 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
             {t("payment_pending_body")}
           </p>
           <div className="flex flex-col gap-2 pt-2">
-            {user && <NotifyMeButton doctorId={doctor.id} />}
+            <NotifyMeButton doctorId={doctor.id} />
             <Button variant="outline" asChild className="w-full">
               <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
             </Button>

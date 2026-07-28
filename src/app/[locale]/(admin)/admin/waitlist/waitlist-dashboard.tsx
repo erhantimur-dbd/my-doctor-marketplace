@@ -98,20 +98,52 @@ interface Analytics {
   statusBreakdown: { new: number; contacted: number; converted: number };
 }
 
+interface SpecialtyDemandRow {
+  id: string;
+  specialtySlug: string;
+  name: string;
+  email: string;
+  placeName: string | null;
+  countryCode: string | null;
+  status: string;
+  createdAt: string;
+  isGuest: boolean;
+}
+
+interface SpecialtyDemandSummary {
+  specialtySlug: string;
+  placeName: string | null;
+  countryCode: string | null;
+  count: number;
+}
+
 interface Props {
   doctors: WaitlistDoctor[];
   patients: LaunchNotification[];
   analytics: Analytics | null;
+  specialtyDemand?: {
+    rows: SpecialtyDemandRow[];
+    summary: SpecialtyDemandSummary[];
+    totalActive: number;
+  };
 }
 
 function countryName(code: string) {
   return COUNTRIES.find((c) => c.code === code)?.name || code;
 }
 
-export function WaitlistDashboard({ doctors, patients, analytics }: Props) {
+export function WaitlistDashboard({
+  doctors,
+  patients,
+  analytics,
+  specialtyDemand,
+}: Props) {
   const [doctorFilter, setDoctorFilter] = useState({ country: "", status: "" });
   const [patientFilter, setPatientFilter] = useState({ region: "" });
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const demandRows = specialtyDemand?.rows || [];
+  const demandSummary = specialtyDemand?.summary || [];
+  const demandActive = specialtyDemand?.totalActive || 0;
 
   async function handleStatusChange(id: string, status: "new" | "contacted" | "converted") {
     setUpdatingId(id);
@@ -135,21 +167,183 @@ export function WaitlistDashboard({ doctors, patients, analytics }: Props) {
   const uniqueRegions = [...new Set(patients.map((p) => p.region))].sort();
 
   return (
-    <Tabs defaultValue="doctors" className="space-y-4">
+    <Tabs defaultValue="demand" className="space-y-4">
       <TabsList>
+        <TabsTrigger value="demand" className="gap-1.5">
+          <TrendingUp className="h-4 w-4" />
+          Patient demand ({demandActive})
+        </TabsTrigger>
         <TabsTrigger value="doctors" className="gap-1.5">
           <Stethoscope className="h-4 w-4" />
           Doctors ({doctors.length})
         </TabsTrigger>
         <TabsTrigger value="patients" className="gap-1.5">
           <Bell className="h-4 w-4" />
-          Patient Notifications ({patients.length})
+          Launch regions ({patients.length})
         </TabsTrigger>
         <TabsTrigger value="analytics" className="gap-1.5">
-          <TrendingUp className="h-4 w-4" />
+          <Globe className="h-4 w-4" />
           Analytics
         </TabsTrigger>
       </TabsList>
+
+      {/* ─── Patient specialty demand (recruiting signal) ─── */}
+      <TabsContent value="demand" className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Active interest signals
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{demandActive}</div>
+              <p className="text-xs text-muted-foreground">
+                Patients waiting for a specialty to open slots
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Top recruiting gap
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {demandSummary[0] ? (
+                <>
+                  <div className="text-2xl font-bold">
+                    {formatSpecialtyName(demandSummary[0].specialtySlug)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {demandSummary[0].count} waiting
+                    {demandSummary[0].placeName
+                      ? ` · ${demandSummary[0].placeName}`
+                      : demandSummary[0].countryCode
+                        ? ` · ${countryName(demandSummary[0].countryCode)}`
+                        : ""}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">No demand yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Where to recruit (by specialty × location)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Specialty</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Country</TableHead>
+                  <TableHead className="text-right">Waiting</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {demandSummary.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
+                      No specialty demand captured yet. Empty search forms feed this table.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  demandSummary.map((s) => (
+                    <TableRow
+                      key={`${s.specialtySlug}-${s.placeName}-${s.countryCode}`}
+                    >
+                      <TableCell className="font-medium">
+                        {formatSpecialtyName(s.specialtySlug)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {s.placeName || "—"}
+                      </TableCell>
+                      <TableCell>
+                        {s.countryCode ? countryName(s.countryCode) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {s.count}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Individual interest</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Specialty</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {demandRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
+                      No patient demand rows yet
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  demandRows.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {r.email}
+                      </TableCell>
+                      <TableCell>
+                        {formatSpecialtyName(r.specialtySlug)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {r.placeName ||
+                          (r.countryCode ? countryName(r.countryCode) : "—")}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {r.isGuest ? "Guest" : "Account"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            r.status === "active" ? "default" : "secondary"
+                          }
+                        >
+                          {r.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(r.createdAt).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       {/* ─── Doctors Tab ─── */}
       <TabsContent value="doctors" className="space-y-4">

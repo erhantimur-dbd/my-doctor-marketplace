@@ -29,6 +29,7 @@ import {
   Building2,
   Wallet,
   ThumbsUp,
+  Bell,
 } from "lucide-react";
 
 export interface SidebarLink {
@@ -50,6 +51,7 @@ export const doctorSidebarLinks: SidebarLink[] = [
   { href: "/doctor-dashboard", icon: LayoutDashboard, label: "Overview" },
   { href: "/doctor-dashboard/calendar", icon: Calendar, label: "Calendar" },
   { href: "/doctor-dashboard/bookings", icon: Clock, label: "Bookings" },
+  { href: "/doctor-dashboard/waitlist", icon: Bell, label: "Waiting list" },
   { href: "/doctor-dashboard/patients", icon: Users, label: "Patients" },
   { href: "/doctor-dashboard/profile", icon: User, label: "Profile" },
   { href: "/doctor-dashboard/reviews", icon: Star, label: "Reviews" },
