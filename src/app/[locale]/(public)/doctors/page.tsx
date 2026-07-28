@@ -2,15 +2,12 @@ import {
   searchDoctors,
   getSpecialties,
   getLocations,
-  getMultiDayAvailabilityBatch,
   getSearchExpansionSuggestions,
   getFeaturedDoctors,
 } from "@/actions/search";
-import { getLiveDoctorAvailability } from "@/actions/live-availability";
 import { getTopEndorsementsBatch } from "@/actions/reviews";
-import { DoctorCard } from "@/components/doctors/doctor-card";
 import { DoctorSearchFilters } from "@/components/doctors/doctor-search-filters";
-import { DoctorResultsWithMap } from "@/components/doctors/doctor-results-with-map";
+import { DoctorListWithDeferredAvailability } from "@/components/doctors/doctor-list-with-deferred-availability";
 import { HomeSearchBar } from "@/components/search/home-search-bar";
 import { SearchExpansionBanner } from "@/components/search/search-expansion-banner";
 import { SmartEmptyStateFromParams } from "@/components/search/smart-empty-state";
@@ -104,27 +101,33 @@ export default async function DoctorsPage({
   ]);
 
   const typedDoctors = result.doctors as unknown as Parameters<
-    typeof DoctorCard
+    typeof import("@/components/doctors/doctor-card").DoctorCard
   >[0]["doctor"][];
   const matchScores = result.matchScores;
-
-  // Fetch multi-day availability + live status + endorsements for all returned doctors
   const doctorIds = typedDoctors.map((d) => d.id);
-  const [availability, liveStatus, topEndorsements] = await Promise.all([
-    getMultiDayAvailabilityBatch(doctorIds, sp.consultationType),
-    getLiveDoctorAvailability(doctorIds),
-    getTopEndorsementsBatch(doctorIds, 2),
+
+  // Critical path: doctor list only. Multi-day slots + live status load client-side
+  // so symptom search first paint is not blocked by batch availability RPCs.
+  // Endorsements + expansion run in parallel with each other (not with multi-day).
+  const needsExpansion =
+    result.total <= 2 ||
+    !!result.fallbackApplied ||
+    (result.matchMode && result.matchMode !== "exact");
+
+  const [topEndorsements, expansionSuggestions] = await Promise.all([
+    doctorIds.length > 0
+      ? getTopEndorsementsBatch(doctorIds, 2)
+      : Promise.resolve(
+          {} as Awaited<ReturnType<typeof getTopEndorsementsBatch>>
+        ),
+    needsExpansion
+      ? getSearchExpansionSuggestions(sp)
+      : Promise.resolve(
+          [] as Awaited<ReturnType<typeof getSearchExpansionSuggestions>>
+        ),
   ]);
 
   const distances = result.distances;
-
-  // Expand suggestions for any thin/empty or recovered search (not only AI-parsed)
-  const expansionSuggestions =
-    result.total <= 2 ||
-    !!result.fallbackApplied ||
-    (result.matchMode && result.matchMode !== "exact")
-      ? await getSearchExpansionSuggestions(sp)
-      : [];
 
   // Resolve center location for the map when a location filter is active
   let centerLocation:
@@ -319,33 +322,22 @@ export default async function DoctorsPage({
               />
             )}
 
-          {/* Live availability legend */}
-          {result.doctors.length > 0 && Object.values(liveStatus).some(Boolean) && (
-            <div className="mb-1 flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
-              </span>
-              Appointment available within the next hour
-            </div>
-          )}
-
           {result.doctors.length === 0 ? (
             <SmartEmptyStateFromParams
               searchParams={sp}
               countryCode={result.searchCountryCode}
             />
           ) : (
-            /* Single results tree: list on all sizes; sticky map lg+; FAB map on mobile */
-            <DoctorResultsWithMap
+            /* Cards paint immediately; multi-day slots enrich client-side */
+            <DoctorListWithDeferredAvailability
               doctors={typedDoctors}
               locale={locale}
-              availability={availability}
+              consultationType={sp.consultationType}
               centerLocation={centerLocation}
               matchScores={matchScores}
               distances={distances}
-              liveAvailability={liveStatus}
               topEndorsements={topEndorsements}
+              withMap
             />
           )}
 

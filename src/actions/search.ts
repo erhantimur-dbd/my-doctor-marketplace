@@ -1338,8 +1338,12 @@ export async function searchDoctors(filters: SearchFilters) {
   // When proximity search is active, sort by distance (nearest first) by default
   // — unless we will re-rank by inventory (marketplace default).
   let finalDoctors = (resultData || []) as Record<string, unknown>[];
+  // Skip re-rank when soonest path already ordered by next slot (avoids a second
+  // full getNextAvailabilityBatch pair on the critical search path).
   const shouldInventoryRank =
-    !isUserExplicitSort(filters.sort) && finalDoctors.length > 0;
+    !isUserExplicitSort(filters.sort) &&
+    filters.sort !== "soonest" &&
+    finalDoctors.length > 0;
 
   if (
     proximityDistances &&

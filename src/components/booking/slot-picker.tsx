@@ -53,28 +53,57 @@ export function SlotPicker({
       setSelectedSlot(null);
 
       const dateStr = format(date, "yyyy-MM-dd");
-      const result = await getDoctorAvailableSlots(
-        doctorId,
-        dateStr,
-        consultationType,
-        slotDurationOverride
-      );
+      // Normalize type so empty/unknown never hits the RPC as ""
+      const ctype =
+        consultationType === "video" || consultationType === "in_person"
+          ? consultationType
+          : "in_person";
 
-      if (result.error) {
-        setError(result.error);
-      } else {
-        const availableSlots = result.slots.filter((s) => s.is_available);
-        setSlots(availableSlots);
+      try {
+        const result = await getDoctorAvailableSlots(
+          doctorId,
+          dateStr,
+          ctype,
+          slotDurationOverride
+        );
 
-        // Auto-select matching time slot from URL (once on initial load)
-        if (initialTime && !hasAutoSelectedTime.current && availableSlots.length > 0) {
-          const matchingSlot = availableSlots.find((s) => s.slot_start === initialTime);
-          if (matchingSlot) {
-            setSelectedSlot({ start: matchingSlot.slot_start, end: matchingSlot.slot_end });
-            onSlotSelect(dateStr, matchingSlot.slot_start, matchingSlot.slot_end);
-            hasAutoSelectedTime.current = true;
+        if (result.error) {
+          // True RPC/network failure only — empty inventory is not an error
+          setError(result.error);
+          setSlots([]);
+        } else {
+          const availableSlots = (result.slots || []).filter(
+            (s) => s.is_available !== false
+          );
+          setSlots(availableSlots);
+          setError(null);
+
+          // Auto-select matching time slot from URL (once on initial load)
+          if (
+            initialTime &&
+            !hasAutoSelectedTime.current &&
+            availableSlots.length > 0
+          ) {
+            const matchingSlot = availableSlots.find(
+              (s) => s.slot_start === initialTime
+            );
+            if (matchingSlot) {
+              setSelectedSlot({
+                start: matchingSlot.slot_start,
+                end: matchingSlot.slot_end,
+              });
+              onSlotSelect(
+                dateStr,
+                matchingSlot.slot_start,
+                matchingSlot.slot_end
+              );
+              hasAutoSelectedTime.current = true;
+            }
           }
         }
+      } catch {
+        setError("Failed to fetch available slots.");
+        setSlots([]);
       }
       setLoading(false);
     },
@@ -145,8 +174,16 @@ export function SlotPicker({
           )}
 
           {selectedDate && !loading && error && (
-            <div className="flex h-48 items-center justify-center rounded-md border border-dashed border-destructive/50">
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-md border border-dashed border-destructive/50 px-4">
+              <p className="text-center text-sm text-destructive">{error}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fetchSlots(selectedDate)}
+              >
+                Try again
+              </Button>
             </div>
           )}
 

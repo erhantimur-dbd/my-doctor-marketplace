@@ -1089,25 +1089,73 @@ export async function getDoctorAvailableSlots(
   slotDurationOverride?: number
 ): Promise<{ slots: AvailableSlot[]; error?: string }> {
   try {
+    if (!doctorId || !date) {
+      return { slots: [], error: "Doctor and date are required." };
+    }
+
+    const {
+      normalizeConsultationType,
+      mapGetAvailableSlotsResult,
+      shouldRetryWithoutDurationOverride,
+    } = await import("@/lib/booking/available-slots");
+
+    const ctype = normalizeConsultationType(consultationType);
+
     // Use admin client so the RPC is callable regardless of the user's role
     // permissions (matches getNextAvailabilityBatch which also uses admin).
     const supabase = createAdminClient();
 
-    const { data, error } = await supabase.rpc("get_available_slots", {
+    const baseArgs = {
       p_doctor_id: doctorId,
       p_date: date,
-      p_consultation_type: consultationType,
-      p_slot_duration_override: slotDurationOverride ?? null,
-    });
+      p_consultation_type: ctype,
+    };
 
-    if (error) {
-      log.error("get_available_slots RPC error:", { err: error });
-      return { slots: [], error: "Failed to fetch available slots." };
+    // Prefer 3-arg form (widest compatibility). Only pass duration override when set.
+    let data: unknown = null;
+    let error: { message?: string; code?: string; details?: string } | null =
+      null;
+
+    if (slotDurationOverride != null && slotDurationOverride > 0) {
+      const res = await supabase.rpc("get_available_slots", {
+        ...baseArgs,
+        p_slot_duration_override: slotDurationOverride,
+      });
+      data = res.data;
+      error = res.error;
+      if (error && shouldRetryWithoutDurationOverride(error.message || "")) {
+        log.warn("get_available_slots retry without duration override", {
+          err: error,
+        });
+        const retry = await supabase.rpc("get_available_slots", baseArgs);
+        data = retry.data;
+        error = retry.error;
+      }
+    } else {
+      const res = await supabase.rpc("get_available_slots", baseArgs);
+      data = res.data;
+      error = res.error;
     }
 
-    return { slots: (data as AvailableSlot[]) || [] };
+    if (error) {
+      log.error("get_available_slots RPC error:", {
+        err: error,
+        doctorId,
+        date,
+        consultationType: ctype,
+        slotDurationOverride,
+      });
+    }
+
+    // Empty schedule day → slots=[], no error (not "Failed to fetch")
+    return mapGetAvailableSlotsResult({
+      data: data as
+        | { slot_start: string; slot_end: string; is_available?: boolean }[]
+        | null,
+      error,
+    }) as { slots: AvailableSlot[]; error?: string };
   } catch (err) {
-    log.error("getDoctorAvailableSlots error:", { err: err });
+    log.error("getDoctorAvailableSlots error:", { err: err, doctorId, date });
     return { slots: [], error: "Failed to fetch available slots." };
   }
 }
