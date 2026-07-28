@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { ArrowRight, MapPin, User } from "lucide-react";
+import { ArrowRight, Globe, MapPin, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
@@ -108,6 +108,24 @@ export function FeaturedDoctorsSection({ doctors }: FeaturedDoctorsSectionProps)
                         ) : null}
                       </div>
                     )}
+
+                    {/* Languages spoken */}
+                    {doctor.languages && doctor.languages.length > 0 ? (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Globe className="h-3 w-3 shrink-0" aria-hidden />
+                        <span className="truncate">
+                          {(() => {
+                            const codes = doctor.languages
+                              .slice(0, 3)
+                              .map((c) => c.toUpperCase());
+                            const remaining = doctor.languages.length - 3;
+                            return remaining > 0
+                              ? `${codes.join(", ")} +${remaining}`
+                              : codes.join(", ");
+                          })()}
+                        </span>
+                      </div>
+                    ) : null}
 
                     {/* Endorsement pills */}
                     {doctor.endorsements && doctor.endorsements.length > 0 ? (

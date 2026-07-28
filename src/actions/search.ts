@@ -1597,6 +1597,8 @@ export interface FeaturedDoctor extends DoctorSuggestion {
   yearsOfExperience: number | null;
   city: string | null;
   countryCode: string | null;
+  /** ISO language codes the doctor speaks (e.g. en, tr, de) */
+  languages: string[];
   /** Top patient skill endorsements (label + count) */
   endorsements: { label: string; count: number }[];
 }
@@ -1604,7 +1606,8 @@ export interface FeaturedDoctor extends DoctorSuggestion {
 /**
  * Returns top-rated verified doctors for the homepage featured strip
  * and search dropdown "Specialists" column. Ordered by featured flag,
- * then rating, then reviews. Includes location, experience, and top endorsements.
+ * then rating, then reviews. Includes location, experience, languages,
+ * and top endorsements.
  */
 export async function getFeaturedDoctors(
   limit = 5
@@ -1619,6 +1622,7 @@ export async function getFeaturedDoctors(
       avg_rating,
       total_reviews,
       years_of_experience,
+      languages,
       profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
       location:locations(city, country_code),
       specialties:doctor_specialties(
@@ -1671,6 +1675,9 @@ export async function getFeaturedDoctors(
         typeof d.years_of_experience === "number" ? d.years_of_experience : null,
       city: (location?.city as string | null) ?? null,
       countryCode: (location?.country_code as string | null) ?? null,
+      languages: Array.isArray(d.languages)
+        ? (d.languages as string[]).filter(Boolean)
+        : [],
       endorsements: [] as { label: string; count: number }[],
     };
   });
