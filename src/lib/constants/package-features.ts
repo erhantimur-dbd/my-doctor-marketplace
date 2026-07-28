@@ -130,6 +130,7 @@ export const PACKAGE_MARKETING: Record<
       "Free forever — no card required",
     ],
     excludedFeatures: [
+      "Featured profile visibility boost",
       "Online bookings & Stripe payouts",
       "Video consultations",
       "Patient messaging",
@@ -144,6 +145,7 @@ export const PACKAGE_MARKETING: Record<
       "Everything in Founding Free",
       "Online bookings & Stripe payouts",
       "Video consultations",
+      "Featured profile visibility boost",
       "Email appointment reminders",
       "Patient messaging",
       "AI review summaries & sentiment tags",
