@@ -194,26 +194,29 @@ export function NotifyMeButton({ doctorId }: NotifyMeButtonProps) {
               />
             </div>
 
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2.5">
               <Checkbox
                 id="waitlist-consent"
                 checked={consent}
                 onCheckedChange={(v) => setConsent(v === true)}
+                className="mt-0.5 shrink-0"
               />
-              <Label
+              {/* Native label — ui/Label is flex and breaks inline Privacy Policy link */}
+              <label
                 htmlFor="waitlist-consent"
-                className="text-sm font-normal leading-snug text-muted-foreground"
+                className="text-sm font-normal leading-relaxed text-muted-foreground"
               >
                 I agree to receive an email when this doctor has availability.
                 See our{" "}
                 <Link
                   href="/privacy"
                   className="underline underline-offset-2 hover:text-foreground"
+                  onClick={(e) => e.stopPropagation()}
                 >
                   Privacy Policy
                 </Link>
                 .
-              </Label>
+              </label>
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
