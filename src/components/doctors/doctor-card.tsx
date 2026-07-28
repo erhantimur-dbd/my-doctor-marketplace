@@ -95,8 +95,8 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
     isHighlighted,
     onHover,
     availability,
-    matchScore,
-    matchReasons,
+    matchScore: _matchScore,
+    matchReasons: _matchReasons,
     compact,
     distanceKm,
     liveAvailable,
@@ -301,11 +301,6 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                             <Badge className="shrink-0 bg-teal-100 text-teal-800 hover:bg-teal-100 text-xs dark:bg-teal-900/40 dark:text-teal-300">
                               <FlaskConical className="mr-1 h-3 w-3" />
                               Testing
-                            </Badge>
-                          )}
-                          {matchScore != null && matchScore > 0 && (
-                            <Badge className="shrink-0 bg-primary/10 text-primary hover:bg-primary/10 text-xs">
-                              {matchScore}% Match
                             </Badge>
                           )}
                         </div>
@@ -702,15 +697,6 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
               </div>
             </div>
 
-          {/* Match % — bottom-left of full tile */}
-          {matchScore != null && matchScore > 0 && (
-            <Badge
-              className="absolute bottom-4 left-5 z-10 bg-primary/10 text-primary hover:bg-primary/10 text-xs font-medium shadow-sm pointer-events-none"
-              aria-label={`${matchScore} percent match`}
-            >
-              {matchScore}% Match
-            </Badge>
-          )}
           </div>
 
         {/* Full Availability Calendar Modal */}
