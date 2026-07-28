@@ -112,56 +112,96 @@ export async function subscribeAsGuest(input: {
   });
 
   if (!parsed.success) {
-    const msg = parsed.error.issues[0]?.message || "Invalid input";
-    if (msg.toLowerCase().includes("consent") || !input.consent) {
-      return { success: false, error: "Please agree to receive availability emails." };
+    const issue = parsed.error.issues[0];
+    const path = issue?.path?.[0];
+    if (path === "consent" || !input.consent) {
+      return {
+        success: false,
+        error: "Please agree to receive availability emails.",
+      };
     }
-    return { success: false, error: "Please enter a valid email address." };
+    if (path === "doctorId") {
+      return {
+        success: false,
+        error: "Missing doctor. Please refresh and try again.",
+      };
+    }
+    if (path === "email" || !input.email?.trim()) {
+      return { success: false, error: "Please enter a valid email address." };
+    }
+    return {
+      success: false,
+      error: issue?.message || "Invalid input. Please check and try again.",
+    };
   }
 
-  // Honeypot tripped
-  if (parsed.data.honeypot) {
-    return { success: true }; // silent success for bots
+  // Honeypot tripped (bots only) — do not insert
+  if (parsed.data.honeypot && parsed.data.honeypot.trim().length > 0) {
+    return { success: true };
   }
 
   const ip = await clientIp();
   const email = normalizeEmail(parsed.data.email);
 
-  const { limited: ipLimited } = await rateLimit(
-    `avail-alert-ip:${ip}`,
-    10,
-    60 * 60 * 1000
-  );
-  if (ipLimited) {
-    return { success: false, error: "Too many requests. Please try again later." };
-  }
+  try {
+    const { limited: ipLimited } = await rateLimit(
+      `avail-alert-ip:${ip}`,
+      10,
+      60 * 60 * 1000
+    );
+    if (ipLimited) {
+      return {
+        success: false,
+        error: "Too many requests. Please try again later.",
+      };
+    }
 
-  const { limited: emailLimited } = await rateLimit(
-    `avail-alert-email:${email}`,
-    5,
-    60 * 60 * 1000
-  );
-  if (emailLimited) {
-    return { success: false, error: "Too many requests for this email. Please try again later." };
+    const { limited: emailLimited } = await rateLimit(
+      `avail-alert-email:${email}`,
+      5,
+      60 * 60 * 1000
+    );
+    if (emailLimited) {
+      return {
+        success: false,
+        error: "Too many requests for this email. Please try again later.",
+      };
+    }
+  } catch (err) {
+    // Rate limit backend failure should not block legitimate subscribers
+    log.error("[AvailabilityAlerts] Rate limit error (continuing):", { err });
   }
 
   const admin = createAdminClient();
 
-  const { data: doctor } = await admin
+  const { data: doctor, error: doctorError } = await admin
     .from("doctors")
     .select("id")
     .eq("id", parsed.data.doctorId)
-    .single();
+    .maybeSingle();
 
+  if (doctorError) {
+    log.error("[AvailabilityAlerts] Doctor lookup error:", {
+      err: doctorError,
+    });
+    return { success: false, error: "Failed to subscribe. Please try again." };
+  }
   if (!doctor) return { success: false, error: "Doctor not found." };
 
   // Re-arm existing guest row or insert new
-  const { data: existing } = await admin
+  const { data: existing, error: existingError } = await admin
     .from("availability_alerts")
     .select("id")
     .eq("doctor_id", parsed.data.doctorId)
     .ilike("guest_email", email)
     .maybeSingle();
+
+  if (existingError) {
+    log.error("[AvailabilityAlerts] Existing lookup error:", {
+      err: existingError,
+    });
+    return { success: false, error: "Failed to subscribe. Please try again." };
+  }
 
   if (existing) {
     const { error } = await admin
@@ -169,6 +209,7 @@ export async function subscribeAsGuest(input: {
       .update({
         guest_name: parsed.data.name?.trim() || null,
         notified_at: null,
+        status: "waiting",
         consented_at: new Date().toISOString(),
         source: parsed.data.source || "doctor_card",
       })
@@ -176,7 +217,7 @@ export async function subscribeAsGuest(input: {
 
     if (error) {
       log.error("[AvailabilityAlerts] Guest re-arm error:", { err: error });
-      return { success: false, error: "Failed to subscribe." };
+      return { success: false, error: "Failed to subscribe. Please try again." };
     }
   } else {
     const { error } = await admin.from("availability_alerts").insert({
@@ -185,14 +226,20 @@ export async function subscribeAsGuest(input: {
       guest_email: email,
       guest_name: parsed.data.name?.trim() || null,
       notified_at: null,
+      status: "waiting",
       consented_at: new Date().toISOString(),
       source: parsed.data.source || "doctor_card",
       unsubscribe_token: crypto.randomUUID(),
     });
 
     if (error) {
-      log.error("[AvailabilityAlerts] Guest subscribe error:", { err: error });
-      return { success: false, error: "Failed to subscribe." };
+      log.error("[AvailabilityAlerts] Guest subscribe error:", {
+        err: error,
+        message: error.message,
+        code: error.code,
+        details: error.details,
+      });
+      return { success: false, error: "Failed to subscribe. Please try again." };
     }
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,82 +35,125 @@ export function NotifyMeButton({ doctorId }: NotifyMeButtonProps) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [consent, setConsent] = useState(false);
-  const [honeypot, setHoneypot] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
-    getAvailabilityAlert(doctorId).then((result) => {
-      setSubscribed(result.subscribed);
-      setIsLoggedIn(result.isLoggedIn);
-      setLoaded(true);
-    });
+    getAvailabilityAlert(doctorId)
+      .then((result) => {
+        setSubscribed(result.subscribed);
+        setIsLoggedIn(result.isLoggedIn);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
   }, [doctorId]);
 
   function handleLoggedInToggle() {
     startTransition(async () => {
-      if (subscribed) {
-        const result = await unsubscribeFromAvailability(doctorId);
-        if (result.error) {
-          toast.error(result.error);
+      try {
+        if (subscribed) {
+          const result = await unsubscribeFromAvailability(doctorId);
+          if (result.error) {
+            toast.error(result.error);
+          } else {
+            setSubscribed(false);
+            toast.success(
+              "You will no longer receive availability notifications."
+            );
+          }
         } else {
-          setSubscribed(false);
-          toast.success("You will no longer receive availability notifications.");
+          const result = await subscribeToAvailability(doctorId);
+          if (result.error === "login_required") {
+            setIsLoggedIn(false);
+            setDialogOpen(true);
+            return;
+          }
+          if (result.error) {
+            toast.error(result.error);
+          } else {
+            setSubscribed(true);
+            toast.success(
+              "We'll notify you when this doctor has new availability!"
+            );
+          }
         }
-      } else {
-        const result = await subscribeToAvailability(doctorId);
-        if (result.error === "login_required") {
-          setIsLoggedIn(false);
-          setDialogOpen(true);
-          return;
-        }
-        if (result.error) {
-          toast.error(result.error);
-        } else {
-          setSubscribed(true);
-          toast.success(
-            "We'll notify you when this doctor has new availability!"
-          );
-        }
+      } catch {
+        toast.error("Something went wrong. Please try again.");
       }
     });
   }
 
-  function handleGuestSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function submitGuest(form: HTMLFormElement) {
+    setFormError(null);
+
+    // Prefer FormData so browser autofill values are included even when
+    // React onChange never fired (common for password-manager yellow fields).
+    const fd = new FormData(form);
+    const emailValue = String(fd.get("email") || email || "").trim();
+    const nameValue = String(fd.get("name") || name || "").trim();
+    // Honeypot: only treat as bot if the trap field is non-empty
+    const honeypotValue = String(fd.get("website_url_hp") || "").trim();
+
+    if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+      setFormError("Please enter a valid email address.");
+      return;
+    }
+    if (!consent) {
+      setFormError("Please agree to receive availability emails.");
+      return;
+    }
+    if (!doctorId) {
+      setFormError("Missing doctor. Please refresh and try again.");
+      return;
+    }
+
     startTransition(async () => {
-      const result = await subscribeAsGuest({
-        doctorId,
-        email,
-        name: name.trim() || null,
-        consent,
-        source: "doctor_card",
-        honeypot,
-      });
-      if (result.error) {
-        toast.error(result.error);
-        return;
+      try {
+        const result = await subscribeAsGuest({
+          doctorId,
+          email: emailValue,
+          name: nameValue || null,
+          consent: true,
+          source: "doctor_card",
+          honeypot: honeypotValue,
+        });
+        if (result.error) {
+          setFormError(result.error);
+          toast.error(result.error);
+          return;
+        }
+        setDialogOpen(false);
+        setSubscribed(true);
+        setFormError(null);
+        toast.success(
+          "Thanks — we'll email you when this doctor has new openings."
+        );
+      } catch {
+        const msg = "Something went wrong. Please try again.";
+        setFormError(msg);
+        toast.error(msg);
       }
-      setDialogOpen(false);
-      setSubscribed(true);
-      toast.success(
-        "Thanks — we'll email you when this doctor has new openings."
-      );
     });
+  }
+
+  function handleGuestSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    submitGuest(e.currentTarget);
   }
 
   function handleClick() {
     if (isLoggedIn) {
       handleLoggedInToggle();
     } else {
-      // Guest or unknown — open email capture
       if (subscribed) {
-        // Guest can't easily unsubscribe without token; open dialog again with note
         toast.message(
           "Check your email for an unsubscribe link, or use the same form to re-subscribe."
         );
         setDialogOpen(true);
         return;
       }
+      setFormError(null);
       setDialogOpen(true);
     }
   }
@@ -147,7 +190,13 @@ export function NotifyMeButton({ doctorId }: NotifyMeButtonProps) {
           : "Notify Me When Available"}
       </Button>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setFormError(null);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Get notified when slots open</DialogTitle>
@@ -157,27 +206,37 @@ export function NotifyMeButton({ doctorId }: NotifyMeButtonProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleGuestSubmit} className="space-y-4">
-            {/* Honeypot — hidden from users */}
-            <input
-              type="text"
-              name="company"
-              value={honeypot}
-              onChange={(e) => setHoneypot(e.target.value)}
-              className="hidden"
-              tabIndex={-1}
-              autoComplete="off"
+          <form
+            ref={formRef}
+            onSubmit={handleGuestSubmit}
+            className="space-y-4"
+            noValidate
+          >
+            {/* Honeypot — obscure name so password managers don't autofill it */}
+            <div
+              className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
               aria-hidden
-            />
+            >
+              <label htmlFor="website_url_hp">Website</label>
+              <input
+                id="website_url_hp"
+                type="text"
+                name="website_url_hp"
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="waitlist-name">Name (optional)</Label>
               <Input
                 id="waitlist-name"
+                name="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Jane Smith"
                 maxLength={120}
+                autoComplete="name"
               />
             </div>
 
@@ -185,6 +244,7 @@ export function NotifyMeButton({ doctorId }: NotifyMeButtonProps) {
               <Label htmlFor="waitlist-email">Email</Label>
               <Input
                 id="waitlist-email"
+                name="email"
                 type="email"
                 required
                 value={email}
@@ -201,7 +261,6 @@ export function NotifyMeButton({ doctorId }: NotifyMeButtonProps) {
                 onCheckedChange={(v) => setConsent(v === true)}
                 className="mt-0.5 shrink-0"
               />
-              {/* Native label — ui/Label is flex and breaks inline Privacy Policy link */}
               <label
                 htmlFor="waitlist-consent"
                 className="text-sm font-normal leading-relaxed text-muted-foreground"
@@ -219,6 +278,15 @@ export function NotifyMeButton({ doctorId }: NotifyMeButtonProps) {
               </label>
             </div>
 
+            {formError && (
+              <p
+                role="alert"
+                className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              >
+                {formError}
+              </p>
+            )}
+
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
                 type="button"
@@ -227,7 +295,24 @@ export function NotifyMeButton({ doctorId }: NotifyMeButtonProps) {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending || !consent}>
+              <Button
+                type="submit"
+                disabled={isPending || !consent}
+                onClick={(e) => {
+                  // Belt-and-suspenders: some browsers / autofill combos skip form onSubmit
+                  if (!formRef.current) return;
+                  // Let native submit handle it unless we're sure we need manual path
+                  // Only force if the click would otherwise no-op
+                  if (isPending || !consent) {
+                    e.preventDefault();
+                    if (!consent) {
+                      setFormError(
+                        "Please agree to receive availability emails."
+                      );
+                    }
+                  }
+                }}
+              >
                 {isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}

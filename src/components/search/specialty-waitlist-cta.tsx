@@ -44,7 +44,7 @@ export function SpecialtyWaitlistCta({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
-  const [honeypot, setHoneypot] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -59,27 +59,34 @@ export function SpecialtyWaitlistCta({
   }, []);
 
   function doJoin(opts?: { name?: string; email?: string; consent?: boolean }) {
+    setFormError(null);
     startTransition(async () => {
-      const result = await joinSpecialtyWaitlist({
-        specialtySlug,
-        name: opts?.name,
-        email: opts?.email,
-        countryCode: countryCode || undefined,
-        placeName: placeName || undefined,
-        placeLat: placeLat ?? undefined,
-        placeLng: placeLng ?? undefined,
-        source: "search_empty",
-        consent: isLoggedIn ? true : opts?.consent === true,
-        honeypot,
-      });
-      if (result.error) {
-        toast.error(result.error);
-        return;
+      try {
+        const result = await joinSpecialtyWaitlist({
+          specialtySlug,
+          name: opts?.name,
+          email: opts?.email,
+          countryCode: countryCode || undefined,
+          placeName: placeName || undefined,
+          placeLat: placeLat ?? undefined,
+          placeLng: placeLng ?? undefined,
+          source: "search_empty",
+          consent: isLoggedIn ? true : opts?.consent === true,
+        });
+        if (result.error) {
+          setFormError(result.error);
+          toast.error(result.error);
+          return;
+        }
+        setJoined(true);
+        toast.success(
+          `You're on the ${label} list — we'll email you when specialists open slots.`
+        );
+      } catch {
+        const msg = "Something went wrong. Please try again.";
+        setFormError(msg);
+        toast.error(msg);
       }
-      setJoined(true);
-      toast.success(
-        `You're on the ${label} list — we'll email you when specialists open slots.`
-      );
     });
   }
 
@@ -170,26 +177,47 @@ export function SpecialtyWaitlistCta({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          doJoin({ name: name.trim(), email: email.trim(), consent });
+          // FormData picks up browser autofill even when React state is empty
+          const fd = new FormData(e.currentTarget);
+          const emailValue = String(fd.get("email") || email || "").trim();
+          const nameValue = String(fd.get("name") || name || "").trim();
+          const hp = String(fd.get("website_url_hp") || "").trim();
+          if (hp) {
+            // bot — pretend success
+            setJoined(true);
+            return;
+          }
+          if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+            setFormError("Please enter a valid email address.");
+            return;
+          }
+          if (!consent) {
+            setFormError("Please agree to receive availability emails.");
+            return;
+          }
+          doJoin({ name: nameValue, email: emailValue, consent });
         }}
         className="space-y-3"
+        noValidate
       >
-        <input
-          type="text"
-          name="company"
-          value={honeypot}
-          onChange={(e) => setHoneypot(e.target.value)}
-          className="hidden"
-          tabIndex={-1}
-          autoComplete="off"
+        <div
+          className="absolute -left-[9999px] h-0 w-0 overflow-hidden"
           aria-hidden
-        />
+        >
+          <input
+            type="text"
+            name="website_url_hp"
+            tabIndex={-1}
+            autoComplete="off"
+          />
+        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label htmlFor="demand-name">Name</Label>
             <Input
               id="demand-name"
+              name="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Jane Smith"
@@ -201,6 +229,7 @@ export function SpecialtyWaitlistCta({
             <Label htmlFor="demand-email">Email</Label>
             <Input
               id="demand-email"
+              name="email"
               type="email"
               required
               value={email}
@@ -235,10 +264,19 @@ export function SpecialtyWaitlistCta({
           </label>
         </div>
 
+        {formError && (
+          <p
+            role="alert"
+            className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {formError}
+          </p>
+        )}
+
         <div className="flex justify-center pt-1">
           <Button
             type="submit"
-            disabled={isPending || !consent || !email.trim()}
+            disabled={isPending || !consent}
             className="gap-2"
           >
             {isPending ? (
