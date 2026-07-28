@@ -27,6 +27,7 @@ import type { DoctorMultiDayAvailability } from "@/actions/search";
 import { getFeaturedReview } from "@/actions/reviews";
 import { CompareCheckbox } from "@/components/doctors/compare-checkbox";
 import { FavoriteButton } from "@/components/doctors/favorite-button";
+import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 
 interface DoctorCardProps {
   doctor: {
@@ -622,9 +623,19 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                         </button>
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground">
-                        No availability in next 14 days
-                      </p>
+                      <div
+                        className="space-y-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        <p className="text-xs text-muted-foreground">
+                          No open slots in the next 14 days — join the waitlist
+                          and we&apos;ll notify you when this doctor has openings.
+                        </p>
+                        <NotifyMeButton doctorId={doctor.id} />
+                      </div>
                     )}
                   </div>
                 )}

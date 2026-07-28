@@ -37,9 +37,22 @@ export function buildEmptyStateSuggestions(
   };
 
   if (base.availableToday) {
+    push("next-7-days", "Show soonest this week (not only today)", {
+      availableToday: null,
+      sort: "soonest",
+      availableWithinDays: 7,
+    });
     push("drop-today", "Show all availability (not only today)", {
       availableToday: null,
-      sort: base.sort === "soonest" ? "soonest" : base.sort,
+      sort: base.sort === "soonest" ? "soonest" : "soonest",
+    });
+  }
+
+  // Always offer soonest multi-day when user may be stuck on time filters
+  if (!base.availableToday && base.sort !== "soonest") {
+    push("sort-soonest", "Sort by soonest appointment", {
+      sort: "soonest",
+      availableWithinDays: 14,
     });
   }
 

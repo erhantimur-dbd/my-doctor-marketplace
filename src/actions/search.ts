@@ -16,6 +16,9 @@ import {
 } from "@/lib/constants/related-specialties";
 import { log } from "@/lib/utils/logger";
 
+/** UUID that never matches — forces zero exact hits into recovery. */
+const NO_MATCH_ID = "00000000-0000-0000-0000-000000000000";
+
 // Common symptom/keyword → [primary GP, specialist] mapping for free-text search.
 // GP is always included as the first port of call; specialist is shown as an option.
 const KEYWORD_SPECIALTY_MAP: Record<string, { primary: string; specialist: string }> = {
@@ -208,6 +211,11 @@ export async function searchDoctors(filters: SearchFilters) {
     query = query.eq("provider_type", filters.providerType);
   }
 
+  // Soft failures: never hard-empty when recovery can expand time/geo.
+  // Recovery ladder runs when primary query is empty.
+  const softFailures: string[] = [];
+  let timeExpandedBanner: string | null = null;
+
   // Live "available now" — same IDs as homepage Available Now chip
   if (filters.liveNow && !filters.liveInPersonNearby) {
     const { data: liveIds, error: liveErr } = await supabase.rpc(
@@ -225,19 +233,24 @@ export async function searchDoctors(filters: SearchFilters) {
 
     if (liveErr) {
       log.error("Live-now availability RPC error:", { err: liveErr });
-      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      softFailures.push("live_now_error");
+      timeExpandedBanner =
+        "Live availability is temporarily unavailable. Showing doctors by soonest appointment.";
+    } else {
+      const ids = (Array.isArray(liveIds) ? liveIds : [])
+        .map((id) => (id == null ? "" : String(id)))
+        .filter((id) => id.length > 0);
+
+      if (ids.length === 0) {
+        // Soft-expand: no one live in window — recover with soonest specialty inventory
+        softFailures.push("live_now");
+        timeExpandedBanner =
+          "No appointments in the next few hours. Showing the soonest available doctors instead.";
+      } else {
+        query = query.in("id", ids);
+        // Specialty already applied inside the RPC when provided — avoid double filter
+      }
     }
-
-    const ids = (Array.isArray(liveIds) ? liveIds : [])
-      .map((id) => (id == null ? "" : String(id)))
-      .filter((id) => id.length > 0);
-
-    if (ids.length === 0) {
-      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
-    }
-
-    query = query.in("id", ids);
-    // Specialty already applied inside the RPC when provided — avoid double filter
   }
 
   // Nearby in-person GP live set — same IDs as "In person nearby" chip counter
@@ -259,26 +272,32 @@ export async function searchDoctors(filters: SearchFilters) {
 
     if (nearbyErr) {
       log.error("Live in-person nearby RPC error:", { err: nearbyErr });
-      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      softFailures.push("live_in_person_error");
+      timeExpandedBanner =
+        "Nearby live availability is temporarily unavailable. Showing GPs with soonest appointments.";
+    } else {
+      const row = Array.isArray(nearbyRows) ? nearbyRows[0] : nearbyRows;
+      const ids = (Array.isArray(row?.doctor_ids) ? row.doctor_ids : [])
+        .map((id: unknown) => (id == null ? "" : String(id)))
+        .filter((id: string) => id.length > 0);
+
+      if (ids.length === 0) {
+        softFailures.push("live_in_person");
+        timeExpandedBanner =
+          "No GPs available nearby right now. Showing the soonest GP appointments instead.";
+      } else {
+        query = query.in("id", ids);
+      }
     }
-
-    const row = Array.isArray(nearbyRows) ? nearbyRows[0] : nearbyRows;
-    const ids = (Array.isArray(row?.doctor_ids) ? row.doctor_ids : [])
-      .map((id: unknown) => (id == null ? "" : String(id)))
-      .filter((id: string) => id.length > 0);
-
-    if (ids.length === 0) {
-      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
-    }
-
-    query = query.in("id", ids);
   }
 
-  // Same-day availability filter
+  // Same-day availability filter — soft-expand to multi-day when none today
   if (
     filters.availableToday &&
     !filters.liveNow &&
-    !filters.liveInPersonNearby
+    !filters.liveInPersonNearby &&
+    !softFailures.includes("live_now") &&
+    !softFailures.includes("live_now_error")
   ) {
     const { data: doctorIds, error: rpcError } = await supabase.rpc(
       "get_doctor_ids_available_today"
@@ -286,19 +305,23 @@ export async function searchDoctors(filters: SearchFilters) {
 
     if (rpcError) {
       log.error("Same-day availability RPC error:", { err: rpcError });
-      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      softFailures.push("available_today_error");
+      timeExpandedBanner =
+        "Same-day availability is temporarily unavailable. Showing doctors by soonest appointment.";
+    } else {
+      const ids = (doctorIds as string[]) || [];
+      if (ids.length === 0) {
+        softFailures.push("available_today");
+        timeExpandedBanner =
+          "No appointments available today. Showing the soonest available doctors this week.";
+      } else {
+        query = query.in("id", ids);
+      }
     }
-
-    const ids = (doctorIds as string[]) || [];
-    if (ids.length === 0) {
-      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
-    }
-
-    query = query.in("id", ids);
   }
 
   // Skill filter — resolve skill slug → matching doctor IDs via doctor_skills.
-  // Applied before specialty so the narrower filter runs first.
+  // Soft-drop skill (keep specialty) when no one has declared the skill yet.
   if (filters.skill) {
     const { data: skillRows } = await supabase
       .from("doctor_skills")
@@ -309,14 +332,22 @@ export async function searchDoctors(filters: SearchFilters) {
       (r: { doctor_id: string }) => r.doctor_id
     );
     if (ids.length === 0) {
-      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      softFailures.push("skill");
+      // Do not hard-empty — continue with specialty / free-text only
+    } else {
+      query = query.in("id", ids);
     }
-    query = query.in("id", ids);
   }
 
   // Specialty filter — two-step: resolve slug → specialty ID → matching doctor IDs
-  // Skip when liveNow already filtered by specialty in the RPC (avoids empty intersections)
-  if (filters.specialty && !filters.liveNow && !filters.liveInPersonNearby) {
+  // Skip only when liveNow/liveInPerson successfully applied specialty-scoped IDs.
+  // Soft-fail with NO_MATCH_ID so recovery ladder + waitlist can run.
+  const liveIdsApplied =
+    (filters.liveNow || filters.liveInPersonNearby) &&
+    !softFailures.some((f) =>
+      f.startsWith("live_now") || f.startsWith("live_in_person")
+    );
+  if (filters.specialty && !liveIdsApplied) {
     const { data: specRow } = await supabase
       .from("specialties")
       .select("id")
@@ -333,9 +364,11 @@ export async function searchDoctors(filters: SearchFilters) {
         (r: { doctor_id: string }) => r.doctor_id
       );
       if (ids.length === 0) {
-        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+        softFailures.push("specialty_empty");
+        query = query.eq("id", NO_MATCH_ID);
+      } else {
+        query = query.in("id", ids);
       }
-      query = query.in("id", ids);
     }
   }
 
@@ -383,16 +416,18 @@ export async function searchDoctors(filters: SearchFilters) {
       ).filter((r) => r.distance_km <= radius);
 
       if (withinRadius.length === 0) {
-        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+        // Soft-fail: recovery will widen radius / country for same specialty
+        softFailures.push("proximity");
+        query = query.eq("id", NO_MATCH_ID);
+      } else {
+        const proximityIds = withinRadius.map((r) => r.doctor_id);
+        query = query.in("id", proximityIds);
+
+        // Store distances for potential use in sorting / response
+        proximityDistances = new Map(
+          withinRadius.map((r) => [r.doctor_id, r.distance_km])
+        );
       }
-
-      const proximityIds = withinRadius.map((r) => r.doctor_id);
-      query = query.in("id", proximityIds);
-
-      // Store distances for potential use in sorting / response
-      proximityDistances = new Map(
-        withinRadius.map((r) => [r.doctor_id, r.distance_km])
-      );
     }
   }
 
@@ -410,9 +445,11 @@ export async function searchDoctors(filters: SearchFilters) {
         .eq("country_code", countryCode);
       const locIds = (countryLocs || []).map((l: { id: string }) => l.id);
       if (locIds.length === 0) {
-        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+        softFailures.push("location_country");
+        query = query.eq("id", NO_MATCH_ID);
+      } else {
+        query = query.in("location_id", locIds);
       }
-      query = query.in("location_id", locIds);
     } else if (filters.consultationType === "video") {
       // Video consultations: expand to country-level so patients see all
       // doctors in the same country, not just the selected city.
@@ -429,18 +466,16 @@ export async function searchDoctors(filters: SearchFilters) {
           .eq("country_code", loc.country_code);
         const locIds = (countryLocs || []).map((l: { id: string }) => l.id);
         if (locIds.length === 0) {
-          return {
-            doctors: [],
-            total: 0,
-            page: filters.page || 1,
-            perPage: 12,
-          };
+          softFailures.push("location_video_country");
+          query = query.eq("id", NO_MATCH_ID);
+        } else {
+          query = query.in("location_id", locIds);
         }
-        query = query.in("location_id", locIds);
       } else if (loc?.id) {
         query = query.eq("location_id", loc.id);
       } else {
-        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+        softFailures.push("location_missing");
+        query = query.eq("id", NO_MATCH_ID);
       }
     } else {
       // In-person / default: prefer proximity-based matching so that
@@ -483,14 +518,11 @@ export async function searchDoctors(filters: SearchFilters) {
               (l: { id: string }) => l.id
             );
             if (locIds.length === 0) {
-              return {
-                doctors: [],
-                total: 0,
-                page: filters.page || 1,
-                perPage: 12,
-              };
+              softFailures.push("location_country_fallback");
+              query = query.eq("id", NO_MATCH_ID);
+            } else {
+              query = query.in("location_id", locIds);
             }
-            query = query.in("location_id", locIds);
           }
         } else if (selectedLoc.id) {
           // RPC failed — fall back to exact location_id match
@@ -500,7 +532,8 @@ export async function searchDoctors(filters: SearchFilters) {
         // No coordinates — fall back to exact location_id match
         query = query.eq("location_id", selectedLoc.id);
       } else {
-        return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+        softFailures.push("location_missing");
+        query = query.eq("id", NO_MATCH_ID);
       }
     }
   }
@@ -537,9 +570,11 @@ export async function searchDoctors(filters: SearchFilters) {
       .in("country_code", [...LAUNCH_REGION_CODES]);
     const launchLocIds = (launchLocs || []).map((l: { id: string }) => l.id);
     if (launchLocIds.length === 0) {
-      return { doctors: [], total: 0, page: filters.page || 1, perPage: 12 };
+      softFailures.push("launch_regions");
+      query = query.eq("id", NO_MATCH_ID);
+    } else {
+      query = query.in("location_id", launchLocIds);
     }
-    query = query.in("location_id", launchLocIds);
   }
 
   // Free-text query: match against specialty names, keywords, doctor names, and bio
@@ -651,7 +686,9 @@ export async function searchDoctors(filters: SearchFilters) {
 
   // "Soonest" sort: order by earliest bookable slot (next-available RPC), then page.
   // Doctors with no slots in the window sink to the end.
+  // On empty, fall through to specialty-preserving recovery (never hard-empty).
   // Location filters use location_id so select("id") is safe (no nested embeds required).
+  let soonestHandled = false;
   if (filters.sort === "soonest") {
     // Replace projection to IDs only (builder already has count:exact from initial select).
     // Do not pass a second options arg — TS builder type after chained filters
@@ -660,99 +697,158 @@ export async function searchDoctors(filters: SearchFilters) {
 
     if (idError) {
       log.error("Soonest sort ID query error:", { err: idError });
-      return { doctors: [], total: 0, page, perPage };
-    }
+      softFailures.push("soonest_error");
+    } else {
+      let allIds = (idRows || []).map((r: { id: string }) => r.id);
 
-    let allIds = (idRows || []).map((r: { id: string }) => r.id);
+      if (allIds.length > 0) {
+        const ctype =
+          filters.consultationType === "video" ||
+          filters.consultationType === "in_person"
+            ? filters.consultationType
+            : "in_person";
 
-    if (allIds.length === 0) {
-      return { doctors: [], total: 0, page, perPage };
-    }
+        // Next GP / similar: only doctors with a free slot in the next N days
+        let withinDays = filters.availableWithinDays ?? 14;
+        // Soft time-expand window when primary time filters already failed
+        if (
+          softFailures.includes("available_today") ||
+          softFailures.includes("live_now") ||
+          softFailures.includes("live_in_person")
+        ) {
+          withinDays = Math.max(withinDays, 7);
+        }
 
-    const ctype =
-      filters.consultationType === "video" ||
-      filters.consultationType === "in_person"
-        ? filters.consultationType
-        : "in_person";
+        // Prefer requested type; if "all", also check video and take the earlier first slot
+        let [availPrimary, availVideo] = await Promise.all([
+          getNextAvailabilityBatch(allIds, ctype, withinDays),
+          filters.consultationType
+            ? Promise.resolve(
+                {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>
+              )
+            : getNextAvailabilityBatch(allIds, "video", withinDays),
+        ]);
 
-    // Next GP / similar: only doctors with a free slot in the next N days
-    const withinDays = filters.availableWithinDays ?? 14;
+        // When availableWithinDays is set, drop doctors with no slot in the window
+        if (
+          filters.availableWithinDays != null &&
+          filters.availableWithinDays > 0
+        ) {
+          const filtered = allIds.filter(
+            (id) => !!(availPrimary[id]?.date || availVideo[id]?.date)
+          );
+          if (filtered.length === 0) {
+            // Soft-expand window to 14 days before giving up to recovery
+            softFailures.push("available_within_days");
+            timeExpandedBanner =
+              timeExpandedBanner ||
+              `No appointments within ${filters.availableWithinDays} days. Showing the soonest available over the next 2 weeks.`;
+            withinDays = 14;
+            [availPrimary, availVideo] = await Promise.all([
+              getNextAvailabilityBatch(allIds, ctype, withinDays),
+              filters.consultationType
+                ? Promise.resolve(
+                    {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>
+                  )
+                : getNextAvailabilityBatch(allIds, "video", withinDays),
+            ]);
+            allIds = allIds.filter(
+              (id) => !!(availPrimary[id]?.date || availVideo[id]?.date)
+            );
+          } else {
+            allIds = filtered;
+          }
+        }
 
-    // Prefer requested type; if "all", also check video and take the earlier first slot
-    const [availPrimary, availVideo] = await Promise.all([
-      getNextAvailabilityBatch(allIds, ctype, withinDays),
-      filters.consultationType
-        ? Promise.resolve(
-            {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>
-          )
-        : getNextAvailabilityBatch(allIds, "video", withinDays),
-    ]);
+        if (allIds.length > 0) {
+          const earliestMs = (id: string): number => {
+            const a = availPrimary[id]?.slots?.[0]?.start;
+            const b = availVideo[id]?.slots?.[0]?.start;
+            const ta = a ? new Date(a).getTime() : Infinity;
+            const tb = b ? new Date(b).getTime() : Infinity;
+            return Math.min(ta, tb);
+          };
 
-    // When availableWithinDays is set, drop doctors with no slot in the window
-    if (filters.availableWithinDays != null && filters.availableWithinDays > 0) {
-      allIds = allIds.filter(
-        (id) => !!(availPrimary[id]?.date || availVideo[id]?.date)
-      );
-      if (allIds.length === 0) {
-        return { doctors: [], total: 0, page, perPage };
+          const orderedIds = [...allIds].sort(
+            (a, b) => earliestMs(a) - earliestMs(b)
+          );
+          const total = orderedIds.length;
+          const pageIds = orderedIds.slice(
+            (page - 1) * perPage,
+            page * perPage
+          );
+
+          if (pageIds.length > 0) {
+            // Re-fetch full rows for the page
+            const { data: pageData, error: pageError } = await supabase
+              .from("doctors")
+              .select(
+                `
+                *,
+                profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+                location:locations(city, country_code, slug, latitude, longitude),
+                specialties:doctor_specialties(
+                  specialty:specialties(id, name_key, slug),
+                  is_primary
+                ),
+                skills:doctor_skills(skill_slug),
+                photos:doctor_photos(storage_path, alt_text, is_primary)
+              `
+              )
+              .in("id", pageIds)
+              .eq("is_active", true)
+              .eq("verification_status", "verified");
+
+            if (pageError) {
+              log.error("Soonest sort page fetch error:", { err: pageError });
+              softFailures.push("soonest_page_error");
+            } else {
+              const idIndexMap = new Map(pageIds.map((id, i) => [id, i]));
+              const sorted = (pageData || []).sort(
+                (a: Record<string, unknown>, b: Record<string, unknown>) =>
+                  (idIndexMap.get(a.id as string) ?? Infinity) -
+                  (idIndexMap.get(b.id as string) ?? Infinity)
+              );
+
+              soonestHandled = true;
+              return {
+                doctors: sorted,
+                total,
+                page,
+                perPage,
+                matchScores: undefined,
+                distances: undefined,
+                outsideLaunchRegion,
+                searchCountryCode,
+                fallbackApplied: timeExpandedBanner,
+                specialistSuggestion,
+                matchMode: timeExpandedBanner
+                  ? ("time_expanded" as const)
+                  : ("exact" as const),
+                waitlistPrompt: null,
+              };
+            }
+          }
+        } else {
+          softFailures.push("soonest_no_slots");
+        }
+      } else {
+        softFailures.push("soonest_empty_candidates");
       }
     }
-
-    const earliestMs = (id: string): number => {
-      const a = availPrimary[id]?.slots?.[0]?.start;
-      const b = availVideo[id]?.slots?.[0]?.start;
-      const ta = a ? new Date(a).getTime() : Infinity;
-      const tb = b ? new Date(b).getTime() : Infinity;
-      return Math.min(ta, tb);
-    };
-
-    const orderedIds = [...allIds].sort(
-      (a, b) => earliestMs(a) - earliestMs(b)
-    );
-    const total = orderedIds.length;
-    const pageIds = orderedIds.slice((page - 1) * perPage, page * perPage);
-
-    if (pageIds.length === 0) {
-      return { doctors: [], total, page, perPage };
-    }
-
-    // Re-fetch full rows for the page (id-only select already consumed the builder)
-    const { data: pageData, error: pageError } = await supabase
-      .from("doctors")
-      .select(
-        `
-        *,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
-        location:locations(city, country_code, slug, latitude, longitude),
-        specialties:doctor_specialties(
-          specialty:specialties(id, name_key, slug),
-          is_primary
-        ),
-        skills:doctor_skills(skill_slug),
-        photos:doctor_photos(storage_path, alt_text, is_primary)
-      `
-      )
-      .in("id", pageIds)
-      .eq("is_active", true)
-      .eq("verification_status", "verified");
-
-    if (pageError) {
-      log.error("Soonest sort page fetch error:", { err: pageError });
-      return { doctors: [], total: 0, page, perPage };
-    }
-
-    const idIndexMap = new Map(pageIds.map((id, i) => [id, i]));
-    const sorted = (pageData || []).sort(
-      (a: Record<string, unknown>, b: Record<string, unknown>) =>
-        (idIndexMap.get(a.id as string) ?? Infinity) -
-        (idIndexMap.get(b.id as string) ?? Infinity)
-    );
-
-    return { doctors: sorted, total, page, perPage };
   }
 
-  // "Nearest" sort uses a two-pass approach: RPC for ordered IDs, then fetch page slice
-  if (
+  // When soonest path ran but found nothing, the query builder is already
+  // consumed by select("id"). Skip re-using it — go straight to recovery
+  // with empty primary results.
+  let data: Record<string, unknown>[] | null = null;
+  let count: number | null = 0;
+  let queryError: { message?: string } | null = null;
+
+  if (filters.sort === "soonest" && !soonestHandled) {
+    data = [];
+    count = 0;
+  } else if (
     filters.sort === "nearest" &&
     filters.userLat != null &&
     filters.userLng != null
@@ -769,6 +865,10 @@ export async function searchDoctors(filters: SearchFilters) {
         .order("is_featured", { ascending: false })
         .order("avg_rating", { ascending: false })
         .range((page - 1) * perPage, page * perPage - 1);
+      const res = await query;
+      data = (res.data || []) as Record<string, unknown>[];
+      count = res.count;
+      queryError = res.error;
     } else {
       const orderedIds = (
         ordered as { doctor_id: string; distance_km: number }[]
@@ -780,29 +880,40 @@ export async function searchDoctors(filters: SearchFilters) {
       );
 
       if (pageIds.length === 0) {
-        return { doctors: [], total, page, perPage };
+        data = [];
+        count = total;
+      } else {
+        query = query.in("id", pageIds);
+        const res = await query;
+        if (res.error) {
+          log.error("Search error:", { err: res.error });
+          queryError = res.error;
+          data = [];
+          count = 0;
+        } else {
+          const idIndexMap = new Map(pageIds.map((id, i) => [id, i]));
+          const sorted = (res.data || []).sort(
+            (a: Record<string, unknown>, b: Record<string, unknown>) =>
+              (idIndexMap.get(a.id as string) ?? Infinity) -
+              (idIndexMap.get(b.id as string) ?? Infinity)
+          );
+          // Nearest with results — return early (no recovery needed)
+          return {
+            doctors: sorted,
+            total,
+            page,
+            perPage,
+            matchScores: undefined,
+            distances: undefined,
+            outsideLaunchRegion,
+            searchCountryCode,
+            fallbackApplied: timeExpandedBanner,
+            specialistSuggestion,
+            matchMode: "exact" as const,
+            waitlistPrompt: null,
+          };
+        }
       }
-
-      query = query.in("id", pageIds);
-
-      const { data, error } = await query;
-
-      if (error) {
-        log.error("Search error:", { err: error });
-        return { doctors: [], total: 0, page, perPage };
-      }
-
-      // Re-sort to match distance order (Supabase .in() doesn't preserve order)
-      const idIndexMap = new Map(
-        pageIds.map((id, i) => [id, i])
-      );
-      const sorted = (data || []).sort(
-        (a: Record<string, unknown>, b: Record<string, unknown>) =>
-          (idIndexMap.get(a.id as string) ?? Infinity) -
-          (idIndexMap.get(b.id as string) ?? Infinity)
-      );
-
-      return { doctors: sorted, total, page, perPage };
     }
   } else {
     // Standard sort
@@ -825,22 +936,37 @@ export async function searchDoctors(filters: SearchFilters) {
     }
 
     query = query.range((page - 1) * perPage, page * perPage - 1);
+    const res = await query;
+    data = (res.data || []) as Record<string, unknown>[];
+    count = res.count;
+    queryError = res.error;
   }
 
-  const { data, count, error } = await query;
-
-  if (error) {
-    log.error("Search error:", { err: error });
-    return { doctors: [], total: 0, page, perPage, matchScores: undefined };
+  if (queryError) {
+    log.error("Search error:", { err: queryError });
+    // Still attempt recovery rather than naked empty
+    data = data || [];
+    count = count ?? 0;
   }
 
   // ── Zero-result fallback chain (specialty-preserving) ──────────
   // NEVER drop specialty to fill with unrelated doctors (e.g. dentists
   // for a dermatology/acne search). Expand geography and surface the
   // same specialty with upcoming availability instead.
-  let fallbackApplied: string | null = null;
-  let matchMode: "exact" | "widened" | "country" | "related" | "empty" =
-    data && data.length > 0 ? "exact" : "empty";
+  let fallbackApplied: string | null = timeExpandedBanner;
+  let matchMode:
+    | "exact"
+    | "widened"
+    | "country"
+    | "related"
+    | "empty"
+    | "time_expanded"
+    | "platform_empty" =
+    data && data.length > 0
+      ? timeExpandedBanner
+        ? "time_expanded"
+        : "exact"
+      : "empty";
   let fallbackData = data;
   let fallbackCount = count;
 
@@ -1003,10 +1129,14 @@ export async function searchDoctors(filters: SearchFilters) {
       filters.specialty ||
       filters.skill ||
       filters.availableToday ||
+      filters.liveNow ||
+      filters.liveInPersonNearby ||
       filters.placeLat ||
       filters.location ||
       textFilterApplied ||
-      matchedSpecialtySlug
+      matchedSpecialtySlug ||
+      softFailures.length > 0 ||
+      filters.sort === "soonest"
     );
 
   if (shouldRunFallback) {
@@ -1149,10 +1279,15 @@ export async function searchDoctors(filters: SearchFilters) {
         }
       }
 
-      // Step 5: still empty — leave empty so UI can show specialty waitlist
+      // Step 5: still empty — platform empty for this specialty (waitlist UI)
       if (!fallbackData || fallbackData.length === 0) {
-        matchMode = "empty";
-        fallbackApplied = null;
+        matchMode = "platform_empty";
+        fallbackApplied =
+          timeExpandedBanner ||
+          `No bookable ${specialtyLabel} specialists match right now. Join the waitlist and we'll notify you when openings appear.`;
+      } else if (timeExpandedBanner && !fallbackApplied) {
+        fallbackApplied = timeExpandedBanner;
+        matchMode = matchMode === "exact" ? "time_expanded" : matchMode;
       }
     } else {
       // No specialty inferred (generic free text) — nearby any as last resort only
@@ -1255,12 +1390,31 @@ export async function searchDoctors(filters: SearchFilters) {
       matchScores[s.doctorId] = { score: s.matchScore, reasons: s.matchReasons };
     }
 
-    return { doctors: sorted, total: resultCount || 0, page, perPage, matchScores, fallbackApplied, specialistSuggestion, matchMode };
+    const waitlistPrompt =
+      primarySpecialty &&
+      (matchMode === "platform_empty" ||
+        matchMode === "empty" ||
+        matchMode === "related" ||
+        (resultCount || 0) === 0)
+        ? { specialtySlug: primarySpecialty }
+        : null;
+
+    return {
+      doctors: sorted,
+      total: resultCount || 0,
+      page,
+      perPage,
+      matchScores,
+      fallbackApplied,
+      specialistSuggestion,
+      matchMode,
+      waitlistPrompt,
+    };
   }
 
   // When proximity search is active, sort by distance (nearest first) by default
   let finalDoctors = resultData || [];
-  if (proximityDistances && proximityDistances.size > 0 && filters.sort !== "rating" && filters.sort !== "price_asc" && filters.sort !== "price_desc") {
+  if (proximityDistances && proximityDistances.size > 0 && filters.sort !== "rating" && filters.sort !== "price_asc" && filters.sort !== "price_desc" && filters.sort !== "soonest") {
     finalDoctors = [...finalDoctors].sort(
       (a: Record<string, unknown>, b: Record<string, unknown>) =>
         (proximityDistances!.get(a.id as string) ?? Infinity) -
@@ -1279,7 +1433,39 @@ export async function searchDoctors(filters: SearchFilters) {
     }
   }
 
-  return { doctors: finalDoctors, total: resultCount || 0, page, perPage, matchScores: undefined, distances, outsideLaunchRegion, searchCountryCode, fallbackApplied, specialistSuggestion, matchMode };
+  // Prefer time-expanded banner when recovery didn't set a geo message
+  if (timeExpandedBanner && !fallbackApplied && finalDoctors.length > 0) {
+    fallbackApplied = timeExpandedBanner;
+    if (matchMode === "exact") matchMode = "time_expanded";
+  }
+  if (softFailures.includes("skill") && finalDoctors.length > 0 && !fallbackApplied) {
+    fallbackApplied =
+      "No doctors match that specific procedure yet. Showing specialists in the same field.";
+  }
+
+  const waitlistPrompt =
+    primarySpecialty &&
+    (matchMode === "platform_empty" ||
+      matchMode === "empty" ||
+      matchMode === "related" ||
+      finalDoctors.length === 0)
+      ? { specialtySlug: primarySpecialty }
+      : null;
+
+  return {
+    doctors: finalDoctors,
+    total: resultCount || 0,
+    page,
+    perPage,
+    matchScores: undefined,
+    distances,
+    outsideLaunchRegion,
+    searchCountryCode,
+    fallbackApplied,
+    specialistSuggestion,
+    matchMode,
+    waitlistPrompt,
+  };
 }
 
 export async function getSpecialties() {

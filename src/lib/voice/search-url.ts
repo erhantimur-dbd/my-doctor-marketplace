@@ -14,6 +14,8 @@ export type DoctorsSearchFilters = {
   maxPrice?: number | null;
   minRating?: number | null;
   availableToday?: boolean | null;
+  /** Only doctors with a free slot in the next N days */
+  availableWithinDays?: number | null;
   sort?: string | null;
   providerType?: string | null;
   placeLat?: number | null;
@@ -57,6 +59,7 @@ export function buildDoctorsSearchPath(
   setIf(params, "maxPrice", filters.maxPrice);
   setIf(params, "minRating", filters.minRating);
   setIf(params, "availableToday", filters.availableToday);
+  setIf(params, "availableWithinDays", filters.availableWithinDays);
   setIf(params, "sort", filters.sort);
   setIf(params, "providerType", filters.providerType);
   setIf(params, "placeLat", filters.placeLat);

@@ -109,9 +109,11 @@ export default async function DoctorsPage({
 
   const distances = result.distances;
 
-  // When AI-parsed search returns few results, suggest ways to broaden
+  // Expand suggestions for any thin/empty or recovered search (not only AI-parsed)
   const expansionSuggestions =
-    result.total <= 2 && sp.aiParsed === "true"
+    result.total <= 2 ||
+    !!result.fallbackApplied ||
+    (result.matchMode && result.matchMode !== "exact")
       ? await getSearchExpansionSuggestions(sp)
       : [];
 
@@ -314,7 +316,10 @@ export default async function DoctorsPage({
           )}
 
           {result.doctors.length === 0 ? (
-            <SmartEmptyStateFromParams searchParams={sp} />
+            <SmartEmptyStateFromParams
+              searchParams={sp}
+              countryCode={result.searchCountryCode}
+            />
           ) : (
             /* Single results tree: list on all sizes; sticky map lg+; FAB map on mobile */
             <DoctorResultsWithMap
