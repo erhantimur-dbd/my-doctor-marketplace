@@ -386,10 +386,18 @@ export async function getDoctorAvailableSlots(doctorId: string, date: string) {
   const { error: authError, supabase } = await requireOrgMember(["owner", "admin"]);
   if (authError || !supabase) return { error: authError, slots: [] };
 
-  const { data, error } = await supabase.rpc("get_available_slots", {
-    p_doctor_id: doctorId,
-    p_date: date,
-  });
+  const { buildGetAvailableSlotsRpcArgs } = await import(
+    "@/lib/booking/available-slots"
+  );
+  // Must use unique 5-arg overload (3/4-arg are ambiguous in Postgres)
+  const { data, error } = await supabase.rpc(
+    "get_available_slots",
+    buildGetAvailableSlotsRpcArgs({
+      doctorId,
+      date,
+      consultationType: "in_person",
+    })
+  );
 
   if (error) return { error: error.message, slots: [] };
   return { error: null, slots: data ?? [] };

@@ -77,13 +77,16 @@ export async function findAlternateGpSlots(params: {
       const types = (doc.consultation_types || []) as string[];
       if (!types.includes(params.consultationType)) continue;
 
+      const { buildGetAvailableSlotsRpcArgs } = await import(
+        "@/lib/booking/available-slots"
+      );
       const { data: slots, error: slotErr } = await supabase.rpc(
         "get_available_slots",
-        {
-          p_doctor_id: doc.id,
-          p_date: dateStr,
-          p_consultation_type: params.consultationType,
-        }
+        buildGetAvailableSlotsRpcArgs({
+          doctorId: doc.id,
+          date: dateStr,
+          consultationType: params.consultationType,
+        })
       );
 
       if (slotErr || !slots?.length) continue;

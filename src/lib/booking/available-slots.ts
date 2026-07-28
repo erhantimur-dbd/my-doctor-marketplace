@@ -38,11 +38,37 @@ export function mapGetAvailableSlotsResult(input: {
 }
 
 /**
- * Whether the PostgREST error indicates a missing 4-arg overload
- * (p_slot_duration_override not deployed).
+ * Args for the unique 5-parameter get_available_slots overload.
+ * Shorter overloads are ambiguous in Postgres (42725 function is not unique).
  */
-export function shouldRetryWithoutDurationOverride(errorMessage: string): boolean {
-  return /p_slot_duration_override|Could not find the function|function public\.get_available_slots|does not exist/i.test(
+export function buildGetAvailableSlotsRpcArgs(input: {
+  doctorId: string;
+  date: string;
+  consultationType: string;
+  slotDurationOverride?: number | null;
+  clinicLocationId?: string | null;
+}): {
+  p_doctor_id: string;
+  p_date: string;
+  p_consultation_type: "in_person" | "video";
+  p_slot_duration_override: number | null;
+  p_clinic_location_id: string | null;
+} {
+  return {
+    p_doctor_id: input.doctorId,
+    p_date: input.date,
+    p_consultation_type: normalizeConsultationType(input.consultationType),
+    p_slot_duration_override:
+      input.slotDurationOverride != null && input.slotDurationOverride > 0
+        ? input.slotDurationOverride
+        : null,
+    p_clinic_location_id: input.clinicLocationId ?? null,
+  };
+}
+
+/** Detect ambiguous-function RPC failures (wrong overload selection). */
+export function isAmbiguousFunctionError(errorMessage: string): boolean {
+  return /not unique|42725|Could not choose a best candidate/i.test(
     errorMessage
   );
 }

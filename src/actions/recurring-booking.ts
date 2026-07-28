@@ -48,11 +48,17 @@ export async function validateRecurringSlots(input: CreateRecurringBookingInput)
   const unavailableDates: string[] = [];
 
   for (const date of dates) {
-    const { data: slots } = await adminDb.rpc("get_available_slots", {
-      p_doctor_id: doctor_id,
-      p_date: date,
-      p_consultation_type: consultation_type,
-    });
+    const { buildGetAvailableSlotsRpcArgs } = await import(
+      "@/lib/booking/available-slots"
+    );
+    const { data: slots } = await adminDb.rpc(
+      "get_available_slots",
+      buildGetAvailableSlotsRpcArgs({
+        doctorId: doctor_id,
+        date,
+        consultationType: consultation_type,
+      })
+    );
 
     const slotAvailable = slots?.some(
       (s: { slot_start: string; is_available: boolean }) =>

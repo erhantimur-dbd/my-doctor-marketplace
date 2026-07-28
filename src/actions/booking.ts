@@ -1094,55 +1094,32 @@ export async function getDoctorAvailableSlots(
     }
 
     const {
-      normalizeConsultationType,
       mapGetAvailableSlotsResult,
-      shouldRetryWithoutDurationOverride,
+      buildGetAvailableSlotsRpcArgs,
     } = await import("@/lib/booking/available-slots");
-
-    const ctype = normalizeConsultationType(consultationType);
 
     // Use admin client so the RPC is callable regardless of the user's role
     // permissions (matches getNextAvailabilityBatch which also uses admin).
     const supabase = createAdminClient();
 
-    const baseArgs = {
-      p_doctor_id: doctorId,
-      p_date: date,
-      p_consultation_type: ctype,
-    };
-
-    // Prefer 3-arg form (widest compatibility). Only pass duration override when set.
-    let data: unknown = null;
-    let error: { message?: string; code?: string; details?: string } | null =
-      null;
-
-    if (slotDurationOverride != null && slotDurationOverride > 0) {
-      const res = await supabase.rpc("get_available_slots", {
-        ...baseArgs,
-        p_slot_duration_override: slotDurationOverride,
-      });
-      data = res.data;
-      error = res.error;
-      if (error && shouldRetryWithoutDurationOverride(error.message || "")) {
-        log.warn("get_available_slots retry without duration override", {
-          err: error,
-        });
-        const retry = await supabase.rpc("get_available_slots", baseArgs);
-        data = retry.data;
-        error = retry.error;
-      }
-    } else {
-      const res = await supabase.rpc("get_available_slots", baseArgs);
-      data = res.data;
-      error = res.error;
-    }
+    // Production has 3 overloads of get_available_slots (3/4/5 args). Calling
+    // with only 3 or 4 named params is ambiguous (Postgres 42725) and surfaces
+    // as "Failed to fetch available slots." Always use the unique 5-arg form.
+    const rpcArgs = buildGetAvailableSlotsRpcArgs({
+      doctorId,
+      date,
+      consultationType,
+      slotDurationOverride,
+      clinicLocationId: null,
+    });
+    const { data, error } = await supabase.rpc("get_available_slots", rpcArgs);
 
     if (error) {
       log.error("get_available_slots RPC error:", {
         err: error,
         doctorId,
         date,
-        consultationType: ctype,
+        consultationType: rpcArgs.p_consultation_type,
         slotDurationOverride,
       });
     }

@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   normalizeConsultationType,
   mapGetAvailableSlotsResult,
-  shouldRetryWithoutDurationOverride,
+  buildGetAvailableSlotsRpcArgs,
+  isAmbiguousFunctionError,
 } from "@/lib/booking/available-slots";
 
 describe("normalizeConsultationType", () => {
@@ -61,13 +62,46 @@ describe("mapGetAvailableSlotsResult", () => {
   });
 });
 
-describe("shouldRetryWithoutDurationOverride", () => {
-  it("detects missing overload / unknown function errors", () => {
+describe("buildGetAvailableSlotsRpcArgs", () => {
+  it("always includes 5 named params for the unique overload", () => {
+    const args = buildGetAvailableSlotsRpcArgs({
+      doctorId: "e0000000-0000-0000-0000-000000000002",
+      date: "2026-08-03",
+      consultationType: "",
+    });
+    expect(Object.keys(args).sort()).toEqual(
+      [
+        "p_clinic_location_id",
+        "p_consultation_type",
+        "p_date",
+        "p_doctor_id",
+        "p_slot_duration_override",
+      ].sort()
+    );
+    expect(args.p_consultation_type).toBe("in_person");
+    expect(args.p_slot_duration_override).toBeNull();
+    expect(args.p_clinic_location_id).toBeNull();
+  });
+
+  it("passes positive duration override", () => {
+    const args = buildGetAvailableSlotsRpcArgs({
+      doctorId: "x",
+      date: "2026-08-03",
+      consultationType: "video",
+      slotDurationOverride: 45,
+    });
+    expect(args.p_consultation_type).toBe("video");
+    expect(args.p_slot_duration_override).toBe(45);
+  });
+});
+
+describe("isAmbiguousFunctionError", () => {
+  it("detects Postgres 42725 not unique", () => {
     expect(
-      shouldRetryWithoutDurationOverride(
-        "Could not find the function public.get_available_slots(p_doctor_id, p_date, p_consultation_type, p_slot_duration_override)"
+      isAmbiguousFunctionError(
+        "function get_available_slots(uuid, date, text) is not unique"
       )
     ).toBe(true);
-    expect(shouldRetryWithoutDurationOverride("permission denied")).toBe(false);
+    expect(isAmbiguousFunctionError("permission denied")).toBe(false);
   });
 });
