@@ -59,6 +59,7 @@ import {
 } from "@/lib/constants/skills";
 import { PriceBookEditor } from "@/components/doctor/price-book-editor";
 import { PracticePhotosManager } from "@/components/doctor/practice-photos-manager";
+import { ProfileMarketplaceFields } from "@/components/doctor/profile-marketplace-fields";
 import type { Education, Certification, Doctor, DoctorService } from "@/types";
 
 function createSupabase() {
@@ -1292,6 +1293,20 @@ export default function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Marketplace fields editable even after verification */}
+      {doctor && (
+        <ProfileMarketplaceFields
+          doctorId={doctor.id}
+          initialInsurers={(doctor as Doctor & { accepted_insurers?: string[] }).accepted_insurers || []}
+          initialGender={(doctor as Doctor).gender ?? null}
+          initialVideoPath={(doctor as Doctor).profile_video_path ?? null}
+          initialVideoStatus={(doctor as Doctor).profile_video_status ?? null}
+          initialVideoRejectionReason={
+            (doctor as Doctor).profile_video_rejection_reason ?? null
+          }
+        />
+      )}
 
       {/* Bottom Save */}
       {!isVerified && (

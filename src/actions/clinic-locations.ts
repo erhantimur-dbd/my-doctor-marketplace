@@ -9,6 +9,11 @@ import type { ClinicLocation, DoctorLocationAssignment } from "@/types";
 
 // ─── Validators ──────────────────────────────────────────────
 
+const dayHoursSchema = z
+  .object({ open: z.string().max(10), close: z.string().max(10) })
+  .nullable()
+  .optional();
+
 const upsertLocationSchema = z.object({
   name: z.string().min(1).max(100),
   address_line1: z.string().max(200).optional(),
@@ -20,6 +25,11 @@ const upsertLocationSchema = z.object({
   phone: z.string().max(30).optional(),
   email: z.email().optional().or(z.literal("")),
   is_primary: z.coerce.boolean().default(false),
+  opening_hours: z
+    .record(z.string(), dayHoursSchema)
+    .optional()
+    .default({}),
+  facilities: z.array(z.string().max(50)).optional().default([]),
 });
 
 // ─── Read ────────────────────────────────────────────────────
@@ -67,6 +77,21 @@ export async function createClinicLocation(formData: FormData) {
   const { error: authError, org } = await requireOrgMember(["owner", "admin"]);
   if (authError || !org) return { error: authError };
 
+  let openingHours: Record<string, unknown> = {};
+  let facilities: string[] = [];
+  try {
+    const oh = formData.get("opening_hours");
+    if (typeof oh === "string" && oh) openingHours = JSON.parse(oh);
+  } catch {
+    /* ignore */
+  }
+  try {
+    const fac = formData.get("facilities");
+    if (typeof fac === "string" && fac) facilities = JSON.parse(fac);
+  } catch {
+    /* ignore */
+  }
+
   const raw = {
     name: formData.get("name") as string,
     address_line1: (formData.get("address_line1") as string) || undefined,
@@ -78,6 +103,8 @@ export async function createClinicLocation(formData: FormData) {
     phone: (formData.get("phone") as string) || undefined,
     email: (formData.get("email") as string) || undefined,
     is_primary: formData.get("is_primary") === "true",
+    opening_hours: openingHours,
+    facilities,
   };
 
   const parsed = upsertLocationSchema.safeParse(raw);
@@ -117,6 +144,21 @@ export async function updateClinicLocation(formData: FormData) {
   const locationId = formData.get("location_id") as string;
   if (!locationId) return { error: "Location ID required" };
 
+  let openingHours: Record<string, unknown> = {};
+  let facilities: string[] = [];
+  try {
+    const oh = formData.get("opening_hours");
+    if (typeof oh === "string" && oh) openingHours = JSON.parse(oh);
+  } catch {
+    /* ignore */
+  }
+  try {
+    const fac = formData.get("facilities");
+    if (typeof fac === "string" && fac) facilities = JSON.parse(fac);
+  } catch {
+    /* ignore */
+  }
+
   const raw = {
     name: formData.get("name") as string,
     address_line1: (formData.get("address_line1") as string) || undefined,
@@ -128,6 +170,8 @@ export async function updateClinicLocation(formData: FormData) {
     phone: (formData.get("phone") as string) || undefined,
     email: (formData.get("email") as string) || undefined,
     is_primary: formData.get("is_primary") === "true",
+    opening_hours: openingHours,
+    facilities,
   };
 
   const parsed = upsertLocationSchema.safeParse(raw);

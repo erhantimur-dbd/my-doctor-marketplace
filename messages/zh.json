@@ -259,7 +259,16 @@
     "your_email": "Your email",
     "submitting": "Submitting...",
     "sort_soonest": "最早可约",
-    "book_next_slot": "预约 {time}"
+    "book_next_slot": "预约 {time}",
+    "sort_next_available": "最近可约",
+    "gender": "性别",
+    "any_gender": "任意性别",
+    "gender_female": "女",
+    "gender_male": "男",
+    "gender_non_binary": "非二元",
+    "insurer": "保险",
+    "any_insurer": "任意保险",
+    "bookable_now": "现在可预约"
   },
   "booking": {
     "select_date": "选择日期",

@@ -200,6 +200,7 @@ export function DesktopFilterBar({
           <SelectItem value="soonest">{t("sort_soonest")}</SelectItem>
           <SelectItem value="best_match">Best Match</SelectItem>
           <SelectItem value="featured">{t("sort_featured")}</SelectItem>
+          <SelectItem value="next_available">{t("sort_next_available")}</SelectItem>
           <SelectItem value="nearest">{t("sort_nearest")}</SelectItem>
           <SelectItem value="rating">{t("sort_rating")}</SelectItem>
           <SelectItem value="price_asc">{t("sort_price_asc")}</SelectItem>

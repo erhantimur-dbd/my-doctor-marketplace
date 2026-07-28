@@ -239,6 +239,13 @@ const SAMPLE_DATA = {
       bookingNumber: "BK-TEST-001",
       magicSession: true,
     }),
+  reviewRequest: () =>
+    templates.reviewRequestEmail({
+      patientName: "John",
+      doctorName: "Dr. Sarah Williams",
+      date: "1 April 2026",
+      reviewUrl: `${APP_URL}/en/dashboard/reviews?booking=test-booking-id`,
+    }),
 };
 
 // TemplateKey and TEMPLATE_LIST imported from @/lib/email/template-list

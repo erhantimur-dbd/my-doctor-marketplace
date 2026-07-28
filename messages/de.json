@@ -556,7 +556,16 @@
     "your_email": "Your email",
     "submitting": "Submitting...",
     "sort_soonest": "Baldmöglichst",
-    "book_next_slot": "Buchen {time}"
+    "book_next_slot": "Buchen {time}",
+    "sort_next_available": "Nächster Termin",
+    "gender": "Geschlecht",
+    "any_gender": "Beliebiges Geschlecht",
+    "gender_female": "Weiblich",
+    "gender_male": "Männlich",
+    "gender_non_binary": "Nicht-binär",
+    "insurer": "Versicherung",
+    "any_insurer": "Beliebiger Versicherer",
+    "bookable_now": "Jetzt buchbar"
   },
   "booking": {
     "select_date": "Datum wahlen",

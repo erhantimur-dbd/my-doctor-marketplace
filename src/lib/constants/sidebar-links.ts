@@ -30,6 +30,7 @@ import {
   Wallet,
   ThumbsUp,
   Bell,
+  Video,
 } from "lucide-react";
 
 export interface SidebarLink {
@@ -232,6 +233,7 @@ export const patientSidebarLinks: SidebarLink[] = [
 export const adminSidebarLinks: SidebarLink[] = [
   { href: "/admin", icon: LayoutDashboard, label: "Overview" },
   { href: "/admin/approvals", icon: ClipboardCheck, label: "Approvals" },
+  { href: "/admin/video-approvals", icon: Video, label: "Video Approvals" },
   { href: "/admin/doctors", icon: Stethoscope, label: "Doctors" },
   { href: "/admin/patients", icon: Users, label: "Patients" },
   { href: "/admin/bookings", icon: Calendar, label: "Bookings" },

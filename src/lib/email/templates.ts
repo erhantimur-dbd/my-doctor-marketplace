@@ -2024,6 +2024,52 @@ export function guestAccountClaimEmail({
 }
 
 // ---------------------------------------------------------------------------
+// Review Request Email (patient — post completed booking)
+// ---------------------------------------------------------------------------
+
+interface ReviewRequestParams {
+  patientName: string;
+  doctorName: string;
+  date: string;
+  reviewUrl: string;
+}
+
+export function reviewRequestEmail({
+  patientName,
+  doctorName,
+  date,
+  reviewUrl,
+}: ReviewRequestParams): { subject: string; html: string } {
+  const subject = `Share your experience with ${doctorName}`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">How was your appointment?</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${patientName}, thank you for seeing <strong>${doctorName}</strong> on ${date}.
+      Your honest review helps other patients choose the right specialist — and only patients with a completed booking can leave one.
+    </p>
+
+    <div style="background-color: #f0f9ff; border-radius: 6px; padding: 20px; margin-bottom: 24px;">
+      <p style="margin: 0 0 8px; font-size: 14px; color: #0369a1; font-weight: 600;">
+        Verified patient reviews only
+      </p>
+      <p style="margin: 0; font-size: 13px; color: #374151; line-height: 1.5;">
+        You can rate the visit, describe what you were seen for, and endorse the skills that stood out.
+        Reviews are moderated fairly — we never remove feedback just because it is critical.
+      </p>
+    </div>
+
+    ${button("Leave a Review", reviewUrl)}
+
+    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      Takes about two minutes. Thank you for helping keep private healthcare transparent.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
 // Reschedule Request Email (sent to doctor)
 // ---------------------------------------------------------------------------
 

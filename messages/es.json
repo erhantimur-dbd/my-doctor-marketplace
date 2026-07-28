@@ -253,7 +253,16 @@
     "your_email": "Your email",
     "submitting": "Submitting...",
     "sort_soonest": "Más pronto disponible",
-    "book_next_slot": "Reservar {time}"
+    "book_next_slot": "Reservar {time}",
+    "sort_next_available": "Próxima disponibilidad",
+    "gender": "Género",
+    "any_gender": "Cualquier género",
+    "gender_female": "Mujer",
+    "gender_male": "Hombre",
+    "gender_non_binary": "No binario",
+    "insurer": "Seguro",
+    "any_insurer": "Cualquier aseguradora",
+    "bookable_now": "Reservable ahora"
   },
   "booking": {
     "select_date": "Seleccionar Fecha",

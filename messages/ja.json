@@ -253,7 +253,16 @@
     "your_email": "Your email",
     "submitting": "Submitting...",
     "sort_soonest": "最短で予約可能",
-    "book_next_slot": "{time} を予約"
+    "book_next_slot": "{time} を予約",
+    "sort_next_available": "最短予約可能",
+    "gender": "性別",
+    "any_gender": "指定なし",
+    "gender_female": "女性",
+    "gender_male": "男性",
+    "gender_non_binary": "ノンバイナリー",
+    "insurer": "保険",
+    "any_insurer": "すべての保険",
+    "bookable_now": "今すぐ予約可能"
   },
   "booking": {
     "select_date": "日付を選択",

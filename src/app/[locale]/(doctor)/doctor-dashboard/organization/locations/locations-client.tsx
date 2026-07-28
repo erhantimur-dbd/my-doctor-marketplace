@@ -46,6 +46,12 @@ import {
   deactivateClinicLocation,
   setDoctorLocations,
 } from "@/actions/clinic-locations";
+import {
+  LOCATION_FACILITIES,
+  WEEKDAY_KEYS,
+  WEEKDAY_LABELS,
+} from "@/lib/constants/location-facilities";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {
   org: any;
@@ -67,7 +73,15 @@ export function LocationsClient({ org, locations: initialLocations, orgDoctors, 
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [editingLocation, setEditingLocation] = useState<any | null>(null);
   const [locForm, setLocForm] = useState({
-    name: "", address_line1: "", city: "", postal_code: "", phone: "", email: "", is_primary: false,
+    name: "",
+    address_line1: "",
+    city: "",
+    postal_code: "",
+    phone: "",
+    email: "",
+    is_primary: false,
+    opening_hours: {} as Record<string, { open: string; close: string } | null>,
+    facilities: [] as string[],
   });
 
   // Doctor assignment dialog
@@ -77,7 +91,17 @@ export function LocationsClient({ org, locations: initialLocations, orgDoctors, 
 
   function openAddLocation() {
     setEditingLocation(null);
-    setLocForm({ name: "", address_line1: "", city: "", postal_code: "", phone: "", email: "", is_primary: false });
+    setLocForm({
+      name: "",
+      address_line1: "",
+      city: "",
+      postal_code: "",
+      phone: "",
+      email: "",
+      is_primary: false,
+      opening_hours: {},
+      facilities: [],
+    });
     setShowLocationDialog(true);
   }
 
@@ -91,6 +115,8 @@ export function LocationsClient({ org, locations: initialLocations, orgDoctors, 
       phone: loc.phone ?? "",
       email: loc.email ?? "",
       is_primary: loc.is_primary,
+      opening_hours: loc.opening_hours ?? {},
+      facilities: loc.facilities ?? [],
     });
     setShowLocationDialog(true);
   }
@@ -107,7 +133,15 @@ export function LocationsClient({ org, locations: initialLocations, orgDoctors, 
   async function saveLocation() {
     setError(null);
     const fd = new FormData();
-    Object.entries(locForm).forEach(([k, v]) => fd.set(k, String(v)));
+    fd.set("name", locForm.name);
+    fd.set("address_line1", locForm.address_line1);
+    fd.set("city", locForm.city);
+    fd.set("postal_code", locForm.postal_code);
+    fd.set("phone", locForm.phone);
+    fd.set("email", locForm.email);
+    fd.set("is_primary", String(locForm.is_primary));
+    fd.set("opening_hours", JSON.stringify(locForm.opening_hours || {}));
+    fd.set("facilities", JSON.stringify(locForm.facilities || []));
     if (editingLocation) fd.set("location_id", editingLocation.id);
 
     const result = editingLocation
@@ -333,7 +367,7 @@ export function LocationsClient({ org, locations: initialLocations, orgDoctors, 
 
       {/* Location form dialog */}
       <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingLocation ? "Edit Location" : "Add Location"}</DialogTitle>
             <DialogDescription>Enter the details for this clinic branch.</DialogDescription>
@@ -401,6 +435,80 @@ export function LocationsClient({ org, locations: initialLocations, orgDoctors, 
                 className="rounded"
               />
               <Label htmlFor="editPrimary" className="cursor-pointer text-sm">Set as primary location</Label>
+            </div>
+
+            <div className="space-y-2 border-t pt-3">
+              <Label className="text-sm font-medium">Opening hours</Label>
+              <p className="text-xs text-muted-foreground">Leave closed days empty.</p>
+              <div className="space-y-2">
+                {WEEKDAY_KEYS.map((day) => {
+                  const hours = locForm.opening_hours?.[day];
+                  const open = hours?.open ?? "";
+                  const close = hours?.close ?? "";
+                  return (
+                    <div key={day} className="grid grid-cols-[5rem_1fr_1fr] items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{WEEKDAY_LABELS[day].slice(0, 3)}</span>
+                      <Input
+                        type="time"
+                        value={open}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setLocForm((p) => {
+                            const next = { ...(p.opening_hours || {}) };
+                            if (!v && !close) {
+                              next[day] = null;
+                            } else {
+                              next[day] = { open: v, close: close || "17:00" };
+                            }
+                            return { ...p, opening_hours: next };
+                          });
+                        }}
+                      />
+                      <Input
+                        type="time"
+                        value={close}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setLocForm((p) => {
+                            const next = { ...(p.opening_hours || {}) };
+                            if (!v && !open) {
+                              next[day] = null;
+                            } else {
+                              next[day] = { open: open || "09:00", close: v };
+                            }
+                            return { ...p, opening_hours: next };
+                          });
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2 border-t pt-3">
+              <Label className="text-sm font-medium">Facilities</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {LOCATION_FACILITIES.map((f) => (
+                  <label
+                    key={f.value}
+                    className="flex cursor-pointer items-center gap-2 text-sm"
+                  >
+                    <Checkbox
+                      checked={locForm.facilities.includes(f.value)}
+                      onCheckedChange={(checked) => {
+                        setLocForm((p) => ({
+                          ...p,
+                          facilities: checked
+                            ? [...p.facilities, f.value]
+                            : p.facilities.filter((x) => x !== f.value),
+                        }));
+                      }}
+                    />
+                    {f.label}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -76,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // High-priority pages (homepage, search)
-  const highPriorityPages = ["", "/doctors", "/specialties"];
+  const highPriorityPages = ["", "/doctors", "/specialties", "/conditions"];
   const highPriorityEntries = locales.flatMap((locale) =>
     highPriorityPages.map((page) => ({
       url: `${BASE_URL}/${locale}${page}`,
@@ -179,6 +179,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
   );
 
+  // Condition / procedure SEO pages (static taxonomy)
+  const { getAllConditionSlugs } = await import("@/lib/constants/conditions");
+  const conditionEntries = locales.flatMap((locale) =>
+    getAllConditionSlugs().map((slug) => ({
+      url: `${BASE_URL}/${locale}/conditions/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.75,
+    }))
+  );
+
+  // City × specialty programmatic SEO (UK/IE launch cities)
+  const { UK_SEO_CITIES } = await import("@/lib/constants/uk-cities");
+  const citySpecialtyEntries = locales.flatMap((locale) =>
+    UK_SEO_CITIES.flatMap((city) =>
+      (specialties || []).slice(0, 30).map((spec: { slug: string }) => ({
+        url: `${BASE_URL}/${locale}/find/${city.slug}/${spec.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      }))
+    )
+  );
+
   return [
     ...highPriorityEntries,
     ...publicEntries,
@@ -187,5 +211,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...doctorEntries,
     ...blogEntries,
     ...specialtyEntries,
+    ...conditionEntries,
+    ...citySpecialtyEntries,
   ];
 }

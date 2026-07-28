@@ -114,7 +114,16 @@ export function DoctorSearchFilters({
   ).length;
 
   // Keys managed by the "More Filters" dialog
-  const MORE_FILTER_KEYS = ["providerType", "acceptedPayment", "minRating", "language", "minPrice", "maxPrice"] as const;
+  const MORE_FILTER_KEYS = [
+    "providerType",
+    "acceptedPayment",
+    "insurer",
+    "gender",
+    "minRating",
+    "language",
+    "minPrice",
+    "maxPrice",
+  ] as const;
 
   const moreFilterCount = MORE_FILTER_KEYS.filter(
     (k) => currentFilters[k] && currentFilters[k] !== "all"

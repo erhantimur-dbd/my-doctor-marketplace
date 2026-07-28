@@ -187,6 +187,18 @@ export async function submitReview(formData: FormData) {
 
   if (error || !insertedReview) return { error: safeError(error) };
 
+  // Mark any pending review request as completed (B5)
+  try {
+    const adminForRequest = createAdminClient();
+    await adminForRequest
+      .from("review_requests")
+      .update({ completed_at: new Date().toISOString() })
+      .eq("booking_id", bookingId)
+      .is("completed_at", null);
+  } catch (err) {
+    log.error("[Reviews] Failed to complete review request", { err });
+  }
+
   // Insert skill endorsements (best-effort — don't fail the review if these error)
   if (skillSlugs.length > 0) {
     const rows = skillSlugs.map((slug) => ({

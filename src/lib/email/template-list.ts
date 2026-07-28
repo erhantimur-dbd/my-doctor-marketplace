@@ -28,7 +28,8 @@ export type TemplateKey =
   | "subscriptionUpgradeInvite"
   | "availabilityAlert"
   | "satisfactionSurvey"
-  | "guestAccountClaim";
+  | "guestAccountClaim"
+  | "reviewRequest";
 
 export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string }[] = [
   // Booking
@@ -45,6 +46,7 @@ export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string 
   { key: "doctorRejected", label: "Doctor Rejected", category: "Onboarding" },
   // Reviews & Messages
   { key: "reviewReceived", label: "Review Received (→ Doctor)", category: "Engagement" },
+  { key: "reviewRequest", label: "Review Request (→ Patient)", category: "Engagement" },
   { key: "newMessage", label: "New Message", category: "Engagement" },
   { key: "adminMessage", label: "Admin Broadcast", category: "Engagement" },
   // Care plans

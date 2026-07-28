@@ -317,7 +317,16 @@
     "your_email": "Your email",
     "submitting": "Submitting...",
     "sort_soonest": "En yakın müsait",
-    "book_next_slot": "Rezerve et {time}"
+    "book_next_slot": "Rezerve et {time}",
+    "sort_next_available": "En yakın müsaitlik",
+    "gender": "Cinsiyet",
+    "any_gender": "Herhangi bir cinsiyet",
+    "gender_female": "Kadın",
+    "gender_male": "Erkek",
+    "gender_non_binary": "Non-binary",
+    "insurer": "Sigorta",
+    "any_insurer": "Herhangi bir sigorta",
+    "bookable_now": "Şimdi randevu alınabilir"
   },
   "booking": {
     "select_date": "Tarih Secin",

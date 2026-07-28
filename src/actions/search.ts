@@ -85,6 +85,10 @@ export interface SearchFilters {
   userLng?: number;
   providerType?: "doctor" | "testing_service";
   acceptedPayment?: string;
+  /** Private medical insurer slug (doctors.accepted_insurers) */
+  insurer?: string;
+  /** Patient-facing gender filter: female | male | non_binary */
+  gender?: string;
   /** Proximity search: latitude of a selected place (borough, street, etc.) */
   placeLat?: number;
   /** Proximity search: longitude of a selected place */
@@ -636,6 +640,12 @@ export async function searchDoctors(filters: SearchFilters) {
   if (filters.acceptedPayment) {
     query = query.contains("accepted_payments", [filters.acceptedPayment]);
   }
+  if (filters.insurer) {
+    query = query.contains("accepted_insurers", [filters.insurer]);
+  }
+  if (filters.gender && filters.gender !== "prefer_not_to_say") {
+    query = query.eq("gender", filters.gender);
+  }
 
   // Pagination
   const page = filters.page || 1;
@@ -913,6 +923,43 @@ export async function searchDoctors(filters: SearchFilters) {
           };
         }
       }
+    }
+  } else if (filters.sort === "next_available") {
+    // Prefer doctors with same-day availability first, then rating.
+    // Uses existing RPC for "available today" IDs; remaining doctors follow.
+    const { data: todayIds } = await supabase.rpc("get_doctor_ids_available_today");
+    const availableTodayIds = new Set((todayIds as string[]) || []);
+
+    // Fetch a larger candidate set then re-rank
+    const { data: candidates, count: candidateCount, error: candErr } = await query
+      .order("is_featured", { ascending: false })
+      .order("avg_rating", { ascending: false })
+      .range(0, Math.min(page * perPage + 48, 200) - 1);
+
+    if (candErr) {
+      log.error("Next available sort error:", { err: candErr });
+      query = query
+        .order("is_featured", { ascending: false })
+        .order("avg_rating", { ascending: false })
+        .range((page - 1) * perPage, page * perPage - 1);
+    } else {
+      const ranked = [...(candidates || [])].sort(
+        (a: { id: string; avg_rating: number }, b: { id: string; avg_rating: number }) => {
+          const aLive = availableTodayIds.has(a.id) ? 0 : 1;
+          const bLive = availableTodayIds.has(b.id) ? 0 : 1;
+          if (aLive !== bLive) return aLive - bLive;
+          return Number(b.avg_rating || 0) - Number(a.avg_rating || 0);
+        }
+      );
+      const total = candidateCount ?? ranked.length;
+      const pageSlice = ranked.slice((page - 1) * perPage, page * perPage);
+      return {
+        doctors: pageSlice,
+        total,
+        page,
+        perPage,
+        bookableNowIds: [...availableTodayIds],
+      };
     }
   } else {
     // Standard sort

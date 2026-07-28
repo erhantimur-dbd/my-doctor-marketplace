@@ -61,6 +61,10 @@ export interface ClinicLocation {
   longitude: number | null;
   is_primary: boolean;
   is_active: boolean;
+  /** Per-day hours e.g. { mon: { open: "09:00", close: "17:00" }, tue: null } */
+  opening_hours: Record<string, { open: string; close: string } | null>;
+  /** Facility tags e.g. wheelchair_accessible, free_parking */
+  facilities: string[];
   created_at: string;
   updated_at: string;
 }
@@ -199,6 +203,13 @@ export interface Doctor {
   in_person_deposit_type: 'none' | 'percentage' | 'flat';
   in_person_deposit_value: number | null;
   accepted_payments: string[];
+  accepted_insurers: string[];
+  gender: "female" | "male" | "non_binary" | "prefer_not_to_say" | null;
+  profile_video_path: string | null;
+  profile_video_status: "pending" | "approved" | "rejected" | null;
+  profile_video_uploaded_at: string | null;
+  profile_video_reviewed_at: string | null;
+  profile_video_rejection_reason: string | null;
   is_wheelchair_accessible: boolean;
   has_testing_addon: boolean;
   avg_rating: number;

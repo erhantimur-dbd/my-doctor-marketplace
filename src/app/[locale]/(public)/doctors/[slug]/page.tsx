@@ -38,7 +38,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getDoctorEndorsementCounts } from "@/actions/reviews";
 import { getSkill } from "@/lib/constants/skills";
 import { generateMetadata as seoMetadata } from "@/lib/seo/metadata";
-import { doctorJsonLd } from "@/lib/seo/json-ld";
+import { doctorJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
+import { getInsurerLabel } from "@/lib/constants/insurers";
+import { getSkill } from "@/lib/constants/skills";
+import { WEEKDAY_KEYS, WEEKDAY_LABELS, getFacilityLabel } from "@/lib/constants/location-facilities";
 import type { Metadata } from "next";
 
 interface DoctorPageProps {
@@ -106,19 +109,40 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
 
   const doctor: any = doctorData2;
 
-  // Get reviews
+  // Get reviews (with treatment/skill tags for "Seen for")
   const { data: reviews } = await adminDb
     .from("reviews")
     .select(
       `
       *,
-      patient:profiles!reviews_patient_id_fkey(first_name, last_name)
+      patient:profiles!reviews_patient_id_fkey(first_name, last_name),
+      review_endorsements(skill_slug)
     `
     )
     .eq("doctor_id", doctor.id)
     .eq("is_visible", true)
     .order("created_at", { ascending: false })
     .limit(5);
+
+  // Public FAQs
+  const { data: faqs } = await adminDb
+    .from("doctor_faqs")
+    .select("question, answer, display_order")
+    .eq("doctor_id", doctor.id)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+
+  // Multi-location (clinic branches) for this doctor when assigned
+  const { data: locationAssignments } = await adminDb
+    .from("doctor_location_assignments")
+    .select(
+      `clinic_location:clinic_locations(
+        id, name, address_line1, city, postal_code, country_code,
+        phone, opening_hours, facilities, is_primary, is_active
+      )`
+    )
+    .eq("doctor_id", doctor.id)
+    .eq("is_active", true);
 
   // Get AI review summary (if available)
   const { data: reviewSummary } = await adminDb
@@ -194,12 +218,43 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
     url: `${process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com"}/${locale}/doctors/${slug}`,
   });
 
+  const faqSchema = faqJsonLd(
+    (faqs || []).map((f: { question: string; answer: string }) => ({
+      question: f.question,
+      answer: f.answer,
+    }))
+  );
+
+  const approvedVideoPath =
+    doctor.profile_video_status === "approved" && doctor.profile_video_path
+      ? doctor.profile_video_path
+      : null;
+  const videoPublicUrl = approvedVideoPath
+    ? approvedVideoPath.startsWith("http")
+      ? approvedVideoPath
+      : `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${approvedVideoPath}`
+    : null;
+
+  const acceptedInsurers: string[] = Array.isArray(doctor.accepted_insurers)
+    ? doctor.accepted_insurers
+    : [];
+
+  const clinicLocations = (locationAssignments || [])
+    .map((a: any) => a.clinic_location)
+    .filter((loc: any) => loc && loc.is_active);
+
   return (
     <div className="relative min-h-screen">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {faqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
       {/* Decorative specialty icons across page background */}
       <HeroSpecialtyIcons />
 
@@ -362,7 +417,28 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
             </Card>
           )}
 
-          {/* Key Skills */}
+          {/* Approved intro video */}
+          {videoPublicUrl && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="h-5 w-5" />
+                  Meet {doctor.profile.first_name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <video
+                  src={videoPublicUrl}
+                  controls
+                  playsInline
+                  className="aspect-video w-full rounded-lg bg-black"
+                  preload="metadata"
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Key Skills (doctor self-declared) */}
           {doctorSkillLabels.length > 0 && (
             <Card>
               <CardHeader>
@@ -383,6 +459,123 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                     </Badge>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Areas of expertise / Seen for (skill endorsement counts) */}
+          {endorsements.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ThumbsUp className="h-5 w-5" />
+                  Areas of expertise
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  Based on verified patient reviews — what patients were seen for.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {endorsements.slice(0, 20).map((e) => (
+                    <div
+                      key={e.slug}
+                      className="inline-flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1.5 text-sm"
+                    >
+                      <span>{e.label}</span>
+                      <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
+                        {e.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Accepted insurers */}
+          {acceptedInsurers.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Insurance accepted
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {acceptedInsurers.map((code: string) => (
+                    <Badge key={code} variant="outline">
+                      {getInsurerLabel(code)}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Multi-location hours & facilities */}
+          {clinicLocations.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5" />
+                  Locations
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {clinicLocations.map((loc: any) => {
+                  const hours = (loc.opening_hours || {}) as Record<
+                    string,
+                    { open: string; close: string } | null
+                  >;
+                  const facilities: string[] = loc.facilities || [];
+                  return (
+                    <div key={loc.id} className="rounded-lg border p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{loc.name}</p>
+                        {loc.is_primary && (
+                          <Badge variant="secondary" className="text-xs">
+                            Primary
+                          </Badge>
+                        )}
+                      </div>
+                      {(loc.address_line1 || loc.city) && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {[loc.address_line1, loc.city, loc.postal_code]
+                            .filter(Boolean)
+                            .join(", ")}
+                        </p>
+                      )}
+                      {Object.keys(hours).length > 0 && (
+                        <div className="mt-3 grid gap-1 text-sm sm:grid-cols-2">
+                          {WEEKDAY_KEYS.map((day) => {
+                            const h = hours[day];
+                            return (
+                              <div key={day} className="flex justify-between gap-2">
+                                <span className="text-muted-foreground">
+                                  {WEEKDAY_LABELS[day]}
+                                </span>
+                                <span>
+                                  {h ? `${h.open} – ${h.close}` : "Closed"}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {facilities.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {facilities.map((f) => (
+                            <Badge key={f} variant="outline" className="text-xs">
+                              {getFacilityLabel(f)}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </CardContent>
             </Card>
           )}
@@ -640,7 +833,7 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                   </TabsTrigger>
                   <TabsTrigger value="endorsements" className="flex items-center gap-2">
                     <ThumbsUp className="h-4 w-4" />
-                    Skill Endorsements ({totalEndorsements})
+                    Seen for ({totalEndorsements})
                   </TabsTrigger>
                 </TabsList>
 
@@ -702,6 +895,26 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
                                 {review.comment}
                               </p>
                             )}
+                            {Array.isArray(review.review_endorsements) &&
+                              review.review_endorsements.length > 0 && (
+                                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                  <span className="text-xs text-muted-foreground">
+                                    Seen for:
+                                  </span>
+                                  {review.review_endorsements.map(
+                                    (e: { skill_slug: string }) => (
+                                      <Badge
+                                        key={e.skill_slug}
+                                        variant="secondary"
+                                        className="text-xs font-normal"
+                                      >
+                                        {getSkill(e.skill_slug)?.label ??
+                                          e.skill_slug}
+                                      </Badge>
+                                    )
+                                  )}
+                                </div>
+                              )}
                             {review.doctor_response && (
                               <div className="mt-2 rounded-md bg-muted/50 p-3">
                                 <p className="text-xs font-medium">
@@ -749,6 +962,31 @@ export default async function DoctorProfilePage({ params }: DoctorPageProps) {
               </Tabs>
             </CardContent>
           </Card>
+
+          {/* Profile FAQs */}
+          {faqs && faqs.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Frequently asked questions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {faqs.map(
+                  (
+                    faq: { question: string; answer: string },
+                    i: number
+                  ) => (
+                    <div key={i}>
+                      <p className="font-medium">{faq.question}</p>
+                      <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+                        {faq.answer}
+                      </p>
+                      {i < faqs.length - 1 && <Separator className="mt-4" />}
+                    </div>
+                  )
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Sidebar - Booking CTA */}

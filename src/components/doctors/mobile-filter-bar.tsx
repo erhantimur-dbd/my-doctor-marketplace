@@ -21,9 +21,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility, FlaskConical, CreditCard } from "lucide-react";
+import { Clock, SlidersHorizontal, X, MapPin, Loader2, Accessibility, FlaskConical, CreditCard, Shield, User } from "lucide-react";
 import { cn, formatSpecialtyName } from "@/lib/utils";
 import { PAYMENT_METHODS } from "@/lib/constants/payment-methods";
+import { INSURERS } from "@/lib/constants/insurers";
+import { SEARCHABLE_GENDERS } from "@/lib/constants/gender";
 
 /** Language names as stored in doctors.languages TEXT[] column */
 const DOCTOR_LANGUAGES = [
@@ -188,6 +190,7 @@ export function MobileFilterBar({
           <SelectItem value="soonest">{t("sort_soonest")}</SelectItem>
           <SelectItem value="best_match">Best Match</SelectItem>
           <SelectItem value="featured">{t("sort_featured")}</SelectItem>
+          <SelectItem value="next_available">{t("sort_next_available")}</SelectItem>
           <SelectItem value="nearest">{t("sort_nearest")}</SelectItem>
           <SelectItem value="rating">{t("sort_rating")}</SelectItem>
           <SelectItem value="price_asc">{t("sort_price_asc")}</SelectItem>
@@ -353,6 +356,54 @@ export function MobileFilterBar({
                   {PAYMENT_METHODS.map((pm) => (
                     <SelectItem key={pm.value} value={pm.value}>
                       {t(pm.labelKey)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Insurer */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-sm">
+                <Shield className="h-3.5 w-3.5" />
+                {t("insurer")}
+              </Label>
+              <Select
+                value={currentFilters.insurer || "all"}
+                onValueChange={(v) => updateFilter("insurer", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("any_insurer")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("any_insurer")}</SelectItem>
+                  {INSURERS.map((ins) => (
+                    <SelectItem key={ins.value} value={ins.value}>
+                      {ins.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Gender */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5 text-sm">
+                <User className="h-3.5 w-3.5" />
+                {t("gender")}
+              </Label>
+              <Select
+                value={currentFilters.gender || "all"}
+                onValueChange={(v) => updateFilter("gender", v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t("any_gender")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t("any_gender")}</SelectItem>
+                  {SEARCHABLE_GENDERS.map((g) => (
+                    <SelectItem key={g.value} value={g.value}>
+                      {g.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

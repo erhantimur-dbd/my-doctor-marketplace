@@ -90,6 +90,8 @@ export default async function DoctorsPage({
       userLng: sp.lng ? Number(sp.lng) : undefined,
       providerType: sp.providerType as "doctor" | "testing_service" | undefined,
       acceptedPayment: sp.acceptedPayment,
+      insurer: sp.insurer,
+      gender: sp.gender,
       placeLat: sp.placeLat ? Number(sp.placeLat) : undefined,
       placeLng: sp.placeLng ? Number(sp.placeLng) : undefined,
       radius: sp.radius ? Number(sp.radius) : undefined,

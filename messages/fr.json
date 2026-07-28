@@ -317,7 +317,16 @@
     "your_email": "Your email",
     "submitting": "Submitting...",
     "sort_soonest": "Disponible le plus tôt",
-    "book_next_slot": "Réserver {time}"
+    "book_next_slot": "Réserver {time}",
+    "sort_next_available": "Prochaine disponibilité",
+    "gender": "Genre",
+    "any_gender": "Tous les genres",
+    "gender_female": "Femme",
+    "gender_male": "Homme",
+    "gender_non_binary": "Non-binaire",
+    "insurer": "Assurance",
+    "any_insurer": "Toute assurance",
+    "bookable_now": "Réservable maintenant"
   },
   "booking": {
     "select_date": "Choisir une date",

@@ -226,7 +226,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
                     </span>
-                    Available Now
+                    Bookable now
                   </span>
                 )}
               </div>

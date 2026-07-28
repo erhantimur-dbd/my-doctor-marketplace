@@ -50,3 +50,39 @@ export function organizationJsonLd() {
     logo: `${process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com"}/logo.png`,
   };
 }
+
+export function faqJsonLd(
+  items: { question: string; answer: string }[]
+): Record<string, unknown> | null {
+  if (!items.length) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+}
+
+export function medicalConditionJsonLd({
+  name,
+  description,
+  url,
+}: {
+  name: string;
+  description: string;
+  url: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "MedicalCondition",
+    name,
+    description,
+    url,
+  };
+}
