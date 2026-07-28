@@ -1103,7 +1103,7 @@ export function HomeSearchBar({
                 } else if (s.location) {
                   params.set("location", s.location);
                 }
-                router.push(`/doctors?${params.toString()}`);
+                navigateToResults(`/doctors?${params.toString()}`);
               }}
             >
               <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
