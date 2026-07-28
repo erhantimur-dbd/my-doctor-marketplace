@@ -27,6 +27,7 @@ import {
   widenRadiusSteps,
   type InventoryRankDoctor,
 } from "@/lib/search";
+import { getTopEndorsementsBatch } from "@/actions/reviews";
 
 /** Build match % map when scoring context is present; does not re-order doctors. */
 function buildMatchScoresMap(
@@ -1589,12 +1590,21 @@ export interface DoctorSuggestion {
 }
 
 export interface FeaturedDoctor extends DoctorSuggestion {
+  id: string;
   avatarUrl: string | null;
+  avgRating: number;
+  totalReviews: number;
+  yearsOfExperience: number | null;
+  city: string | null;
+  countryCode: string | null;
+  /** Top patient skill endorsements (label + count) */
+  endorsements: { label: string; count: number }[];
 }
 
 /**
- * Returns top-rated verified doctors for the homepage search dropdown
- * "Specialists" column. Ordered by featured flag, then rating, then reviews.
+ * Returns top-rated verified doctors for the homepage featured strip
+ * and search dropdown "Specialists" column. Ordered by featured flag,
+ * then rating, then reviews. Includes location, experience, and top endorsements.
  */
 export async function getFeaturedDoctors(
   limit = 5
@@ -1604,8 +1614,13 @@ export async function getFeaturedDoctors(
     .from("doctors")
     .select(
       `
+      id,
       slug,
+      avg_rating,
+      total_reviews,
+      years_of_experience,
       profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+      location:locations(city, country_code),
       specialties:doctor_specialties(
         specialty:specialties(name_key),
         is_primary
@@ -1621,10 +1636,13 @@ export async function getFeaturedDoctors(
 
   if (error || !data) return [];
 
-  return data.map((d: Record<string, unknown>) => {
+  const base = data.map((d: Record<string, unknown>) => {
     const profile: Record<string, unknown> = Array.isArray(d.profile)
       ? d.profile[0]
       : (d.profile as Record<string, unknown>);
+    const location: Record<string, unknown> | null = Array.isArray(d.location)
+      ? (d.location[0] as Record<string, unknown> | undefined) ?? null
+      : (d.location as Record<string, unknown> | null);
     const specs = d.specialties as Array<{
       specialty: { name_key: string } | { name_key: string }[];
       is_primary: boolean;
@@ -1637,6 +1655,7 @@ export async function getFeaturedDoctors(
       : specData?.name_key;
 
     return {
+      id: d.id as string,
       name: `${profile?.first_name || ""} ${profile?.last_name || ""}`.trim(),
       slug: d.slug as string,
       specialty: nameKey
@@ -1646,8 +1665,30 @@ export async function getFeaturedDoctors(
             .replace(/\b\w/g, (l: string) => l.toUpperCase())
         : "",
       avatarUrl: (profile?.avatar_url as string | null) ?? null,
+      avgRating: Number(d.avg_rating) || 0,
+      totalReviews: Number(d.total_reviews) || 0,
+      yearsOfExperience:
+        typeof d.years_of_experience === "number" ? d.years_of_experience : null,
+      city: (location?.city as string | null) ?? null,
+      countryCode: (location?.country_code as string | null) ?? null,
+      endorsements: [] as { label: string; count: number }[],
     };
   });
+
+  // Attach top patient skill endorsements (batch query)
+  try {
+    const endorsementMap = await getTopEndorsementsBatch(
+      base.map((d) => d.id),
+      2
+    );
+    for (const doctor of base) {
+      doctor.endorsements = endorsementMap[doctor.id] ?? [];
+    }
+  } catch (err) {
+    log.error("Featured doctor endorsements batch failed:", { err });
+  }
+
+  return base;
 }
 
 export async function searchSuggestions(
