@@ -40,7 +40,6 @@ import { getSkill } from "@/lib/constants/skills";
 import { generateMetadata as seoMetadata } from "@/lib/seo/metadata";
 import { doctorJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { getInsurerLabel } from "@/lib/constants/insurers";
-import { getSkill } from "@/lib/constants/skills";
 import { WEEKDAY_KEYS, WEEKDAY_LABELS, getFacilityLabel } from "@/lib/constants/location-facilities";
 import type { Metadata } from "next";
 
