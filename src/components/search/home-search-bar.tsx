@@ -1118,7 +1118,7 @@ export function HomeSearchBar({
     if (!isSearchMode) {
       let itemIndex = -1;
       return (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border bg-background shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-[60] mt-1.5 max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-hidden rounded-2xl border border-border/80 bg-background shadow-2xl ring-1 ring-black/5">
           {renderRecentSearches()}
           <div className="grid grid-cols-3 gap-2 p-2">
             {/* Popular specialties */}
@@ -1170,7 +1170,7 @@ export function HomeSearchBar({
     // Search mode: grouped list (unchanged from before minus AI symptom block)
     let itemIndex = -1;
     return (
-      <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border bg-background shadow-lg">
+      <div className="absolute left-0 right-0 top-full z-[60] mt-1.5 max-h-[min(28rem,70vh)] overflow-y-auto overflow-x-hidden rounded-2xl border border-border/80 bg-background shadow-2xl ring-1 ring-black/5">
         {/* Specialties group (filtered) */}
         {displaySpecialties.length > 0 && (
           <div className="p-1">
@@ -1309,138 +1309,148 @@ export function HomeSearchBar({
   return (
     <div className={cn("mx-auto", compact ? "max-w-full" : "max-w-4xl")} ref={wrapperRef}>
       {/* Desktop layout */}
-      <div className="relative hidden md:block">
-        {/* Doctify-style labeled pill — used on both home (prominent) and results (compact) pages */}
-        <div className={cn(
-          "flex items-stretch gap-0 rounded-full border-2 bg-background transition-shadow",
-          compact
-            ? "shadow-lg ring-1 ring-white/10"
-            : "shadow-2xl ring-8 hover:shadow-[0_24px_60px_-12px_rgba(30,64,175,0.45)]",
-          missingInputWarning
-            ? "border-destructive/60 ring-destructive/20"
-            : compact
-              ? "border-white/40"
-              : "border-white/40 ring-white/10"
-        )}>
-          {/* What field + Grok voice mic */}
-          <label
-            htmlFor="home-search-what"
-            className={cn(
-              "flex flex-col justify-center flex-1 min-w-0 rounded-l-full cursor-text text-left transition-colors hover:bg-muted/30",
-              compact ? "px-5 py-1.5" : "px-6 py-3"
-            )}
-          >
-            <span className={cn(
-              "text-xs font-semibold leading-tight",
-              missingInputWarning ? "text-destructive" : "text-primary"
-            )}>
-              {t("search_what_label")}
-            </span>
-            <div className="flex items-center gap-2">
-              <input
-                id="home-search-what"
-                ref={inputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onFocus={() => setShowSuggestions(true)}
-                onKeyDown={handleKeyDown}
-                placeholder={
-                  speech.isRecording || speech.isProcessing
-                    ? t("voice_listening")
-                    : t("search_name_placeholder")
-                }
-                className={cn(
-                  "min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground",
-                  compact ? "h-5" : "h-6"
-                )}
-                autoComplete="off"
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (speech.isRecording) speech.stop();
-                  else if (!speech.isProcessing) startVoiceWithPrivacy();
-                }}
-                className={cn(
-                  "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
-                  speech.isRecording
-                    ? "bg-red-100 text-red-600"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                aria-label={
-                  speech.isRecording
-                    ? t("voice_stop") || "Stop listening"
-                    : t("voice_search") || "Voice search"
-                }
-                title={t("voice_search_hint") || "Search by voice (Grok)"}
-                disabled={speech.isProcessing}
-              >
-                <Mic
-                  className={cn(
-                    "h-4 w-4",
-                    speech.isRecording && "animate-pulse"
-                  )}
-                />
-                {speech.isRecording && (
-                  <span className="absolute inset-0 animate-ping rounded-full bg-red-400/30" />
-                )}
-              </button>
-            </div>
-          </label>
-
-          {/* Divider */}
-          <div className={cn("w-px bg-border", compact ? "my-2" : "my-3")} />
-
-          {/* Where field */}
+      <div className="hidden md:block">
+        {/*
+          Positioning context = pill only.
+          Dropdown uses absolute top-full so it must NOT include chips/toggles
+          in its relative parent (otherwise it renders detached below them).
+        */}
+        <div className="relative z-50">
+          {/* Doctify-style labeled pill — used on both home (prominent) and results (compact) pages */}
           <div className={cn(
-            "flex flex-col justify-center w-72 text-left",
-            compact ? "px-4 py-1.5" : "px-5 py-3"
+            "flex items-stretch gap-0 rounded-full border-2 bg-background transition-shadow",
+            compact
+              ? "shadow-lg ring-1 ring-white/10"
+              : "shadow-2xl ring-8 hover:shadow-[0_24px_60px_-12px_rgba(30,64,175,0.45)]",
+            missingInputWarning
+              ? "border-destructive/60 ring-destructive/20"
+              : compact
+                ? "border-white/40"
+                : "border-white/40 ring-white/10"
           )}>
-            <span className={cn(
-              "text-xs font-semibold leading-tight",
-              missingInputWarning ? "text-destructive" : "text-foreground"
+            {/* What field + Grok voice mic */}
+            <label
+              htmlFor="home-search-what"
+              className={cn(
+                "flex flex-col justify-center flex-1 min-w-0 rounded-l-full cursor-text text-left transition-colors hover:bg-muted/30",
+                compact ? "px-5 py-1.5" : "px-6 py-3"
+              )}
+            >
+              <span className={cn(
+                "text-xs font-semibold leading-tight",
+                missingInputWarning ? "text-destructive" : "text-primary"
+              )}>
+                {t("search_what_label")}
+              </span>
+              <div className="flex items-center gap-2">
+                <input
+                  id="home-search-what"
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onFocus={() => setShowSuggestions(true)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={
+                    speech.isRecording || speech.isProcessing
+                      ? t("voice_listening")
+                      : t("search_name_placeholder")
+                  }
+                  className={cn(
+                    "min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground",
+                    compact ? "h-5" : "h-6"
+                  )}
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (speech.isRecording) speech.stop();
+                    else if (!speech.isProcessing) startVoiceWithPrivacy();
+                  }}
+                  className={cn(
+                    "relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all",
+                    speech.isRecording
+                      ? "bg-red-100 text-red-600"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                  aria-label={
+                    speech.isRecording
+                      ? t("voice_stop") || "Stop listening"
+                      : t("voice_search") || "Voice search"
+                  }
+                  title={t("voice_search_hint") || "Search by voice (Grok)"}
+                  disabled={speech.isProcessing}
+                >
+                  <Mic
+                    className={cn(
+                      "h-4 w-4",
+                      speech.isRecording && "animate-pulse"
+                    )}
+                  />
+                  {speech.isRecording && (
+                    <span className="absolute inset-0 animate-ping rounded-full bg-red-400/30" />
+                  )}
+                </button>
+              </div>
+            </label>
+
+            {/* Divider */}
+            <div className={cn("w-px bg-border", compact ? "my-2" : "my-3")} />
+
+            {/* Where field */}
+            <div className={cn(
+              "flex flex-col justify-center w-72 text-left",
+              compact ? "px-4 py-1.5" : "px-5 py-3"
             )}>
-              {t("search_where_label")}
-            </span>
-            <LocationCombobox
-              locations={locations}
-              value={location}
-              onValueChange={handleLocationChange}
-              placeholder={t("search_location_placeholder")}
-              variant="seamless"
-              geoSupported={geo.supported}
-              geoLoading={geo.loading}
-              onUseMyLocation={handleLocateClick}
-              useMyLocationLabel={t("use_my_location")}
-              detectingLabel={t("detecting_location") || "Detecting..."}
-              onPlaceSelect={handlePlaceSelect}
-              placeName={placeData?.name}
-              onEnterKey={handleSmartSearch}
-            />
+              <span className={cn(
+                "text-xs font-semibold leading-tight",
+                missingInputWarning ? "text-destructive" : "text-foreground"
+              )}>
+                {t("search_where_label")}
+              </span>
+              <LocationCombobox
+                locations={locations}
+                value={location}
+                onValueChange={handleLocationChange}
+                placeholder={t("search_location_placeholder")}
+                variant="seamless"
+                geoSupported={geo.supported}
+                geoLoading={geo.loading}
+                onUseMyLocation={handleLocateClick}
+                useMyLocationLabel={t("use_my_location")}
+                detectingLabel={t("detecting_location") || "Detecting..."}
+                onPlaceSelect={handlePlaceSelect}
+                placeName={placeData?.name}
+                onEnterKey={handleSmartSearch}
+              />
+            </div>
+
+            {/* Circular search button */}
+            <div className={cn("flex items-center", compact ? "pr-1.5" : "pr-2")}>
+              <Button
+                size="icon"
+                aria-label={t("search_button")}
+                className={cn(
+                  "rounded-full shadow-lg",
+                  compact ? "h-11 w-11" : "h-14 w-14"
+                )}
+                onClick={() => handleSmartSearch()}
+                disabled={aiLoading}
+              >
+                {aiLoading ? (
+                  <Loader2 className={cn("animate-spin", compact ? "h-4 w-4" : "h-5 w-5")} />
+                ) : (
+                  <Search className={cn(compact ? "h-4 w-4" : "h-5 w-5")} />
+                )}
+              </Button>
+            </div>
           </div>
 
-          {/* Circular search button */}
-          <div className={cn("flex items-center", compact ? "pr-1.5" : "pr-2")}>
-            <Button
-              size="icon"
-              aria-label={t("search_button")}
-              className={cn(
-                "rounded-full shadow-lg",
-                compact ? "h-11 w-11" : "h-14 w-14"
-              )}
-              onClick={() => handleSmartSearch()}
-              disabled={aiLoading}
-            >
-              {aiLoading ? (
-                <Loader2 className={cn("animate-spin", compact ? "h-4 w-4" : "h-5 w-5")} />
-              ) : (
-                <Search className={cn(compact ? "h-4 w-4" : "h-5 w-5")} />
-              )}
-            </Button>
-          </div>
+          {/* Autocomplete dropdown — attached under the pill, overlays chips below */}
+          {renderDropdown()}
         </div>
 
         {!compact && (
@@ -1513,9 +1523,6 @@ export function HomeSearchBar({
             )}
           </>
         )}
-
-        {/* Autocomplete dropdown — desktop */}
-        {renderDropdown()}
       </div>
 
       {/* Mobile layout */}
