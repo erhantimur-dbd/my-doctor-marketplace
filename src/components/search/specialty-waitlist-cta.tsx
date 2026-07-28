@@ -235,18 +235,20 @@ export function SpecialtyWaitlistCta({
           </label>
         </div>
 
-        <Button
-          type="submit"
-          disabled={isPending || !consent || !email.trim()}
-          className="w-full gap-2 sm:w-auto"
-        >
-          {isPending ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Bell className="h-4 w-4" />
-          )}
-          {variant === "compact" ? "Notify me" : "Notify me when slots open"}
-        </Button>
+        <div className="flex justify-center pt-1">
+          <Button
+            type="submit"
+            disabled={isPending || !consent || !email.trim()}
+            className="gap-2"
+          >
+            {isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Bell className="h-4 w-4" />
+            )}
+            {variant === "compact" ? "Notify me" : "Notify me when slots open"}
+          </Button>
+        </div>
       </form>
     </div>
   );
