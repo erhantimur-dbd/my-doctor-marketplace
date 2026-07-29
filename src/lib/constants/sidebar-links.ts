@@ -28,8 +28,8 @@ import {
   ScrollText,
   Building2,
   Wallet,
+  Activity,
   ThumbsUp,
-  Bell,
   Video,
 } from "lucide-react";
 
@@ -228,26 +228,94 @@ export const patientSidebarLinks: SidebarLink[] = [
   { href: "/dashboard/support", icon: HelpCircle, label: "Support" },
 ];
 
-// ─── Admin Portal (11 items) ─────────────────────────────────────────────────
+// ─── Admin Portal ────────────────────────────────────────────────────────────
 
 export const adminSidebarLinks: SidebarLink[] = [
   { href: "/admin", icon: LayoutDashboard, label: "Overview" },
   { href: "/admin/approvals", icon: ClipboardCheck, label: "Approvals" },
   { href: "/admin/video-approvals", icon: Video, label: "Video Approvals" },
+  { href: "/admin/support", icon: HelpCircle, label: "Support" },
+  { href: "/admin/inquiries", icon: Mail, label: "Inquiries" },
+  { href: "/admin/audit-log", icon: ScrollText, label: "Audit Log" },
   { href: "/admin/doctors", icon: Stethoscope, label: "Doctors" },
   { href: "/admin/patients", icon: Users, label: "Patients" },
+  { href: "/admin/organizations", icon: Building2, label: "Organizations" },
   { href: "/admin/bookings", icon: Calendar, label: "Bookings" },
   { href: "/admin/reviews", icon: Star, label: "Reviews" },
-  { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
-  { href: "/admin/nps", icon: ThumbsUp, label: "NPS" },
-  { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
-  { href: "/admin/organizations", icon: Building2, label: "Organizations" },
-  { href: "/admin/licenses", icon: Crown, label: "Licenses" },
+  { href: "/admin/featured", icon: Crown, label: "Featured" },
   { href: "/admin/waitlist", icon: ClipboardList, label: "Waitlist" },
-  { href: "/admin/blog", icon: FileText, label: "Blog" },
+  { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
+  { href: "/admin/payments", icon: CreditCard, label: "Payments" },
+  { href: "/admin/licenses", icon: Wallet, label: "Licenses" },
   { href: "/admin/coupons", icon: Tag, label: "Coupons" },
-  { href: "/admin/email-tests", icon: Mail, label: "Email Tests" },
-  { href: "/admin/support", icon: HelpCircle, label: "Support" },
-  { href: "/admin/audit-log", icon: ScrollText, label: "Audit Log" },
+  { href: "/admin/blog", icon: FileText, label: "Blog" },
+  { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
+  { href: "/admin/nps", icon: ThumbsUp, label: "NPS Surveys" },
+  { href: "/admin/email-tests", icon: FlaskConical, label: "Email Tests" },
+  { href: "/admin/health", icon: Activity, label: "System Health" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
+];
+
+export const adminSidebarGroups: SidebarGroup[] = [
+  {
+    links: [
+      { href: "/admin", icon: LayoutDashboard, label: "Overview" },
+    ],
+  },
+  {
+    label: "Operations",
+    links: [
+      { href: "/admin/approvals", icon: ClipboardCheck, label: "Approvals" },
+      {
+        href: "/admin/video-approvals",
+        icon: Video,
+        label: "Video Approvals",
+      },
+      { href: "/admin/support", icon: HelpCircle, label: "Support" },
+      { href: "/admin/inquiries", icon: Mail, label: "Inquiries" },
+      { href: "/admin/audit-log", icon: ScrollText, label: "Audit Log" },
+    ],
+  },
+  {
+    label: "People",
+    links: [
+      { href: "/admin/doctors", icon: Stethoscope, label: "Doctors" },
+      { href: "/admin/patients", icon: Users, label: "Patients" },
+      { href: "/admin/organizations", icon: Building2, label: "Organizations" },
+    ],
+  },
+  {
+    label: "Marketplace",
+    links: [
+      { href: "/admin/bookings", icon: Calendar, label: "Bookings" },
+      { href: "/admin/reviews", icon: Star, label: "Reviews" },
+      { href: "/admin/featured", icon: Crown, label: "Featured" },
+      { href: "/admin/waitlist", icon: ClipboardList, label: "Waitlist" },
+    ],
+  },
+  {
+    label: "Money",
+    links: [
+      { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
+      { href: "/admin/payments", icon: CreditCard, label: "Payments" },
+      { href: "/admin/licenses", icon: Wallet, label: "Licenses" },
+      { href: "/admin/coupons", icon: Tag, label: "Coupons" },
+    ],
+  },
+  {
+    label: "Growth",
+    links: [
+      { href: "/admin/blog", icon: FileText, label: "Blog" },
+      { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
+      { href: "/admin/nps", icon: ThumbsUp, label: "NPS Surveys" },
+      { href: "/admin/email-tests", icon: FlaskConical, label: "Email Tests" },
+    ],
+  },
+  {
+    label: "System",
+    links: [
+      { href: "/admin/health", icon: Activity, label: "System Health" },
+      { href: "/admin/settings", icon: Settings, label: "Settings" },
+    ],
+  },
 ];

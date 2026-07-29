@@ -17,6 +17,7 @@ import {
   doctorSidebarGroups,
   patientSidebarLinks,
   adminSidebarLinks,
+  adminSidebarGroups,
   type SidebarLink,
   type SidebarGroup,
 } from "@/lib/constants/sidebar-links";
@@ -58,11 +59,12 @@ const portalConfig: Record<
   },
   admin: {
     links: adminSidebarLinks,
+    groups: adminSidebarGroups,
     quickHrefs: [
       "/admin",
-      "/admin/doctors",
+      "/admin/approvals",
       "/admin/bookings",
-      "/admin/revenue",
+      "/admin/support",
     ],
     title: "Admin Portal",
     rootPath: "/admin",

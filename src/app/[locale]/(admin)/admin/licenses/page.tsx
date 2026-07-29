@@ -84,9 +84,15 @@ export default async function AdminLicensesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Crown className="h-6 w-6 text-yellow-500" />
-        <h1 className="text-2xl font-bold">License Management</h1>
+      <div>
+        <div className="flex items-center gap-3">
+          <Crown className="h-6 w-6 text-yellow-500" />
+          <h1 className="text-2xl font-bold">Licenses &amp; Subscriptions</h1>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Commercial tiers, seats, MRR/ARR — source of truth for doctor
+          subscriptions
+        </p>
       </div>
 
       {/* KPI Cards */}

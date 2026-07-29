@@ -9,42 +9,9 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { DEFAULT_BLOCKED_KEYWORDS } from "./blocked-keywords";
 
-const DEFAULT_BLOCKED_KEYWORDS = [
-  // Profanity / abuse
-  "scam",
-  "fraud",
-  "fake",
-  "quack",
-  "incompetent",
-  "malpractice",
-  "negligent",
-  "disgusting",
-  "horrible",
-  "worst",
-  "useless",
-  "awful",
-  "terrible",
-  "rubbish",
-  "pathetic",
-  // Threats / legal
-  "sue",
-  "lawyer",
-  "lawsuit",
-  "solicitor",
-  "court",
-  "police",
-  "report you",
-  // Spam signals
-  "buy now",
-  "click here",
-  "free trial",
-  "discount code",
-  "promo code",
-  "http://",
-  "https://",
-  "www.",
-];
+export { DEFAULT_BLOCKED_KEYWORDS } from "./blocked-keywords";
 
 export interface KeywordFilterResult {
   passed: boolean;

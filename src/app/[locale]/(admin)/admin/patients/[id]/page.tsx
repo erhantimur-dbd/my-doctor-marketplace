@@ -24,6 +24,8 @@ import { ResetPasswordButton } from "./reset-password-button";
 import { SuspendPatientButton } from "./suspend-patient-button";
 import { SendEmailDialog } from "../../components/send-email-dialog";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { adminGetPatientWallet } from "@/actions/admin";
+import { WalletSection } from "./wallet-section";
 
 const statusColors: Record<string, string> = {
   confirmed: "bg-blue-100 text-blue-700",
@@ -103,6 +105,14 @@ export default async function AdminPatientDetailPage({
       ["confirmed", "approved", "completed"].includes(b.status)
     )
     .reduce((sum: number, b: any) => sum + b.total_amount_cents, 0);
+
+  const walletResult = await adminGetPatientWallet(id);
+  const walletBalances = walletResult.balances || [];
+  const walletTransactions = walletResult.transactions || [];
+  const displayCurrency =
+    patient.preferred_currency ||
+    (bookings as any)?.[0]?.currency ||
+    "GBP";
 
   return (
     <div className="space-y-6">
@@ -216,7 +226,7 @@ export default async function AdminPatientDetailPage({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Spent</span>
               <span className="font-bold">
-                {formatCurrency(totalSpent, "EUR")}
+                {formatCurrency(totalSpent, displayCurrency)}
               </span>
             </div>
           </CardContent>
@@ -237,11 +247,18 @@ export default async function AdminPatientDetailPage({
             <Separator />
             <div className="flex justify-between">
               <span className="text-muted-foreground">Currency</span>
-              <span>{patient.preferred_currency || "EUR"}</span>
+              <span>{patient.preferred_currency || "GBP"}</span>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      <WalletSection
+        patientId={id}
+        preferredCurrency={patient.preferred_currency}
+        balances={walletBalances}
+        transactions={walletTransactions}
+      />
 
       {/* Booking History */}
       <Card>

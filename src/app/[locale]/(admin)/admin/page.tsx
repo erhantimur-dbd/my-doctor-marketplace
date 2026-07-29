@@ -277,7 +277,7 @@ export default async function AdminDashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Platform Revenue</p>
                 <p className="text-2xl font-bold">
-                  {formatCurrency(totalRevenue, "EUR")}
+                  {formatCurrency(totalRevenue, "GBP")}
                 </p>
               </div>
             </CardContent>
@@ -362,21 +362,71 @@ export default async function AdminDashboard() {
           </Card>
         </Link>
         {npsScore !== null && (
+          <Link href="/admin/nps" className="block">
+            <Card className="transition-shadow hover:shadow-md">
+              <CardContent className="flex items-center gap-4 p-6">
+                <div className={`rounded-full p-3 ${npsScore >= 50 ? "bg-green-50" : npsScore >= 0 ? "bg-yellow-50" : "bg-red-50"}`}>
+                  <ThumbsUp className={`h-5 w-5 ${npsScore >= 50 ? "text-green-600" : npsScore >= 0 ? "text-yellow-600" : "text-red-600"}`} />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">NPS Score</p>
+                  <p className="text-2xl font-bold">{npsScore > 0 ? "+" : ""}{npsScore}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {npsResponseCount} responses
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+        <Link href="/admin/support" className="block">
           <Card className="transition-shadow hover:shadow-md">
             <CardContent className="flex items-center gap-4 p-6">
-              <div className={`rounded-full p-3 ${npsScore >= 50 ? "bg-green-50" : npsScore >= 0 ? "bg-yellow-50" : "bg-red-50"}`}>
-                <ThumbsUp className={`h-5 w-5 ${npsScore >= 50 ? "text-green-600" : npsScore >= 0 ? "text-yellow-600" : "text-red-600"}`} />
+              <div className="rounded-full bg-indigo-50 p-3">
+                <Clock className="h-5 w-5 text-indigo-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">NPS Score</p>
-                <p className="text-2xl font-bold">{npsScore > 0 ? "+" : ""}{npsScore}</p>
+                <p className="text-sm text-muted-foreground">Open Support</p>
+                <p className="text-2xl font-bold">Tickets</p>
                 <p className="text-xs text-muted-foreground">
-                  {npsResponseCount} responses
+                  Inbox &amp; replies
                 </p>
               </div>
             </CardContent>
           </Card>
-        )}
+        </Link>
+        <Link href="/admin/inquiries" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-sky-50 p-3">
+                <TrendingUp className="h-5 w-5 text-sky-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Contact Leads</p>
+                <p className="text-2xl font-bold">Inquiries</p>
+                <p className="text-xs text-muted-foreground">
+                  Partnership &amp; press
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/admin/health" className="block">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="rounded-full bg-slate-50 p-3">
+                <AlertTriangle className="h-5 w-5 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">System</p>
+                <p className="text-2xl font-bold">Health</p>
+                <p className="text-xs text-muted-foreground">
+                  Env, crons, DB
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Monthly Revenue Chart */}
@@ -395,7 +445,7 @@ export default async function AdminDashboard() {
                 className="flex flex-1 flex-col items-center gap-2"
               >
                 <span className="text-xs font-medium">
-                  {formatCurrency(m.revenue, "EUR")}
+                  {formatCurrency(m.revenue, "GBP")}
                 </span>
                 <div className="relative w-full max-w-16 flex-1">
                   <div
