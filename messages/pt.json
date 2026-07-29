@@ -167,7 +167,22 @@
     "browse_card_heart_title": "Saúde do coração",
     "browse_card_heart_desc": "Cardiologistas para dor no peito, tensão, colesterol e check-ups.",
     "browse_card_stomach_title": "Estômago e digestão",
-    "browse_card_stomach_desc": "Gastrenterologistas para SII, refluxo e sintomas digestivos."
+    "browse_card_stomach_desc": "Gastrenterologistas para SII, refluxo e sintomas digestivos.",
+    "hero_title_prefix": "Encontre o seu",
+    "hero_title_second_line": "Agende instantaneamente",
+    "hero_rotating_words": [
+      "médico de confiança",
+      "clínico geral",
+      "urologista",
+      "dentista",
+      "fisioterapeuta",
+      "dermatologista",
+      "cardiologista",
+      "ginecologista",
+      "pediatra",
+      "psicólogo",
+      "ORL"
+    ]
   },
   "doctor": {
     "verified": "Médico Verificado",

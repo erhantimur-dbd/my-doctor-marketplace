@@ -169,7 +169,22 @@
     "browse_card_heart_title": "Santé cardiaque",
     "browse_card_heart_desc": "Cardiologues pour douleurs thoraciques, tension, cholestérol et bilans.",
     "browse_card_stomach_title": "Estomac et digestion",
-    "browse_card_stomach_desc": "Gastro-entérologues pour SII, reflux et symptômes digestifs."
+    "browse_card_stomach_desc": "Gastro-entérologues pour SII, reflux et symptômes digestifs.",
+    "hero_title_prefix": "Trouvez votre",
+    "hero_title_second_line": "Réservez instantanément",
+    "hero_rotating_words": [
+      "médecin de confiance",
+      "généraliste",
+      "urologue",
+      "dentiste",
+      "kinésithérapeute",
+      "dermatologue",
+      "cardiologue",
+      "gynécologue",
+      "pédiatre",
+      "psychologue",
+      "ORL"
+    ]
   },
   "auth": {
     "login_title": "Bon Retour",

@@ -167,7 +167,22 @@
     "browse_card_heart_title": "心臓の健康",
     "browse_card_heart_desc": "胸痛、血圧、コレステロール、心臓チェックの循環器内科医。",
     "browse_card_stomach_title": "胃・消化",
-    "browse_card_stomach_desc": "IBS、逆流、消化器症状の消化器内科医。"
+    "browse_card_stomach_desc": "IBS、逆流、消化器症状の消化器内科医。",
+    "hero_title_prefix": "信頼できる",
+    "hero_title_second_line": "すぐに予約",
+    "hero_rotating_words": [
+      "医師",
+      "かかりつけ医",
+      "泌尿器科医",
+      "歯科医",
+      "理学療法士",
+      "皮膚科医",
+      "循環器内科医",
+      "婦人科医",
+      "小児科医",
+      "心理士",
+      "耳鼻咽喉科医"
+    ]
   },
   "doctor": {
     "verified": "認証済み医師",

@@ -42,6 +42,21 @@
   },
   "home": {
     "hero_title": "Find Your Trusted Doctor, Book Instantly",
+    "hero_title_prefix": "Find your trusted",
+    "hero_title_second_line": "Book Instantly",
+    "hero_rotating_words": [
+      "Doctor",
+      "GP",
+      "Urologist",
+      "Dentist",
+      "Physiotherapist",
+      "Dermatologist",
+      "Cardiologist",
+      "Gynaecologist",
+      "Paediatrician",
+      "Psychologist",
+      "ENT Specialist"
+    ],
     "hero_subtitle": "Discover verified private specialists across the UK with transparent pricing and instant online booking.",
     "search_placeholder": "Search by specialty, doctor name, or location...",
     "verified_doctors": "Verified Doctors",

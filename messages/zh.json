@@ -167,7 +167,22 @@
     "browse_card_heart_title": "心脏健康",
     "browse_card_heart_desc": "心内科医生处理胸痛、血压、胆固醇和心脏检查。",
     "browse_card_stomach_title": "肠胃消化",
-    "browse_card_stomach_desc": "消化科医生处理肠易激、反流和消化症状。"
+    "browse_card_stomach_desc": "消化科医生处理肠易激、反流和消化症状。",
+    "hero_title_prefix": "找到您信赖的",
+    "hero_title_second_line": "即时预约",
+    "hero_rotating_words": [
+      "医生",
+      "全科医生",
+      "泌尿科医生",
+      "牙医",
+      "理疗师",
+      "皮肤科医生",
+      "心脏科医生",
+      "妇科医生",
+      "儿科医生",
+      "心理医生",
+      "耳鼻喉科医生"
+    ]
   },
   "doctor": {
     "verified": "认证医生",

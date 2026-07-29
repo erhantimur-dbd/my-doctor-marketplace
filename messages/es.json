@@ -167,7 +167,22 @@
     "browse_card_heart_title": "Salud del corazón",
     "browse_card_heart_desc": "Cardiólogos para dolor torácico, tensión, colesterol y revisiones.",
     "browse_card_stomach_title": "Estómago y digestión",
-    "browse_card_stomach_desc": "Gastroenterólogos para SII, reflujo y síntomas digestivos."
+    "browse_card_stomach_desc": "Gastroenterólogos para SII, reflujo y síntomas digestivos.",
+    "hero_title_prefix": "Encuentra tu",
+    "hero_title_second_line": "Reserva al instante",
+    "hero_rotating_words": [
+      "médico de confianza",
+      "médico de cabecera",
+      "urólogo",
+      "dentista",
+      "fisioterapeuta",
+      "dermatólogo",
+      "cardiólogo",
+      "ginecólogo",
+      "pediatra",
+      "psicólogo",
+      "otorrino"
+    ]
   },
   "doctor": {
     "verified": "Médico Verificado",

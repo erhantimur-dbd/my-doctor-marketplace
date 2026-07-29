@@ -169,7 +169,22 @@
     "browse_card_heart_title": "Herzgesundheit",
     "browse_card_heart_desc": "Kardiologen bei Brustschmerzen, Blutdruck, Cholesterin und Herzchecks.",
     "browse_card_stomach_title": "Magen & Verdauung",
-    "browse_card_stomach_desc": "Gastroenterologen bei Reizdarm, Reflux und Verdauungsbeschwerden."
+    "browse_card_stomach_desc": "Gastroenterologen bei Reizdarm, Reflux und Verdauungsbeschwerden.",
+    "hero_title_prefix": "Finden Sie Ihren vertrauenswürdigen",
+    "hero_title_second_line": "Sofort buchen",
+    "hero_rotating_words": [
+      "Arzt",
+      "Hausarzt",
+      "Urologen",
+      "Zahnarzt",
+      "Physiotherapeuten",
+      "Dermatologen",
+      "Kardiologen",
+      "Gynäkologen",
+      "Kinderarzt",
+      "Psychologen",
+      "HNO-Arzt"
+    ]
   },
   "auth": {
     "login_title": "Willkommen zuruck",

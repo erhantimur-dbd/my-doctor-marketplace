@@ -169,7 +169,22 @@
     "browse_card_heart_title": "Kalp sağlığı",
     "browse_card_heart_desc": "Göğüs ağrısı, tansiyon, kolesterol ve kalp kontrolleri için kardiyologlar.",
     "browse_card_stomach_title": "Mide ve sindirim",
-    "browse_card_stomach_desc": "IBS, reflü ve sindirim şikayetleri için gastroenterologlar."
+    "browse_card_stomach_desc": "IBS, reflü ve sindirim şikayetleri için gastroenterologlar.",
+    "hero_title_prefix": "Güvenilir",
+    "hero_title_second_line": "Anında randevu alın",
+    "hero_rotating_words": [
+      "Doktor",
+      "Aile Hekimi",
+      "Ürolog",
+      "Diş Hekimi",
+      "Fizyoterapist",
+      "Dermatolog",
+      "Kardiyolog",
+      "Jinekolog",
+      "Çocuk Doktoru",
+      "Psikolog",
+      "KBB Uzmanı"
+    ]
   },
   "auth": {
     "login_title": "Tekrar Hos Geldiniz",

@@ -167,7 +167,22 @@
     "browse_card_heart_title": "Salute del cuore",
     "browse_card_heart_desc": "Cardiologi per dolore toracico, pressione, colesterolo e controlli.",
     "browse_card_stomach_title": "Stomaco e digestione",
-    "browse_card_stomach_desc": "Gastroenterologi per IBS, reflusso e sintomi digestivi."
+    "browse_card_stomach_desc": "Gastroenterologi per IBS, reflusso e sintomi digestivi.",
+    "hero_title_prefix": "Trova il tuo",
+    "hero_title_second_line": "Prenota subito",
+    "hero_rotating_words": [
+      "medico di fiducia",
+      "medico di base",
+      "urologo",
+      "dentista",
+      "fisioterapista",
+      "dermatologo",
+      "cardiologo",
+      "ginecologo",
+      "pediatra",
+      "psicologo",
+      "ORL"
+    ]
   },
   "doctor": {
     "verified": "Medico Verificato",
