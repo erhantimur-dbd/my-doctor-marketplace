@@ -2381,6 +2381,92 @@ export async function adminBulkCreditWallet(
   return { success: true, credited, failed };
 }
 
+// ===================== Contact Inquiries =====================
+
+export async function getAdminContactInquiries(filters?: {
+  status?: string;
+  inquiry_type?: string;
+}) {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError, inquiries: [] };
+
+  let query = supabase
+    .from("contact_inquiries")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (filters?.status && filters.status !== "all") {
+    query = query.eq("status", filters.status);
+  }
+  if (filters?.inquiry_type && filters.inquiry_type !== "all") {
+    query = query.eq("inquiry_type", filters.inquiry_type);
+  }
+
+  const { data, error } = await query;
+  if (error) return { error: safeError(error), inquiries: [] };
+  return { inquiries: data || [] };
+}
+
+export async function updateContactInquiryStatus(
+  inquiryId: string,
+  status: "new" | "read" | "replied" | "archived",
+  adminNotes?: string
+) {
+  const { error: authError, supabase, user } = await requireAdmin();
+  if (authError || !supabase || !user) return { error: authError };
+
+  const updates: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
+  if (adminNotes !== undefined) {
+    updates.admin_notes = adminNotes;
+  }
+
+  const { error } = await supabase
+    .from("contact_inquiries")
+    .update(updates)
+    .eq("id", inquiryId);
+
+  if (error) return { error: safeError(error) };
+
+  await logAdminAction(
+    supabase,
+    user.id,
+    "contact_inquiry_updated",
+    "contact_inquiry",
+    inquiryId,
+    { status, admin_notes: adminNotes }
+  );
+
+  revalidatePath("/admin/inquiries");
+  return { success: true };
+}
+
+// ===================== Satisfaction Surveys =====================
+
+export async function getAdminSatisfactionSurveys(limit = 100) {
+  const { error: authError, supabase } = await requireAdmin();
+  if (authError || !supabase) return { error: authError, surveys: [] };
+
+  const { data, error } = await supabase
+    .from("satisfaction_surveys")
+    .select(
+      `id, nps_score, would_recommend, feedback_text, submitted_at, sent_at, created_at,
+       booking_id, patient_id, doctor_id,
+       booking:bookings(booking_number),
+       patient:profiles!satisfaction_surveys_patient_id_fkey(first_name, last_name, email),
+       doctor:doctors(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+    )
+    .not("submitted_at", "is", null)
+    .order("submitted_at", { ascending: false })
+    .limit(limit);
+
+  if (error) return { error: safeError(error), surveys: [] };
+  return { surveys: data || [] };
+}
+
 // ===================== CSV Export Actions =====================
 
 export async function exportRevenueCSV() {

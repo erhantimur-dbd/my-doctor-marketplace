@@ -1,0 +1,36 @@
+/**
+ * Default review moderation blocklist (client-safe constants).
+ * Runtime loading still prefers platform_settings.review_blocked_keywords.
+ */
+export const DEFAULT_BLOCKED_KEYWORDS = [
+  "scam",
+  "fraud",
+  "fake",
+  "quack",
+  "incompetent",
+  "malpractice",
+  "negligent",
+  "disgusting",
+  "horrible",
+  "worst",
+  "useless",
+  "awful",
+  "terrible",
+  "rubbish",
+  "pathetic",
+  "sue",
+  "lawyer",
+  "lawsuit",
+  "solicitor",
+  "court",
+  "police",
+  "report you",
+  "buy now",
+  "click here",
+  "free trial",
+  "discount code",
+  "promo code",
+  "http://",
+  "https://",
+  "www.",
+];

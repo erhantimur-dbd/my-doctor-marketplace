@@ -24,11 +24,26 @@ import {
   BookOpen,
   Users,
   LayoutDashboard,
+  ClipboardCheck,
+  Building2,
+  DollarSign,
+  Tag,
+  ScrollText,
+  FileText,
+  BarChart3,
+  FlaskConical,
+  Activity,
+  ThumbsUp,
+  Crown,
+  ClipboardList,
+  Mail,
+  Wallet,
+  Video,
 } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/providers/auth-provider";
 
-interface CommandItem {
+interface PaletteCommand {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -36,7 +51,7 @@ interface CommandItem {
   keywords?: string[];
 }
 
-const PUBLIC_COMMANDS: CommandItem[] = [
+const PUBLIC_COMMANDS: PaletteCommand[] = [
   {
     label: "Find a Doctor",
     href: "/doctors",
@@ -73,7 +88,7 @@ const PUBLIC_COMMANDS: CommandItem[] = [
   },
 ];
 
-const PATIENT_COMMANDS: CommandItem[] = [
+const PATIENT_COMMANDS: PaletteCommand[] = [
   {
     label: "Dashboard",
     href: "/dashboard",
@@ -122,7 +137,7 @@ const PATIENT_COMMANDS: CommandItem[] = [
   },
 ];
 
-const DOCTOR_COMMANDS: CommandItem[] = [
+const DOCTOR_COMMANDS: PaletteCommand[] = [
   {
     label: "Doctor Dashboard",
     href: "/doctor-dashboard",
@@ -163,12 +178,170 @@ const DOCTOR_COMMANDS: CommandItem[] = [
   },
 ];
 
+const ADMIN_COMMANDS: PaletteCommand[] = [
+  {
+    label: "Admin Overview",
+    href: "/admin",
+    icon: LayoutDashboard,
+    group: "Admin",
+    keywords: ["dashboard", "command centre", "hq"],
+  },
+  {
+    label: "Approvals",
+    href: "/admin/approvals",
+    icon: ClipboardCheck,
+    group: "Admin",
+    keywords: ["verify", "doctors", "pending"],
+  },
+  {
+    label: "Support Tickets",
+    href: "/admin/support",
+    icon: HelpCircle,
+    group: "Admin",
+    keywords: ["tickets", "helpdesk"],
+  },
+  {
+    label: "Contact Inquiries",
+    href: "/admin/inquiries",
+    icon: Mail,
+    group: "Admin",
+    keywords: ["contact", "leads", "partnership"],
+  },
+  {
+    label: "Doctors",
+    href: "/admin/doctors",
+    icon: Stethoscope,
+    group: "Admin",
+  },
+  {
+    label: "Patients",
+    href: "/admin/patients",
+    icon: Users,
+    group: "Admin",
+  },
+  {
+    label: "Organizations",
+    href: "/admin/organizations",
+    icon: Building2,
+    group: "Admin",
+    keywords: ["clinics", "orgs"],
+  },
+  {
+    label: "Bookings",
+    href: "/admin/bookings",
+    icon: Calendar,
+    group: "Admin",
+    keywords: ["appointments"],
+  },
+  {
+    label: "Reviews",
+    href: "/admin/reviews",
+    icon: Star,
+    group: "Admin",
+    keywords: ["moderation"],
+  },
+  {
+    label: "Featured Doctors",
+    href: "/admin/featured",
+    icon: Crown,
+    group: "Admin",
+  },
+  {
+    label: "Waitlist",
+    href: "/admin/waitlist",
+    icon: ClipboardList,
+    group: "Admin",
+    keywords: ["launch", "regions"],
+  },
+  {
+    label: "Revenue",
+    href: "/admin/revenue",
+    icon: DollarSign,
+    group: "Admin",
+    keywords: ["gmv", "fees", "money"],
+  },
+  {
+    label: "Payments",
+    href: "/admin/payments",
+    icon: CreditCard,
+    group: "Admin",
+    keywords: ["fees", "ledger"],
+  },
+  {
+    label: "Licenses",
+    href: "/admin/licenses",
+    icon: Wallet,
+    group: "Admin",
+    keywords: ["subscriptions", "mrr", "seats", "tiers"],
+  },
+  {
+    label: "Coupons",
+    href: "/admin/coupons",
+    icon: Tag,
+    group: "Admin",
+    keywords: ["discounts", "promo"],
+  },
+  {
+    label: "Blog",
+    href: "/admin/blog",
+    icon: FileText,
+    group: "Admin",
+    keywords: ["cms", "articles"],
+  },
+  {
+    label: "Analytics",
+    href: "/admin/analytics",
+    icon: BarChart3,
+    group: "Admin",
+    keywords: ["metrics", "stats"],
+  },
+  {
+    label: "NPS Surveys",
+    href: "/admin/nps",
+    icon: ThumbsUp,
+    group: "Admin",
+    keywords: ["satisfaction", "feedback", "nps", "surveys"],
+  },
+  {
+    label: "Video Approvals",
+    href: "/admin/video-approvals",
+    icon: Video,
+    group: "Admin",
+    keywords: ["video", "intro", "approve"],
+  },
+  {
+    label: "Email Tests",
+    href: "/admin/email-tests",
+    icon: FlaskConical,
+    group: "Admin",
+  },
+  {
+    label: "System Health",
+    href: "/admin/health",
+    icon: Activity,
+    group: "Admin",
+    keywords: ["cron", "status", "uptime", "env"],
+  },
+  {
+    label: "Audit Log",
+    href: "/admin/audit-log",
+    icon: ScrollText,
+    group: "Admin",
+  },
+  {
+    label: "Platform Settings",
+    href: "/admin/settings",
+    icon: Settings,
+    group: "Admin",
+    keywords: ["commission", "keywords", "config"],
+  },
+];
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { profile } = useAuth();
 
-  // Listen for Ctrl/Cmd + K
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -191,11 +364,20 @@ export function CommandPalette() {
 
   const role = profile?.role;
   const roleCommands =
-    role === "doctor"
-      ? DOCTOR_COMMANDS
-      : role === "patient"
-        ? PATIENT_COMMANDS
-        : [];
+    role === "admin"
+      ? ADMIN_COMMANDS
+      : role === "doctor"
+        ? DOCTOR_COMMANDS
+        : role === "patient"
+          ? PATIENT_COMMANDS
+          : [];
+
+  const roleHeading =
+    role === "admin"
+      ? "Admin Portal"
+      : role === "doctor"
+        ? "Doctor Portal"
+        : "My Account";
 
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
@@ -219,7 +401,7 @@ export function CommandPalette() {
         {roleCommands.length > 0 && (
           <>
             <CommandSeparator />
-            <CommandGroup heading={role === "doctor" ? "Doctor Portal" : "My Account"}>
+            <CommandGroup heading={roleHeading}>
               {roleCommands.map((cmd) => (
                 <CommandItem
                   key={cmd.href}

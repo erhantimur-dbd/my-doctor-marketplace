@@ -83,6 +83,8 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   // doesn't swallow them before the page-level region check runs.
   "/regulatory",
   "/complaints",
+  // Admin command centre — allowlisted admins only (RBAC enforced below)
+  "/admin",
 ];
 
 // Root-level paths (no locale prefix) that bypass the gate.
