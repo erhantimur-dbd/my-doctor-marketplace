@@ -17,7 +17,11 @@ interface HeroRotatingTitleProps {
 }
 
 /**
- * Doctify-style hero H1: "Find your trusted [Doctor|Urologist|…]" + "Book Instantly".
+ * Doctify-style hero H1:
+ *   Find your trusted Gynaecologist
+ *   Book Instantly
+ *
+ * Prefix + rotating word stay on one phrase line when space allows.
  */
 export function HeroRotatingTitle({
   prefix,
@@ -42,48 +46,49 @@ export function HeroRotatingTitle({
   }, [intervalMs, reduceMotion, safeWords.length]);
 
   const current = safeWords[index] ?? safeWords[0];
-  // Longest word reserves horizontal space so the line doesn't jump
+  // Longest word reserves width so cycling doesn't shift layout
   const longest = useMemo(
     () =>
       safeWords.reduce((a, b) => (b.length > a.length ? b : a), safeWords[0]),
     [safeWords]
   );
 
+  const wordClass =
+    "inline-block whitespace-nowrap text-white underline decoration-white/45 decoration-2 underline-offset-[0.18em]";
+
   return (
     <h1
       className={cn(
-        "mx-auto max-w-3xl text-4xl font-bold tracking-tight text-white md:text-6xl",
+        "mx-auto max-w-4xl text-center text-4xl font-bold tracking-tight text-white md:text-6xl",
         className
       )}
     >
-      <span className="block">
-        <span>{prefix} </span>
+      {/* Line 1: prefix + role on one phrase (wraps as a unit only if needed) */}
+      <span className="inline-flex max-w-full flex-wrap items-baseline justify-center gap-x-2.5 gap-y-1">
+        <span className="whitespace-nowrap">{prefix}</span>
         <span
-          className="relative inline-grid align-bottom text-left"
+          className="relative inline-grid text-left align-baseline"
           aria-live="polite"
           aria-atomic="true"
         >
-          {/* Invisible sizer for max word width + line height */}
           <span
             className="invisible col-start-1 row-start-1 whitespace-nowrap"
             aria-hidden
           >
             {longest}
           </span>
-          <span className="relative col-start-1 row-start-1 overflow-hidden">
+          <span className="relative col-start-1 row-start-1 overflow-hidden leading-none">
             {reduceMotion ? (
-              <span className="inline-block whitespace-nowrap underline decoration-white/40 decoration-2 underline-offset-4">
-                {safeWords[0]}
-              </span>
+              <span className={wordClass}>{safeWords[0]}</span>
             ) : (
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
                   key={current}
-                  className="inline-block whitespace-nowrap underline decoration-white/40 decoration-2 underline-offset-4"
-                  initial={{ y: "40%", opacity: 0 }}
+                  className={wordClass}
+                  initial={{ y: "45%", opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: "-40%", opacity: 0 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  exit={{ y: "-45%", opacity: 0 }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
                 >
                   {current}
                 </motion.span>
@@ -92,7 +97,11 @@ export function HeroRotatingTitle({
           </span>
         </span>
       </span>
-      <span className="mt-1 block md:mt-2">{secondLine}</span>
+
+      {/* Line 2: payoff — secondary hierarchy */}
+      <span className="mt-2 block text-3xl font-semibold tracking-tight text-white/90 md:mt-3 md:text-5xl">
+        {secondLine}
+      </span>
     </h1>
   );
 }
