@@ -31,6 +31,7 @@ import {
   Activity,
   ThumbsUp,
   Video,
+  Bell,
 } from "lucide-react";
 
 export interface SidebarLink {
