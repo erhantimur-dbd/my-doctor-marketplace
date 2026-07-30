@@ -25,7 +25,6 @@ import { HowItWorksSection } from "@/components/home/how-it-works-section";
 import { FeaturedDoctorsSection } from "@/components/home/featured-doctors-section";
 import { SameDayBanner } from "@/components/home/same-day-banner";
 import { ForDoctorsCta } from "@/components/home/for-doctors-cta";
-import { HeroRotatingTitle } from "@/components/home/hero-rotating-title";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { CONDITION_HUBS } from "@/lib/constants/condition-hubs";
 
@@ -85,11 +84,9 @@ export default async function HomePage() {
         <HeroSpecialtyIcons hideOnMobile variant="dark" />
 
         <div className="relative container mx-auto text-center">
-          <HeroRotatingTitle
-            prefix={t("hero_title_prefix")}
-            words={t.raw("hero_rotating_words") as string[]}
-            secondLine={t("hero_title_second_line")}
-          />
+          <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-white md:text-6xl">
+            {t("hero_title")}
+          </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-white/80 md:text-xl">
             {t("hero_subtitle")}
           </p>
