@@ -2,6 +2,9 @@ import { Link } from "@/i18n/navigation";
 import { CONDITION_HUBS, conditionHubSearchHref } from "@/lib/constants/condition-hubs";
 import type { Metadata } from "next";
 
+/** Parent locale layout uses cookies — keep this route dynamic. */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Health conditions — Find the right doctor",
   description:
@@ -23,7 +26,7 @@ export default function ConditionsIndexPage() {
         {CONDITION_HUBS.map((hub) => (
           <Link
             key={hub.slug}
-            href={`/conditions/${hub.slug}`}
+            href={conditionHubSearchHref(hub)}
             className="group rounded-2xl border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
           >
             <div className="text-2xl" aria-hidden>

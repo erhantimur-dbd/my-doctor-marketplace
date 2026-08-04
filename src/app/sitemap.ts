@@ -179,10 +179,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }))
   );
 
-  // Condition / procedure SEO pages (static taxonomy)
-  const { getAllConditionSlugs } = await import("@/lib/constants/conditions");
+  // Condition hub SEO pages — only slugs that resolve on /conditions/[slug]
+  const { getAllConditionHubSlugs } = await import(
+    "@/lib/constants/condition-hubs"
+  );
   const conditionEntries = locales.flatMap((locale) =>
-    getAllConditionSlugs().map((slug) => ({
+    getAllConditionHubSlugs().map((slug) => ({
       url: `${BASE_URL}/${locale}/conditions/${slug}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
