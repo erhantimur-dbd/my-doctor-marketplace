@@ -55,6 +55,7 @@ export default async function DoctorsPage({
   const [result, specialties, locations, featuredDoctors] = await Promise.all([
     searchDoctors({
       specialty: sp.specialty,
+      condition: sp.condition,
       location: sp.location,
       minPrice: sp.minPrice ? Number(sp.minPrice) : undefined,
       maxPrice: sp.maxPrice ? Number(sp.maxPrice) : undefined,
@@ -63,7 +64,7 @@ export default async function DoctorsPage({
       consultationType: sp.consultationType,
       query: sp.query,
       // Marketplace default: inventory-first when user has intent (specialty /
-      // query / time chips). Featured only for open browse with no intent.
+      // condition / query / time chips). Featured only for open browse with no intent.
       sort:
         sp.sort ||
         (sp.availableToday === "true" ||
@@ -72,7 +73,8 @@ export default async function DoctorsPage({
         sp.availableWithinDays ||
         sp.specialty ||
         sp.skill ||
-        sp.query
+        sp.query ||
+        sp.condition
           ? "soonest"
           : "featured"),
       page: sp.page ? Number(sp.page) : 1,
@@ -101,6 +103,8 @@ export default async function DoctorsPage({
     getLocations(),
     getFeaturedDoctors(5),
   ]);
+
+  const conditionMeta = result.conditionMeta ?? null;
 
   const typedDoctors = result.doctors as unknown as Parameters<
     typeof import("@/components/doctors/doctor-card").DoctorCard
@@ -242,7 +246,11 @@ export default async function DoctorsPage({
               specialties={specialties}
               locations={locations}
               featuredDoctors={featuredDoctors}
-              initialQuery={sp.query || ""}
+              initialQuery={
+                sp.query ||
+                conditionMeta?.displayQuery ||
+                ""
+              }
               initialLocation={sp.location || ""}
               initialConsultationType={
                 (sp.consultationType as "all" | "in_person" | "video") || "all"
@@ -276,6 +284,37 @@ export default async function DoctorsPage({
               }
               regionCode={result.searchCountryCode}
             />
+          )}
+
+          {/* Condition browse context — structured hub intent, not free-text */}
+          {conditionMeta && (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+              <span className="text-lg leading-none" aria-hidden>
+                {conditionMeta.emoji}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground">
+                  Showing specialists for {conditionMeta.title}
+                </p>
+                <p className="mt-0.5 text-muted-foreground line-clamp-2">
+                  {conditionMeta.description}
+                </p>
+              </div>
+              {conditionMeta.specialtySlugs.length > 1 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {conditionMeta.specialtySlugs.map((slug) => (
+                    <span
+                      key={slug}
+                      className="rounded-full bg-background px-2.5 py-0.5 text-xs font-medium text-muted-foreground ring-1 ring-border"
+                    >
+                      {slug
+                        .replace(/-/g, " ")
+                        .replace(/\b\w/g, (c) => c.toUpperCase())}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Fallback applied banner — only when we still have results to show.
@@ -312,7 +351,7 @@ export default async function DoctorsPage({
 
           {/* Specialty demand form for non-empty soft failures only (related /
               fully booked). Zero results use a single form inside SmartEmptyState. */}
-          {sp.specialty &&
+          {(sp.specialty || conditionMeta?.primarySpecialty) &&
             result.doctors.length > 0 &&
             (result.matchMode === "related" ||
               result.matchMode === "platform_empty" ||
@@ -322,7 +361,9 @@ export default async function DoctorsPage({
                 result.waitlistPrompt.doctorIdsFullyBooked?.length
               )) && (
               <SpecialtyWaitlistCta
-                specialtySlug={sp.specialty}
+                specialtySlug={
+                  sp.specialty || conditionMeta?.primarySpecialty || ""
+                }
                 countryCode={result.searchCountryCode}
                 placeName={sp.placeName}
                 placeLat={sp.placeLat ? Number(sp.placeLat) : null}

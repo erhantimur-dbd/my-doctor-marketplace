@@ -25,7 +25,10 @@ import { HowItWorksSection } from "@/components/home/how-it-works-section";
 import { FeaturedDoctorsSection } from "@/components/home/featured-doctors-section";
 import { ForDoctorsCta } from "@/components/home/for-doctors-cta";
 import { ChatWidget } from "@/components/chat/chat-widget";
-import { CONDITION_HUBS } from "@/lib/constants/condition-hubs";
+import {
+  CONDITION_HUBS,
+  conditionHubSearchHref,
+} from "@/lib/constants/condition-hubs";
 
 const allSpecialties = [
   { slug: "general-practice", icon: "Stethoscope", key: "general_practice" },
@@ -139,7 +142,7 @@ export default async function HomePage() {
             {CONDITION_HUBS.slice(0, 8).map((hub) => (
               <Link
                 key={hub.slug}
-                href={`/conditions/${hub.slug}`}
+                href={conditionHubSearchHref(hub)}
                 className="rounded-xl border bg-card p-4 text-left shadow-sm transition hover:border-primary/40 hover:shadow-md"
               >
                 <span className="text-xl" aria-hidden>

@@ -19,6 +19,7 @@ import {
   buildEarliestMsFn,
   pinActiveFeaturedFirst,
   normalizeFeaturedFlag,
+  isActivelyFeatured,
   isUserExplicitSort,
   shouldRunRecovery,
   fullyBookedBanner,
@@ -27,7 +28,14 @@ import {
   widenRadiusSteps,
   type InventoryRankDoctor,
 } from "@/lib/search";
+import {
+  conditionSpecialtySlugs,
+  getConditionHub,
+} from "@/lib/constants/condition-hubs";
 import { getTopEndorsementsBatch } from "@/actions/reviews";
+
+/** Cap soonest-sort availability RPCs so condition/specialty browse cannot timeout. */
+const SOONEST_CANDIDATE_CAP = 100;
 
 /** Build match % map when scoring context is present; does not re-order doctors. */
 function buildMatchScoresMap(
@@ -70,6 +78,17 @@ function buildMatchScoresMap(
 
 export interface SearchFilters {
   specialty?: string;
+  /**
+   * Multiple specialty slugs OR'd into the doctor pool (e.g. condition hubs).
+   * When set, takes precedence over single `specialty` for inventory matching.
+   * Primary specialty for waitlist/UI remains `specialty`.
+   */
+  specialties?: string[];
+  /**
+   * Condition hub slug (e.g. "knee-pain"). Resolved to specialty pool +
+   * optional soft skill. Preferred over free-text query for browse-by-condition.
+   */
+  condition?: string;
   location?: string;
   minPrice?: number;
   maxPrice?: number;
@@ -120,7 +139,55 @@ export interface SearchFilters {
   availableWithinDays?: number;
 }
 
-export async function searchDoctors(filters: SearchFilters) {
+export type ConditionSearchMeta = {
+  slug: string;
+  title: string;
+  description: string;
+  emoji: string;
+  primarySpecialty: string;
+  specialtySlugs: string[];
+  displayQuery: string;
+};
+
+function resolveConditionFilters(filters: SearchFilters): {
+  filters: SearchFilters;
+  conditionMeta: ConditionSearchMeta | null;
+} {
+  if (!filters.condition) {
+    return { filters, conditionMeta: null };
+  }
+  const hub = getConditionHub(filters.condition);
+  if (!hub) {
+    return { filters, conditionMeta: null };
+  }
+  const specialtySlugs = conditionSpecialtySlugs(hub);
+  const next: SearchFilters = {
+    ...filters,
+    // Primary specialty for waitlist / recovery labels
+    specialty: filters.specialty || hub.specialtySlug,
+    specialties:
+      filters.specialties && filters.specialties.length > 0
+        ? filters.specialties
+        : specialtySlugs,
+    // Soft skill from hub unless caller overrode
+    skill: filters.skill || hub.skillSlug,
+    // Do not free-text filter on condition browse — specialty pool is the signal
+    query: filters.query,
+  };
+  const conditionMeta: ConditionSearchMeta = {
+    slug: hub.slug,
+    title: hub.title,
+    description: hub.description,
+    emoji: hub.emoji,
+    primarySpecialty: hub.specialtySlug,
+    specialtySlugs,
+    displayQuery: hub.displayQuery,
+  };
+  return { filters: next, conditionMeta };
+}
+
+export async function searchDoctors(rawFilters: SearchFilters) {
+  const { filters, conditionMeta } = resolveConditionFilters(rawFilters);
   const supabase = createAdminClient();
 
   // Detect if the location filter is a country-level slug (e.g. "country-gb")
@@ -300,7 +367,8 @@ export async function searchDoctors(filters: SearchFilters) {
     }
   }
 
-  // Specialty filter — two-step: resolve slug → specialty ID → matching doctor IDs
+  // Specialty filter — resolve slug(s) → specialty IDs → matching doctor IDs.
+  // Multi-specialty OR when filters.specialties is set (condition hubs).
   // Skip only when liveNow/liveInPerson successfully applied specialty-scoped IDs.
   // Soft-fail with NO_MATCH_ID so recovery ladder + waitlist can run.
   const liveIdsApplied =
@@ -308,28 +376,42 @@ export async function searchDoctors(filters: SearchFilters) {
     !softFailures.some((f) =>
       f.startsWith("live_now") || f.startsWith("live_in_person")
     );
-  if (filters.specialty && !liveIdsApplied) {
-    const { data: specRow } = await supabase
+  const specialtySlugsToMatch = (
+    filters.specialties && filters.specialties.length > 0
+      ? filters.specialties
+      : filters.specialty
+        ? [filters.specialty]
+        : []
+  ).filter(Boolean);
+  if (specialtySlugsToMatch.length > 0 && !liveIdsApplied) {
+    const { data: specRows } = await supabase
       .from("specialties")
       .select("id")
-      .eq("slug", filters.specialty)
-      .single();
+      .in("slug", specialtySlugsToMatch);
 
-    if (specRow) {
+    if (specRows && specRows.length > 0) {
       const { data: matchRows } = await supabase
         .from("doctor_specialties")
         .select("doctor_id")
-        .eq("specialty_id", specRow.id);
+        .in(
+          "specialty_id",
+          specRows.map((s: { id: string }) => s.id)
+        );
 
-      const ids = (matchRows || []).map(
-        (r: { doctor_id: string }) => r.doctor_id
-      );
+      const ids = [
+        ...new Set(
+          (matchRows || []).map((r: { doctor_id: string }) => r.doctor_id)
+        ),
+      ];
       if (ids.length === 0) {
         softFailures.push("specialty_empty");
         query = query.eq("id", NO_MATCH_ID);
       } else {
         query = query.in("id", ids);
       }
+    } else {
+      softFailures.push("specialty_empty");
+      query = query.eq("id", NO_MATCH_ID);
     }
   }
 
@@ -668,6 +750,28 @@ export async function searchDoctors(filters: SearchFilters) {
     } else {
       let allIds = (idRows || []).map((r: { id: string }) => r.id);
 
+      // Cap candidates before batch availability RPCs — full specialty pools
+      // can exceed serverless time budgets (condition browse always uses soonest).
+      if (allIds.length > SOONEST_CANDIDATE_CAP) {
+        const { data: rankSeed } = await supabase
+          .from("doctors")
+          .select("id, is_featured, featured_until, avg_rating")
+          .in("id", allIds);
+        const seed = (rankSeed || []) as {
+          id: string;
+          is_featured: boolean | null;
+          featured_until: string | null;
+          avg_rating: number | null;
+        }[];
+        seed.sort((a, b) => {
+          const aFeat = isActivelyFeatured(a) ? 0 : 1;
+          const bFeat = isActivelyFeatured(b) ? 0 : 1;
+          if (aFeat !== bFeat) return aFeat - bFeat;
+          return Number(b.avg_rating || 0) - Number(a.avg_rating || 0);
+        });
+        allIds = seed.slice(0, SOONEST_CANDIDATE_CAP).map((r) => r.id);
+      }
+
       if (allIds.length > 0) {
         const ctype =
           filters.consultationType === "video" ||
@@ -686,15 +790,32 @@ export async function searchDoctors(filters: SearchFilters) {
           withinDays = Math.max(withinDays, 7);
         }
 
-        // Prefer requested type; if "all", also check video and take the earlier first slot
-        let [availPrimary, availVideo] = await Promise.all([
-          getNextAvailabilityBatch(allIds, ctype, withinDays),
-          filters.consultationType
-            ? Promise.resolve(
-                {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>
-              )
-            : getNextAvailabilityBatch(allIds, "video", withinDays),
-        ]);
+        // Prefer requested type; if "all", also check video and take the earlier first slot.
+        // Guard batch RPCs so a timeout/throw soft-fails to featured recovery.
+        let availPrimary: Awaited<
+          ReturnType<typeof getNextAvailabilityBatch>
+        > = {};
+        let availVideo: Awaited<
+          ReturnType<typeof getNextAvailabilityBatch>
+        > = {};
+        try {
+          [availPrimary, availVideo] = await Promise.all([
+            getNextAvailabilityBatch(allIds, ctype, withinDays),
+            filters.consultationType
+              ? Promise.resolve(
+                  {} as Awaited<ReturnType<typeof getNextAvailabilityBatch>>
+                )
+              : getNextAvailabilityBatch(allIds, "video", withinDays),
+          ]);
+        } catch (err) {
+          log.error("Soonest availability batch failed:", { err });
+          softFailures.push("soonest_error");
+          timeExpandedBanner =
+            timeExpandedBanner ||
+            "Live next-appointment ranking is temporarily unavailable. Showing top specialists by rating.";
+          // Fall through to standard sort path by leaving soonestHandled false
+          allIds = [];
+        }
 
         // When availableWithinDays is set, drop doctors with no slot in the window
         if (
@@ -835,6 +956,7 @@ export async function searchDoctors(filters: SearchFilters) {
                     : primarySpecForWaitlist && sorted.length === 0
                       ? { specialtySlug: primarySpecForWaitlist }
                       : null,
+                conditionMeta,
               };
             }
           }
@@ -920,6 +1042,7 @@ export async function searchDoctors(filters: SearchFilters) {
             specialistSuggestion,
             matchMode: "exact" as const,
             waitlistPrompt: null,
+            conditionMeta,
           };
         }
       }
@@ -1606,6 +1729,7 @@ export async function searchDoctors(filters: SearchFilters) {
     specialistSuggestion,
     matchMode,
     waitlistPrompt,
+    conditionMeta,
   };
 }
 

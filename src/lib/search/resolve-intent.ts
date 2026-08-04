@@ -59,6 +59,7 @@ export function defaultMarketplaceSort(filters: {
   specialty?: string;
   skill?: string;
   query?: string;
+  condition?: string;
   availableToday?: boolean;
   liveNow?: boolean;
   liveInPersonNearby?: boolean;
@@ -72,7 +73,8 @@ export function defaultMarketplaceSort(filters: {
     filters.availableWithinDays ||
     filters.specialty ||
     filters.skill ||
-    filters.query
+    filters.query ||
+    filters.condition
   ) {
     return "soonest";
   }

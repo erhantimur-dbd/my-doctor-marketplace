@@ -68,6 +68,10 @@ describe("default marketplace sort", () => {
     );
   });
 
+  it("defaults to soonest when condition set", () => {
+    expect(defaultMarketplaceSort({ condition: "knee-pain" })).toBe("soonest");
+  });
+
   it("defaults to featured for open browse", () => {
     expect(defaultMarketplaceSort({})).toBe("featured");
   });
@@ -302,5 +306,52 @@ describe("recovery policy (specialty-preserving)", () => {
     expect(a.toLowerCase()).not.toContain("all nearby");
     expect(b.toLowerCase()).not.toContain("all nearby");
     expect(b.toLowerCase()).toContain("waitlist");
+  });
+});
+
+describe("condition hubs → search intent", () => {
+  it("maps knee-pain to orthopedics + physiotherapy pool", async () => {
+    const {
+      getConditionHub,
+      conditionSpecialtySlugs,
+      conditionHubSearchHref,
+    } = await import("@/lib/constants/condition-hubs");
+    const hub = getConditionHub("knee-pain");
+    expect(hub).toBeDefined();
+    expect(hub!.specialtySlug).toBe("orthopedics");
+    expect(conditionSpecialtySlugs(hub!)).toEqual([
+      "orthopedics",
+      "physiotherapy",
+    ]);
+    expect(conditionHubSearchHref(hub!)).toBe(
+      "/doctors?condition=knee-pain&sort=soonest"
+    );
+    expect(conditionHubSearchHref(hub!)).not.toContain("query=");
+  });
+
+  it("maps anxiety-stress to psychology + psychiatry", async () => {
+    const {
+      getConditionHub,
+      conditionSpecialtySlugs,
+    } = await import("@/lib/constants/condition-hubs");
+    const hub = getConditionHub("anxiety-stress");
+    expect(conditionSpecialtySlugs(hub!)).toEqual([
+      "psychology",
+      "psychiatry",
+    ]);
+  });
+
+  it("every hub has a unique slug and primary specialty", async () => {
+    const { CONDITION_HUBS, conditionSpecialtySlugs } = await import(
+      "@/lib/constants/condition-hubs"
+    );
+    const slugs = CONDITION_HUBS.map((h) => h.slug);
+    expect(new Set(slugs).size).toBe(slugs.length);
+    for (const hub of CONDITION_HUBS) {
+      const pool = conditionSpecialtySlugs(hub);
+      expect(pool.length).toBeGreaterThan(0);
+      expect(pool[0]).toBe(hub.specialtySlug);
+      expect(hub.displayQuery.length).toBeGreaterThan(0);
+    }
   });
 });

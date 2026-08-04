@@ -23,7 +23,7 @@ export default function ConditionsIndexPage() {
         {CONDITION_HUBS.map((hub) => (
           <Link
             key={hub.slug}
-            href={`/conditions/${hub.slug}`}
+            href={conditionHubSearchHref(hub)}
             className="group rounded-2xl border bg-card p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
           >
             <div className="text-2xl" aria-hidden>

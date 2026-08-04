@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   CONDITION_HUBS,
   conditionHubSearchHref,
+  conditionSpecialtySlugs,
   getConditionHub,
 } from "@/lib/constants/condition-hubs";
 import { formatSpecialtyName } from "@/lib/utils";
@@ -32,9 +33,13 @@ export default async function ConditionHubPage({ params }: PageProps) {
   const hub = getConditionHub(slug);
   if (!hub) notFound();
 
+  const specialtyPool = conditionSpecialtySlugs(hub);
   const specialtyLabel = formatSpecialtyName(
     hub.specialtySlug.replace(/-/g, "_")
   );
+  const specialtyPoolLabels = specialtyPool
+    .map((s) => formatSpecialtyName(s.replace(/-/g, "_")))
+    .join(", ");
   const searchHref = conditionHubSearchHref(hub);
 
   return (
@@ -58,8 +63,8 @@ export default async function ConditionHubPage({ params }: PageProps) {
 
         <div className="mt-6 rounded-xl border bg-muted/30 p-4 text-sm">
           <p>
-            <span className="font-medium">Suggested specialty:</span>{" "}
-            {specialtyLabel}
+            <span className="font-medium">Specialists we match:</span>{" "}
+            {specialtyPoolLabels}
           </p>
           <p className="mt-1 text-muted-foreground">
             Results are sorted by soonest available appointment so you can book
