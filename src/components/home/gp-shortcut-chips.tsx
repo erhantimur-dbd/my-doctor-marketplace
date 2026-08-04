@@ -40,7 +40,7 @@ interface GpShortcutChipsProps {
 }
 
 const FALLBACKS = {
-  section: "Same-Day Appointments Available:",
+  section: "Same Day Appointments Available:",
   seeToday: "Video GP today",
   seeTodayCount: (n: number) => `Video GP today · ${n} open`,
   seeTodayTitle: "Video GP appointments available today",
