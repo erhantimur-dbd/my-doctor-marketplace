@@ -61,6 +61,7 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   "/reset-password",
   "/email-verified",
   "/callback",
+  "/accept-terms",
   // Doctor onboarding
   "/register-doctor",
   "/doctor-dashboard",
@@ -189,11 +190,25 @@ export async function middleware(request: NextRequest) {
   if ((isPatientRoute || isDoctorRoute || isAdminRoute) && user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, terms_accepted_at")
       .eq("id", user.id)
       .single();
 
     const userRole = profile?.role;
+
+    // OAuth first-time users must accept terms (email/password already stamps
+    // terms at register). Do not gate legacy accounts with null terms.
+    const authProvider = user.app_metadata?.provider as string | undefined;
+    const isOAuthUser = Boolean(authProvider && authProvider !== "email");
+    if (
+      isOAuthUser &&
+      !profile?.terms_accepted_at &&
+      !pathnameWithoutLocale.startsWith("/accept-terms")
+    ) {
+      const acceptUrl = new URL(`/${locale}/accept-terms`, request.url);
+      acceptUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(acceptUrl);
+    }
 
     // Patient routes: only accessible by patients
     if (isPatientRoute && userRole !== "patient") {

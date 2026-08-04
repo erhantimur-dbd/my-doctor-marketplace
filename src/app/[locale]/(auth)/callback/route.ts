@@ -71,6 +71,27 @@ export async function GET(
     }
   );
 
+  /** Resolve post-auth destination; force terms interstitial for OAuth users
+   *  who have not yet accepted terms/privacy. */
+  async function resolvePostAuthRedirect(
+    userId: string,
+    isOAuth: boolean,
+    destination: string
+  ): Promise<string> {
+    if (!isOAuth) return destination;
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("terms_accepted_at")
+      .eq("id", userId)
+      .single();
+
+    if (!profile?.terms_accepted_at) {
+      return `/${locale}/accept-terms?next=${encodeURIComponent(destination)}`;
+    }
+    return destination;
+  }
+
   // Handle PKCE flow (OAuth + email confirmation with code)
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
@@ -148,16 +169,22 @@ export async function GET(
             const role = (meta.role ||
               user.app_metadata?.role ||
               "patient") as string;
+            let dest: string;
             if (role === "doctor") {
-              return createRedirectWithCookies(`/${locale}/doctor-dashboard`);
+              dest = `/${locale}/doctor-dashboard`;
             } else if (role === "admin") {
-              return createRedirectWithCookies(`/${locale}/admin`);
+              dest = `/${locale}/admin`;
             } else {
-              return createRedirectWithCookies(`/${locale}/dashboard`);
+              dest = `/${locale}/dashboard`;
             }
+            const finalUrl = await resolvePostAuthRedirect(user.id, true, dest);
+            return createRedirectWithCookies(finalUrl);
           }
           return createRedirectWithCookies(`/${locale}/email-verified`);
         }
+
+        const finalUrl = await resolvePostAuthRedirect(user.id, isOAuth, next);
+        return createRedirectWithCookies(finalUrl);
       }
 
       // Doctor intent may also apply when next is already doctor-dashboard

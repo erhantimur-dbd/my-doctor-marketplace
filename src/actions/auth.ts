@@ -14,8 +14,11 @@ import { safeError } from "@/lib/utils/safe-error";
 import { log } from "@/lib/utils/logger";
 import {
   AUTH_RETURN_COOKIE,
+  DOCTOR_OAUTH_INTENT_COOKIE,
   isSafeRelativePath,
 } from "@/lib/auth/return-cookie";
+import type { OAuthProviderId } from "@/lib/auth/oauth-providers";
+import { OAUTH_PROVIDERS, TERMS_VERSION } from "@/lib/auth/oauth-providers";
 
 async function setAuthReturnCookie(redirectTo: string | null | undefined) {
   if (!redirectTo || !isSafeRelativePath(redirectTo)) return;
@@ -183,7 +186,7 @@ export async function register(formData: FormData) {
         .update({
           terms_accepted_at: new Date().toISOString(),
           privacy_accepted_at: new Date().toISOString(),
-          terms_version: "2026-03-17",
+          terms_version: TERMS_VERSION,
         })
         .eq("id", data.user.id)
     ).catch((err) => log.error("[Auth] Terms acceptance recording error:", { err: err }));
@@ -1171,10 +1174,16 @@ export async function logout(locale: string = "en") {
 
 type OAuthSignInOptions = { doctorIntent?: boolean };
 
+const PROVIDER_LABELS: Record<OAuthProviderId, string> = {
+  google: "Google",
+  apple: "Apple",
+  facebook: "Facebook",
+  azure: "Microsoft",
+  twitter: "X",
+};
+
 async function setDoctorOAuthIntentCookie(doctorIntent?: boolean) {
   if (!doctorIntent) return;
-  const { cookies } = await import("next/headers");
-  const { DOCTOR_OAUTH_INTENT_COOKIE } = await import("@/lib/auth/return-cookie");
   const jar = await cookies();
   jar.set(DOCTOR_OAUTH_INTENT_COOKIE, "1", {
     path: "/",
@@ -1185,23 +1194,46 @@ async function setDoctorOAuthIntentCookie(doctorIntent?: boolean) {
   });
 }
 
-export async function signInWithGoogle(
+/**
+ * Unified OAuth sign-in. Only providers marked enabled in oauth-providers
+ * config may be used (prevents calling disabled IdPs from crafted requests).
+ */
+export async function signInWithOAuthProvider(
+  providerId: OAuthProviderId,
   locale: string = "en",
   redirectTo?: string,
   options?: OAuthSignInOptions
 ) {
+  const config = OAUTH_PROVIDERS.find((p) => p.id === providerId);
+  if (!config?.enabled) {
+    return {
+      error: `${PROVIDER_LABELS[providerId] || "This"} sign-in is not available. Please try another method.`,
+    };
+  }
+
   await setDoctorOAuthIntentCookie(options?.doctorIntent);
+
   const supabase = await createClient();
   const origin = await getOrigin();
   const next =
     redirectTo ||
     (options?.doctorIntent ? `/${locale}/doctor-dashboard` : undefined);
 
+  const oauthOptions: {
+    redirectTo: string;
+    scopes?: string;
+  } = {
+    redirectTo: buildOAuthCallback(origin, locale, next),
+  };
+
+  // Microsoft requires explicit scopes for email/profile claims
+  if (providerId === "azure") {
+    oauthOptions.scopes = "openid profile email";
+  }
+
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: buildOAuthCallback(origin, locale, next),
-    },
+    provider: config.supabaseProvider,
+    options: oauthOptions,
   });
 
   if (error) {
@@ -1209,10 +1241,20 @@ export async function signInWithGoogle(
   }
 
   if (!data.url) {
-    return { error: "Google sign-in is not configured. Please try another method." };
+    return {
+      error: `${PROVIDER_LABELS[providerId]} sign-in is not configured. Please try another method.`,
+    };
   }
 
   redirect(data.url);
+}
+
+export async function signInWithGoogle(
+  locale: string = "en",
+  redirectTo?: string,
+  options?: OAuthSignInOptions
+) {
+  return signInWithOAuthProvider("google", locale, redirectTo, options);
 }
 
 export async function signInWithApple(
@@ -1220,94 +1262,20 @@ export async function signInWithApple(
   redirectTo?: string,
   options?: OAuthSignInOptions
 ) {
-  await setDoctorOAuthIntentCookie(options?.doctorIntent);
-  const supabase = await createClient();
-  const origin = await getOrigin();
-  const next =
-    redirectTo ||
-    (options?.doctorIntent ? `/${locale}/doctor-dashboard` : undefined);
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "apple",
-    options: {
-      redirectTo: buildOAuthCallback(origin, locale, next),
-    },
-  });
-
-  if (error) {
-    return { error: safeError(error) };
-  }
-
-  if (!data.url) {
-    return { error: "Apple sign-in is not configured. Please try another method." };
-  }
-
-  redirect(data.url);
+  return signInWithOAuthProvider("apple", locale, redirectTo, options);
 }
 
 export async function signInWithFacebook(locale: string = "en", redirectTo?: string) {
-  const supabase = await createClient();
-  const origin = await getOrigin();
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "facebook",
-    options: {
-      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
-    },
-  });
-
-  if (error) {
-    return { error: safeError(error) };
-  }
-
-  if (!data.url) {
-    return { error: "Facebook sign-in is not configured. Please try another method." };
-  }
-
-  redirect(data.url);
+  return signInWithOAuthProvider("facebook", locale, redirectTo);
 }
 
 export async function signInWithAzure(locale: string = "en", redirectTo?: string) {
-  const supabase = await createClient();
-  const origin = await getOrigin();
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "azure",
-    options: {
-      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
-      scopes: "openid profile email",
-    },
-  });
-
-  if (error) {
-    return { error: safeError(error) };
-  }
-
-  if (!data.url) {
-    return { error: "Microsoft sign-in is not configured. Please try another method." };
-  }
-
-  redirect(data.url);
+  return signInWithOAuthProvider("azure", locale, redirectTo);
 }
 
 export async function signInWithTwitter(locale: string = "en", redirectTo?: string) {
-  const supabase = await createClient();
-  const origin = await getOrigin();
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "twitter",
-    options: {
-      redirectTo: buildOAuthCallback(origin, locale, redirectTo),
-    },
-  });
-
-  if (error) {
-    return { error: safeError(error) };
-  }
-
-  if (!data.url) {
-    return { error: "X sign-in is not configured. Please try another method." };
-  }
-
-  redirect(data.url);
+  return signInWithOAuthProvider("twitter", locale, redirectTo);
 }
+
+// Re-export so call sites can stamp the same version
+export { TERMS_VERSION };
