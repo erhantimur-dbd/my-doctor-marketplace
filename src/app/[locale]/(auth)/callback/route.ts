@@ -187,29 +187,6 @@ export async function GET(
         return createRedirectWithCookies(finalUrl);
       }
 
-      // Doctor intent may also apply when next is already doctor-dashboard
-      const doctorIntentLate =
-        request.cookies.get(DOCTOR_OAUTH_INTENT_COOKIE)?.value === "1";
-      if (doctorIntentLate && user) {
-        const meta = user.user_metadata || {};
-        await bootstrapDoctorShell({
-          userId: user.id,
-          email: user.email || "",
-          firstName: (meta.first_name as string) || "Doctor",
-          lastName: (meta.last_name as string) || "User",
-        });
-        const res = createRedirectWithCookies(
-          next.includes("doctor-dashboard")
-            ? next
-            : `/${locale}/doctor-dashboard`
-        );
-        res.cookies.set(DOCTOR_OAUTH_INTENT_COOKIE, "", {
-          path: "/",
-          maxAge: 0,
-        });
-        return res;
-      }
-
       return createRedirectWithCookies(next);
     }
   }
