@@ -1277,5 +1277,5 @@ export async function signInWithTwitter(locale: string = "en", redirectTo?: stri
   return signInWithOAuthProvider("twitter", locale, redirectTo);
 }
 
-// Re-export so call sites can stamp the same version
-export { TERMS_VERSION };
+// Note: do NOT re-export non-async values from this "use server" file.
+// TERMS_VERSION is imported from @/lib/auth/oauth-providers where needed.
