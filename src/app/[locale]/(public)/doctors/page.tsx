@@ -52,57 +52,99 @@ export default async function DoctorsPage({
   const sp = await searchParams;
   const t = await getTranslations("search");
 
-  const [result, specialties, locations, featuredDoctors] = await Promise.all([
-    searchDoctors({
-      specialty: sp.specialty,
-      condition: sp.condition,
-      location: sp.location,
-      minPrice: sp.minPrice ? Number(sp.minPrice) : undefined,
-      maxPrice: sp.maxPrice ? Number(sp.maxPrice) : undefined,
-      minRating: sp.minRating ? Number(sp.minRating) : undefined,
-      language: sp.language,
-      consultationType: sp.consultationType,
-      query: sp.query,
-      // Marketplace default: inventory-first when user has intent (specialty /
-      // condition / query / time chips). Featured only for open browse with no intent.
-      sort:
-        sp.sort ||
-        (sp.availableToday === "true" ||
-        sp.liveNow === "true" ||
-        sp.liveInPersonNearby === "true" ||
-        sp.availableWithinDays ||
-        sp.specialty ||
-        sp.skill ||
-        sp.query ||
-        sp.condition
-          ? "soonest"
-          : "featured"),
-      page: sp.page ? Number(sp.page) : 1,
-      availableToday: sp.availableToday === "true",
-      liveNow: sp.liveNow === "true",
-      liveInPersonNearby: sp.liveInPersonNearby === "true",
-      liveWindowHours: sp.liveWindowHours
-        ? Number(sp.liveWindowHours)
-        : undefined,
-      availableWithinDays: sp.availableWithinDays
-        ? Number(sp.availableWithinDays)
-        : undefined,
-      wheelchairAccessible: sp.wheelchairAccessible === "true",
-      userLat: sp.lat ? Number(sp.lat) : undefined,
-      userLng: sp.lng ? Number(sp.lng) : undefined,
-      providerType: sp.providerType as "doctor" | "testing_service" | undefined,
-      acceptedPayment: sp.acceptedPayment,
-      insurer: sp.insurer,
-      gender: sp.gender,
-      placeLat: sp.placeLat ? Number(sp.placeLat) : undefined,
-      placeLng: sp.placeLng ? Number(sp.placeLng) : undefined,
-      radius: sp.radius ? Number(sp.radius) : undefined,
-      skill: sp.skill,
-    }),
-    getSpecialties(),
-    getLocations(),
-    getFeaturedDoctors(5),
-  ]);
+  type SearchResult = Awaited<ReturnType<typeof searchDoctors>>;
+
+  let result: SearchResult;
+  let specialties: Awaited<ReturnType<typeof getSpecialties>>;
+  let locations: Awaited<ReturnType<typeof getLocations>>;
+  let featuredDoctors: Awaited<ReturnType<typeof getFeaturedDoctors>>;
+
+  try {
+    [result, specialties, locations, featuredDoctors] = await Promise.all([
+      searchDoctors({
+        specialty: sp.specialty,
+        condition: sp.condition,
+        location: sp.location,
+        minPrice: sp.minPrice ? Number(sp.minPrice) : undefined,
+        maxPrice: sp.maxPrice ? Number(sp.maxPrice) : undefined,
+        minRating: sp.minRating ? Number(sp.minRating) : undefined,
+        language: sp.language,
+        consultationType: sp.consultationType,
+        query: sp.query,
+        // Marketplace default: inventory-first when user has intent (specialty /
+        // condition / query / time chips). Featured only for open browse with no intent.
+        sort:
+          sp.sort ||
+          (sp.availableToday === "true" ||
+          sp.liveNow === "true" ||
+          sp.liveInPersonNearby === "true" ||
+          sp.availableWithinDays ||
+          sp.specialty ||
+          sp.skill ||
+          sp.query ||
+          sp.condition
+            ? "soonest"
+            : "featured"),
+        page: sp.page ? Number(sp.page) : 1,
+        availableToday: sp.availableToday === "true",
+        liveNow: sp.liveNow === "true",
+        liveInPersonNearby: sp.liveInPersonNearby === "true",
+        liveWindowHours: sp.liveWindowHours
+          ? Number(sp.liveWindowHours)
+          : undefined,
+        availableWithinDays: sp.availableWithinDays
+          ? Number(sp.availableWithinDays)
+          : undefined,
+        wheelchairAccessible: sp.wheelchairAccessible === "true",
+        userLat: sp.lat ? Number(sp.lat) : undefined,
+        userLng: sp.lng ? Number(sp.lng) : undefined,
+        providerType: sp.providerType as
+          | "doctor"
+          | "testing_service"
+          | undefined,
+        acceptedPayment: sp.acceptedPayment,
+        insurer: sp.insurer,
+        gender: sp.gender,
+        placeLat: sp.placeLat ? Number(sp.placeLat) : undefined,
+        placeLng: sp.placeLng ? Number(sp.placeLng) : undefined,
+        radius: sp.radius ? Number(sp.radius) : undefined,
+        skill: sp.skill,
+      }),
+      getSpecialties(),
+      getLocations(),
+      getFeaturedDoctors(5),
+    ]);
+  } catch (err) {
+    console.error("Doctors page search failed:", err);
+    // Never surface a raw 500 for condition/specialty browse — degrade to empty.
+    try {
+      [specialties, locations, featuredDoctors] = await Promise.all([
+        getSpecialties(),
+        getLocations(),
+        getFeaturedDoctors(5),
+      ]);
+    } catch {
+      specialties = [];
+      locations = [];
+      featuredDoctors = [];
+    }
+    result = {
+      doctors: [],
+      total: 0,
+      page: 1,
+      perPage: 12,
+      matchScores: undefined,
+      distances: undefined,
+      outsideLaunchRegion: false,
+      searchCountryCode: null,
+      fallbackApplied:
+        "Search is temporarily unavailable. Please try again in a moment.",
+      specialistSuggestion: null,
+      matchMode: "empty",
+      waitlistPrompt: null,
+      conditionMeta: null,
+    };
+  }
 
   const conditionMeta = result.conditionMeta ?? null;
 

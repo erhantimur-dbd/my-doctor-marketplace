@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DoctorCard } from "@/components/doctors/doctor-card";
 import { searchDoctors, getSpecialties } from "@/actions/search";
-import { getCityBySlug, UK_SEO_CITIES } from "@/lib/constants/uk-cities";
-import { SPECIALTIES, getSpecialtyMeta } from "@/lib/constants/specialties";
+import { getCityBySlug } from "@/lib/constants/uk-cities";
+import { getSpecialtyMeta } from "@/lib/constants/specialties";
 import { formatSpecialtyName } from "@/lib/utils";
 import { generateMetadata as seoMetadata } from "@/lib/seo/metadata";
 import { faqJsonLd } from "@/lib/seo/json-ld";
@@ -15,17 +15,11 @@ interface PageProps {
   params: Promise<{ locale: string; location: string; specialty: string }>;
 }
 
-export async function generateStaticParams() {
-  // Limit build-time paths: top cities × all specialties
-  const cities = UK_SEO_CITIES.slice(0, 12);
-  const specs = SPECIALTIES.filter((s) => s.category !== "testing").slice(0, 20);
-  return cities.flatMap((city) =>
-    specs.map((spec) => ({
-      location: city.slug,
-      specialty: spec.slug,
-    }))
-  );
-}
+/**
+ * Dynamic: locale layout reads cookies. Static generation of city×specialty
+ * shells causes DYNAMIC_SERVER_USAGE 500s at request time.
+ */
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, location, specialty } = await params;

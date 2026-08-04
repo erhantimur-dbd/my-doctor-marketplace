@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import {
-  CONDITION_HUBS,
   conditionHubSearchHref,
   conditionSpecialtySlugs,
   getConditionHub,
@@ -14,9 +13,12 @@ interface PageProps {
   params: Promise<{ locale: string; slug: string }>;
 }
 
-export async function generateStaticParams() {
-  return CONDITION_HUBS.map((h) => ({ slug: h.slug }));
-}
+/**
+ * Must be dynamic: parent [locale] layout reads auth cookies via Supabase.
+ * generateStaticParams + cookie-using layouts throws DYNAMIC_SERVER_USAGE
+ * at runtime (production 500 on every /conditions/{slug} click).
+ */
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;

@@ -2,6 +2,9 @@ import { Link } from "@/i18n/navigation";
 import { CONDITION_HUBS, conditionHubSearchHref } from "@/lib/constants/condition-hubs";
 import type { Metadata } from "next";
 
+/** Parent locale layout uses cookies — keep this route dynamic. */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Health conditions — Find the right doctor",
   description:
