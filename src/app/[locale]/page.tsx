@@ -23,7 +23,6 @@ import { SpecialtyMarquee } from "@/components/shared/specialty-marquee";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { HowItWorksSection } from "@/components/home/how-it-works-section";
 import { FeaturedDoctorsSection } from "@/components/home/featured-doctors-section";
-import { SameDayBanner } from "@/components/home/same-day-banner";
 import { ForDoctorsCta } from "@/components/home/for-doctors-cta";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { CONDITION_HUBS } from "@/lib/constants/condition-hubs";
@@ -65,11 +64,6 @@ export default async function HomePage() {
     getLiveAvailabilityCounts(),
     getFeaturedDoctors(8),
   ]);
-
-  const liveAvailabilityTotal = Object.values(liveCounts).reduce(
-    (sum, n) => sum + (typeof n === "number" ? n : 0),
-    0
-  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -187,9 +181,6 @@ export default async function HomePage() {
           />
         </div>
       </section>
-
-      {/* Same-day / live availability urgency */}
-      <SameDayBanner count={liveAvailabilityTotal} />
 
       {/* Featured doctors */}
       <FeaturedDoctorsSection doctors={featuredDoctors} />
