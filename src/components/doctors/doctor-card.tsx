@@ -221,7 +221,7 @@ export const DoctorCard = forwardRef<HTMLDivElement, DoctorCardProps>(
                   </span>
                 ) : <span />}
                 {liveAvailable && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm animate-badge-pulse">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm animate-badge-pulse">
                     <span className="relative flex h-2 w-2">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />

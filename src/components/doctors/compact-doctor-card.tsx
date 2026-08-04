@@ -120,7 +120,7 @@ export const CompactDoctorCard = forwardRef<HTMLDivElement, CompactDoctorCardPro
                       </span>
                     )}
                     {liveAvailable && (
-                      <span className="ml-auto mr-3 inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm animate-badge-pulse shrink-0">
+                      <span className="ml-auto mr-3 inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow-sm animate-badge-pulse shrink-0">
                         <span className="relative flex h-1.5 w-1.5">
                           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
                           <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />

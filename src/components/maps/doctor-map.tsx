@@ -296,7 +296,7 @@ export function DoctorMap({
                       marginTop: 4,
                       padding: "2px 8px",
                       borderRadius: 9999,
-                      backgroundColor: "#ef4444",
+                      backgroundColor: "var(--primary)",
                       color: "#fff",
                       fontSize: 10,
                       fontWeight: 600,
