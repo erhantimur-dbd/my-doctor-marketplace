@@ -1506,6 +1506,12 @@ export function HomeSearchBar({
               ))}
             </div>
 
+            {/* AI search hint — directly under the search bar, above same-day chips */}
+            <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-white/80 drop-shadow-sm">
+              <Sparkles className="h-3 w-3 shrink-0" />
+              <span>{t("ai_search_hint")}</span>
+            </p>
+
             {/* GP instant-book shortcuts — desktop */}
             <GpShortcutChips
               className="mt-4"
@@ -1516,12 +1522,6 @@ export function HomeSearchBar({
               locationSlug={location}
               geo={{ latitude: geo.latitude, longitude: geo.longitude }}
             />
-
-            {/* AI search hint — desktop */}
-            <p className="mt-2.5 flex items-center justify-center gap-1.5 text-xs text-white/80 drop-shadow-sm">
-              <Sparkles className="h-3 w-3 shrink-0" />
-              <span>{t("ai_search_hint")}</span>
-            </p>
 
             {/* Always-visible popular condition chips */}
             {searchBarChips.length > 0 && (
@@ -1874,12 +1874,6 @@ export function HomeSearchBar({
               ))}
             </div>
 
-            {/* AI search hint — mobile (inside white card, so use dark text) */}
-            <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70 text-center leading-snug px-2">
-              <Sparkles className="h-3 w-3 shrink-0" />
-              <span>{t("ai_search_hint")}</span>
-            </p>
-
             {/* Popular condition chips — mobile */}
             {searchBarChips.length > 0 && (
               <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -1924,7 +1918,15 @@ export function HomeSearchBar({
           )}
         </Button>
 
-        {/* GP instant-book shortcuts — mobile */}
+        {/* AI search hint — mobile, directly under search button */}
+        {!compact && (
+          <p className="flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground/70 text-center leading-snug px-2">
+            <Sparkles className="h-3 w-3 shrink-0" />
+            <span>{t("ai_search_hint")}</span>
+          </p>
+        )}
+
+        {/* GP instant-book shortcuts — mobile (below AI hint) */}
         {!compact && (
           <GpShortcutChips
             className="pt-1"
