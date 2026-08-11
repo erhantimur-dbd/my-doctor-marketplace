@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { getCompanyIdentity } from "@/lib/constants/company";
 
 /**
  * UK Privacy Policy — served on `mydoctors360.co.uk` only.
@@ -10,30 +11,23 @@ import { Card, CardContent } from "@/components/ui/card";
  * links, and the UK international-transfers basis (UK IDTA / Data Bridge).
  *
  * Must be signed off by a UK healthcare regulatory solicitor before
- * publication. Do NOT publish with any "TBD_" placeholder still in place —
- * each TBD represents data the user owes us before go-live.
- *
- * TBD placeholders (must be supplied by the user before go-live):
- *   - Legal entity name (e.g. "MyDoctors360 Ltd")
- *   - Companies House number
- *   - Registered office address
- *   - ICO data controller registration number
- *   - DPO name + contact (or named privacy lead)
- *   - Data controller vs processor designation per data type (if any
- *     adjustments are needed beyond the defaults below)
+ * publication. Set LEGAL_ENTITY_NAME, COMPANIES_HOUSE_NUMBER, REGISTERED_OFFICE,
+ * ICO_REGISTRATION_NUMBER, DPO_NAME, DPO_EMAIL in Vercel env.
  */
 
 const EFFECTIVE_DATE = "17 March 2026";
 const COMPANY = "MyDoctors360";
 
-const LEGAL_ENTITY = "TBD_LEGAL_ENTITY_NAME";
-const COMPANIES_HOUSE_NUMBER = "TBD_COMPANIES_HOUSE_NUMBER";
-const REGISTERED_OFFICE = "TBD_REGISTERED_OFFICE_ADDRESS";
-const ICO_REGISTRATION_NUMBER = "TBD_ICO_REGISTRATION_NUMBER";
-const DPO_NAME = "TBD_DPO_NAME_OR_PRIVACY_LEAD";
-const DPO_EMAIL = "TBD_DPO_EMAIL";
-
 export function PrivacyUk() {
+  const {
+    legalEntityName: LEGAL_ENTITY,
+    companiesHouseNumber: COMPANIES_HOUSE_NUMBER,
+    registeredOffice: REGISTERED_OFFICE,
+    icoRegistrationNumber: ICO_REGISTRATION_NUMBER,
+    dpoName: DPO_NAME,
+    dpoEmail: DPO_EMAIL,
+  } = getCompanyIdentity();
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-12">
       <div>

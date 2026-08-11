@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { getCompanyIdentity } from "@/lib/constants/company";
 
 /**
  * UK Terms of Service — served on `mydoctors360.co.uk` only.
@@ -12,26 +13,23 @@ import { Card, CardContent } from "@/components/ui/card";
  * facilitator, and each listed doctor must evidence their own CQC status.
  *
  * This file should be reviewed by a UK healthcare regulatory solicitor
- * before it goes live to real patients. Do NOT publish with TBD values.
+ * before it goes live to real patients.
  *
- * TBD placeholders (must be supplied by the user before go-live):
- *   - Legal entity name (e.g. "MyDoctors360 Ltd")
- *   - Companies House number
- *   - Registered office address
- *   - Complaints handler email
+ * Legal entity details: env LEGAL_ENTITY_NAME, COMPANIES_HOUSE_NUMBER,
+ * REGISTERED_OFFICE, COMPLAINTS_EMAIL.
  */
 
 const EFFECTIVE_DATE = "17 March 2026";
 const COMPANY = "MyDoctors360";
 
-// TBD — replace before publishing. Leaving real placeholders so a grep for
-// "TBD_" will catch anything that slipped through.
-const LEGAL_ENTITY = "TBD_LEGAL_ENTITY_NAME";
-const COMPANIES_HOUSE_NUMBER = "TBD_COMPANIES_HOUSE_NUMBER";
-const REGISTERED_OFFICE = "TBD_REGISTERED_OFFICE_ADDRESS";
-const COMPLAINTS_EMAIL = "TBD_COMPLAINTS_EMAIL";
-
 export function TermsUk() {
+  const {
+    legalEntityName: LEGAL_ENTITY,
+    companiesHouseNumber: COMPANIES_HOUSE_NUMBER,
+    registeredOffice: REGISTERED_OFFICE,
+    complaintsEmail: COMPLAINTS_EMAIL,
+  } = getCompanyIdentity();
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-12">
       <div>

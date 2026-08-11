@@ -15,6 +15,7 @@ export default function VerifyEmailPage() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const redirectTo = searchParams.get("redirect") || "";
+  const checkoutSuccess = searchParams.get("checkout") === "success";
   const loginHref = redirectTo
     ? `/login?redirect=${encodeURIComponent(redirectTo)}`
     : "/login";
@@ -72,8 +73,24 @@ export default function VerifyEmailPage() {
           )}
         </div>
 
+        {checkoutSuccess && (
+          <div className="w-full rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm text-emerald-900">
+            <p className="font-medium">
+              {t("checkout_success_title") || "Payment received"}
+            </p>
+            <p className="mt-1 text-emerald-800/90">
+              {t("checkout_success_body") ||
+                "Your subscription checkout completed. Verify your email to sign in and finish setting up your practice."}
+            </p>
+          </div>
+        )}
+
         <p className="text-xs text-muted-foreground">
           {t("verify_check_spam")}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {t("verify_link_expiry") ||
+            "Links usually arrive within a minute and expire after a short time — use Resend if needed."}
         </p>
 
         {/* Resend feedback */}

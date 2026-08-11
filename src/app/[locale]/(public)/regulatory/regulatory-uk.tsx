@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { getCompanyIdentity } from "@/lib/constants/company";
 
 /**
  * UK Regulatory Status page — served on `mydoctors360.co.uk` only.
@@ -10,20 +11,19 @@ import { Card, CardContent } from "@/components/ui/card";
  * both link to.
  *
  * Must be signed off by a UK healthcare regulatory solicitor before
- * publication. Do NOT publish with any "TBD_" placeholder still in place.
- *
- * TBD placeholders (must be supplied by the user before go-live):
- *   - Legal entity name
- *   - Companies House number
- *   - Indemnity insurance details for {LEGAL_ENTITY} itself (E&O / cyber)
+ * publication. Env: LEGAL_ENTITY_NAME, COMPANIES_HOUSE_NUMBER,
+ * PLATFORM_INDEMNITY_SUMMARY.
  */
 
 const COMPANY = "MyDoctors360";
-const LEGAL_ENTITY = "TBD_LEGAL_ENTITY_NAME";
-const COMPANIES_HOUSE_NUMBER = "TBD_COMPANIES_HOUSE_NUMBER";
-const INDEMNITY_SUMMARY = "TBD_INDEMNITY_INSURER_AND_COVER_SUMMARY";
 
 export function RegulatoryUk() {
+  const {
+    legalEntityName: LEGAL_ENTITY,
+    companiesHouseNumber: COMPANIES_HOUSE_NUMBER,
+    indemnitySummary: INDEMNITY_SUMMARY,
+  } = getCompanyIdentity();
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-12">
       <div>

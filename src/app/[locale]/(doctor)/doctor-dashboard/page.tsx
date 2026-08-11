@@ -122,6 +122,31 @@ export default async function DoctorDashboard() {
         Welcome back, {profile?.first_name}
       </h1>
 
+      {/* Founding Doctor Programme */}
+      {doctor.is_founding_member && (
+        <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20">
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="rounded-full bg-emerald-100 p-2.5 dark:bg-emerald-900/50">
+              <Crown className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-emerald-900 dark:text-emerald-100">
+                Founding Doctor
+                {doctor.founding_member_number
+                  ? ` #${doctor.founding_member_number}`
+                  : ""}
+              </p>
+              <p className="text-sm text-emerald-800/80 dark:text-emerald-200/70">
+                You&apos;re in the first 100 founding doctors. Founding pricing
+                is locked for life, and your profile has priority placement at
+                launch. Complete your profile and verification to go live on day
+                one.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Verification Status Banners */}
       {doctor.verification_status === "pending" && (
         <Card className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">

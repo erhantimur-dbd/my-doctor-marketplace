@@ -1,29 +1,25 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { getCompanyIdentity } from "@/lib/constants/company";
 
 /**
  * UK Complaints page — served on `mydoctors360.co.uk` only.
  *
  * Separates complaints into two clear tracks: platform complaints (come to
  * us first) and clinical complaints (go to the doctor / registered provider
- * / GMC / CQC). Data-protection complaints point to the ICO. The platform
- * complaints track must commit to a response time and be owned by a named
- * person, which the user will supply later.
+ * / GMC / CQC). Data-protection complaints point to the ICO.
  *
- * Must be signed off by a UK healthcare regulatory solicitor before
- * publication. Do NOT publish with any "TBD_" placeholder still in place.
- *
- * TBD placeholders (must be supplied by the user before go-live):
- *   - Legal entity name
- *   - Named complaints handler (or team alias)
- *   - Complaints handler email
+ * Env: LEGAL_ENTITY_NAME, COMPLAINTS_HANDLER, COMPLAINTS_EMAIL.
  */
 
 const COMPANY = "MyDoctors360";
-const LEGAL_ENTITY = "TBD_LEGAL_ENTITY_NAME";
-const COMPLAINTS_HANDLER = "TBD_COMPLAINTS_HANDLER_NAME_OR_TEAM";
-const COMPLAINTS_EMAIL = "TBD_COMPLAINTS_EMAIL";
 
 export function ComplaintsUk() {
+  const {
+    legalEntityName: LEGAL_ENTITY,
+    complaintsHandler: COMPLAINTS_HANDLER,
+    complaintsEmail: COMPLAINTS_EMAIL,
+  } = getCompanyIdentity();
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-12">
       <div>

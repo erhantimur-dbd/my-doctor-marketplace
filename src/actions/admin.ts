@@ -1344,11 +1344,11 @@ export async function adminGrantDoctorSubscription(data: {
     return { error: "Doctor has no organization. Please create one first." };
   }
 
-  // Determine max_seats from tier defaults
+  // Determine max_seats from tier defaults (must match LICENSE_TIERS)
   const seatDefaults: Record<string, number> = {
     starter: 1,
     professional: 1,
-    clinic: 5,
+    clinic: 3, // Clinic includes 3 seats (expand to 15 via extras)
   };
 
   // Create license via the existing function logic (inline to handle legacy compat)

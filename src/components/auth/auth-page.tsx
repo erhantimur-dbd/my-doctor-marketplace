@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
-import { Loader2, Stethoscope } from "lucide-react";
+import { Loader2, Stethoscope, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +15,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { PasswordStrength } from "@/components/ui/password-strength";
+import {
+  PasswordStrength,
+  passwordMeetsServerMinimum,
+} from "@/components/ui/password-strength";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BookingAuthSummary } from "@/components/auth/booking-auth-summary";
 import { isBookRedirect } from "@/lib/chat/booking-href";
@@ -47,6 +51,12 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [passwordValue, setPasswordValue] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [needsVerificationEmail, setNeedsVerificationEmail] = useState<
+    string | null
+  >(null);
 
   // Smart default: show sign-up when coming from a booking redirect
   const isBookingRedirect = isBookRedirect(redirectTo) || !!bookingContext;
@@ -55,16 +65,35 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
 
   const [activeTab, setActiveTab] = useState<string>(smartDefault);
 
+  const registerPasswordOk = passwordMeetsServerMinimum(passwordValue);
+
   /* ── Handlers ── */
 
   async function handleLogin(formData: FormData) {
     setLoginLoading(true);
     setError("");
+    setNeedsVerificationEmail(null);
     formData.append("redirect", redirectTo);
     formData.append("locale", locale);
+    // Prefer controlled email if present
+    if (loginEmail) formData.set("email", loginEmail);
+
     const result = await login(formData);
     if (result && "mfaRequired" in result && result.mfaRequired) {
       router.push(`/${locale}/verify-mfa`);
+      return;
+    }
+    if (result && "needsVerification" in result && result.needsVerification) {
+      const em =
+        ("email" in result && typeof result.email === "string"
+          ? result.email
+          : loginEmail) || "";
+      setNeedsVerificationEmail(em);
+      setError(
+        result.error ||
+          "Please verify your email address before signing in."
+      );
+      setLoginLoading(false);
       return;
     }
     if (result?.error) {
@@ -76,8 +105,29 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   async function handleRegister(formData: FormData) {
     setRegisterLoading(true);
     setError("");
+    setNeedsVerificationEmail(null);
+
+    if (!acceptedTerms) {
+      setError(
+        t("accept_terms_required") ||
+          "Please accept the Terms of Service and Privacy Policy to continue."
+      );
+      setRegisterLoading(false);
+      return;
+    }
+    if (!registerPasswordOk) {
+      setError(
+        t("password_requirements") ||
+          "Password must be at least 8 characters and include 3 of: lowercase, uppercase, number, symbol."
+      );
+      setRegisterLoading(false);
+      return;
+    }
+
     formData.append("redirect", redirectTo);
     formData.append("locale", locale);
+    if (registerEmail) formData.set("email", registerEmail);
+
     const result = await register(formData);
     if (result?.error) {
       setError(result.error);
@@ -88,6 +138,7 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   function handleTabChange(value: string) {
     setActiveTab(value);
     setError("");
+    setNeedsVerificationEmail(null);
     // Update URL without full navigation so bookmarks / back button work
     const newPath = value === "sign-in" ? `/${locale}/login` : `/${locale}/register`;
     // Preserve redirect param
@@ -98,6 +149,11 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   }
 
   const summaryMode = activeTab === "sign-up" ? "sign-up" : "sign-in";
+  const verifyHref = needsVerificationEmail
+    ? `/verify-email?email=${encodeURIComponent(needsVerificationEmail)}${
+        redirectTo ? `&redirect=${encodeURIComponent(redirectTo)}` : ""
+      }`
+    : "/verify-email";
 
   return (
     <div
@@ -151,12 +207,21 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
           )}
           {callbackError && (
             <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              Email verification failed or link expired. Please try signing up again.
+              {t("callback_error") ||
+                "Email verification failed or link expired. Please try signing up again or resend the verification email."}
             </div>
           )}
           {error && (
-            <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
+            <div className="mb-4 space-y-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              <p>{error}</p>
+              {needsVerificationEmail && (
+                <Button variant="outline" size="sm" className="w-full bg-background" asChild>
+                  <Link href={verifyHref}>
+                    <Mail className="mr-2 h-4 w-4" />
+                    {t("go_to_verify_email") || "Open email verification"}
+                  </Link>
+                </Button>
+              )}
             </div>
           )}
 
@@ -199,6 +264,8 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
                   type="email"
                   autoComplete="email"
                   placeholder="name@example.com"
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
                   required
                 />
               </div>
@@ -216,12 +283,47 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
                 <PasswordStrength password={passwordValue} />
               </div>
 
+              <div className="flex items-start gap-2 rounded-md border bg-muted/30 p-3">
+                <Checkbox
+                  id="accept-terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={(v) => setAcceptedTerms(v === true)}
+                  className="mt-0.5"
+                />
+                <Label
+                  htmlFor="accept-terms"
+                  className="text-xs font-normal leading-relaxed text-muted-foreground"
+                >
+                  {t("signup_terms_prefix") || "I agree to the"}{" "}
+                  <Link
+                    href="/terms"
+                    className="font-medium text-primary underline-offset-2 hover:underline"
+                    target="_blank"
+                  >
+                    {t("terms_link") || "Terms of Service"}
+                  </Link>{" "}
+                  {t("and") || "and"}{" "}
+                  <Link
+                    href="/privacy"
+                    className="font-medium text-primary underline-offset-2 hover:underline"
+                    target="_blank"
+                  >
+                    {t("privacy_link") || "Privacy Policy"}
+                  </Link>
+                  .
+                </Label>
+              </div>
+
               <input type="hidden" name="locale" value={locale} />
 
               <Button
                 type="submit"
                 className="w-full"
-                disabled={registerLoading}
+                disabled={
+                  registerLoading ||
+                  !acceptedTerms ||
+                  (passwordValue.length > 0 && !registerPasswordOk)
+                }
               >
                 {registerLoading && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -242,6 +344,8 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
                   type="email"
                   autoComplete="email"
                   placeholder="name@example.com"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
                   required
                 />
               </div>

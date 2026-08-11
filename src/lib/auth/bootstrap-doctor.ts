@@ -137,6 +137,16 @@ export async function bootstrapDoctorShell(params: {
       log.error("OAuth doctor org bootstrap failed", { err: orgErr });
     }
 
+    // Founding Doctor Programme — same path as email/password signup
+    try {
+      const { claimFoundingMembership } = await import(
+        "@/lib/founding/members"
+      );
+      await claimFoundingMembership(newDoctor.id);
+    } catch (foundingErr) {
+      log.error("OAuth founding claim failed", { err: foundingErr });
+    }
+
     return {
       ok: true,
       doctorId: newDoctor.id,

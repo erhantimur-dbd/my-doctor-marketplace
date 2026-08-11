@@ -224,13 +224,8 @@ export default function RegisterDoctorPage() {
     }
 
     if (step === 2) {
-      // GMC is UK-only; other markets may optionally enter a national reg number
-      if (country === "GB") {
-        if (!gmcNumber || !/^\d{7}$/.test(gmcNumber)) {
-          setError("Please enter a valid 7-digit GMC reference number");
-          return;
-        }
-      }
+      // GMC is re-validated on step 3 once country is known (country lives on
+      // Practice step). Still require at least one specialty here.
       if (selectedSpecialties.length === 0) {
         setError("Please select at least one specialty");
         return;
@@ -238,6 +233,14 @@ export default function RegisterDoctorPage() {
     }
 
     if (step === 3) {
+      if (!country) {
+        setError("Please select the country where you practise");
+        return;
+      }
+      if (!city.trim()) {
+        setError("Please enter your practice city");
+        return;
+      }
       if (consultationTypes.length === 0) {
         setError("Please select at least one consultation type");
         return;
@@ -247,7 +250,14 @@ export default function RegisterDoctorPage() {
       // in the UK. We use the clinic `country` field as the practising
       // country signal: if it's GB, the full UK compliance sub-section
       // must be completed before moving to the next step.
+      // GMC is collected on step 2 but only enforceable once country is set.
       if (country === "GB") {
+        if (!gmcNumber || !/^\d{7}$/.test(gmcNumber)) {
+          setError(
+            "Please go back and enter a valid 7-digit GMC reference number (required for UK practice)"
+          );
+          return;
+        }
         if (!cqcStatus) {
           setError("Please select your CQC status");
           return;

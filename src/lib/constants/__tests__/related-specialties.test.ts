@@ -5,10 +5,12 @@ import {
 } from "../related-specialties";
 
 describe("getRelatedSpecialtySlugs", () => {
-  it("includes general-practice for specialist searches", () => {
+  it("returns related specialists without auto-injecting general-practice", () => {
+    // Product: do not dilute specialist search with GP for every specialty
     const related = getRelatedSpecialtySlugs("neurology");
-    expect(related).toContain("general-practice");
     expect(related).not.toContain("neurology");
+    expect(Array.isArray(related)).toBe(true);
+    // GP only when taxonomy relatedSlugs includes it — not forced globally
   });
 
   it("does not force-add general-practice when searching GP", () => {
