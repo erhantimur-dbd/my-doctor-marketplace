@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,8 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import {
+  PasswordStrength,
+  passwordMeetsServerMinimum,
+} from "@/components/ui/password-strength";
 import { resetPassword } from "@/actions/auth";
 import { useState } from "react";
 import { Loader2, ArrowLeft, CheckCircle } from "lucide-react";
@@ -22,25 +26,31 @@ import { Loader2, ArrowLeft, CheckCircle } from "lucide-react";
  */
 export default function ResetPasswordPage() {
   const t = useTranslations("auth");
+  const locale = useLocale();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setError("");
-    const password = String(formData.get("password") || "");
-    const confirm = String(formData.get("confirm") || "");
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (!passwordMeetsServerMinimum(password)) {
+      setError(
+        t("password_requirements") ||
+          "Password must be at least 8 characters and include 3 of: lowercase, uppercase, number, symbol."
+      );
       setLoading(false);
       return;
     }
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError(t("passwords_mismatch") || "Passwords do not match.");
       setLoading(false);
       return;
     }
+    formData.set("password", password);
+    formData.set("locale", locale);
     try {
       const result = await resetPassword(formData);
       if (result && "error" in result && result.error) {
@@ -59,12 +69,15 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <Card>
+      <Card className="mx-auto w-full max-w-md">
         <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
           <CheckCircle className="h-12 w-12 text-green-600" />
-          <h2 className="text-xl font-semibold">{t("set_password")}</h2>
+          <h2 className="text-xl font-semibold">
+            {t("password_updated_title") || "Password updated"}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Your password has been updated. You can sign in now.
+            {t("password_updated_body") ||
+              "Your password has been updated. You can sign in now."}
           </p>
           <Button asChild>
             <Link href="/login">{t("sign_in")}</Link>
@@ -75,11 +88,12 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <Card>
+    <Card className="mx-auto w-full max-w-md">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">{t("set_password")}</CardTitle>
         <CardDescription>
-          Choose a password to manage bookings and your MyDoctors360 account.
+          {t("set_password_subtitle") ||
+            "Choose a strong password to manage bookings and your MyDoctors360 account."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -92,29 +106,42 @@ export default function ResetPasswordPage() {
 
           <div className="space-y-2">
             <Label htmlFor="password">{t("new_password")}</Label>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="new-password"
               minLength={8}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <PasswordStrength password={password} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="confirm">Confirm password</Label>
-            <Input
+            <Label htmlFor="confirm">{t("confirm_password")}</Label>
+            <PasswordInput
               id="confirm"
               name="confirm"
-              type="password"
               autoComplete="new-password"
               minLength={8}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
               required
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <input type="hidden" name="locale" value={locale} />
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={
+              loading ||
+              !passwordMeetsServerMinimum(password) ||
+              password !== confirm
+            }
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t("set_password")}
           </Button>

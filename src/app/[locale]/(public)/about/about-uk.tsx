@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { getCompanyIdentity } from "@/lib/constants/company";
 
 /**
  * UK About page — served on `mydoctors360.co.uk` only.
@@ -9,16 +10,17 @@ import { Card, CardContent } from "@/components/ui/card";
  * vague marketing language like "trusted", "vetted", "best" without a
  * verifiable claim behind it.
  *
- * TBD placeholders (must be supplied by the user before go-live):
- *   - Legal entity name
- *   - Companies House number
+ * Legal entity details come from env (LEGAL_ENTITY_NAME, COMPANIES_HOUSE_NUMBER).
  */
 
 const COMPANY = "MyDoctors360";
-const LEGAL_ENTITY = "TBD_LEGAL_ENTITY_NAME";
-const COMPANIES_HOUSE_NUMBER = "TBD_COMPANIES_HOUSE_NUMBER";
 
 export function AboutUk() {
+  const {
+    legalEntityName: LEGAL_ENTITY,
+    companiesHouseNumber: COMPANIES_HOUSE_NUMBER,
+  } = getCompanyIdentity();
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-12">
       <div>

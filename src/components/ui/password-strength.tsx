@@ -2,6 +2,10 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import {
+  passwordMeetsServerMinimum,
+  passwordVarietyScore,
+} from "@/lib/validators/password";
 
 type Strength = "weak" | "medium" | "strong";
 
@@ -9,16 +13,9 @@ function getStrength(password: string): { level: Strength; score: number } {
   if (!password) return { level: "weak", score: 0 };
 
   let score = 0;
-
-  // Length
   if (password.length >= 8) score++;
   if (password.length >= 12) score++;
-
-  // Character variety
-  if (/[a-z]/.test(password)) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^a-zA-Z0-9]/.test(password)) score++;
+  score += passwordVarietyScore(password);
 
   if (score <= 2) return { level: "weak", score };
   if (score <= 4) return { level: "medium", score };
@@ -37,11 +34,21 @@ const strengthConfig: Record<
 interface PasswordStrengthProps {
   password: string;
   className?: string;
+  /** Show the “what’s required” hint under the meter */
+  showRequirements?: boolean;
 }
 
-export function PasswordStrength({ password, className }: PasswordStrengthProps) {
+export function PasswordStrength({
+  password,
+  className,
+  showRequirements = true,
+}: PasswordStrengthProps) {
   const { level } = useMemo(() => getStrength(password), [password]);
   const config = strengthConfig[level];
+  const meetsMin = useMemo(
+    () => passwordMeetsServerMinimum(password),
+    [password]
+  );
 
   if (!password) return null;
 
@@ -67,7 +74,20 @@ export function PasswordStrength({ password, className }: PasswordStrengthProps)
         )}
       >
         {config.label} password
+        {!meetsMin && (
+          <span className="text-muted-foreground">
+            {" "}
+            — keep going until it meets the requirements below
+          </span>
+        )}
       </p>
+      {showRequirements && !meetsMin && (
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          At least 8 characters, and 3 of: lowercase, uppercase, number, symbol.
+        </p>
+      )}
     </div>
   );
 }
+
+export { passwordMeetsServerMinimum };

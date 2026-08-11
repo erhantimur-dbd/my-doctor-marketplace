@@ -64,6 +64,7 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   "/accept-terms",
   // Doctor onboarding
   "/register-doctor",
+  "/register-testing-service",
   "/doctor-dashboard",
   "/doctor-dashboard/",
   // Doctor-facing marketing

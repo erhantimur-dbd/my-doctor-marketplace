@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { getCompanyIdentity } from "@/lib/constants/company";
 
 /**
  * UK Cookie Policy — served on `mydoctors360.co.uk` only.
@@ -7,22 +8,20 @@ import { Card, CardContent } from "@/components/ui/card";
  * pathway. The cookie inventory and consent behaviour are the same as the
  * default variant; the legal framing is the UK-specific bit.
  *
- * TBD placeholders (must be supplied by the user before go-live):
- *   - Legal entity name
- *   - Companies House number
- *   - ICO data controller registration number
- *   - DPO name + contact
+ * Env: LEGAL_ENTITY_NAME, COMPANIES_HOUSE_NUMBER, ICO_REGISTRATION_NUMBER, DPO_EMAIL.
  */
 
 const EFFECTIVE_DATE = "17 March 2026";
 const COMPANY = "MyDoctors360";
 
-const LEGAL_ENTITY = "TBD_LEGAL_ENTITY_NAME";
-const COMPANIES_HOUSE_NUMBER = "TBD_COMPANIES_HOUSE_NUMBER";
-const ICO_REGISTRATION_NUMBER = "TBD_ICO_REGISTRATION_NUMBER";
-const DPO_EMAIL = "TBD_DPO_EMAIL";
-
 export function CookiePolicyUk() {
+  const {
+    legalEntityName: LEGAL_ENTITY,
+    companiesHouseNumber: COMPANIES_HOUSE_NUMBER,
+    icoRegistrationNumber: ICO_REGISTRATION_NUMBER,
+    dpoEmail: DPO_EMAIL,
+  } = getCompanyIdentity();
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 py-12">
       <div>

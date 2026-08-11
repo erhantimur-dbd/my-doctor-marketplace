@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod/v4";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { rateLimit } from "@/lib/rate-limit";
 import { log } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -21,6 +22,20 @@ const doctorWaitlistSchema = z.object({
  * mydoctors360.com / .co.uk / .eu even while the rest of the app is gated.
  */
 export async function POST(request: Request) {
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "unknown";
+
+  // 5 submissions per IP per 15 minutes — blocks waitlist spam
+  const { limited } = await rateLimit(`waitlist:doctor:${ip}`, 5, 15 * 60 * 1000);
+  if (limited) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429 }
+    );
+  }
+
   let body: unknown;
   try {
     body = await request.json();

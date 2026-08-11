@@ -90,6 +90,9 @@ export async function login(formData: FormData) {
     return {
       error:
         "Please verify your email address before signing in. Check your inbox for the verification link.",
+      needsVerification: true as const,
+      email: email.trim().toLowerCase(),
+      locale,
     };
   }
 
@@ -247,6 +250,28 @@ async function createDoctorAccount(formData: FormData): Promise<
   const pwResult = passwordSchema.safeParse(password);
   if (!pwResult.success) {
     return { error: pwResult.error.issues[0]?.message || "Password too weak." };
+  }
+
+  // Early country signal for GMC gate (also set as practising_country=GB on submit)
+  const countryEarly = (formData.get("country") as string)?.trim() || "";
+  const practisingEarly =
+    (formData.get("practising_country") as string)?.trim() || countryEarly;
+  if (practisingEarly === "GB" || countryEarly === "GB") {
+    const { isValidGmcNumber } = await import("@/lib/founding/members");
+    if (!isValidGmcNumber(gmcNumber)) {
+      return {
+        error:
+          "A valid 7-digit GMC reference number is required for UK-practising doctors.",
+      };
+    }
+  }
+
+  const cityEarly = (formData.get("city") as string)?.trim() || "";
+  if (!countryEarly) {
+    return { error: "Please select the country where you practise." };
+  }
+  if (!cityEarly) {
+    return { error: "Please enter your practice city." };
   }
 
   const { data, error } = await supabase.auth.signUp({
@@ -671,6 +696,34 @@ async function createDoctorAccount(formData: FormData): Promise<
     } catch (orgErr) {
       // Non-blocking — doctor can still use the platform; org can be created later
       log.error("[Auth] Auto-org creation failed:", { err: orgErr });
+    }
+  }
+
+  // Record terms / privacy acceptance (mirrors patient registration)
+  try {
+    await adminSupabase
+      .from("profiles")
+      .update({
+        terms_accepted_at: new Date().toISOString(),
+        privacy_accepted_at: new Date().toISOString(),
+        terms_version: "2026-03-17",
+      })
+      .eq("id", data.user.id);
+  } catch (termsErr) {
+    log.error("[Auth] Doctor terms acceptance recording error:", {
+      err: termsErr,
+    });
+  }
+
+  // Founding Doctor Programme — first 100 get founding number + featured priority
+  if (newDoctor) {
+    try {
+      const { claimFoundingMembership } = await import(
+        "@/lib/founding/members"
+      );
+      await claimFoundingMembership(newDoctor.id);
+    } catch (foundingErr) {
+      log.error("[Auth] Founding claim failed:", { err: foundingErr });
     }
   }
 
@@ -1133,18 +1186,25 @@ export async function forgotPassword(formData: FormData) {
 
   const supabase = await createClient();
 
-  const email = formData.get("email") as string;
+  const email = (formData.get("email") as string)?.trim() || "";
+  const locale = (formData.get("locale") as string) || "en";
+
+  if (!email) {
+    return { error: "Please enter your email address." };
+  }
 
   const origin = await getOrigin();
 
+  // Locale-aware recovery URL (was hardcoded to /en/)
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/en/reset-password`,
+    redirectTo: `${origin}/${locale}/callback?next=${encodeURIComponent(`/${locale}/reset-password`)}`,
   });
 
   if (error) {
     return { error: safeError(error) };
   }
 
+  // Always success-shaped to avoid email enumeration
   return { success: true };
 }
 
@@ -1152,6 +1212,12 @@ export async function resetPassword(formData: FormData) {
   const supabase = await createClient();
 
   const password = formData.get("password") as string;
+  const locale = (formData.get("locale") as string) || "en";
+
+  const pwResult = passwordSchema.safeParse(password);
+  if (!pwResult.success) {
+    return { error: pwResult.error.issues[0]?.message || "Password too weak." };
+  }
 
   const { error } = await supabase.auth.updateUser({
     password,
@@ -1162,7 +1228,7 @@ export async function resetPassword(formData: FormData) {
   }
 
   revalidatePath("/", "layout");
-  redirect("/en/login");
+  redirect(`/${locale}/login?verified=true`);
 }
 
 export async function logout(locale: string = "en") {
