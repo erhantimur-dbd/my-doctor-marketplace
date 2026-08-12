@@ -85,6 +85,11 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   // doesn't swallow them before the page-level region check runs.
   "/regulatory",
   "/complaints",
+  // Invite / invitation deep links (clinic seat + doctor invites)
+  "/invite",
+  "/invitation",
+  // Public survey pages
+  "/survey",
   // Admin command centre — allowlisted admins only (RBAC enforced below)
   "/admin",
 ];

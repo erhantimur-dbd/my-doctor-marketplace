@@ -264,7 +264,7 @@ export function getCheckoutTiers(): LicenseTierConfig[] {
 
 /**
  * Env-backed Stripe Price ID for a licence tier (preferred for production).
- * Returns null when unset so callers can fall back to create-on-the-fly.
+ * Returns null when unset; checkout helpers then throw (no create-on-the-fly).
  */
 export function getEnvLicensePriceId(tier: string): string | null {
   const map: Record<string, string | undefined> = {
@@ -279,202 +279,61 @@ export function getEnvLicensePriceId(tier: string): string | null {
 
 /**
  * Resolve Stripe Price ID for doctor licence checkout.
- * Monthly: prefers STRIPE_PRICE_* env vars.
- * Annual: 2 months free (10× monthly, billed yearly); env STRIPE_PRICE_*_ANNUAL optional later.
+ * Production requires STRIPE_PRICE_* env vars — we never create ephemeral
+ * Stripe Prices at request time (avoids orphaned catalogue drift).
+ *
+ * Monthly: STRIPE_PRICE_STARTER | STRIPE_PRICE_PROFESSIONAL | STRIPE_PRICE_CLINIC
+ * Annual:  STRIPE_PRICE_<TIER>_ANNUAL (required for annual checkout)
  */
-const _cachedLicensePriceIds: Record<string, string> = {};
-
 export async function getOrCreateLicensePriceId(
   tier: string,
-  tierConfig: LicenseTierConfig,
+  _tierConfig: LicenseTierConfig,
   billingPeriod: "monthly" | "annual" = "monthly"
 ): Promise<string> {
-  const { annualTotalPence } = await import(
-    "@/lib/constants/billing-period"
-  );
-
   if (billingPeriod === "monthly") {
     const envId = getEnvLicensePriceId(tier);
     if (envId) return envId;
-  } else {
-    const annualEnv = process.env[`STRIPE_PRICE_${tier.toUpperCase()}_ANNUAL`];
-    if (annualEnv?.startsWith("price_")) return annualEnv;
+    throw new Error(
+      `Missing Stripe price env for licence tier "${tier}". Set STRIPE_PRICE_${tier.toUpperCase()} (price_…).`
+    );
   }
 
-  const cacheKey = `${tier}:${billingPeriod}`;
-  if (_cachedLicensePriceIds[cacheKey]) return _cachedLicensePriceIds[cacheKey];
-
-  const { getStripe } = await import("@/lib/stripe/client");
-  const stripe = getStripe();
-  const unitAmount =
-    billingPeriod === "annual"
-      ? annualTotalPence(tierConfig.priceMonthlyPence)
-      : tierConfig.priceMonthlyPence;
-  const interval = billingPeriod === "annual" ? "year" : "month";
-
-  try {
-    const existing = await stripe.prices.search({
-      query: `metadata["license_tier"]:"${tier}" metadata["billing_period"]:"${billingPeriod}" active:"true"`,
-      limit: 1,
-    });
-    if (existing.data[0]?.id) {
-      _cachedLicensePriceIds[cacheKey] = existing.data[0].id;
-      return existing.data[0].id;
-    }
-  } catch {
-    /* search may be unavailable — fall through to create */
-  }
-
-  // Monthly without billing_period metadata (legacy search)
-  if (billingPeriod === "monthly") {
-    try {
-      const existing = await stripe.prices.search({
-        query: `metadata["license_tier"]:"${tier}" active:"true"`,
-        limit: 1,
-      });
-      if (
-        existing.data[0]?.id &&
-        existing.data[0].recurring?.interval === "month"
-      ) {
-        _cachedLicensePriceIds[cacheKey] = existing.data[0].id;
-        return existing.data[0].id;
-      }
-    } catch {
-      /* fall through */
-    }
-  }
-
-  const price = await stripe.prices.create({
-    currency: "gbp",
-    unit_amount: unitAmount,
-    recurring: { interval },
-    product_data: {
-      name: `MyDoctors360 ${tierConfig.name} License${
-        billingPeriod === "annual" ? " (Annual — 2 months free)" : ""
-      }`,
-      metadata: { tier, license_tier: tier, billing_period: billingPeriod },
-    },
-    metadata: {
-      tier,
-      license_tier: tier,
-      billing_period: billingPeriod,
-    },
-  });
-
-  _cachedLicensePriceIds[cacheKey] = price.id;
-  return price.id;
+  const annualEnv = process.env[`STRIPE_PRICE_${tier.toUpperCase()}_ANNUAL`];
+  if (annualEnv?.startsWith("price_")) return annualEnv;
+  throw new Error(
+    `Missing Stripe annual price env for licence tier "${tier}". Set STRIPE_PRICE_${tier.toUpperCase()}_ANNUAL (price_…).`
+  );
 }
 
 /**
- * Medical testing add-on price. Prefers STRIPE_PRICE_TESTING_ADDON (monthly).
- * Annual = 10× monthly (2 months free).
+ * Medical testing add-on price. Requires STRIPE_PRICE_TESTING_ADDON (monthly)
+ * or STRIPE_PRICE_TESTING_ADDON_ANNUAL (annual). No ephemeral create.
  */
-const _cachedTestingAddonPriceIds: Record<string, string> = {};
-
 export async function getOrCreateTestingAddonPriceId(
   billingPeriod: "monthly" | "annual" = "monthly"
 ): Promise<string> {
-  const { annualTotalPence } = await import(
-    "@/lib/constants/billing-period"
+  if (billingPeriod === "monthly") {
+    const id = process.env.STRIPE_PRICE_TESTING_ADDON?.trim();
+    if (id?.startsWith("price_")) return id;
+    throw new Error(
+      "Missing STRIPE_PRICE_TESTING_ADDON (price_…). Configure it in env — do not create Prices at runtime."
+    );
+  }
+  const annual = process.env.STRIPE_PRICE_TESTING_ADDON_ANNUAL?.trim();
+  if (annual?.startsWith("price_")) return annual;
+  throw new Error(
+    "Missing STRIPE_PRICE_TESTING_ADDON_ANNUAL (price_…). Configure it in env — do not create Prices at runtime."
   );
-
-  if (
-    billingPeriod === "monthly" &&
-    process.env.STRIPE_PRICE_TESTING_ADDON?.startsWith("price_")
-  ) {
-    return process.env.STRIPE_PRICE_TESTING_ADDON;
-  }
-
-  if (_cachedTestingAddonPriceIds[billingPeriod]) {
-    return _cachedTestingAddonPriceIds[billingPeriod];
-  }
-
-  const { getStripe } = await import("@/lib/stripe/client");
-  const stripe = getStripe();
-  const monthly =
-    AVAILABLE_MODULES.find((m) => m.key === "medical_testing")
-      ?.priceMonthlyPence ?? 4900;
-  const unitAmount =
-    billingPeriod === "annual" ? annualTotalPence(monthly) : monthly;
-  const interval = billingPeriod === "annual" ? "year" : "month";
-  const typeKey =
-    billingPeriod === "annual"
-      ? "medical_testing_addon_annual"
-      : "medical_testing_addon";
-
-  try {
-    const existing = await stripe.prices.search({
-      query: `metadata["type"]:"${typeKey}" active:"true"`,
-      limit: 1,
-    });
-    if (existing.data[0]?.id) {
-      _cachedTestingAddonPriceIds[billingPeriod] = existing.data[0].id;
-      return existing.data[0].id;
-    }
-  } catch {
-    /* fall through */
-  }
-
-  const price = await stripe.prices.create({
-    currency: "gbp",
-    unit_amount: unitAmount,
-    recurring: { interval },
-    product_data: {
-      name:
-        billingPeriod === "annual"
-          ? "Medical Testing Add-on (Annual — 2 months free)"
-          : "Medical Testing Add-on",
-      metadata: { type: typeKey },
-    },
-    metadata: { type: typeKey, billing_period: billingPeriod },
-  });
-  _cachedTestingAddonPriceIds[billingPeriod] = price.id;
-  return price.id;
 }
 
 /**
- * Get or create a reusable Stripe price for extra seats.
- *
- * Uses STRIPE_PRICE_EXTRA_SEAT env var if set (recommended for production).
- * Otherwise creates a price on-the-fly and caches the ID for the session.
+ * Extra seat price. Requires STRIPE_PRICE_EXTRA_SEAT. No ephemeral create.
  */
-let _cachedSeatPriceId: string | null = null;
-
 export async function getOrCreateExtraSeatPriceId(): Promise<string> {
-  // 1. Use env var if configured (recommended)
-  if (process.env.STRIPE_PRICE_EXTRA_SEAT) {
-    return process.env.STRIPE_PRICE_EXTRA_SEAT;
-  }
-
-  // 2. Return cached value if we already created one this session
-  if (_cachedSeatPriceId) return _cachedSeatPriceId;
-
-  // 3. Search for existing price in Stripe
-  const { getStripe } = await import("@/lib/stripe/client");
-  const stripe = getStripe();
-
-  const existingPrices = await stripe.prices.search({
-    query: 'metadata["type"]:"extra_seat" active:"true"',
-    limit: 1,
-  });
-
-  if (existingPrices.data.length > 0) {
-    _cachedSeatPriceId = existingPrices.data[0].id;
-    return _cachedSeatPriceId;
-  }
-
-  // 4. Create one if none exists
-  const price = await stripe.prices.create({
-    currency: "gbp",
-    unit_amount: EXTRA_SEAT_PRICE_PENCE,
-    recurring: { interval: "month" },
-    product_data: {
-      name: "Extra Doctor Seat",
-      metadata: { type: "extra_seat" },
-    },
-    metadata: { type: "extra_seat" },
-  });
-
-  _cachedSeatPriceId = price.id;
-  return _cachedSeatPriceId;
+  const id = process.env.STRIPE_PRICE_EXTRA_SEAT?.trim();
+  if (id?.startsWith("price_")) return id;
+  throw new Error(
+    "Missing STRIPE_PRICE_EXTRA_SEAT (price_…). Configure it in env — do not create Prices at runtime."
+  );
 }
+
