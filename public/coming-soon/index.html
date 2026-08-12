@@ -828,6 +828,9 @@
     });
 
 
+
+    (function(){function beacon(event,props){try{fetch("/api/analytics/beacon",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({event:event,props:props||{}}),keepalive:true,credentials:"omit"}).catch(function(){})}catch(e){}}document.addEventListener("click",function(e){var a=e.target&&e.target.closest?e.target.closest("a[href*=register-doctor]"):null;if(!a)return;var href=a.getAttribute("href")||"";if(href.indexOf("founding=1")!==-1||href.indexOf("tier=free")!==-1){beacon("founding_claim_started",{surface:"coming_soon",tier:"free"})}},true)})();
+
     // Live founding spots (best-effort; keep static fallback on failure)
     (async function loadFoundingSpots() {
       try {

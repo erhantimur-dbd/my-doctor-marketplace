@@ -300,6 +300,16 @@ export async function updateDoctorVerification(
   }
 
   revalidatePath("/admin/doctors");
+  try {
+    const { trackServer } = await import("@/lib/analytics/server");
+    const { AnalyticsEvent } = await import("@/lib/analytics/events");
+    void trackServer(doctorId, AnalyticsEvent.VerificationStatusChanged, {
+      surface: "server",
+      verification_status: status,
+    });
+  } catch {
+    /* analytics no-op */
+  }
   return { success: true };
 }
 

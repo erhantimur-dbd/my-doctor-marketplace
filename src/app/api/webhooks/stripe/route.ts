@@ -69,6 +69,26 @@ export async function POST(request: NextRequest) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
 
+      // Doctor licence checkout conversion (no PII)
+      if (session.metadata?.type === "license") {
+        try {
+          const { trackServer } = await import("@/lib/analytics/server");
+          const { AnalyticsEvent } = await import("@/lib/analytics/events");
+          void trackServer(
+            session.metadata.doctor_id || session.metadata.organization_id || "anonymous",
+            AnalyticsEvent.CheckoutCompleted,
+            {
+              surface: "server",
+              tier: session.metadata.tier,
+              billing_period: session.metadata.billing_period,
+            }
+          );
+        } catch {
+          /* analytics no-op */
+        }
+      }
+
+
       // ── Wallet Top-Up ──
       // Prefer Stripe-charged amount over client-set metadata (money integrity).
       if (session.metadata?.type === "wallet_top_up") {
@@ -339,6 +359,21 @@ export async function POST(request: NextRequest) {
             paid_at: new Date().toISOString(),
           })
           .eq("id", bookingId);
+
+        try {
+          const { trackServer } = await import("@/lib/analytics/server");
+          const { AnalyticsEvent } = await import("@/lib/analytics/events");
+          void trackServer(
+            session.metadata?.doctor_id || bookingId,
+            AnalyticsEvent.BookingCompleted,
+            {
+              surface: "server",
+              // booking paid/confirmed is the conversion north-star
+            }
+          );
+        } catch {
+          /* analytics no-op */
+        }
 
         // Fetch full booking with patient + doctor details for email & video room
         const { data: booking } = await supabase

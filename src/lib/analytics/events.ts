@@ -1,28 +1,25 @@
 /**
- * v1 product analytics events.
+ * Giorgia v1 product analytics events (PostHog).
  *
  * Rules (MD360 / CQC-safe):
  * - No PII (email, name, phone, address)
  * - No clinical content (symptoms, diagnoses, prescriptions, care plans)
- * - Prefer coarse enums (tier, locale, surface)
- * - GA4/gtag must NOT receive these — marketing surface only
+ * - Prefer coarse enums (tier, locale, surface, stripe_price_id)
+ * - Do not dual-fire these to GA4/gtag (marketing only)
  */
 
 export const AnalyticsEvent = {
-  /** Soft-launch founding CTA on coming-soon or marketing */
-  FoundingCtaClick: "founding_cta_click",
-  /** Doctor registration form opened / started */
-  DoctorRegisterStarted: "doctor_register_started",
-  /** Doctor account created (free or before checkout) — no identifiers */
-  DoctorRegisterCompleted: "doctor_register_completed",
-  /** Pricing page viewed */
-  PricingViewed: "pricing_viewed",
-  /** Paid checkout session creation attempted */
+  WaitlistSubmit: "waitlist_submit",
+  FoundingClaimStarted: "founding_claim_started",
+  FoundingClaimSucceeded: "founding_claim_succeeded",
+  RegisterStarted: "register_started",
+  RegisterCompleted: "register_completed",
+  VerificationStatusChanged: "verification_status_changed",
   CheckoutStarted: "checkout_started",
-  /** Checkout returned success query (client-side) */
-  CheckoutSucceeded: "checkout_succeeded",
-  /** Doctor waitlist form submitted from coming-soon (secondary CTA) */
-  DoctorWaitlistSubmitted: "doctor_waitlist_submitted",
+  CheckoutCompleted: "checkout_completed",
+  BookingCompleted: "booking_completed",
+  /** Soft marketing beacon — optional client-only */
+  PricingViewed: "pricing_viewed",
 } as const;
 
 export type AnalyticsEventName =
@@ -34,11 +31,13 @@ export type AnalyticsProps = Record<
   string | number | boolean | null | undefined
 >;
 
-/** Shared optional context — never put email/user id here. */
 export type AnalyticsContext = {
   locale?: string;
-  surface?: "coming_soon" | "marketing" | "app" | "admin";
+  surface?: "coming_soon" | "marketing" | "app" | "admin" | "server";
   tier?: string;
   founding?: boolean;
   billing_period?: "monthly" | "annual";
+  stripe_price_id?: string;
+  verification_status?: string;
+  previous_status?: string;
 };

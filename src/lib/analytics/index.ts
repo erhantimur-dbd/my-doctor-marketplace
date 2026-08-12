@@ -1,8 +1,3 @@
-/**
- * Product analytics public API (PostHog).
- * GA4 remains in components/shared/analytics-scripts.tsx (marketing).
- */
-
 export { AnalyticsEvent } from "@/lib/analytics/events";
 export type {
   AnalyticsEventName,

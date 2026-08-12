@@ -110,25 +110,33 @@ export default function RegisterDoctorPage() {
 
   // Auto-fill from URL params (?ref=, ?tier=, ?checkout=cancelled)
 
-  // Product analytics (PostHog) — no PII; gated by env + cookie consent
+  // Product analytics (PostHog) — fire once on mount; no PII
   useEffect(() => {
     let cancelled = false;
+    const tier = searchParams.get("tier") || undefined;
+    const founding = searchParams.get("founding") === "1";
     (async () => {
       const { track, AnalyticsEvent } = await import("@/lib/analytics");
       if (cancelled) return;
-      const tier = searchParams.get("tier") || undefined;
-      const founding = searchParams.get("founding") === "1";
-      void track(AnalyticsEvent.DoctorRegisterStarted, {
+      void track(AnalyticsEvent.RegisterStarted, {
         locale,
         surface: "app",
         tier,
         founding: founding || undefined,
       });
+      if (founding) {
+        void track(AnalyticsEvent.FoundingClaimStarted, {
+          locale,
+          surface: "app",
+          tier: tier || "free",
+        });
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [locale, searchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once on mount
+  }, []);
 
   useEffect(() => {
     const ref = searchParams.get("ref");
