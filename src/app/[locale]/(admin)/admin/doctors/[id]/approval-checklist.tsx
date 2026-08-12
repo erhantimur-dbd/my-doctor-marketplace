@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { saveApprovalChecklist } from "@/actions/admin";
+import { saveApprovalChecklist, updateDoctorVerification } from "@/actions/admin";
 import {
   ClipboardCheck,
   ExternalLink,
@@ -33,6 +33,8 @@ interface ApprovalChecklistProps {
   isUkDoctor: boolean;
   ukRegulatory: UkRegulatorySnapshot;
   onChecklistChange: (complete: boolean) => void;
+  /** Called after a successful verify from the checklist quick path. */
+  onVerified?: () => void;
 }
 
 type UkChecklistState = {
@@ -52,6 +54,7 @@ export function ApprovalChecklist({
   isUkDoctor,
   ukRegulatory,
   onChecklistChange,
+  onVerified,
 }: ApprovalChecklistProps) {
   const [gmcVerified, setGmcVerified] = useState(
     initialData?.gmc_verified ?? false
@@ -71,6 +74,113 @@ export function ApprovalChecklist({
     dbsCheckVerified: initialData?.dbs_check_verified ?? false,
   });
   const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  const buildPayload = (overrides?: {
+    gmcVerified?: boolean;
+    websiteVerified?: boolean;
+    uk?: UkChecklistState;
+    notes?: string;
+  }) => {
+    const nextGmc = overrides?.gmcVerified ?? gmcVerified;
+    const nextWebsite = overrides?.websiteVerified ?? websiteVerified;
+    const nextUk = overrides?.uk ?? uk;
+    return {
+      gmc_verified: nextGmc,
+      website_verified: nextWebsite,
+      notes: overrides?.notes ?? notes,
+      cqc_status_evidenced: nextUk.cqcStatusEvidenced,
+      mpl_attestation_reviewed: nextUk.mplAttestationReviewed,
+      excluded_procedures_attestation_confirmed:
+        nextUk.excludedProceduresAttestationConfirmed,
+      indemnity_document_verified: nextUk.indemnityDocumentVerified,
+      indemnity_in_date: nextUk.indemnityInDate,
+      dbs_check_verified: nextUk.dbsCheckVerified,
+    };
+  };
+
+  const markAllLocal = () => {
+    setGmcVerified(true);
+    setWebsiteVerified(true);
+    if (isUkDoctor) {
+      setUk({
+        cqcStatusEvidenced: true,
+        mplAttestationReviewed: true,
+        excludedProceduresAttestationConfirmed: true,
+        indemnityDocumentVerified: true,
+        indemnityInDate: true,
+        dbsCheckVerified: true,
+      });
+    }
+  };
+
+  async function handleMarkAllComplete() {
+    const nextUk: UkChecklistState = isUkDoctor
+      ? {
+          cqcStatusEvidenced: true,
+          mplAttestationReviewed: true,
+          excludedProceduresAttestationConfirmed: true,
+          indemnityDocumentVerified: true,
+          indemnityInDate: true,
+          dbsCheckVerified: true,
+        }
+      : uk;
+    markAllLocal();
+    setSaving(true);
+    const result = await saveApprovalChecklist(
+      doctorId,
+      buildPayload({
+        gmcVerified: true,
+        websiteVerified: true,
+        uk: nextUk,
+      })
+    );
+    setSaving(false);
+    if (result?.error) {
+      toast.error(result.error);
+      return;
+    }
+    onChecklistChange(true);
+    toast.success("Checklist marked complete. Verify is enabled below.");
+  }
+
+  async function handleSaveAndVerify() {
+    const nextUk: UkChecklistState = isUkDoctor
+      ? {
+          cqcStatusEvidenced: true,
+          mplAttestationReviewed: true,
+          excludedProceduresAttestationConfirmed: true,
+          indemnityDocumentVerified: true,
+          indemnityInDate: true,
+          dbsCheckVerified: true,
+        }
+      : uk;
+    markAllLocal();
+    setVerifying(true);
+    const saveResult = await saveApprovalChecklist(
+      doctorId,
+      buildPayload({
+        gmcVerified: true,
+        websiteVerified: true,
+        uk: nextUk,
+      })
+    );
+    if (saveResult?.error) {
+      setVerifying(false);
+      toast.error(saveResult.error);
+      return;
+    }
+    onChecklistChange(true);
+    const verifyResult = await updateDoctorVerification(doctorId, "verified");
+    setVerifying(false);
+    if (verifyResult?.error) {
+      toast.error(verifyResult.error);
+      return;
+    }
+    toast.success("Doctor verified");
+    onVerified?.();
+  }
+
 
   const totalBoxes = isUkDoctor ? 8 : 2;
   const checksComplete =
@@ -532,12 +642,34 @@ export function ApprovalChecklist({
           </div>
         </div>
 
-        {allComplete && (
-          <p className="text-sm text-green-700">
-            All checks are complete. You can now verify this doctor using the
-            actions below.
-          </p>
-        )}
+        <div className="flex flex-wrap items-center gap-2 border-t pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleMarkAllComplete}
+            disabled={saving || verifying || allComplete}
+          >
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Mark all complete
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSaveAndVerify}
+            disabled={saving || verifying}
+          >
+            {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <CheckCircle className="mr-1 h-4 w-4" />
+            Complete checklist & Verify
+          </Button>
+          {allComplete && (
+            <p className="text-sm text-green-700">
+              Checklist complete — Verify is enabled in Admin Actions, or use the
+              button above.
+            </p>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

@@ -60,14 +60,15 @@ export function ApprovalSection({
   checklist,
   ukRegulatory,
 }: ApprovalSectionProps) {
-  const isPendingOrReview =
-    verificationStatus === "pending" || verificationStatus === "under_review";
-
   const isUkDoctor = ukRegulatory.practisingCountry === "GB";
 
+  const [status, setStatus] = useState(verificationStatus);
   const [checklistComplete, setChecklistComplete] = useState(
     isChecklistComplete(checklist, isUkDoctor)
   );
+
+  const isPendingOrReview =
+    status === "pending" || status === "under_review";
 
   return (
     <>
@@ -81,6 +82,7 @@ export function ApprovalSection({
           isUkDoctor={isUkDoctor}
           ukRegulatory={ukRegulatory}
           onChecklistChange={setChecklistComplete}
+          onVerified={() => setStatus("verified")}
         />
       )}
 
@@ -91,7 +93,7 @@ export function ApprovalSection({
         <CardContent>
           <AdminDoctorActions
             doctorId={doctorId}
-            currentStatus={verificationStatus}
+            currentStatus={status}
             isActive={isActive}
             isFeatured={isFeatured}
             currentPlan={currentPlan}
