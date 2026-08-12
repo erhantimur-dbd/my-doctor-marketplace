@@ -109,6 +109,27 @@ export default function RegisterDoctorPage() {
   const [colleagueEmail, setColleagueEmail] = useState("");
 
   // Auto-fill from URL params (?ref=, ?tier=, ?checkout=cancelled)
+
+  // Product analytics (PostHog) — no PII; gated by env + cookie consent
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { track, AnalyticsEvent } = await import("@/lib/analytics");
+      if (cancelled) return;
+      const tier = searchParams.get("tier") || undefined;
+      const founding = searchParams.get("founding") === "1";
+      void track(AnalyticsEvent.DoctorRegisterStarted, {
+        locale,
+        surface: "app",
+        tier,
+        founding: founding || undefined,
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [locale, searchParams]);
+
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) {

@@ -1,0 +1,18 @@
+/**
+ * Product analytics public API (PostHog).
+ * GA4 remains in components/shared/analytics-scripts.tsx (marketing).
+ */
+
+export { AnalyticsEvent } from "@/lib/analytics/events";
+export type {
+  AnalyticsEventName,
+  AnalyticsProps,
+  AnalyticsContext,
+} from "@/lib/analytics/events";
+export {
+  isPostHogConfigured,
+  getPostHogKey,
+  getPostHogHost,
+} from "@/lib/analytics/config";
+export { hasAnalyticsConsent, readCookieConsent } from "@/lib/analytics/consent";
+export { track, enablePostHog, disablePostHog } from "@/lib/analytics/client";
