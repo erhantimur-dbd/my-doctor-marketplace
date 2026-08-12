@@ -285,6 +285,14 @@ export function getEnvLicensePriceId(tier: string): string | null {
  * Monthly: STRIPE_PRICE_STARTER | STRIPE_PRICE_PROFESSIONAL | STRIPE_PRICE_CLINIC
  * Annual:  STRIPE_PRICE_<TIER>_ANNUAL (required for annual checkout)
  */
+
+/** User-facing / action-layer soft-fail for missing STRIPE_PRICE_* config. */
+export function stripePriceSetupErrorMessage(err: unknown): string | null {
+  if (!(err instanceof Error)) return null;
+  if (err.message.startsWith("Stripe price setup:")) return err.message;
+  return null;
+}
+
 export async function getOrCreateLicensePriceId(
   tier: string,
   _tierConfig: LicenseTierConfig,
@@ -294,14 +302,14 @@ export async function getOrCreateLicensePriceId(
     const envId = getEnvLicensePriceId(tier);
     if (envId) return envId;
     throw new Error(
-      `Missing Stripe price env for licence tier "${tier}". Set STRIPE_PRICE_${tier.toUpperCase()} (price_…).`
+      `Stripe price setup: set STRIPE_PRICE_${tier.toUpperCase()} to a stable Dashboard Price ID (price_…). Sandbox vs live must match the Stripe secret key — do not create Prices at runtime.`
     );
   }
 
   const annualEnv = process.env[`STRIPE_PRICE_${tier.toUpperCase()}_ANNUAL`];
   if (annualEnv?.startsWith("price_")) return annualEnv;
   throw new Error(
-    `Missing Stripe annual price env for licence tier "${tier}". Set STRIPE_PRICE_${tier.toUpperCase()}_ANNUAL (price_…).`
+    `Stripe price setup: set STRIPE_PRICE_${tier.toUpperCase()}_ANNUAL to a stable Dashboard Price ID (price_…). Sandbox vs live must match the Stripe secret key — do not create Prices at runtime.`
   );
 }
 
@@ -316,13 +324,13 @@ export async function getOrCreateTestingAddonPriceId(
     const id = process.env.STRIPE_PRICE_TESTING_ADDON?.trim();
     if (id?.startsWith("price_")) return id;
     throw new Error(
-      "Missing STRIPE_PRICE_TESTING_ADDON (price_…). Configure it in env — do not create Prices at runtime."
+      "Stripe price setup: set STRIPE_PRICE_TESTING_ADDON to a stable Dashboard Price ID (price_…). Sandbox vs live must match the Stripe secret key."
     );
   }
   const annual = process.env.STRIPE_PRICE_TESTING_ADDON_ANNUAL?.trim();
   if (annual?.startsWith("price_")) return annual;
   throw new Error(
-    "Missing STRIPE_PRICE_TESTING_ADDON_ANNUAL (price_…). Configure it in env — do not create Prices at runtime."
+    "Stripe price setup: set STRIPE_PRICE_TESTING_ADDON_ANNUAL to a stable Dashboard Price ID (price_…). Sandbox vs live must match the Stripe secret key."
   );
 }
 
@@ -333,7 +341,7 @@ export async function getOrCreateExtraSeatPriceId(): Promise<string> {
   const id = process.env.STRIPE_PRICE_EXTRA_SEAT?.trim();
   if (id?.startsWith("price_")) return id;
   throw new Error(
-    "Missing STRIPE_PRICE_EXTRA_SEAT (price_…). Configure it in env — do not create Prices at runtime."
+    "Stripe price setup: set STRIPE_PRICE_EXTRA_SEAT to a stable Dashboard Price ID (price_…). Sandbox vs live must match the Stripe secret key."
   );
 }
 

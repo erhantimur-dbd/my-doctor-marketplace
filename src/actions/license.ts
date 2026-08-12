@@ -11,7 +11,7 @@ import {
   upgradeTierSchema,
   schedulePlanChangeSchema,
 } from "@/lib/validators/license";
-import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_PENCE, convertPrice, BASE_CURRENCY, getOrCreateExtraSeatPriceId } from "@/lib/constants/license-tiers";
+import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_PENCE, convertPrice, BASE_CURRENCY, getOrCreateExtraSeatPriceId, stripePriceSetupErrorMessage } from "@/lib/constants/license-tiers";
 import type { LicenseTier } from "@/types";
 import { log } from "@/lib/utils/logger";
 
@@ -197,11 +197,18 @@ export async function createLicenseCheckout(
   const { getOrCreateLicensePriceId } = await import(
     "@/lib/constants/license-tiers"
   );
-  const priceId = await getOrCreateLicensePriceId(
-    parsed.data.tier,
-    tierConfig,
-    billingPeriod
-  );
+  let priceId: string;
+  try {
+    priceId = await getOrCreateLicensePriceId(
+      parsed.data.tier,
+      tierConfig,
+      billingPeriod
+    );
+  } catch (err) {
+    const setup = stripePriceSetupErrorMessage(err);
+    if (setup) return { error: setup };
+    throw err;
+  }
 
   // Per-user pricing: Professional tier quantity = seat count
   const seatCount = parsed.data.seat_count || 1;
@@ -412,7 +419,14 @@ export async function addExtraSeats(formData: FormData) {
   if (license.stripe_subscription_id) {
     try {
       const stripe = getStripe();
-      const seatPriceId = await getOrCreateExtraSeatPriceId();
+      let seatPriceId: string;
+      try {
+        seatPriceId = await getOrCreateExtraSeatPriceId();
+      } catch (err) {
+        const setup = stripePriceSetupErrorMessage(err);
+        if (setup) return { error: setup };
+        throw err;
+      }
       const subscription = await stripe.subscriptions.retrieve(license.stripe_subscription_id);
 
       // Find existing extra-seat subscription item
@@ -721,11 +735,18 @@ export async function upgradeLicenseTier(
   const { getOrCreateLicensePriceId } = await import(
     "@/lib/constants/license-tiers"
   );
-  const priceId = await getOrCreateLicensePriceId(
-    parsed.data.new_tier,
-    tierConfig,
-    billingPeriod
-  );
+  let priceId: string;
+  try {
+    priceId = await getOrCreateLicensePriceId(
+      parsed.data.new_tier,
+      tierConfig,
+      billingPeriod
+    );
+  } catch (err) {
+    const setup = stripePriceSetupErrorMessage(err);
+    if (setup) return { error: setup };
+    throw err;
+  }
 
   const quantity = tierConfig.perUser
     ? Math.min(Math.max(seatCount, 1), tierConfig.maxSeats)

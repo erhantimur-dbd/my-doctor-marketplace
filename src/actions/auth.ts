@@ -811,12 +811,8 @@ export async function registerDoctorWithCheckout(formData: FormData) {
   const {
     getOrCreateLicensePriceId,
     getOrCreateTestingAddonPriceId,
+    stripePriceSetupErrorMessage,
   } = await import("@/lib/constants/license-tiers");
-  const priceId = await getOrCreateLicensePriceId(
-    tier,
-    tierConfig,
-    billingPeriod
-  );
 
   const quantity = tierConfig.perUser
     ? Math.min(Math.max(seatCount, 1), tierConfig.maxSeats)
@@ -832,12 +828,28 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     tier,
     formWantsAddon: formData.get("has_testing_addon") === "true",
   });
+
+  let priceId: string;
+  let testingPriceId: string | undefined;
+  try {
+    priceId = await getOrCreateLicensePriceId(
+      tier,
+      tierConfig,
+      billingPeriod
+    );
+    if (hasTestingAddon) {
+      testingPriceId = await getOrCreateTestingAddonPriceId(billingPeriod);
+    }
+  } catch (err) {
+    const setup = stripePriceSetupErrorMessage(err);
+    if (setup) return { error: setup };
+    throw err;
+  }
+
   const lineItems: { price: string; quantity: number }[] = [
     { price: priceId, quantity },
   ];
-  if (hasTestingAddon) {
-    const testingPriceId =
-      await getOrCreateTestingAddonPriceId(billingPeriod);
+  if (hasTestingAddon && testingPriceId) {
     lineItems.push({ price: testingPriceId, quantity: 1 });
   }
 
@@ -908,7 +920,11 @@ export async function resumeDoctorLicenseCheckout(
     return { error: "No practice organization found. Please complete registration." };
   }
 
-  const { getLicenseTier, getOrCreateLicensePriceId } = await import(
+  const {
+    getLicenseTier,
+    getOrCreateLicensePriceId,
+    stripePriceSetupErrorMessage,
+  } = await import(
     "@/lib/constants/license-tiers"
   );
   const tierConfig = getLicenseTier(tier);
@@ -952,11 +968,18 @@ export async function resumeDoctorLicenseCheckout(
       .eq("id", doctor.organization_id);
   }
 
-  const priceId = await getOrCreateLicensePriceId(
+  let priceId: string;
+  try {
+    priceId = await getOrCreateLicensePriceId(
     tier,
     tierConfig,
     billingPeriod
-  );
+    );
+  } catch (err) {
+    const setup = stripePriceSetupErrorMessage(err);
+    if (setup) return { error: setup };
+    throw err;
+  }
   const quantity = tierConfig.perUser
     ? Math.min(Math.max(seatCount, 1), tierConfig.maxSeats)
     : 1;
