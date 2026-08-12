@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = createAdminClient();
 
-  // Idempotency check: skip if this event was already processed
+  // Idempotency: select is a fast path; insert-first wins under concurrency.
   const { data: existing } = await supabase
     .from("processed_webhook_events")
     .select("event_id")
@@ -59,12 +59,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true, duplicate: true });
   }
 
-  // Mark as processed immediately (before handling) to prevent race conditions
-  await supabase.from("processed_webhook_events").insert({
-    event_id: event.id,
-    event_type: event.type,
-  });
+  // Claim the event BEFORE side effects. Unique violation => another worker won.
+  const { error: claimError } = await supabase
+    .from("processed_webhook_events")
+    .insert({
+      event_id: event.id,
+      event_type: event.type,
+    });
 
+  if (claimError) {
+    if (claimError.code === "23505") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    console.error("Webhook idempotency claim failed:", claimError);
+    return NextResponse.json({ error: "Idempotency claim failed" }, { status: 500 });
+  }
+
+  try {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
@@ -191,7 +202,8 @@ export async function POST(request: NextRequest) {
               stripe_payment_intent_id: session.payment_intent as string,
               paid_at: new Date().toISOString(),
             })
-            .eq("id", firstBookingId);
+            .eq("id", firstBookingId)
+            .neq("status", "confirmed");
 
           // Fetch full booking for email, video room, calendar export
           const { data: booking } = await supabase
@@ -338,7 +350,8 @@ export async function POST(request: NextRequest) {
             stripe_payment_intent_id: session.payment_intent as string,
             paid_at: new Date().toISOString(),
           })
-          .eq("id", bookingId);
+          .eq("id", bookingId)
+          .neq("status", "confirmed");
 
         // Fetch full booking with patient + doctor details for email & video room
         const { data: booking } = await supabase
@@ -1111,7 +1124,8 @@ export async function POST(request: NextRequest) {
           stripe_payment_intent_id: paymentIntent.id,
           paid_at: new Date().toISOString(),
         })
-        .eq("id", newBookingId);
+        .eq("id", newBookingId)
+        .neq("status", "confirmed");
 
       // 2. Cancel the original booking (superseded by the rescheduled one)
       await supabase
@@ -1273,4 +1287,12 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+  } catch (err) {
+    console.error("Stripe webhook handler failed, releasing claim for retry:", err);
+    await supabase
+      .from("processed_webhook_events")
+      .delete()
+      .eq("event_id", event.id);
+    return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 });
+  }
 }

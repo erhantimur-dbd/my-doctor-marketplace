@@ -1,3 +1,8 @@
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
+import { getDoctorLicenseTier } from "@/lib/license/check";
+import { hasFeature } from "@/lib/utils/feature-flags";
 import { getDoctorPrescriptions } from "@/actions/prescriptions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +32,31 @@ function statusColor(status: string) {
 }
 
 export default async function DoctorPrescriptionsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/en/login");
+
+  const { data: doctor } = await supabase
+    .from("doctors")
+    .select("id")
+    .eq("profile_id", user.id)
+    .single();
+
+  if (!doctor) redirect("/en/register-doctor");
+
+  const licenseTier = await getDoctorLicenseTier(supabase, doctor.id);
+  if (!hasFeature("prescriptions", licenseTier)) {
+    return (
+      <UpgradePrompt
+        feature="Prescriptions"
+        description="Digital prescriptions are included on Professional, Clinic, and Enterprise plans. Upgrade from Billing to unlock prescribing for your patients."
+      />
+    );
+  }
+
   const prescriptions = await getDoctorPrescriptions();
 
   return (

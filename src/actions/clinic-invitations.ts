@@ -346,6 +346,17 @@ export async function acceptClinicInvitationWithTransfer(token: string) {
 
   if (!invite) return { error: "Invitation not found or has expired" };
 
+  // Verify email matches (before cancelling Stripe / removing membership)
+  const { data: profile } = await adminSupabase
+    .from("profiles")
+    .select("email, role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || profile.email.toLowerCase() !== invite.email.toLowerCase()) {
+    return { error: "This invitation was sent to a different email address." };
+  }
+
   // Cancel existing personal subscription
   const { data: existingOrg } = await adminSupabase
     .from("organization_members")
