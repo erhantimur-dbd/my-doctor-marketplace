@@ -10,13 +10,14 @@
  * Only relative internal paths get preserved — external URLs are dropped
  * before building the redirect param, to prevent open-redirect abuse.
  */
+import { isSafeRelativePath } from "@/lib/auth/return-cookie";
+
 export function getAuthedHref(
   targetPath: string,
   options: { isAuthenticated: boolean; locale: string }
 ): string {
   if (options.isAuthenticated) return targetPath;
-  const safe = targetPath.startsWith("/") && !targetPath.startsWith("//");
-  const redirect = safe
+  const redirect = isSafeRelativePath(targetPath)
     ? `/${options.locale}${targetPath}`
     : `/${options.locale}`;
   return `/login?redirect=${encodeURIComponent(redirect)}`;
@@ -58,7 +59,7 @@ export function parseBookRedirect(
   redirectTo: string | null | undefined
 ): BookRedirectContext | null {
   if (!redirectTo) return null;
-  if (!redirectTo.startsWith("/") || redirectTo.startsWith("//")) return null;
+  if (!isSafeRelativePath(redirectTo)) return null;
 
   try {
     const url = new URL(redirectTo, "http://local.invalid");

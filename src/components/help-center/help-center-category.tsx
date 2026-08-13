@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Link2 } from "lucide-react";
-import DOMPurify from "isomorphic-dompurify";
 import { useTranslations } from "next-intl";
 import type { HelpCategory } from "./help-center-data";
+import { sanitizeHelpHtml } from "@/lib/help/sanitize-help-html";
 
 interface HelpCenterCategoryProps {
   category: HelpCategory;
@@ -82,7 +82,9 @@ export function HelpCenterCategory({
                   <AccordionContent>
                     <div
                       className="prose prose-sm max-w-none text-muted-foreground dark:prose-invert [&_strong]:text-foreground whitespace-pre-line"
-                      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.answer) }}
+                      dangerouslySetInnerHTML={{
+                        __html: sanitizeHelpHtml(article.answer),
+                      }}
                     />
                     <button
                       onClick={() => copyLink(article.id)}

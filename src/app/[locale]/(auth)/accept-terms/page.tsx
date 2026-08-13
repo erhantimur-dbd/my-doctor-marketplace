@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AcceptTermsForm } from "./accept-terms-form";
+import {
+  isSafeRelativePath,
+  sanitizeAuthLocale,
+} from "@/lib/auth/return-cookie";
 
 export default async function AcceptTermsPage({
   params,
@@ -9,11 +13,12 @@ export default async function AcceptTermsPage({
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ next?: string }>;
 }) {
-  const { locale } = await params;
+  const { locale: localeParam } = await params;
+  const locale = sanitizeAuthLocale(localeParam);
   const { next: rawNext } = await searchParams;
 
   const next =
-    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+    rawNext && isSafeRelativePath(rawNext)
       ? rawNext
       : `/${locale}/dashboard`;
 

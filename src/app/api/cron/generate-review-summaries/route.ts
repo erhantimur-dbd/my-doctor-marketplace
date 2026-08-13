@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateReviewSummary } from "@/lib/ai/review-summarizer";
 import { isAIEnabled } from "@/lib/ai/provider";
+import { authorizeCronRequest } from "@/lib/cron/authorize";
 
 const MAX_DOCTORS_PER_RUN = 20;
 const MIN_REVIEWS_FOR_SUMMARY = 3;
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authorizeCronRequest(request);
+  if (denied) return denied;
 
   if (!isAIEnabled()) {
     return NextResponse.json({ skipped: true, reason: "AI not configured" });

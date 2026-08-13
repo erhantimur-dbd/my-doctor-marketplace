@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { expireGpOffersAndRefund } from "@/lib/gp/reassign";
+import { authorizeCronRequest } from "@/lib/cron/authorize";
 
 /**
  * Expire pending GP alternate-slot offers and refund patients.
- * Protect with CRON_SECRET (same as other /api/cron routes).
+ * Fail-closed: CRON_SECRET must be set AND Authorization must match.
  */
 export async function GET(request: NextRequest) {
-  const auth = request.headers.get("authorization");
-  const secret = process.env.CRON_SECRET;
-  if (secret && auth !== `Bearer ${secret}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authorizeCronRequest(request);
+  if (denied) return denied;
 
   try {
     const { processed } = await expireGpOffersAndRefund();

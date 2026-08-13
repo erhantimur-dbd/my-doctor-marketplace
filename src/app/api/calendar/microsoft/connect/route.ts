@@ -30,9 +30,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const state = Buffer.from(
-      JSON.stringify({ doctorId: doctor.id, userId: user.id })
-    ).toString("base64url");
+    const { signCalendarOAuthState } = await import(
+      "@/lib/calendar/oauth-state"
+    );
+    const state = signCalendarOAuthState({
+      doctorId: doctor.id,
+      userId: user.id,
+    });
 
     const authUrl = getMicrosoftAuthUrl(state);
     return NextResponse.redirect(authUrl);

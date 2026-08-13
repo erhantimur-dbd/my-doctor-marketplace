@@ -246,8 +246,16 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL(`/${locale}`, request.url));
     }
 
-    // Admin routes: must be admin AND on email allowlist
+    // Admin routes: must be admin AND on email allowlist.
+    // Soft-launch fail-closed: in production an empty ADMIN_EMAILS deny-alls
+    // so a missing env cannot open /admin to any role=admin account.
     if (isAdminRoute) {
+      const isProduction =
+        process.env.VERCEL_ENV === "production" ||
+        process.env.NODE_ENV === "production";
+      if (isProduction && ADMIN_EMAILS.length === 0) {
+        return NextResponse.redirect(new URL(`/${locale}`, request.url));
+      }
       if (
         ADMIN_EMAILS.length > 0 &&
         !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")

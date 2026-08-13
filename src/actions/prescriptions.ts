@@ -3,6 +3,8 @@ import { safeError } from "@/lib/utils/safe-error";
 
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { getDoctorLicenseTier } from "@/lib/license/check";
+import { hasFeature } from "@/lib/utils/feature-flags";
 import { z } from "zod/v4";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
@@ -70,6 +72,17 @@ async function getDoctorId(): Promise<string | null> {
   return doctor?.id || null;
 }
 
+
+/** Prescriptions are Professional+ — deny mutations/reads without the feature. */
+async function requirePrescriptionsFeature(doctorId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const licenseTier = await getDoctorLicenseTier(supabase, doctorId);
+  if (!hasFeature("prescriptions", licenseTier)) {
+    return "Prescriptions require a Professional plan or higher. Upgrade from Billing to unlock.";
+  }
+  return null;
+}
+
 // ─── Doctor actions ──────────────────────────────────────────────────────────
 
 /**
@@ -113,6 +126,9 @@ export async function createPrescription(input: PrescriptionInput) {
 
   const doctorId = await getDoctorId();
   if (!doctorId) return { error: "Not authenticated as doctor" };
+
+  const featureError = await requirePrescriptionsFeature(doctorId);
+  if (featureError) return { error: featureError };
 
   const supabase = await createClient();
   const {
@@ -211,6 +227,9 @@ export async function updatePrescription(
   const doctorId = await getDoctorId();
   if (!doctorId) return { error: "Not authenticated as doctor" };
 
+  const featureError = await requirePrescriptionsFeature(doctorId);
+  if (featureError) return { error: featureError };
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -245,6 +264,9 @@ export async function updatePrescription(
 export async function cancelPrescription(prescriptionId: string) {
   const doctorId = await getDoctorId();
   if (!doctorId) return { error: "Not authenticated as doctor" };
+
+  const featureError = await requirePrescriptionsFeature(doctorId);
+  if (featureError) return { error: featureError };
 
   const supabase = await createClient();
   const {
@@ -324,6 +346,9 @@ export async function getDoctorPrescriptions() {
   const doctorId = await getDoctorId();
   if (!doctorId) return [];
 
+  const featureError = await requirePrescriptionsFeature(doctorId);
+  if (featureError) return [];
+
   const supabase = await createClient();
   const { data } = await supabase
     .from("prescriptions")
@@ -346,6 +371,9 @@ export async function getDoctorPrescriptions() {
 export async function getDoctorPrescriptionById(prescriptionId: string) {
   const doctorId = await getDoctorId();
   if (!doctorId) return null;
+
+  const featureError = await requirePrescriptionsFeature(doctorId);
+  if (featureError) return null;
 
   const supabase = await createClient();
   const { data } = await supabase

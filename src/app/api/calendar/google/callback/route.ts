@@ -40,13 +40,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Decode state
-    let state: { doctorId: string; userId: string };
-    try {
-      state = JSON.parse(
-        Buffer.from(stateParam, "base64url").toString()
-      );
-    } catch {
+    const { verifyCalendarOAuthState } = await import(
+      "@/lib/calendar/oauth-state"
+    );
+    const state = verifyCalendarOAuthState(stateParam);
+    if (!state) {
       return NextResponse.redirect(
         new URL(
           "/en/doctor-dashboard/settings?calendar_error=invalid_state",
@@ -67,6 +65,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { data: doctorRow } = await supabase
+      .from("doctors")
+      .select("id")
+      .eq("profile_id", user.id)
+      .single();
+    if (!doctorRow || doctorRow.id !== state.doctorId) {
+      return NextResponse.redirect(
+        new URL(
+          "/en/doctor-dashboard/settings?calendar_error=invalid_state",
+          request.url
+        )
+      );
+    }
+    const doctorId = doctorRow.id;
+
     // Exchange code for tokens
     const tokens = await exchangeCodeForTokens(code);
 
@@ -84,7 +97,7 @@ export async function GET(request: NextRequest) {
       .from("doctor_calendar_connections")
       .upsert(
         {
-          doctor_id: state.doctorId,
+          doctor_id: doctorId,
           provider: "google",
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
@@ -106,12 +119,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Trigger initial import sync (non-blocking — run in background)
-    importGoogleCalendarEvents(state.doctorId).catch((err) =>
+    importGoogleCalendarEvents(doctorId).catch((err) =>
       console.error("Initial sync error:", err)
     );
 
     // Set up push notification webhook (non-blocking)
-    setupCalendarWebhook(state.doctorId).catch((err) =>
+    setupCalendarWebhook(doctorId).catch((err) =>
       console.error("Webhook setup error:", err)
     );
 

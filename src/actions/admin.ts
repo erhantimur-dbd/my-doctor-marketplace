@@ -47,7 +47,16 @@ async function requireAdmin() {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated", supabase: null, user: null };
 
-  // Check email allowlist (if configured)
+  // Soft-launch fail-closed: in production an empty ADMIN_EMAILS deny-alls
+  // so a missing env cannot authorize any role=admin account.
+  const isProduction =
+    process.env.VERCEL_ENV === "production" ||
+    process.env.NODE_ENV === "production";
+  if (isProduction && ADMIN_EMAILS.length === 0) {
+    return { error: "Not authorized", supabase: null, user: null };
+  }
+
+  // Check email allowlist (if configured; local/dev may use role-only)
   if (
     ADMIN_EMAILS.length > 0 &&
     !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")

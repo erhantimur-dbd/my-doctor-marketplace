@@ -403,12 +403,16 @@ export async function setupCalendarWebhook(
 
     const channelId = `mydoctor-${doctorId}-${Date.now()}`;
     const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/google-calendar`;
+    const { googleChannelToken } = await import("@/lib/calendar/oauth-state");
+    const token = googleChannelToken(channelId);
 
     const watch = await watchCalendar(
       access_token,
       conn.calendar_id,
       channelId,
-      webhookUrl
+      webhookUrl,
+      undefined,
+      token
     );
 
     await supabase

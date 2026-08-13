@@ -7,6 +7,7 @@ import {
 } from "@/lib/email/templates";
 import { fetchCqcProvider } from "@/lib/verification/cqc";
 import { log } from "@/lib/utils/logger";
+import { authorizeCronRequest } from "@/lib/cron/authorize";
 
 /**
  * Daily verification cron for UK-practising doctors.
@@ -53,10 +54,8 @@ type DoctorProfile = {
 };
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authorizeCronRequest(request);
+  if (denied) return denied;
 
   const supabase = createAdminClient();
   const now = new Date();

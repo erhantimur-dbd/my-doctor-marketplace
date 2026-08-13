@@ -40,12 +40,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let state: { doctorId: string; userId: string };
-    try {
-      state = JSON.parse(
-        Buffer.from(stateParam, "base64url").toString()
-      );
-    } catch {
+    const { verifyCalendarOAuthState } = await import(
+      "@/lib/calendar/oauth-state"
+    );
+    const state = verifyCalendarOAuthState(stateParam);
+    if (!state) {
       return NextResponse.redirect(
         new URL(
           "/en/doctor-dashboard/settings?calendar_error=invalid_state",
@@ -63,6 +62,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/en/login", request.url));
     }
 
+    const { data: doctorRow } = await supabase
+      .from("doctors")
+      .select("id")
+      .eq("profile_id", user.id)
+      .single();
+    if (!doctorRow || doctorRow.id !== state.doctorId) {
+      return NextResponse.redirect(
+        new URL(
+          "/en/doctor-dashboard/settings?calendar_error=invalid_state",
+          request.url
+        )
+      );
+    }
+    const doctorId = doctorRow.id;
+
     const tokens = await exchangeCodeForTokens(code);
 
     const expiresAt = new Date(
@@ -79,7 +93,7 @@ export async function GET(request: NextRequest) {
       .from("doctor_calendar_connections")
       .upsert(
         {
-          doctor_id: state.doctorId,
+          doctor_id: doctorId,
           provider: "microsoft",
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
@@ -101,12 +115,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Trigger initial sync (non-blocking)
-    importMicrosoftCalendarEvents(state.doctorId).catch((err) =>
+    importMicrosoftCalendarEvents(doctorId).catch((err) =>
       console.error("Microsoft initial sync error:", err)
     );
 
     // Set up webhook (non-blocking)
-    setupMicrosoftWebhook(state.doctorId).catch((err) =>
+    setupMicrosoftWebhook(doctorId).catch((err) =>
       console.error("Microsoft webhook setup error:", err)
     );
 

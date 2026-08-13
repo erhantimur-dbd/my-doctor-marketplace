@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { authorizeCronRequest } from "@/lib/cron/authorize";
 
 /**
  * Daily cron: clear paid Featured profile boosts after featured_until.
@@ -12,10 +13,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * Auth: Authorization: Bearer $CRON_SECRET
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authorizeCronRequest(request);
+  if (denied) return denied;
 
   const supabase = createAdminClient();
   const now = new Date().toISOString();

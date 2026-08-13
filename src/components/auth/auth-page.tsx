@@ -126,6 +126,7 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
 
     formData.append("redirect", redirectTo);
     formData.append("locale", locale);
+    formData.set("accepted", "true");
     if (registerEmail) formData.set("email", registerEmail);
 
     const result = await register(formData);
