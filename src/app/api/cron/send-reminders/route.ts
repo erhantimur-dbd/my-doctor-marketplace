@@ -10,6 +10,7 @@ import {
 } from "@/lib/whatsapp/templates";
 import { sendSms } from "@/lib/sms/client";
 import { appointmentReminderSms } from "@/lib/sms/templates";
+import { authorizeCronRequest } from "@/lib/cron/authorize";
 
 // Default reminders used when a doctor hasn't configured their own
 const DEFAULT_REMINDERS = [
@@ -19,10 +20,8 @@ const DEFAULT_REMINDERS = [
 ];
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authorizeCronRequest(request);
+  if (denied) return denied;
 
   const supabase = createAdminClient();
   const now = new Date();

@@ -32,17 +32,14 @@ export async function GET() {
   // 2. External service keys configured
   checks.stripe = {
     status: process.env.STRIPE_SECRET_KEY ? "ok" : "error",
-    ...(process.env.STRIPE_SECRET_KEY ? {} : { error: "STRIPE_SECRET_KEY not set" }),
   };
 
   checks.email = {
     status: process.env.RESEND_API_KEY ? "ok" : "error",
-    ...(process.env.RESEND_API_KEY ? {} : { error: "RESEND_API_KEY not set" }),
   };
 
   checks.supabase = {
     status: process.env.SUPABASE_SERVICE_ROLE_KEY ? "ok" : "error",
-    ...(process.env.SUPABASE_SERVICE_ROLE_KEY ? {} : { error: "SUPABASE_SERVICE_ROLE_KEY not set" }),
   };
 
   // Overall status

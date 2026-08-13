@@ -27,6 +27,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { googleChannelToken } = await import("@/lib/calendar/oauth-state");
+    const expectedToken = googleChannelToken(channelId);
+    const channelToken = request.headers.get("x-goog-channel-token");
+    if (!expectedToken || channelToken !== expectedToken) {
+      return NextResponse.json({ error: "Invalid channel token" }, { status: 401 });
+    }
+
     // Find the doctor connection by webhook channel ID
     const supabase = createAdminClient();
     const { data: connection } = await supabase

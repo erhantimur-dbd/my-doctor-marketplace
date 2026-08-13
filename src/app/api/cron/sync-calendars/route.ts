@@ -3,12 +3,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { syncAllConnectedDoctors, setupCalendarWebhook } from "@/lib/google/sync";
 import { syncAllMicrosoftDoctors, setupMicrosoftWebhook } from "@/lib/microsoft/sync";
 import { syncAllCalDAVDoctors } from "@/lib/caldav/sync";
+import { authorizeCronRequest } from "@/lib/cron/authorize";
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authorizeCronRequest(request);
+  if (denied) return denied;
 
   // Sync all providers in parallel
   const [google, microsoft, caldav] = await Promise.all([

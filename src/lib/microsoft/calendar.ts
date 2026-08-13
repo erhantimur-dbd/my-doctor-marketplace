@@ -249,6 +249,10 @@ export async function createSubscription(
   calendarId: string,
   webhookUrl: string
 ): Promise<{ id: string; expirationDateTime: string }> {
+  const clientState = process.env.MICROSOFT_WEBHOOK_SECRET;
+  if (!clientState) {
+    throw new Error("MICROSOFT_WEBHOOK_SECRET is not set");
+  }
   // Microsoft subscriptions max 3 days for calendars
   const expiration = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -263,7 +267,7 @@ export async function createSubscription(
       notificationUrl: webhookUrl,
       resource: `/me/calendars/${calendarId}/events`,
       expirationDateTime: expiration,
-      clientState: "mydoctors360-calendar-sync",
+      clientState,
     }),
   });
 

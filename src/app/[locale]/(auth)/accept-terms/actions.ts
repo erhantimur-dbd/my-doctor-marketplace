@@ -8,14 +8,18 @@ import { welcomeEmail } from "@/lib/email/templates";
 import { TERMS_VERSION } from "@/lib/auth/oauth-providers";
 import { log } from "@/lib/utils/logger";
 import { safeError } from "@/lib/utils/safe-error";
+import {
+  isSafeRelativePath,
+  sanitizeAuthLocale,
+} from "@/lib/auth/return-cookie";
 
 function safeNext(raw: string | null | undefined, locale: string): string {
-  if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
+  if (raw && isSafeRelativePath(raw)) return raw;
   return `/${locale}/dashboard`;
 }
 
 export async function acceptTerms(formData: FormData) {
-  const locale = (formData.get("locale") as string) || "en";
+  const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
   const next = safeNext(formData.get("next") as string | null, locale);
   const accepted = formData.get("accepted") === "on" || formData.get("accepted") === "true";
 

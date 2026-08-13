@@ -34,10 +34,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create state token with doctor ID for the callback
-    const state = Buffer.from(
-      JSON.stringify({ doctorId: doctor.id, userId: user.id })
-    ).toString("base64url");
+    const { signCalendarOAuthState } = await import(
+      "@/lib/calendar/oauth-state"
+    );
+    const state = signCalendarOAuthState({
+      doctorId: doctor.id,
+      userId: user.id,
+    });
 
     const authUrl = getGoogleAuthUrl(state);
     return NextResponse.redirect(authUrl);

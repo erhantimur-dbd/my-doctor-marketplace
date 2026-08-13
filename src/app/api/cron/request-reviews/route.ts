@@ -3,16 +3,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { reviewRequestEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
+import { authorizeCronRequest } from "@/lib/cron/authorize";
 
 /**
  * Wave B5 — automated review requests after completed appointments.
  * Window: completed 24–72h ago, no existing review, no prior review_request row.
  */
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authorizeCronRequest(request);
+  if (denied) return denied;
 
   const supabase = createAdminClient();
   const origin = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";

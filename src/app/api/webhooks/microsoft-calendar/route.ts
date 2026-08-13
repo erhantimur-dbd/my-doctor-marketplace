@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { importMicrosoftCalendarEvents } from "@/lib/microsoft/sync";
 
-const EXPECTED_CLIENT_STATE = process.env.MICROSOFT_WEBHOOK_SECRET || "mydoctors360-calendar-sync";
+const EXPECTED_CLIENT_STATE = process.env.MICROSOFT_WEBHOOK_SECRET;
 
 /**
  * POST /api/webhooks/microsoft-calendar
@@ -26,6 +26,11 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const notifications = body.value || [];
+
+    if (!EXPECTED_CLIENT_STATE) {
+      console.error("Microsoft webhook: MICROSOFT_WEBHOOK_SECRET is not set");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+    }
 
     for (const notification of notifications) {
       // Verify client state matches our secret

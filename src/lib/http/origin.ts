@@ -46,15 +46,32 @@ export function canonicalizeAppHost(host: string): string {
   return withoutPort;
 }
 
+export function isAllowedAppHost(host: string): boolean {
+  const h = host.toLowerCase().replace(/:\d+$/, "");
+  if (
+    h === "localhost" ||
+    h.startsWith("127.") ||
+    h.startsWith("0.0.0.0")
+  ) {
+    return true;
+  }
+  if (h.endsWith(".vercel.app")) return true;
+  for (const suffix of APP_BRAND_HOST_SUFFIXES) {
+    if (h === suffix || h === `www.${suffix}`) return true;
+  }
+  return false;
+}
+
 export function resolveAppOrigin(input: {
   host?: string | null;
   forwardedHost?: string | null;
   proto?: string | null;
   fallback?: string | null;
 }): string {
-  const raw = (input.forwardedHost || input.host || "")
-    .split(",")[0]
-    .trim();
+  const candidates = [input.forwardedHost, input.host]
+    .map((v) => (v || "").split(",")[0].trim())
+    .filter(Boolean);
+  const raw = candidates.find((h) => isAllowedAppHost(h)) || "";
 
   if (raw) {
     const host = canonicalizeAppHost(raw);

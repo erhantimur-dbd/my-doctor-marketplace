@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Link } from "@/i18n/navigation";
 import { registerTestingService } from "@/actions/auth";
+import { passwordMeetsServerMinimum } from "@/lib/validators/password";
 import { getTestingSpecialties } from "@/lib/constants/specialties";
 import { formatSpecialtyName } from "@/lib/utils";
 import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
@@ -82,8 +83,10 @@ export default function RegisterTestingServicePage() {
         setError("Please fill in all required fields");
         return;
       }
-      if (password.length < 8) {
-        setError("Password must be at least 8 characters");
+      if (!passwordMeetsServerMinimum(password)) {
+        setError(
+          "Password must be at least 8 characters and include 3 of: lowercase, uppercase, number, symbol."
+        );
         return;
       }
     }
@@ -125,6 +128,13 @@ export default function RegisterTestingServicePage() {
     formData.set("email", email);
     formData.set("password", password);
     formData.set("locale", locale);
+    formData.set("clinic_name", serviceName);
+    formData.set("selected_specialties", JSON.stringify(selectedTestTypes));
+    formData.set("languages", JSON.stringify(selectedLanguages));
+    formData.set("address", address);
+    formData.set("city", city);
+    formData.set("postal_code", postalCode);
+    formData.set("country", country);
 
     const result = await registerTestingService(formData);
     if (result?.error) {

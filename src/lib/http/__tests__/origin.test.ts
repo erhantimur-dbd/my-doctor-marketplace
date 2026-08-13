@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalizeAppHost,
   getConfiguredAppOrigin,
+  isAllowedAppHost,
   resolveAppOrigin,
 } from "../origin";
 
@@ -62,6 +63,18 @@ describe("resolveAppOrigin", () => {
       resolveAppOrigin({
         host: "localhost:3000",
         proto: "http",
+      })
+    ).toBe("http://localhost:3000");
+  });
+
+  it("ignores untrusted forwarded hosts", () => {
+    expect(isAllowedAppHost("evil.com")).toBe(false);
+    expect(
+      resolveAppOrigin({
+        host: "localhost:3000",
+        forwardedHost: "evil.com",
+        proto: "http",
+        fallback: "https://www.mydoctors360.com",
       })
     ).toBe("http://localhost:3000");
   });

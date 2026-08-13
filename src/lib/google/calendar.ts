@@ -258,7 +258,8 @@ export async function watchCalendar(
   calendarId: string,
   channelId: string,
   webhookUrl: string,
-  expirationMs?: number
+  expirationMs?: number,
+  token?: string
 ): Promise<{
   id: string;
   resourceId: string;
@@ -268,6 +269,7 @@ export async function watchCalendar(
     id: channelId,
     type: "web_hook",
     address: webhookUrl,
+    ...(token ? { token } : {}),
   };
 
   if (expirationMs) {

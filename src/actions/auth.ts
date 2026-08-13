@@ -16,6 +16,7 @@ import {
   AUTH_RETURN_COOKIE,
   DOCTOR_OAUTH_INTENT_COOKIE,
   isSafeRelativePath,
+  sanitizeAuthLocale,
 } from "@/lib/auth/return-cookie";
 import type { OAuthProviderId } from "@/lib/auth/oauth-providers";
 import { OAUTH_PROVIDERS, TERMS_VERSION } from "@/lib/auth/oauth-providers";
@@ -54,9 +55,7 @@ function buildOAuthCallback(
 ): string {
   const base = `${origin}/${locale}/callback`;
   if (!redirectTo) return base;
-  const isSafeRelative =
-    redirectTo.startsWith("/") && !redirectTo.startsWith("//");
-  if (!isSafeRelative) return base;
+  if (!isSafeRelativePath(redirectTo)) return base;
   return `${base}?next=${encodeURIComponent(redirectTo)}`;
 }
 
@@ -73,7 +72,7 @@ export async function login(formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const redirectTo = formData.get("redirect") as string;
-  const locale = (formData.get("locale") as string) || "en";
+  const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -107,7 +106,7 @@ export async function login(formData: FormData) {
 
   // If there's an explicit redirect (e.g. from middleware), honour it
   // Only allow relative paths to prevent open redirect attacks
-  if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+  if (redirectTo && isSafeRelativePath(redirectTo)) {
     redirect(redirectTo);
   }
 
@@ -137,8 +136,16 @@ export async function register(formData: FormData) {
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
-  const locale = (formData.get("locale") as string) || "en";
+  const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
   const redirectTo = (formData.get("redirect") as string) || "";
+  const accepted =
+    formData.get("accepted") === "on" || formData.get("accepted") === "true";
+  if (!accepted) {
+    return {
+      error:
+        "Please accept the Terms of Service and Privacy Policy to continue.",
+    };
+  }
 
   // Server-side password strength validation
   const pwResult = passwordSchema.safeParse(password);
@@ -203,7 +210,7 @@ export async function register(formData: FormData) {
 
   revalidatePath("/", "layout");
   const verifyQs = new URLSearchParams({ email });
-  if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+  if (redirectTo && isSafeRelativePath(redirectTo)) {
     verifyQs.set("redirect", redirectTo);
   }
   redirect(`/${locale}/verify-email?${verifyQs.toString()}`);
@@ -236,7 +243,7 @@ async function createDoctorAccount(formData: FormData): Promise<
   const lastName = formData.get("last_name") as string;
   const gmcNumber = (formData.get("gmc_number") as string)?.trim() || "";
   const referralCode = (formData.get("referral_code") as string)?.trim().toUpperCase() || "";
-  const locale = (formData.get("locale") as string) || "en";
+  const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
   const colleagueName = (formData.get("colleague_name") as string)?.trim() || "";
   const colleagueEmail = (formData.get("colleague_email") as string)?.trim().toLowerCase() || "";
   // Durable testing entitlement is never set at account create (avoids free unlock
@@ -706,7 +713,7 @@ async function createDoctorAccount(formData: FormData): Promise<
       .update({
         terms_accepted_at: new Date().toISOString(),
         privacy_accepted_at: new Date().toISOString(),
-        terms_version: "2026-03-17",
+        terms_version: TERMS_VERSION,
       })
       .eq("id", data.user.id);
   } catch (termsErr) {
@@ -952,6 +959,10 @@ export async function resumeDoctorLicenseCheckout(
 
   const stripe = getStripe();
   const origin = await getOrigin();
+  const { locale: resumeLocaleRaw } = await import("@/lib/http/origin").then(
+    (m) => m.getRequestOriginAndLocale()
+  );
+  const resumeLocale = sanitizeAuthLocale(resumeLocaleRaw);
   let customerId = org?.stripe_customer_id as string | null;
   if (!customerId) {
     const customer = await stripe.customers.create({
@@ -1009,8 +1020,8 @@ export async function resumeDoctorLicenseCheckout(
       type: "license",
       billing_period: billingPeriod,
     },
-    success_url: `${origin}/en/doctor-dashboard/organization/billing?checkout=success`,
-    cancel_url: `${origin}/en/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
+    success_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=success`,
+    cancel_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
   });
 
   return { checkoutUrl: session.url };
@@ -1030,7 +1041,31 @@ export async function registerTestingService(formData: FormData) {
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
   const lastName = formData.get("last_name") as string;
-  const locale = (formData.get("locale") as string) || "en";
+  const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
+
+  const pwResult = passwordSchema.safeParse(password);
+  if (!pwResult.success) {
+    return { error: pwResult.error.issues[0]?.message || "Password too weak." };
+  }
+
+  const clinicName = (formData.get("clinic_name") as string)?.trim() || "";
+  const address = (formData.get("address") as string)?.trim() || "";
+  const city = (formData.get("city") as string)?.trim() || "";
+  const postalCode = (formData.get("postal_code") as string)?.trim() || "";
+  const countryCode = (formData.get("country") as string)?.trim() || "";
+
+  let languages: string[] = ["en"];
+  try {
+    const raw = formData.get("languages") as string | null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        languages = parsed.filter((l): l is string => typeof l === "string");
+      }
+    }
+  } catch {
+    /* keep default */
+  }
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -1111,6 +1146,17 @@ export async function registerTestingService(formData: FormData) {
       Math.random().toString(36).substring(2, 6)
     ).toUpperCase();
 
+    let locationId: string | null = null;
+    if (countryCode) {
+      const { data: location } = await adminSupabase
+        .from("locations")
+        .select("id")
+        .eq("country_code", countryCode)
+        .limit(1)
+        .maybeSingle();
+      if (location) locationId = location.id;
+    }
+
     const { error: doctorError, data: newDoctor } = await adminSupabase
       .from("doctors")
       .insert({
@@ -1120,6 +1166,12 @@ export async function registerTestingService(formData: FormData) {
         consultation_fee_cents: 0,
         base_currency: "GBP",
         referral_code: newReferralCode,
+        languages,
+        ...(clinicName && { clinic_name: clinicName }),
+        ...(address && { address }),
+        ...(city && { city }),
+        ...(postalCode && { postal_code: postalCode }),
+        ...(locationId && { location_id: locationId }),
       })
       .select("id")
       .single();
@@ -1127,6 +1179,59 @@ export async function registerTestingService(formData: FormData) {
     if (doctorError) {
       log.error("Testing service creation failed:", { err: doctorError });
       return { error: safeError(doctorError) };
+    }
+
+    const selectedSpecialtiesRaw = formData.get("selected_specialties") as
+      | string
+      | null;
+    if (selectedSpecialtiesRaw && newDoctor) {
+      try {
+        const parsed = JSON.parse(selectedSpecialtiesRaw);
+        if (Array.isArray(parsed)) {
+          const requestedSlugs = Array.from(
+            new Set(parsed.filter((s): s is string => typeof s === "string"))
+          );
+          if (requestedSlugs.length > 0) {
+            const { data: specialtyRows } = await adminSupabase
+              .from("specialties")
+              .select("id, slug")
+              .in("slug", requestedSlugs);
+            const slugToId = new Map<string, string>(
+              (specialtyRows ?? []).map((s: { id: string; slug: string }) => [
+                s.slug,
+                s.id,
+              ])
+            );
+            const ordered = requestedSlugs
+              .filter((s) => slugToId.has(s))
+              .map((s, idx) => ({
+                doctor_id: newDoctor.id,
+                specialty_id: slugToId.get(s)!,
+                is_primary: idx === 0,
+              }));
+            if (ordered.length > 0) {
+              await adminSupabase.from("doctor_specialties").insert(ordered);
+            }
+          }
+        }
+      } catch (err) {
+        log.error("Testing service specialties insert failed:", { err });
+      }
+    }
+
+    try {
+      await adminSupabase
+        .from("profiles")
+        .update({
+          terms_accepted_at: new Date().toISOString(),
+          privacy_accepted_at: new Date().toISOString(),
+          terms_version: TERMS_VERSION,
+        })
+        .eq("id", data.user.id);
+    } catch (termsErr) {
+      log.error("[Auth] Testing service terms acceptance recording error:", {
+        err: termsErr,
+      });
     }
 
     // Auto-create organization + owner membership for testing service
@@ -1175,6 +1280,7 @@ export async function registerTestingService(formData: FormData) {
 }
 
 export async function resendVerificationEmail(email: string, locale: string = "en") {
+  locale = sanitizeAuthLocale(locale);
   const ip = await getClientIp();
   const { limited } = await rateLimit(`resend:${ip}`, 3, 15 * 60 * 1000);
   if (limited) {
@@ -1210,7 +1316,7 @@ export async function forgotPassword(formData: FormData) {
   const supabase = await createClient();
 
   const email = (formData.get("email") as string)?.trim() || "";
-  const locale = (formData.get("locale") as string) || "en";
+  const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
 
   if (!email) {
     return { error: "Please enter your email address." };
@@ -1235,7 +1341,7 @@ export async function resetPassword(formData: FormData) {
   const supabase = await createClient();
 
   const password = formData.get("password") as string;
-  const locale = (formData.get("locale") as string) || "en";
+  const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
 
   const pwResult = passwordSchema.safeParse(password);
   if (!pwResult.success) {
@@ -1255,6 +1361,7 @@ export async function resetPassword(formData: FormData) {
 }
 
 export async function logout(locale: string = "en") {
+  locale = sanitizeAuthLocale(locale);
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
@@ -1302,6 +1409,7 @@ export async function signInWithOAuthProvider(
 
   await setDoctorOAuthIntentCookie(options?.doctorIntent);
 
+  locale = sanitizeAuthLocale(locale);
   const supabase = await createClient();
   const origin = await getOrigin();
   const next =
