@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { PricingBillingToggle } from "@/components/marketing/pricing-billing-toggle";
+import { AnalyticsPageBeacon } from "@/components/shared/analytics-page-beacon";
+import { AnalyticsEvent } from "@/lib/analytics";
 import {
   AVAILABLE_MODULES,
   TESTING_STANDALONE_PLAN,
@@ -130,6 +132,10 @@ export default async function PricingPage() {
 
   return (
     <>
+      <AnalyticsPageBeacon
+        event={AnalyticsEvent.PricingViewed}
+        props={{ surface: "marketing" }}
+      />
       {/* Hero */}
       <section className="relative bg-gradient-to-br from-primary/5 via-background to-primary/5 px-4 py-16 md:py-24">
         <HeroSpecialtyIcons />

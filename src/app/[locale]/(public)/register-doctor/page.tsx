@@ -109,6 +109,35 @@ export default function RegisterDoctorPage() {
   const [colleagueEmail, setColleagueEmail] = useState("");
 
   // Auto-fill from URL params (?ref=, ?tier=, ?checkout=cancelled)
+
+  // Product analytics (PostHog) — fire once on mount; no PII
+  useEffect(() => {
+    let cancelled = false;
+    const tier = searchParams.get("tier") || undefined;
+    const founding = searchParams.get("founding") === "1";
+    (async () => {
+      const { track, AnalyticsEvent } = await import("@/lib/analytics");
+      if (cancelled) return;
+      void track(AnalyticsEvent.RegisterStarted, {
+        locale,
+        surface: "app",
+        tier,
+        founding: founding || undefined,
+      });
+      if (founding) {
+        void track(AnalyticsEvent.FoundingClaimStarted, {
+          locale,
+          surface: "app",
+          tier: tier || "free",
+        });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once on mount
+  }, []);
+
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) {

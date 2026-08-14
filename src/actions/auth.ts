@@ -729,9 +729,29 @@ async function createDoctorAccount(formData: FormData): Promise<
         "@/lib/founding/members"
       );
       await claimFoundingMembership(newDoctor.id);
+      try {
+        const { trackServer } = await import("@/lib/analytics/server");
+        const { AnalyticsEvent } = await import("@/lib/analytics/events");
+        void trackServer(newDoctor.id, AnalyticsEvent.FoundingClaimSucceeded, {
+          surface: "server",
+          tier: "free",
+        });
+      } catch {
+        /* analytics no-op */
+      }
     } catch (foundingErr) {
       log.error("[Auth] Founding claim failed:", { err: foundingErr });
     }
+  }
+
+  try {
+    const { trackServer } = await import("@/lib/analytics/server");
+    const { AnalyticsEvent } = await import("@/lib/analytics/events");
+    void trackServer(newDoctor.id, AnalyticsEvent.RegisterCompleted, {
+      surface: "server",
+    });
+  } catch {
+    /* analytics no-op */
   }
 
   return { userId: data.user.id, doctorId: newDoctor.id, orgId, email, locale };
@@ -897,6 +917,19 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     success_url: `${origin}/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}&checkout=success`,
     cancel_url: `${origin}/${result.locale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
   });
+
+  try {
+    const { trackServer } = await import("@/lib/analytics/server");
+    const { AnalyticsEvent } = await import("@/lib/analytics/events");
+    void trackServer(result.doctorId, AnalyticsEvent.CheckoutStarted, {
+      surface: "server",
+      tier,
+      billing_period: billingPeriod,
+      stripe_price_id: priceId,
+    });
+  } catch {
+    /* analytics no-op */
+  }
 
   return { checkoutUrl: session.url };
 }

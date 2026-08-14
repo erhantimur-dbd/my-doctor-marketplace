@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CurrencyProvider } from "@/providers/currency-provider";
 import { CookieConsentBanner } from "@/components/shared/cookie-consent-banner";
 import { AnalyticsScripts } from "@/components/shared/analytics-scripts";
+import { PostHogProvider } from "@/components/shared/posthog-provider";
 import { PwaInstallPrompt } from "@/components/shared/pwa-install-prompt";
 import { CommandPalette } from "@/components/shared/command-palette";
 import { NavigationProgress } from "@/components/shared/navigation-progress";
@@ -108,6 +109,7 @@ export default async function LocaleLayout({
           </CurrencyProvider>
         </NextIntlClientProvider>
         <AnalyticsScripts />
+        <PostHogProvider />
       </body>
     </html>
   );

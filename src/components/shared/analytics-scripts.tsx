@@ -8,6 +8,8 @@ const CONSENT_KEY = "cookie_consent";
 
 /**
  * Renders GA4 scripts only when the user has given analytics consent.
+ * GA4 is marketing measurement only — product funnel events go to PostHog
+ * (`src/lib/analytics`), not gtag.
  * Listens for the "cookie-consent-updated" custom event so it can
  * activate immediately after the user accepts (no page reload needed).
  */

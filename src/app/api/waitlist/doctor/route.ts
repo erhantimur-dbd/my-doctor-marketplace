@@ -73,5 +73,12 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ success: true });
+  try {
+      const { trackServer } = await import("@/lib/analytics/server");
+      const { AnalyticsEvent } = await import("@/lib/analytics/events");
+      void trackServer("anonymous", AnalyticsEvent.WaitlistSubmit, {
+        surface: "coming_soon",
+      });
+    } catch { /* analytics no-op */ }
+    return NextResponse.json({ success: true });
 }
