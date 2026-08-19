@@ -23,6 +23,10 @@ import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
+import {
+  CARE_PLANS_DISABLED_MESSAGE,
+  isCarePlansEnabled,
+} from "@/lib/launch/soft-launch";
 
 // ─── helpers ───────────────────────────────────────────────────
 
@@ -59,6 +63,10 @@ function generateToken(): string {
 export async function createFollowUpInvitation(
   input: CreateFollowUpInvitationInput
 ): Promise<{ success?: boolean; invitation_id?: string; error?: string }> {
+  if (!isCarePlansEnabled()) {
+    return { error: CARE_PLANS_DISABLED_MESSAGE };
+  }
+
   try {
     const { error: authError, supabase, doctor } = await requireDoctor();
     if (authError || !supabase || !doctor) {
@@ -253,6 +261,10 @@ export async function createFollowUpInvitation(
 }
 
 export async function getFollowUpInvitationByToken(token: string) {
+  if (!isCarePlansEnabled()) {
+    return { invitation: null, error: CARE_PLANS_DISABLED_MESSAGE };
+  }
+
   try {
     // Use admin client to bypass RLS — access is gated by the secret token
     const supabase = createAdminClient();
@@ -309,6 +321,10 @@ export async function createInvitationCheckout(
   startTime: string,
   endTime: string
 ): Promise<{ url?: string | null; error?: string }> {
+  if (!isCarePlansEnabled()) {
+    return { error: CARE_PLANS_DISABLED_MESSAGE };
+  }
+
   try {
     const supabase = await createClient();
     const {
@@ -438,6 +454,10 @@ export async function createInvitationCheckout(
 export async function bookFollowUpSession(
   input: BookFollowUpSessionInput
 ): Promise<{ success?: boolean; error?: string }> {
+  if (!isCarePlansEnabled()) {
+    return { error: CARE_PLANS_DISABLED_MESSAGE };
+  }
+
   try {
     const supabase = await createClient();
     const {
@@ -596,6 +616,10 @@ export async function bookFollowUpSession(
 export async function cancelFollowUpInvitation(
   invitationId: string
 ): Promise<{ success?: boolean; error?: string }> {
+  if (!isCarePlansEnabled()) {
+    return { error: CARE_PLANS_DISABLED_MESSAGE };
+  }
+
   try {
     const { error: authError, supabase, doctor } = await requireDoctor();
     if (authError || !supabase || !doctor) {
@@ -646,6 +670,10 @@ export async function cancelFollowUpInvitation(
 }
 
 export async function getPatientTreatmentPlans() {
+  if (!isCarePlansEnabled()) {
+    return { active: [], completed: [], error: CARE_PLANS_DISABLED_MESSAGE };
+  }
+
   try {
     const supabase = await createClient();
     const {

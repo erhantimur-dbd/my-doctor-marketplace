@@ -1,4 +1,6 @@
 import { getPatientPrescriptionById } from "@/actions/prescriptions";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isPrescriptionsEnabled } from "@/lib/launch/soft-launch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,15 @@ export default async function PatientPrescriptionDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (!isPrescriptionsEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Prescriptions unavailable"
+        description="Prescriptions are disabled for this launch."
+      />
+    );
+  }
+
   const { id } = await params;
   const prescription = await getPatientPrescriptionById(id);
 

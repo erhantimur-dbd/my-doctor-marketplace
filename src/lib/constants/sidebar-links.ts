@@ -205,11 +205,7 @@ export const doctorSidebarGroups: SidebarGroup[] = [
 export const patientSidebarLinks: SidebarLink[] = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Overview" },
   { href: "/dashboard/bookings", icon: Calendar, label: "Bookings" },
-  {
-    href: "/dashboard/treatment-plans",
-    icon: ClipboardList,
-    label: "Care Plans",
-  },
+  // { href: "/dashboard/treatment-plans", icon: ClipboardList, label: "Care Plans" }, // Soft-launch: hard-disabled
   { href: "/dashboard/wallet", icon: Wallet, label: "Wallet" },
   { href: "/dashboard/payments", icon: CreditCard, label: "Payments" },
   { href: "/dashboard/invoices", icon: Receipt, label: "Invoices" },

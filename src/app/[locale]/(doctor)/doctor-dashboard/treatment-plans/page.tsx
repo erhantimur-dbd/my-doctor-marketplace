@@ -15,8 +15,8 @@ import {
 import { ClipboardList, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
-import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
-import { hasActiveLicense } from "@/lib/license/check";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
 
 const STATUS_STYLES: Record<string, { label: string; variant: string; className: string }> = {
   sent: {
@@ -52,6 +52,15 @@ const STATUS_STYLES: Record<string, { label: string; variant: string; className:
 };
 
 export default async function TreatmentPlansPage() {
+  if (!isCarePlansEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Care plans unavailable"
+        description="Care plans are disabled for this launch."
+      />
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -66,10 +75,6 @@ export default async function TreatmentPlansPage() {
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
-
-  if (!(await hasActiveLicense(supabase, doctor.id))) {
-    return <UpgradePrompt feature="Care Plans" />;
-  }
 
   const { data: plans } = await supabase
     .from("treatment_plans")

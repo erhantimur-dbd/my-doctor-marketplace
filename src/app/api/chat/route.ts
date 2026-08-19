@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  isPublicChatEnabled,
+  PUBLIC_CHAT_DISABLED_MESSAGE,
+} from "@/lib/launch/soft-launch";
 import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
 import { aiModel, isAIEnabled } from "@/lib/ai/provider";
 import { buildChatTools, type ChatToolsContext } from "@/lib/chat/tools";
@@ -11,6 +15,15 @@ import { log } from "@/lib/utils/logger";
 export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
+  // Soft-launch hard-disable: public clinical chat is unreachable even
+  // for authenticated users. Auth-lock alone is not enough.
+  if (!isPublicChatEnabled()) {
+    return NextResponse.json(
+      { error: PUBLIC_CHAT_DISABLED_MESSAGE },
+      { status: 403 }
+    );
+  }
+
   if (!isAIEnabled()) {
     return NextResponse.json(
       { error: "AI chat is not configured on this environment." },

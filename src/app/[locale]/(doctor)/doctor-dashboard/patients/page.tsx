@@ -18,6 +18,7 @@ import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 import { hasActiveLicense } from "@/lib/license/check";
 import { FollowUpInvitationDialog } from "@/components/doctor/follow-up-invitation-dialog";
 import { CreateInvoiceDialog } from "@/components/doctor/create-invoice-dialog";
+import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
 
 interface PatientRow {
   patient_id: string;
@@ -266,13 +267,15 @@ export default async function PatientsPage({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1.5">
-                        <FollowUpInvitationDialog
-                          patientId={patient.patient_id}
-                          patientName={`${patient.first_name} ${patient.last_name}`}
-                          doctorCurrency={doctor.base_currency}
-                          services={servicesData || []}
-                          priceBook={priceBookData || []}
-                        />
+                        {isCarePlansEnabled() ? (
+                          <FollowUpInvitationDialog
+                            patientId={patient.patient_id}
+                            patientName={`${patient.first_name} ${patient.last_name}`}
+                            doctorCurrency={doctor.base_currency}
+                            services={servicesData || []}
+                            priceBook={priceBookData || []}
+                          />
+                        ) : null}
                         <CreateInvoiceDialog
                           patientId={patient.patient_id}
                           patientName={`${patient.first_name} ${patient.last_name}`}

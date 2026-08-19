@@ -23,6 +23,8 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { BookTreatmentSessionDialog } from "../book-treatment-session-dialog";
 import type { Metadata } from "next";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
 
 export const metadata: Metadata = {
   title: "Care Plan Details",
@@ -109,6 +111,15 @@ export default async function TreatmentPlanDetailPage({
 }: {
   params: Promise<{ id: string; locale: string }>;
 }) {
+  if (!isCarePlansEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Care plans unavailable"
+        description="Care plans are disabled for this launch."
+      />
+    );
+  }
+
   const { id } = await params;
   const supabase = await createClient();
   const {

@@ -24,6 +24,8 @@ import { BookTreatmentSessionDialog } from "./book-treatment-session-dialog";
 import { getPatientTreatmentPlansV2 } from "@/actions/treatment-plan";
 import { Link } from "@/i18n/navigation";
 import type { Metadata } from "next";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
 
 export const metadata: Metadata = {
   title: "Care Plans",
@@ -31,6 +33,15 @@ export const metadata: Metadata = {
 };
 
 export default async function TreatmentPlansPage() {
+  if (!isCarePlansEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Care plans unavailable"
+        description="Care plans are disabled for this launch."
+      />
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
