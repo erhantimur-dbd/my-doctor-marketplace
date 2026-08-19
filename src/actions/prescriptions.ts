@@ -75,8 +75,15 @@ async function getDoctorId(): Promise<string | null> {
 }
 
 
+/** Shared so callers can read `.error` without a `{ error } | { success }` union. */
+type PrescriptionMutationResult = {
+  error?: string;
+  success?: boolean;
+  id?: string;
+};
+
 /** Soft-launch hard-disable — every tier, including Professional+. */
-function prescriptionsDisabledError() {
+function prescriptionsDisabledError(): PrescriptionMutationResult {
   return { error: PRESCRIPTIONS_DISABLED_MESSAGE };
 }
 
@@ -98,7 +105,9 @@ function prescriptionsDisabledError() {
  *
  * Part of Workstream 3.1 of the UK CQC compliance plan.
  */
-export async function createPrescription(input: PrescriptionInput) {
+export async function createPrescription(
+  input: PrescriptionInput
+): Promise<PrescriptionMutationResult> {
   if (!isPrescriptionsEnabled()) return prescriptionsDisabledError();
 
   const parsed = prescriptionSchema.safeParse(input);
@@ -219,7 +228,7 @@ export async function updatePrescription(
       | "booking_id"
     >
   >
-) {
+): Promise<PrescriptionMutationResult> {
   if (!isPrescriptionsEnabled()) return prescriptionsDisabledError();
 
   const doctorId = await getDoctorId();
@@ -256,7 +265,9 @@ export async function updatePrescription(
 /**
  * Cancel a prescription (doctor only).
  */
-export async function cancelPrescription(prescriptionId: string) {
+export async function cancelPrescription(
+  prescriptionId: string
+): Promise<PrescriptionMutationResult> {
   if (!isPrescriptionsEnabled()) return prescriptionsDisabledError();
 
   const doctorId = await getDoctorId();
