@@ -133,13 +133,6 @@ export default async function PatientDashboard() {
       color: "bg-green-50 text-green-600",
     },
     {
-      href: "/dashboard/treatment-plans" as const,
-      icon: ClipboardList,
-      label: "Care Plans",
-      description: "View doctor recommendations",
-      color: "bg-purple-50 text-purple-600",
-    },
-    {
       href: "/dashboard/settings" as const,
       icon: Settings,
       label: "Settings",

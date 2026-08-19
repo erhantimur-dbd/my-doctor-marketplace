@@ -3,8 +3,10 @@ import { safeError } from "@/lib/utils/safe-error";
 
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { getDoctorLicenseTier } from "@/lib/license/check";
-import { hasFeature } from "@/lib/utils/feature-flags";
+import {
+  isPrescriptionsEnabled,
+  PRESCRIPTIONS_DISABLED_MESSAGE,
+} from "@/lib/launch/soft-launch";
 import { z } from "zod/v4";
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
@@ -73,14 +75,16 @@ async function getDoctorId(): Promise<string | null> {
 }
 
 
-/** Prescriptions are Professional+ — deny mutations/reads without the feature. */
-async function requirePrescriptionsFeature(doctorId: string): Promise<string | null> {
-  const supabase = await createClient();
-  const licenseTier = await getDoctorLicenseTier(supabase, doctorId);
-  if (!hasFeature("prescriptions", licenseTier)) {
-    return "Prescriptions require a Professional plan or higher. Upgrade from Billing to unlock.";
-  }
-  return null;
+/** Shared so callers can read `.error` without a `{ error } | { success }` union. */
+type PrescriptionMutationResult = {
+  error?: string;
+  success?: boolean;
+  id?: string;
+};
+
+/** Soft-launch hard-disable — every tier, including Professional+. */
+function prescriptionsDisabledError(): PrescriptionMutationResult {
+  return { error: PRESCRIPTIONS_DISABLED_MESSAGE };
 }
 
 // ─── Doctor actions ──────────────────────────────────────────────────────────
@@ -101,7 +105,11 @@ async function requirePrescriptionsFeature(doctorId: string): Promise<string | n
  *
  * Part of Workstream 3.1 of the UK CQC compliance plan.
  */
-export async function createPrescription(input: PrescriptionInput) {
+export async function createPrescription(
+  input: PrescriptionInput
+): Promise<PrescriptionMutationResult> {
+  if (!isPrescriptionsEnabled()) return prescriptionsDisabledError();
+
   const parsed = prescriptionSchema.safeParse(input);
   if (!parsed.success) {
     // Surface the first zod error so the form can highlight the offending
@@ -126,9 +134,6 @@ export async function createPrescription(input: PrescriptionInput) {
 
   const doctorId = await getDoctorId();
   if (!doctorId) return { error: "Not authenticated as doctor" };
-
-  const featureError = await requirePrescriptionsFeature(doctorId);
-  if (featureError) return { error: featureError };
 
   const supabase = await createClient();
   const {
@@ -223,12 +228,11 @@ export async function updatePrescription(
       | "booking_id"
     >
   >
-) {
+): Promise<PrescriptionMutationResult> {
+  if (!isPrescriptionsEnabled()) return prescriptionsDisabledError();
+
   const doctorId = await getDoctorId();
   if (!doctorId) return { error: "Not authenticated as doctor" };
-
-  const featureError = await requirePrescriptionsFeature(doctorId);
-  if (featureError) return { error: featureError };
 
   const supabase = await createClient();
   const {
@@ -261,12 +265,13 @@ export async function updatePrescription(
 /**
  * Cancel a prescription (doctor only).
  */
-export async function cancelPrescription(prescriptionId: string) {
+export async function cancelPrescription(
+  prescriptionId: string
+): Promise<PrescriptionMutationResult> {
+  if (!isPrescriptionsEnabled()) return prescriptionsDisabledError();
+
   const doctorId = await getDoctorId();
   if (!doctorId) return { error: "Not authenticated as doctor" };
-
-  const featureError = await requirePrescriptionsFeature(doctorId);
-  if (featureError) return { error: featureError };
 
   const supabase = await createClient();
   const {
@@ -343,11 +348,10 @@ async function writePrescriptionAuditEvent({
  * Get prescriptions written by the current doctor.
  */
 export async function getDoctorPrescriptions() {
+  if (!isPrescriptionsEnabled()) return [];
+
   const doctorId = await getDoctorId();
   if (!doctorId) return [];
-
-  const featureError = await requirePrescriptionsFeature(doctorId);
-  if (featureError) return [];
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -369,11 +373,10 @@ export async function getDoctorPrescriptions() {
  * Get a single prescription by ID (doctor view).
  */
 export async function getDoctorPrescriptionById(prescriptionId: string) {
+  if (!isPrescriptionsEnabled()) return null;
+
   const doctorId = await getDoctorId();
   if (!doctorId) return null;
-
-  const featureError = await requirePrescriptionsFeature(doctorId);
-  if (featureError) return null;
 
   const supabase = await createClient();
   const { data } = await supabase
@@ -398,6 +401,8 @@ export async function getDoctorPrescriptionById(prescriptionId: string) {
  * Get prescriptions for the current patient.
  */
 export async function getPatientPrescriptions() {
+  if (!isPrescriptionsEnabled()) return [];
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -426,6 +431,8 @@ export async function getPatientPrescriptions() {
  * Get a single prescription by ID (patient view).
  */
 export async function getPatientPrescriptionById(prescriptionId: string) {
+  if (!isPrescriptionsEnabled()) return null;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -455,6 +462,8 @@ export async function getPatientPrescriptionById(prescriptionId: string) {
  * Get patients for the current doctor (for the prescription form patient selector).
  */
 export async function getDoctorPatients() {
+  if (!isPrescriptionsEnabled()) return [];
+
   const doctorId = await getDoctorId();
   if (!doctorId) return [];
 

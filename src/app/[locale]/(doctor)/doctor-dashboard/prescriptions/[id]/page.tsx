@@ -1,9 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
-import { getDoctorLicenseTier } from "@/lib/license/check";
-import { hasFeature } from "@/lib/utils/feature-flags";
-import { getDoctorPrescriptionById, cancelPrescription } from "@/actions/prescriptions";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isPrescriptionsEnabled } from "@/lib/launch/soft-launch";
+import { getDoctorPrescriptionById } from "@/actions/prescriptions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,6 +42,15 @@ export default async function DoctorPrescriptionDetailPage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  if (!isPrescriptionsEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Prescriptions unavailable"
+        description="Prescriptions are disabled for this launch."
+      />
+    );
+  }
+
   if (!user) redirect("/en/login");
 
   const { data: doctor } = await supabase
@@ -52,16 +60,6 @@ export default async function DoctorPrescriptionDetailPage({
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
-
-  const licenseTier = await getDoctorLicenseTier(supabase, doctor.id);
-  if (!hasFeature("prescriptions", licenseTier)) {
-    return (
-      <UpgradePrompt
-        feature="Prescriptions"
-        description="Digital prescriptions are included on Professional, Clinic, and Enterprise plans. Upgrade from Billing to unlock prescribing for your patients."
-      />
-    );
-  }
 
   const { id } = await params;
   const prescription = await getDoctorPrescriptionById(id);

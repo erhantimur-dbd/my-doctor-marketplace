@@ -2,8 +2,19 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { TreatmentPlanWizard } from "./wizard";
 import { hasActiveLicense } from "@/lib/license/check";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
 
 export default async function NewTreatmentPlanPage() {
+  if (!isCarePlansEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Care plans unavailable"
+        description="Care plans are disabled for this launch."
+      />
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

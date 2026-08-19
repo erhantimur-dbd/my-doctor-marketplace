@@ -1,4 +1,6 @@
 import { getPatientPrescriptions } from "@/actions/prescriptions";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isPrescriptionsEnabled } from "@/lib/launch/soft-launch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +29,15 @@ function statusColor(status: string) {
 }
 
 export default async function PatientPrescriptionsPage() {
+  if (!isPrescriptionsEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Prescriptions unavailable"
+        description="Prescriptions are disabled for this launch."
+      />
+    );
+  }
+
   const prescriptions = await getPatientPrescriptions();
 
   return (
