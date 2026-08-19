@@ -17,6 +17,16 @@ export const maxDuration = 30;
  * @see https://docs.x.ai/developers/model-capabilities/audio/voice
  */
 export async function POST(request: NextRequest) {
+  const { isPublicChatEnabled, PUBLIC_CHAT_DISABLED_MESSAGE } = await import(
+    "@/lib/launch/soft-launch"
+  );
+  if (!isPublicChatEnabled()) {
+    return NextResponse.json(
+      { error: PUBLIC_CHAT_DISABLED_MESSAGE },
+      { status: 403 }
+    );
+  }
+
   if (!isGrokVoiceEnabled()) {
     return NextResponse.json(
       {

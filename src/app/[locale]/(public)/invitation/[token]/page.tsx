@@ -7,6 +7,8 @@ import { Clock, MapPin, Video, CalendarDays, Stethoscope, AlertCircle, MessageSq
 import { formatCurrency } from "@/lib/utils/currency";
 import { InvitationClient } from "./invitation-client";
 import type { Metadata } from "next";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
 
 interface InvitationPageProps {
   params: Promise<{ locale: string; token: string }>;
@@ -20,6 +22,15 @@ export async function generateMetadata({ params }: InvitationPageProps): Promise
 }
 
 export default async function InvitationPage({ params }: InvitationPageProps) {
+  if (!isCarePlansEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Care plans unavailable"
+        description="Care plans are disabled for this launch."
+      />
+    );
+  }
+
   const { token, locale } = await params;
   const supabase = await createClient();
 

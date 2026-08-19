@@ -17,6 +17,8 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { TreatmentPlanClient } from "./treatment-plan-client";
 import type { Metadata } from "next";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
 
 interface TreatmentPlanPageProps {
   params: Promise<{ locale: string; token: string }>;
@@ -34,6 +36,15 @@ export async function generateMetadata({
 export default async function TreatmentPlanPage({
   params,
 }: TreatmentPlanPageProps) {
+  if (!isCarePlansEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Care plans unavailable"
+        description="Care plans are disabled for this launch."
+      />
+    );
+  }
+
   const { token, locale } = await params;
   const supabase = await createClient();
 

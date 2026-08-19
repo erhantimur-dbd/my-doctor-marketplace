@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
-import { getDoctorLicenseTier } from "@/lib/license/check";
-import { hasFeature } from "@/lib/utils/feature-flags";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isPrescriptionsEnabled } from "@/lib/launch/soft-launch";
 import { getDoctorPatients } from "@/actions/prescriptions";
 import { PrescriptionForm } from "@/components/doctor/prescription-form";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,15 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function NewPrescriptionPage() {
+  if (!isPrescriptionsEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Prescriptions unavailable"
+        description="Prescriptions are disabled for this launch."
+      />
+    );
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -24,16 +32,6 @@ export default async function NewPrescriptionPage() {
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
-
-  const licenseTier = await getDoctorLicenseTier(supabase, doctor.id);
-  if (!hasFeature("prescriptions", licenseTier)) {
-    return (
-      <UpgradePrompt
-        feature="Prescriptions"
-        description="Digital prescriptions are included on Professional, Clinic, and Enterprise plans. Upgrade from Billing to unlock prescribing for your patients."
-      />
-    );
-  }
 
   const patients = await getDoctorPatients();
 
