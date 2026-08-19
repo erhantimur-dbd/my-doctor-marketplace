@@ -885,6 +885,10 @@ export async function saveDoctorNotes(
   bookingId: string,
   notes: string
 ): Promise<{ success?: boolean; error?: string }> {
+  if (!isCarePlansEnabled()) {
+    return { error: CARE_PLANS_DISABLED_MESSAGE };
+  }
+
   try {
     const { error: authError, supabase, doctor } = await requireDoctor();
     if (authError || !supabase || !doctor) {

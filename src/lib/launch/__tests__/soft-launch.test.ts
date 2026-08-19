@@ -63,11 +63,15 @@ describe("care plans are hard-disabled", () => {
       "acceptTreatmentPlanPerVisit",
       "bookTreatmentPlanSession",
       "cancelTreatmentPlan",
+      "saveDoctorNotes",
       "getDoctorTreatmentPlans",
       "getPatientTreatmentPlansV2",
     ]) {
       expect(src, name).toContain(name);
     }
+    expect(src).toMatch(
+      /export async function saveDoctorNotes[\s\S]*?if \(!isCarePlansEnabled\(\)\) \{\s*return \{ error: CARE_PLANS_DISABLED_MESSAGE \};/
+    );
   });
 });
 
