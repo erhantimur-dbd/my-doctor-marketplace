@@ -53,6 +53,31 @@ describe("specialty invite config", () => {
     expect(getSpecialtyInvite("blood-tests")).toBeUndefined();
   });
 
+  it("non-override specialties use Parker’s 5-bullet template", () => {
+    const copy = getSpecialtyInvite("neurology");
+    expect(copy?.usps).toEqual([
+      "Built for neurology private practice — booking, calendar, video, payments for independent neurology clinicians.",
+      "Founding Free — claim a founding seat, build your profile before patient launch (no card).",
+      "Verified profile path — list with credentials patients can trust when discovery opens.",
+      "Specialty-ready listing — fees, consult types, and availability suited to neurology (not a generic GP-only form).",
+      "You stay clinically independent — MD360 is booking/video/payments software, not CQC / not care delivery.",
+    ]);
+  });
+
+  it("hard-rules: no Clinic £, live booking, care/Rx, or invented diagnoses", () => {
+    const forbidden =
+      /£\d|clinic plan|patients booking now|prescription|care plan|symptom ai|diagnose |we provide care|we treat/i;
+    for (const slug of medicalSlugs) {
+      const blob = getSpecialtyInvite(slug)!.usps.join(" ");
+      expect(blob, slug).not.toMatch(forbidden);
+    }
+    const landing = read(
+      "src/app/[locale]/(public)/invite/[specialty]/specialty-invite-landing.tsx"
+    );
+    expect(landing).not.toMatch(forbidden);
+    expect(landing).toContain("foundingRegisterHref");
+  });
+
   it("CTA helper points at founding free register with specialty", () => {
     expect(foundingRegisterHref("dentistry")).toBe(
       "/register-doctor?tier=free&founding=1&specialty=dentistry"
