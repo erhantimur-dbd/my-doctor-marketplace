@@ -26,7 +26,7 @@ const FOUNDING_CALLOUTS = [
     icon: Gift,
     title: "Founding Free — free forever",
     description:
-      "Claim a founding profile at no cost. Build it, get verified, and list publicly. Upgrade later when you want online bookings.",
+      "Claim a founding seat at no cost. Build your profile before patient launch. No card required.",
   },
   {
     icon: Users,
@@ -36,15 +36,15 @@ const FOUNDING_CALLOUTS = [
   },
   {
     icon: Calendar,
-    title: "Online booking when you are ready",
+    title: "Practice tools, when you enable them",
     description:
-      "Patients book the appointments you publish. You set availability, fees, and consultation types.",
+      "Booking, calendar, video, and payments software for your own list — not a live patient marketplace yet.",
   },
   {
     icon: CreditCard,
-    title: "Payments to your practice",
+    title: "You stay clinically independent",
     description:
-      "When you unlock bookings, patients pay through the platform and you get paid out — MyDoctors360 does not take over your care.",
+      "MyDoctors360 is booking, video, and payments software. We are not CQC-registered and do not provide or arrange care.",
   },
 ];
 
@@ -103,8 +103,8 @@ export function SpecialtyInviteLanding({
             Why {specialtyName.toLowerCase()} practices join
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
-            Practitioner tools — bookings, profile, and payments — not a
-            hospital or clinic run by MyDoctors360.
+            Marketplace software for independent clinicians — not care delivery
+            and not CQC.
           </p>
           <ul className="mt-8 space-y-3">
             {copy.usps.map((usp) => (
@@ -165,7 +165,8 @@ export function SpecialtyInviteLanding({
                 </h2>
                 <p className="mt-3 text-white/85">
                   Register on Founding Free. No card required. Your specialty
-                  will be preselected as {specialtyName}.
+                  is preselected as {specialtyName} — build the profile before
+                  patient discovery opens.
                 </p>
                 <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <Button

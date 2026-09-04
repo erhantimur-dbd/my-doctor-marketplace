@@ -37,8 +37,9 @@ export default function SpecialtyInviteIndexPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             Send a specialty landing page instead of a generic founding link.
-            Each page explains practitioner tools — bookings, profile, and
-            payments — and lands on Founding Free register.
+            Each page explains founding tools — booking, calendar, video, and
+            payments software — and lands on Founding Free register. No card
+            required.
           </p>
         </div>
       </section>

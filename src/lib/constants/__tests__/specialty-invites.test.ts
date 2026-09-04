@@ -25,8 +25,7 @@ describe("specialty invite config", () => {
       expect(SPECIALTY_INVITES[slug], slug).toBeTruthy();
       const copy = getSpecialtyInvite(slug);
       expect(copy, slug).toBeTruthy();
-      expect(copy!.usps.length).toBeGreaterThanOrEqual(3);
-      expect(copy!.usps.length).toBeLessThanOrEqual(5);
+      expect(copy!.usps).toHaveLength(5);
       expect(copy!.headline.length).toBeGreaterThan(10);
       expect(copy!.subhead.length).toBeGreaterThan(10);
       expect(isMedicalInviteSlug(slug)).toBe(true);
@@ -40,14 +39,18 @@ describe("specialty invite config", () => {
     }
   });
 
-  it("dentistry copy is practitioner-benefit framed", () => {
+  it("dentistry uses the locked 5-bullet pack", () => {
     const dentistry = getSpecialtyInvite("dentistry");
     expect(dentistry?.headline.toLowerCase()).toMatch(/dental/);
-    expect(dentistry?.usps.some((u) => /book/i.test(u))).toBe(true);
-    expect(dentistry?.usps.some((u) => /whitening|check-up/i.test(u))).toBe(
-      true
-    );
-    expect(dentistry?.clinicVsSolo).toMatch(/Clinic/i);
+    expect(dentistry?.usps[0]).toMatch(/private dental practice/i);
+    expect(dentistry?.usps[1]).toMatch(/Founding Free/i);
+    expect(dentistry?.usps[4]).toMatch(/not CQC/i);
+    expect(dentistry?.usps.join(" ")).not.toMatch(/£|Clinic plan|patients booking now/i);
+  });
+
+  it("does not invent unknown specialties", () => {
+    expect(getSpecialtyInvite("not-a-specialty")).toBeUndefined();
+    expect(getSpecialtyInvite("blood-tests")).toBeUndefined();
   });
 
   it("CTA helper points at founding free register with specialty", () => {
