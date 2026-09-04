@@ -39,13 +39,46 @@ describe("specialty invite config", () => {
     }
   });
 
-  it("dentistry uses the locked 5-bullet pack", () => {
-    const dentistry = getSpecialtyInvite("dentistry");
-    expect(dentistry?.headline.toLowerCase()).toMatch(/dental/);
-    expect(dentistry?.usps[0]).toMatch(/private dental practice/i);
-    expect(dentistry?.usps[1]).toMatch(/Founding Free/i);
-    expect(dentistry?.usps[4]).toMatch(/not CQC/i);
-    expect(dentistry?.usps.join(" ")).not.toMatch(/£|Clinic plan|patients booking now/i);
+  it("locked packs match Parker’s exact bullets", () => {
+    expect(getSpecialtyInvite("dentistry")?.usps).toEqual([
+      "Built for private dental practice — online booking, calendar, video consults, and payments for independent dentists.",
+      "Founding Free — claim a founding seat and build your clinic profile before patient discovery opens (no card).",
+      "Verified listing path — credentials and practice details patients can trust when the marketplace lifts.",
+      "Dental-ready profile — fees, consult types, and availability for exams, treatments, and follow-ups (not a GP-only form).",
+      "You stay clinically independent — MD360 is booking, video and payments software, not CQC and not care delivery.",
+    ]);
+    expect(getSpecialtyInvite("cardiology")?.usps).toEqual([
+      "Built for private cardiology — booking, calendar, video, and payments for independent cardiologists.",
+      "Founding Free — claim a founding seat and prepare your profile ahead of patient launch (no card).",
+      "Verified listing path — specialist credentials visible when discovery opens.",
+      "Cardiology-ready profile — consult fees, follow-up types, and availability suited to specialty clinics.",
+      "You stay clinically independent — marketplace tools only; MD360 does not provide or manage clinical care.",
+    ]);
+    expect(getSpecialtyInvite("general-practice")?.usps).toEqual([
+      "Built for independent private GPs — booking, calendar, video, and payments without a clinic chain.",
+      "Founding Free — first-100 founding seat, free profile build, no card required.",
+      "Verified listing path — patients find a checked profile when the patient side opens.",
+      "GP-ready profile — appointments, fees, and availability for private primary care consults.",
+      "You stay clinically independent — MD360 is software for booking/video/payments, not a care provider and not CQC-registered.",
+    ]);
+    expect(getSpecialtyInvite("dermatology")?.usps).toEqual([
+      "Built for private dermatology — booking, calendar, video, and payments for independent dermatologists.",
+      "Founding Free — claim a founding seat and build your specialty profile before launch (no card).",
+      "Verified listing path — specialist credentials ready for discovery day one.",
+      "Dermatology-ready profile — consult types, fees, and availability for clinic and video follow-ups.",
+      "You stay clinically independent — marketplace tools only; no CQC / no care delivery by MD360.",
+    ]);
+    const mentalHealthUsps = [
+      "Built for private mental-health practice — booking, calendar, video sessions, and payments for independent clinicians.",
+      "Founding Free — claim a founding seat and prepare your profile before patient discovery (no card).",
+      "Verified listing path — credentials patients can trust when listings go live.",
+      "Specialty-ready profile — session types, fees, and availability for video and in-clinic appointments.",
+      "You stay clinically independent — MD360 provides booking/video/payments software only, not clinical care and not CQC.",
+    ];
+    expect(getSpecialtyInvite("psychiatry")?.usps).toEqual(mentalHealthUsps);
+    expect(getSpecialtyInvite("psychology")?.usps).toEqual(mentalHealthUsps);
+    expect(getSpecialtyInvite("psychiatry")?.headline).toMatch(/psychiatry/i);
+    expect(getSpecialtyInvite("psychology")?.headline).toMatch(/psychology/i);
   });
 
   it("does not invent unknown specialties", () => {
