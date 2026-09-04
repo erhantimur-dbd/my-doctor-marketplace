@@ -85,7 +85,11 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   // doesn't swallow them before the page-level region check runs.
   "/regulatory",
   "/complaints",
-  // Invite / invitation deep links (clinic seat + doctor invites)
+  // Invite / invitation deep links:
+  //   /invite — specialty invite index
+  //   /invite/[specialty] — founding-doctor specialty landing (medical slugs)
+  //   /invite/[token] — clinic seat invites (64-char hex; same dynamic route)
+  //   /invitation — legacy invitation path
   "/invite",
   "/invitation",
   // Public survey pages

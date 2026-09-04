@@ -3,6 +3,7 @@ import { routing } from "@/i18n/routing";
 import { headers } from "next/headers";
 import type { MetadataRoute } from "next";
 import { regionFromHost } from "@/lib/region";
+import { getSpecialtyInviteSlugs } from "@/lib/constants/specialty-invites";
 
 const { locales } = routing;
 
@@ -36,6 +37,7 @@ const SOFT_LAUNCH_PUBLIC_PAGES = [
   "/login",
   "/register",
   "/register-doctor",
+  "/invite",
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -52,13 +54,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // that actually return the app (doctor soft-launch allowlist). Full patient
   // sitemap (home, doctors, blog, specialties) returns after gate lift.
   if (softLaunch) {
+    const inviteSpecialtyPages = getSpecialtyInviteSlugs().map(
+      (slug) => `/invite/${slug}`
+    );
     const softEntries = locales.flatMap((locale) =>
-      SOFT_LAUNCH_PUBLIC_PAGES.map((page) => ({
+      [...SOFT_LAUNCH_PUBLIC_PAGES, ...inviteSpecialtyPages].map((page) => ({
         url: `${BASE_URL}/${locale}${page}`,
         lastModified: new Date(),
         changeFrequency: "weekly" as const,
         priority:
-          page === "/register-doctor" || page === "/pricing" ? 0.9 : 0.6,
+          page === "/register-doctor" ||
+          page === "/pricing" ||
+          page.startsWith("/invite")
+            ? 0.9
+            : 0.6,
       }))
     );
 
@@ -99,13 +108,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/login",
     "/register",
     "/register-doctor",
+    "/invite",
   ];
+  const inviteSlugPages = getSpecialtyInviteSlugs().map(
+    (slug) => `/invite/${slug}`
+  );
   const publicEntries = locales.flatMap((locale) =>
-    publicPages.map((page) => ({
+    [...publicPages, ...inviteSlugPages].map((page) => ({
       url: `${BASE_URL}/${locale}${page}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
-      priority: 0.7,
+      priority: page.startsWith("/invite") ? 0.8 : 0.7,
     }))
   );
 

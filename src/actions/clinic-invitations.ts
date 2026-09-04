@@ -40,7 +40,7 @@ export async function getClinicInvitations() {
   return { error: null, invitations: data ?? [] };
 }
 
-/** Resolve an invitation token — called on the public /invite/[token] page */
+/** Resolve an invitation token — called on the public /invite/[specialty] dispatcher for 64-hex tokens */
 export async function resolveInviteToken(token: string) {
   const adminSupabase = createAdminClient();
 
