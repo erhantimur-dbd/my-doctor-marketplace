@@ -3,7 +3,7 @@ import { routing } from "@/i18n/routing";
 import { headers } from "next/headers";
 import type { MetadataRoute } from "next";
 import { regionFromHost } from "@/lib/region";
-import { getSpecialtyInviteSlugs } from "@/lib/constants/specialty-invites";
+import { getMedicalSpecialties } from "@/lib/constants/specialties";
 
 const { locales } = routing;
 
@@ -54,8 +54,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // that actually return the app (doctor soft-launch allowlist). Full patient
   // sitemap (home, doctors, blog, specialties) returns after gate lift.
   if (softLaunch) {
-    const inviteSpecialtyPages = getSpecialtyInviteSlugs().map(
-      (slug) => `/invite/${slug}`
+    const inviteSpecialtyPages = getMedicalSpecialties().map(
+      (spec) => `/invite/${spec.slug}`
     );
     const softEntries = locales.flatMap((locale) =>
       [...SOFT_LAUNCH_PUBLIC_PAGES, ...inviteSpecialtyPages].map((page) => ({
@@ -110,8 +110,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/register-doctor",
     "/invite",
   ];
-  const inviteSlugPages = getSpecialtyInviteSlugs().map(
-    (slug) => `/invite/${slug}`
+  const inviteSlugPages = getMedicalSpecialties().map(
+    (spec) => `/invite/${spec.slug}`
   );
   const publicEntries = locales.flatMap((locale) =>
     [...publicPages, ...inviteSlugPages].map((page) => ({

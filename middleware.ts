@@ -86,10 +86,10 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   "/regulatory",
   "/complaints",
   // Invite / invitation deep links:
-  //   /invite — specialty invite index
-  //   /invite/[specialty] — founding-doctor specialty landing (medical slugs)
-  //   /invite/[token] — clinic seat invites (64-char hex; same dynamic route)
-  //   /invitation — legacy invitation path
+  //   /invite — specialty invite index + medical-slug landings
+  //   /invite/<64-hex> — rewritten in next.config to /invite/accept/[token]
+  //   /invitation — follow-up care-plan invitations (not clinic seats)
+  // Keep this file free of invite-page / clinic-seat / Stripe imports (Edge).
   "/invite",
   "/invitation",
   // Public survey pages

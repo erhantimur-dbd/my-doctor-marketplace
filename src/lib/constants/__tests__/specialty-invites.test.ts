@@ -137,7 +137,9 @@ describe("specialty invite routes and gates", () => {
     expect(page).toContain("generateStaticParams");
     expect(page).toContain("notFound()");
     expect(page).toContain("isTestingSpecialtySlug");
-    expect(page).toContain("isClinicInviteToken");
+    expect(page).not.toContain("clinic-invitations");
+    expect(page).not.toContain("ClinicInvitePage");
+    expect(page).not.toContain("isClinicInviteToken");
     expect(landing).toContain("foundingRegisterHref");
     expect(landing).toContain('href="/pricing"');
   });
@@ -149,6 +151,24 @@ describe("specialty invite routes and gates", () => {
     expect(middleware).toContain('"/invite"');
     expect(vercel).toMatch(/invite/);
     expect(sitemap).toContain('"/invite"');
-    expect(sitemap).toContain("getSpecialtyInviteSlugs");
+    expect(sitemap).toContain("getMedicalSpecialties");
+    expect(sitemap).not.toContain("specialty-invites");
+  });
+
+  it("edge middleware graph stays free of invite/clinic/stripe modules", () => {
+    const middleware = read("middleware.ts");
+    const supabaseMw = read("src/lib/supabase/middleware.ts");
+    const routing = read("src/i18n/routing.ts");
+    for (const src of [middleware, supabaseMw, routing]) {
+      const imports = src
+        .split("\n")
+        .filter((line) => line.trim().startsWith("import "))
+        .join("\n");
+      expect(imports).not.toMatch(
+        /specialty-invites|clinic-invitations|@\/lib\/stripe|resend/i
+      );
+    }
+    const nextConfig = read("next.config.ts");
+    expect(nextConfig).toMatch(/invite\/accept\/:token/);
   });
 });

@@ -5,15 +5,10 @@ import { getSpecialtyMeta } from "@/lib/constants/specialties";
 import {
   getSpecialtyInvite,
   getSpecialtyInviteSlugs,
-  isClinicInviteToken,
   isTestingSpecialtySlug,
 } from "@/lib/constants/specialty-invites";
 import { formatSpecialtyName } from "@/lib/utils";
 import { SpecialtyInviteLanding } from "./specialty-invite-landing";
-import {
-  ClinicInvitePage,
-  clinicInviteMetadata,
-} from "./clinic-invite-page";
 
 interface PageParams {
   params: Promise<{ locale: string; specialty: string }>;
@@ -23,8 +18,8 @@ export function generateStaticParams() {
   return getSpecialtyInviteSlugs().map((specialty) => ({ specialty }));
 }
 
-/** Clinic seat tokens remain reachable at /invite/[64-hex]. */
-export const dynamicParams = true;
+/** Unknown / testing slugs 404. Clinic seat tokens are rewritten to /invite/accept/[token]. */
+export const dynamicParams = false;
 
 export async function generateMetadata({
   params,
@@ -37,37 +32,29 @@ export async function generateMetadata({
 
   const meta = getSpecialtyMeta(specialty);
   const copy = getSpecialtyInvite(specialty);
-  if (meta && copy) {
-    const name = formatSpecialtyName(meta.nameKey);
-    return seoMeta({
-      title: `${name} — Founding Doctor Invite`,
-      description: copy.subhead,
-      path: `/${locale}/invite/${specialty}`,
-    });
+  if (!meta || !copy) {
+    return { title: "Invite Not Found" };
   }
 
-  if (isClinicInviteToken(specialty)) {
-    return clinicInviteMetadata(specialty);
-  }
-
-  return { title: "Invite Not Found" };
+  const name = formatSpecialtyName(meta.nameKey);
+  return seoMeta({
+    title: `${name} — Founding Doctor Invite`,
+    description: copy.subhead,
+    path: `/${locale}/invite/${specialty}`,
+  });
 }
 
 export default async function SpecialtyInvitePage({ params }: PageParams) {
-  const { locale, specialty } = await params;
+  const { specialty } = await params;
 
   if (isTestingSpecialtySlug(specialty)) {
     notFound();
   }
 
   const copy = getSpecialtyInvite(specialty);
-  if (copy) {
-    return <SpecialtyInviteLanding slug={specialty} copy={copy} />;
+  if (!copy) {
+    notFound();
   }
 
-  if (isClinicInviteToken(specialty)) {
-    return <ClinicInvitePage locale={locale} token={specialty} />;
-  }
-
-  notFound();
+  return <SpecialtyInviteLanding slug={specialty} copy={copy} />;
 }

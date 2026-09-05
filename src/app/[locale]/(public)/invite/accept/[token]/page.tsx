@@ -3,7 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { InviteAcceptClient } from "./invite-accept-client";
 import type { Metadata } from "next";
 
-export async function clinicInviteMetadata(token: string): Promise<Metadata> {
+interface Props {
+  params: Promise<{ locale: string; token: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { token } = await params;
   const { invite } = await resolveInviteToken(token);
   const clinicName = invite?.organization?.name ?? "a clinic";
   return {
@@ -13,13 +18,9 @@ export async function clinicInviteMetadata(token: string): Promise<Metadata> {
   };
 }
 
-export async function ClinicInvitePage({
-  locale,
-  token,
-}: {
-  locale: string;
-  token: string;
-}) {
+export default async function ClinicInviteAcceptPage({ params }: Props) {
+  const { locale, token } = await params;
+
   const { invite, error } = await resolveInviteToken(token);
 
   const supabase = await createClient();

@@ -30,6 +30,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      // Clinic seat tokens stay at /invite/<64-hex> for existing emails.
+      // Rewrite keeps Stripe/Resend/admin off the specialty-invite page graph
+      // so they cannot leak into the Edge middleware bundle.
+      {
+        source:
+          "/:locale(en|de|tr|fr|it|es|pt|zh|ja)/invite/:token([a-fA-F0-9]{64})",
+        destination: "/:locale/invite/accept/:token",
+      },
+    ];
+  },
   async headers() {
     return [
       {
