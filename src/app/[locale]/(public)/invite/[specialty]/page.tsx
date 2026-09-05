@@ -18,7 +18,7 @@ export function generateStaticParams() {
   return getSpecialtyInviteSlugs().map((specialty) => ({ specialty }));
 }
 
-/** Unknown / testing slugs 404. Clinic seat tokens are rewritten to /invite/accept/[token]. */
+/** Unknown / testing slugs 404. Clinic seat tokens are rewritten in middleware to /invite/accept/[token]. */
 export const dynamicParams = false;
 
 export async function generateMetadata({

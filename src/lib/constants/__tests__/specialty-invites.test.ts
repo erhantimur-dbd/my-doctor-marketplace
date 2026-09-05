@@ -169,6 +169,14 @@ describe("specialty invite routes and gates", () => {
       );
     }
     const nextConfig = read("next.config.ts");
-    expect(nextConfig).toMatch(/invite\/accept\/:token/);
+    // next.config rewrites() + Sentry tunnelRoute crashed Preview Edge.
+    // Clinic hex rewrite lives in middleware.ts (string scan only).
+    expect(nextConfig).not.toMatch(/async\s+rewrites\s*\(/);
+    expect(nextConfig).not.toMatch(/invite\/accept\/:token/);
+    expect(middleware).toContain("rewriteClinicInviteRequest");
+    expect(middleware).toContain("isClinicInviteToken");
+    expect(middleware).toContain("@/lib/clinic-invite-token");
+    expect(supabaseMw).toMatch(/missing NEXT_PUBLIC_SUPABASE_URL/);
+    expect(supabaseMw).toContain("updateSession failed");
   });
 });

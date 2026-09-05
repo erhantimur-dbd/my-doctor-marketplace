@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { isClinicInviteToken } from "@/lib/clinic-invite-token";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 
@@ -87,9 +88,9 @@ const COMING_SOON_ALLOWED_PREFIXES = [
   "/complaints",
   // Invite / invitation deep links:
   //   /invite — specialty invite index + medical-slug landings
-  //   /invite/<64-hex> — rewritten in next.config to /invite/accept/[token]
+  //   /invite/<64-hex> — rewritten below to /invite/accept/[token]
   //   /invitation — follow-up care-plan invitations (not clinic seats)
-  // Keep this file free of invite-page / clinic-seat / Stripe imports (Edge).
+  // Do not import invite pages, clinic-invitations, Stripe, or Resend (Edge).
   "/invite",
   "/invitation",
   // Public survey pages
@@ -119,7 +120,30 @@ function isAllowedOnComingSoon(pathname: string): boolean {
   });
 }
 
-export async function middleware(request: NextRequest) {
+/**
+ * Existing clinic emails use /{locale}/invite/{64-hex}. Specialty landings
+ * live at /invite/[specialty]. Rewrite hex tokens in middleware with a
+ * string scan — do NOT add next.config rewrites() for this. Custom
+ * rewrites() are merged by @sentry/nextjs (tunnelRoute: /monitoring) into
+ * the Edge routing table; a :token([a-fA-F0-9]{64}) matcher there is a
+ * known way to crash every path with MIDDLEWARE_INVOCATION_FAILED.
+ */
+function rewriteClinicInviteRequest(request: NextRequest): NextRequest {
+  const pathname = request.nextUrl.pathname;
+  const parts = pathname.split("/");
+  if (
+    parts.length !== 4 ||
+    parts[2] !== "invite" ||
+    !isClinicInviteToken(parts[3] ?? "")
+  ) {
+    return request;
+  }
+  const url = request.nextUrl.clone();
+  url.pathname = `/${parts[1]}/invite/accept/${parts[3]}`;
+  return new NextRequest(url, request);
+}
+
+async function runMiddleware(request: NextRequest) {
   // Serve /sitemap.xml and /robots.txt straight from the root-level metadata
   // routes (src/app/sitemap.ts, src/app/robots.ts). Without this early return,
   // next-intl rewrites them to /{locale}/sitemap.xml, which doesn't exist and
@@ -143,6 +167,8 @@ export async function middleware(request: NextRequest) {
     }
     // Allowed path — fall through to normal middleware (intl + auth + RBAC).
   }
+
+  request = rewriteClinicInviteRequest(request);
 
   // Run intl middleware first
   const intlResponse = intlMiddleware(request);
@@ -183,7 +209,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // MFA enforcement: if user has MFA enrolled but session is AAL1, redirect to verify-mfa
-  if (user && (isPatientRoute || isDoctorRoute || isAdminRoute)) {
+  if (user && supabase && (isPatientRoute || isDoctorRoute || isAdminRoute)) {
     const isMfaPage = pathnameWithoutLocale.startsWith("/verify-mfa");
     if (!isMfaPage) {
       const { data: aal } =
@@ -197,7 +223,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Role-based access control: enforce role boundaries for all protected routes
-  if ((isPatientRoute || isDoctorRoute || isAdminRoute) && user) {
+  if ((isPatientRoute || isDoctorRoute || isAdminRoute) && user && supabase) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role, terms_accepted_at")
@@ -273,7 +299,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // License enforcement: redirect suspended orgs to billing page
-  if (isDoctorRoute && user) {
+  if (isDoctorRoute && user && supabase) {
     const billingPages = [
       "/doctor-dashboard/organization/billing",
       "/doctor-dashboard/subscription",
@@ -311,6 +337,18 @@ export async function middleware(request: NextRequest) {
   }
 
   return intlResponse;
+}
+
+export async function middleware(request: NextRequest) {
+  try {
+    return await runMiddleware(request);
+  } catch (error) {
+    // Invoke-time throws become MIDDLEWARE_INVOCATION_FAILED (HTTP 500) on
+    // every path after Deployment Protection SSO. Fall through rather than
+    // take the site down. Module-load crashes still 500.
+    console.error("[middleware] invocation failed:", error);
+    return NextResponse.next();
+  }
 }
 
 export const config = {

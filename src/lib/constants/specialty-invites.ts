@@ -121,12 +121,7 @@ for (const spec of getMedicalSpecialties()) {
   }
 }
 
-/** Clinic seat-invite tokens are 32-byte hex strings (64 chars). */
-const CLINIC_INVITE_TOKEN = /^[a-f0-9]{64}$/i;
-
-export function isClinicInviteToken(value: string): boolean {
-  return CLINIC_INVITE_TOKEN.test(value);
-}
+export { isClinicInviteToken } from "@/lib/clinic-invite-token";
 
 export function isTestingSpecialtySlug(slug: string): boolean {
   return getTestingSpecialties().some((s) => s.slug === slug);
