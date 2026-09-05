@@ -8,6 +8,7 @@ import {
   isTestingSpecialtySlug,
 } from "@/lib/constants/specialty-invites";
 import { formatSpecialtyName } from "@/lib/utils";
+import { routing } from "@/i18n/routing";
 import { SpecialtyInviteLanding } from "./specialty-invite-landing";
 
 interface PageParams {
@@ -15,11 +16,18 @@ interface PageParams {
 }
 
 export function generateStaticParams() {
-  return getSpecialtyInviteSlugs().map((specialty) => ({ specialty }));
+  return routing.locales.flatMap((locale) =>
+    getSpecialtyInviteSlugs().map((specialty) => ({ locale, specialty }))
+  );
 }
 
-/** Unknown / testing slugs 404. Clinic seat tokens are rewritten in middleware to /invite/accept/[token]. */
-export const dynamicParams = false;
+/**
+ * Parent [locale] layout reads auth cookies via Supabase.
+ * generateStaticParams + dynamicParams=false 404s every medical slug on
+ * Preview (paths never SSG) and can throw DYNAMIC_SERVER_USAGE on siblings
+ * such as /pricing — same class of bug as conditions/[slug].
+ */
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

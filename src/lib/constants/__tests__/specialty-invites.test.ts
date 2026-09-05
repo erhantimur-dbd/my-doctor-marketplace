@@ -135,6 +135,8 @@ describe("specialty invite routes and gates", () => {
       "src/app/[locale]/(public)/invite/[specialty]/specialty-invite-landing.tsx"
     );
     expect(page).toContain("generateStaticParams");
+    expect(page).toContain('dynamic = "force-dynamic"');
+    expect(page).not.toContain("dynamicParams = false");
     expect(page).toContain("notFound()");
     expect(page).toContain("isTestingSpecialtySlug");
     expect(page).not.toContain("clinic-invitations");
@@ -173,8 +175,9 @@ describe("specialty invite routes and gates", () => {
     // Clinic hex rewrite lives in middleware.ts (string scan only).
     expect(nextConfig).not.toMatch(/async\s+rewrites\s*\(/);
     expect(nextConfig).not.toMatch(/invite\/accept\/:token/);
-    expect(middleware).toContain("rewriteClinicInviteRequest");
+    expect(middleware).toContain("clinicInviteAcceptPath");
     expect(middleware).toContain("isClinicInviteToken");
+    expect(middleware).not.toMatch(/invocation failed/);
     expect(middleware).toContain("@/lib/clinic-invite-token");
     expect(supabaseMw).toMatch(/missing NEXT_PUBLIC_SUPABASE_URL/);
     expect(supabaseMw).toContain("updateSession failed");

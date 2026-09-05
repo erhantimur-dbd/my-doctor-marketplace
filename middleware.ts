@@ -122,28 +122,26 @@ function isAllowedOnComingSoon(pathname: string): boolean {
 
 /**
  * Existing clinic emails use /{locale}/invite/{64-hex}. Specialty landings
- * live at /invite/[specialty]. Rewrite hex tokens in middleware with a
- * string scan — do NOT add next.config rewrites() for this. Custom
- * rewrites() are merged by @sentry/nextjs (tunnelRoute: /monitoring) into
- * the Edge routing table; a :token([a-fA-F0-9]{64}) matcher there is a
- * known way to crash every path with MIDDLEWARE_INVOCATION_FAILED.
+ * live at /invite/[specialty]. Rewrite hex tokens with a string scan —
+ * do NOT add next.config rewrites() for this. Custom rewrites() are merged
+ * by @sentry/nextjs (tunnelRoute: /monitoring) into the Edge routing table
+ * and can crash every path with MIDDLEWARE_INVOCATION_FAILED.
+ *
+ * Only 64-char hex matches. Slugs like "dentistry" are left untouched.
  */
-function rewriteClinicInviteRequest(request: NextRequest): NextRequest {
-  const pathname = request.nextUrl.pathname;
+function clinicInviteAcceptPath(pathname: string): string | null {
   const parts = pathname.split("/");
   if (
     parts.length !== 4 ||
     parts[2] !== "invite" ||
     !isClinicInviteToken(parts[3] ?? "")
   ) {
-    return request;
+    return null;
   }
-  const url = request.nextUrl.clone();
-  url.pathname = `/${parts[1]}/invite/accept/${parts[3]}`;
-  return new NextRequest(url, request);
+  return `/${parts[1]}/invite/accept/${parts[3]}`;
 }
 
-async function runMiddleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Serve /sitemap.xml and /robots.txt straight from the root-level metadata
   // routes (src/app/sitemap.ts, src/app/robots.ts). Without this early return,
   // next-intl rewrites them to /{locale}/sitemap.xml, which doesn't exist and
@@ -168,13 +166,23 @@ async function runMiddleware(request: NextRequest) {
     // Allowed path — fall through to normal middleware (intl + auth + RBAC).
   }
 
-  request = rewriteClinicInviteRequest(request);
-
-  // Run intl middleware first
+  // Run intl middleware first. Never fall back to NextResponse.next() —
+  // that skips next-intl and makes getLocale() 500 on /pricing.
   const intlResponse = intlMiddleware(request);
 
   // Update Supabase session
   const { supabase, user } = await updateSession(request, intlResponse);
+
+  const clinicAcceptPath = clinicInviteAcceptPath(request.nextUrl.pathname);
+  if (clinicAcceptPath) {
+    const dest = request.nextUrl.clone();
+    dest.pathname = clinicAcceptPath;
+    const rewrite = NextResponse.rewrite(dest);
+    intlResponse.cookies.getAll().forEach((cookie) => {
+      rewrite.cookies.set(cookie);
+    });
+    return rewrite;
+  }
 
   const pathname = request.nextUrl.pathname;
   const pathnameWithoutLocale = getPathnameWithoutLocale(pathname);
@@ -337,18 +345,6 @@ async function runMiddleware(request: NextRequest) {
   }
 
   return intlResponse;
-}
-
-export async function middleware(request: NextRequest) {
-  try {
-    return await runMiddleware(request);
-  } catch (error) {
-    // Invoke-time throws become MIDDLEWARE_INVOCATION_FAILED (HTTP 500) on
-    // every path after Deployment Protection SSO. Fall through rather than
-    // take the site down. Module-load crashes still 500.
-    console.error("[middleware] invocation failed:", error);
-    return NextResponse.next();
-  }
 }
 
 export const config = {
