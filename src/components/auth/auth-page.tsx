@@ -28,6 +28,10 @@ import type { BookingAuthContext } from "@/lib/auth/booking-context";
 
 import { login, register } from "@/actions/auth";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
+import {
+  FOUNDING_REGISTER_HREF,
+  SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME,
+} from "@/lib/constants/company";
 
 /* ── AuthPage ── */
 
@@ -137,6 +141,13 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   }
 
   function handleTabChange(value: string) {
+    if (
+      SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME &&
+      value === "sign-up"
+    ) {
+      router.replace(FOUNDING_REGISTER_HREF);
+      return;
+    }
     setActiveTab(value);
     setError("");
     setNeedsVerificationEmail(null);
@@ -176,12 +187,14 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         {/* ── Tab triggers ── */}
         <TabsList className="w-full rounded-none border-b bg-muted/50 p-0 h-12">
-          <TabsTrigger
-            value="sign-up"
-            className="flex-1 rounded-none h-full text-sm font-semibold data-[state=active]:shadow-none data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary"
-          >
-            {t("tab_sign_up")}
-          </TabsTrigger>
+          {!SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME && (
+            <TabsTrigger
+              value="sign-up"
+              className="flex-1 rounded-none h-full text-sm font-semibold data-[state=active]:shadow-none data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary"
+            >
+              {t("tab_sign_up")}
+            </TabsTrigger>
+          )}
           <TabsTrigger
             value="sign-in"
             className="flex-1 rounded-none h-full text-sm font-semibold data-[state=active]:shadow-none data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary"
@@ -390,7 +403,11 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
             <Stethoscope className="h-4 w-4" />
             {t("doctor_cta")}{" "}
             <Link
-              href="/register-doctor"
+              href={
+                SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                  ? FOUNDING_REGISTER_HREF
+                  : "/register-doctor"
+              }
               className="font-medium text-primary hover:underline"
             >
               {t("doctor_cta_link")}

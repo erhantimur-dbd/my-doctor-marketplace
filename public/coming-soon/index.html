@@ -6,7 +6,7 @@
   <title>MyDoctors360 — Founding Doctor Programme | Private Practice, Reimagined</title>
   <meta name="description" content="MyDoctors360 is launching soon across the UK and Europe. Join the Founding Doctor Programme — exclusive perks and pricing locked in for the first 100 doctors. Apply today." />
   <meta property="og:title" content="MyDoctors360 — Founding Doctor Programme" />
-  <meta property="og:description" content="A modern private practice platform for UK and European doctors. Limited founding spots — exclusive pricing and perks locked in for life." />
+  <meta property="og:description" content="A modern private practice platform for UK and European doctors. First 100 founding doctors — exclusive pricing and perks locked in for life." />
   <meta property="og:type" content="website" />
   <meta name="google-site-verification" content="EdM0owW0expdv2fT1tiUvYx9ibGdw3FW_k7489bQRmE" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -829,22 +829,7 @@
     });
 
 
-    // Live founding spots (best-effort; keep static fallback on failure)
-    (async function loadFoundingSpots() {
-      try {
-        const res = await fetch('/api/founding/status', { credentials: 'omit' });
-        if (!res.ok) return;
-        const data = await res.json();
-        const label = document.getElementById('foundingSpotsLabel');
-        if (!label || typeof data.remainingSpots !== 'number') return;
-        // Cap only — do not show remaining-count occupancy theatre.
-        if (!data.isOpen || data.remainingSpots <= 0) {
-          label.textContent = 'Founding programme is full — you can still register on Free';
-        } else {
-          label.textContent = 'First 100 founding doctors';
-        }
-      } catch (_) { /* keep static copy */ }
-    })();
+    // Do not overwrite the founding band with remaining-count occupancy.
 
     function showError(msg) {
       errorMsgEl.textContent = msg;

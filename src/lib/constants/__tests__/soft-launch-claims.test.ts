@@ -36,6 +36,12 @@ describe("Soft Launch public claims", () => {
         /Reminders, follow-ups, invoices and treatment plans/
       );
       expect(text, rel).not.toMatch(/Ready to Book Your First Appointment/);
+      expect(text, rel).not.toMatch(/Only 100 of 100 founding spots left/);
+      expect(text, rel).not.toMatch(/founding spots left/i);
+      expect(text, rel).not.toMatch(/thousands of patients/i);
+      expect(text, rel).not.toMatch(/treatment tags/i);
+      expect(text, rel).not.toMatch(/Chat or speak to find a doctor/i);
+      expect(text, rel).not.toMatch(/Book Instantly/);
     }
   });
 
@@ -44,6 +50,8 @@ describe("Soft Launch public claims", () => {
     expect(pricing).toMatch(/Patient records and booking history/);
     expect(pricing).toMatch(/Join the Founding Doctor Programme/);
     expect(pricing).toMatch(/register-doctor\?tier=free&founding=1/);
+    expect(pricing).toMatch(/Reach patients looking for your specialty/);
+    expect(pricing).not.toMatch(/treatment tags/i);
   });
 
   it("coming-soon founding band and why-doctors grid match Legal copy", () => {
@@ -53,6 +61,8 @@ describe("Soft Launch public claims", () => {
     expect(html).toMatch(
       /patient CRM and waitlist auto-notify/
     );
+    expect(html).not.toMatch(/remainingSpots|spots left|filling up/i);
+    expect(html).not.toMatch(/loadFoundingSpots/);
   });
 
   it("how-it-works and register are doctor Founding surfaces", () => {
@@ -60,6 +70,9 @@ describe("Soft Launch public claims", () => {
     expect(how).toMatch(/Founding Doctor Programme/);
     expect(how).not.toMatch(/href=["']\/doctors["']/);
     expect(how).not.toMatch(/Create Free Account/);
+    expect(how).not.toMatch(/thousands of patients/i);
+    expect(how).not.toMatch(/Book Instantly/);
+    expect(how).not.toMatch(/Ready to Book Your First Appointment/);
 
     const register = read("src/app/[locale]/(auth)/register/page.tsx");
     expect(register).toMatch(/Patient registration opens at launch/);
@@ -79,5 +92,13 @@ describe("Soft Launch public claims", () => {
     expect(header).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
     expect(footer).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
     expect(footer).toMatch(/Founding Programme/);
+    expect(header).toMatch(/for_doctors/);
+    expect(header).not.toMatch(/href=["']\/register["']/);
+  });
+
+  it("does not mount patient-finder chat on Soft Launch layout", () => {
+    const layout = read("src/app/[locale]/layout.tsx");
+    expect(layout).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
+    expect(layout).toMatch(/!SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
   });
 });

@@ -22,7 +22,11 @@ export function Footer() {
               <Logo className="h-6 w-6 text-primary" />
               <div className="flex flex-col">
                 <span className="text-lg font-bold leading-tight">MyDoctors360</span>
-                <span className="text-[10px] text-muted-foreground">{t("brand_tagline")}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                    ? "Founding Doctor Programme"
+                    : t("brand_tagline")}
+                </span>
               </div>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">

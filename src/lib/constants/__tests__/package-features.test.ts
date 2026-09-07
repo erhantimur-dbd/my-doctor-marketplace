@@ -98,7 +98,7 @@ describe("public packaging copy does not contradict matrix", () => {
     expect(html).toMatch(/Solo practice or multi-doctor clinic/i);
     expect(html).not.toMatch(/1–4 doctor|up to 4 seats|per-user multi/i);
     expect(html).toMatch(/First 100 founding doctors/);
-    expect(html).not.toMatch(/filling up fast|Only 100 spots/i);
+    expect(html).not.toMatch(/filling up fast|Only 100 spots|spots left/i);
     expect(html).not.toMatch(/patient CRM, care plans/i);
     expect(html).not.toMatch(/treatment plans handled/i);
     expect(html).toMatch(/marketplace platform, not a care provider/i);

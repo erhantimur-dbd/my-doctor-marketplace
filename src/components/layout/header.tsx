@@ -109,7 +109,11 @@ export function Header() {
           <Logo className="h-7 w-7 text-primary" />
           <div className="flex flex-col">
             <span className="text-xl font-bold tracking-tight leading-tight">MyDoctors360</span>
-            <span className="text-[10px] text-muted-foreground">{t("brand_tagline")}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                ? "Founding Doctor Programme"
+                : t("brand_tagline")}
+            </span>
           </div>
         </Link>
 
@@ -141,7 +145,11 @@ export function Header() {
                 <Link href="/login">{t("login")}</Link>
               </Button>
               <Button size="sm" asChild>
-                <Link href={registerHref}>{t("register")}</Link>
+                <Link href={registerHref}>
+                  {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                    ? t("for_doctors")
+                    : t("register")}
+                </Link>
               </Button>
             </div>
           )}
@@ -401,7 +409,9 @@ export function Header() {
                       </Button>
                       <Button className="w-full" size="lg" variant="outline" asChild>
                         <Link href={registerHref} onClick={() => setMobileOpen(false)}>
-                          {t("register")}
+                          {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                            ? t("for_doctors")
+                            : t("register")}
                         </Link>
                       </Button>
                     </div>
@@ -413,7 +423,11 @@ export function Header() {
               <SheetFooter className="border-t px-6 py-4">
                 <div className="flex w-full items-center justify-center gap-1.5 text-xs text-muted-foreground">
                   <Shield className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>{tHome("trusted_by")}</span>
+                  <span>
+                    {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                      ? "First 100 founding doctors"
+                      : tHome("trusted_by")}
+                  </span>
                 </div>
               </SheetFooter>
             </SheetContent>

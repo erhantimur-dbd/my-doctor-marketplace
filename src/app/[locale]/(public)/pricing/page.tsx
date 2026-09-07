@@ -48,7 +48,7 @@ const BENEFITS = [
   {
     icon: Target,
     title: "Reach target patients",
-    description: "Reach target patients with treatment tags.",
+    description: "Reach patients looking for your specialty.",
   },
   {
     icon: MessageSquareHeart,
