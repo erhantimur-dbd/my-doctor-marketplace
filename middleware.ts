@@ -6,6 +6,7 @@ import {
   comingSoonGateApplies,
   isAllowedOnComingSoon,
 } from "@/lib/soft-launch/coming-soon-gate";
+import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -46,7 +47,10 @@ export async function middleware(request: NextRequest) {
   // *.vercel.app does not match those hosts. While Soft Launch chrome is on,
   // apply the same allowlist on every host so /en/doctors stays dark.
   const host = request.headers.get("host")?.replace(/:\d+$/, "") || "";
-  if (comingSoonGateApplies(host)) {
+  if (
+    SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME ||
+    comingSoonGateApplies(host)
+  ) {
     if (!isAllowedOnComingSoon(request.nextUrl.pathname)) {
       return NextResponse.rewrite(
         new URL("/coming-soon/index.html", request.url)
