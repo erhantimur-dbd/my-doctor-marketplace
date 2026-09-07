@@ -67,6 +67,12 @@ describe("Soft Launch public claims", () => {
     expect(register).not.toMatch(/AuthPage/);
   });
 
+  it("Next homepage redirects to coming-soon while Soft Launch chrome is on", () => {
+    const home = read("src/app/[locale]/page.tsx");
+    expect(home).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
+    expect(home).toMatch(/redirect\("\/coming-soon\/index.html"\)/);
+  });
+
   it("header/footer hide patient-search CTAs while Soft Launch chrome is on", () => {
     const header = read("src/components/layout/header.tsx");
     const footer = read("src/components/layout/footer.tsx");
