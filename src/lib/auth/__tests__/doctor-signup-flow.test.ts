@@ -30,6 +30,22 @@ describe("doctor signup flow contracts", () => {
     expect(allowBlock).not.toContain('"/doctors"');
   });
 
+  it("middleware never swallows next-intl with NextResponse.next() on locale routes", () => {
+    const middleware = read("middleware.ts");
+    const session = read("src/lib/supabase/middleware.ts");
+    // Only sitemap/robots may use NextResponse.next(); locale paths return intlResponse
+    const nextCalls = middleware.match(/return NextResponse\.next\(\)/g) ?? [];
+    expect(nextCalls.length).toBe(1);
+    expect(middleware).toMatch(/sitemap\.xml/);
+    expect(middleware).toMatch(/return intlResponse/);
+    expect(middleware).not.toMatch(
+      /catch[\s\S]{0,200}return NextResponse\.next\(\)/
+    );
+    // Session refresh must not throw after SSO (Preview MIDDLEWARE_INVOCATION_FAILED)
+    expect(session).toMatch(/Must never throw/);
+    expect(session).toMatch(/return \{ supabase: null, user: null, response \}/);
+  });
+
   it("exposes free and paid registration actions sharing account creation", () => {
     const auth = read("src/actions/auth.ts");
     expect(auth).toMatch(/async function createDoctorAccount/);

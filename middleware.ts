@@ -140,10 +140,12 @@ export async function middleware(request: NextRequest) {
     // Allowed path — fall through to normal middleware (intl + auth + RBAC).
   }
 
-  // Run intl middleware first
+  // Run intl middleware first. Never fall back to NextResponse.next() on
+  // locale routes — that skips next-intl headers and makes getLocale() 500
+  // (specialty #19). updateSession must not throw; if it cannot refresh
+  // cookies it returns null supabase/user and we still return intlResponse.
   const intlResponse = intlMiddleware(request);
 
-  // Update Supabase session
   const { supabase, user } = await updateSession(request, intlResponse);
 
   const pathname = request.nextUrl.pathname;
@@ -179,7 +181,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // MFA enforcement: if user has MFA enrolled but session is AAL1, redirect to verify-mfa
-  if (user && (isPatientRoute || isDoctorRoute || isAdminRoute)) {
+  if (user && supabase && (isPatientRoute || isDoctorRoute || isAdminRoute)) {
     const isMfaPage = pathnameWithoutLocale.startsWith("/verify-mfa");
     if (!isMfaPage) {
       const { data: aal } =
@@ -193,7 +195,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // Role-based access control: enforce role boundaries for all protected routes
-  if ((isPatientRoute || isDoctorRoute || isAdminRoute) && user) {
+  if ((isPatientRoute || isDoctorRoute || isAdminRoute) && user && supabase) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role, terms_accepted_at")
@@ -269,7 +271,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // License enforcement: redirect suspended orgs to billing page
-  if (isDoctorRoute && user) {
+  if (isDoctorRoute && user && supabase) {
     const billingPages = [
       "/doctor-dashboard/organization/billing",
       "/doctor-dashboard/subscription",

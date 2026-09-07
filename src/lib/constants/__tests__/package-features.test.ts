@@ -102,6 +102,7 @@ describe("public packaging copy does not contradict matrix", () => {
     expect(html).not.toMatch(/patient CRM, care plans/i);
     expect(html).not.toMatch(/treatment plans handled/i);
     expect(html).toMatch(/marketplace platform, not a care provider/i);
+    expect(html).not.toMatch(/locked in for life|free forever/i);
   });
 
   it("EN FAQ doctor-subscription matches package matrix (no Starter WhatsApp, no Clinic branding)", async () => {
