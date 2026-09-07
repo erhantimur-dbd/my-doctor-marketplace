@@ -13,26 +13,27 @@ const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 describe("doctor signup flow contracts", () => {
   it("soft-launch gate allows register-doctor and doctor-dashboard on prod hosts", () => {
     const middleware = read("middleware.ts");
+    const gate = read("src/lib/soft-launch/coming-soon-gate.ts");
     const vercel = read("vercel.json");
-    expect(middleware).toContain('"/register-doctor"');
-    expect(middleware).toContain('"/doctor-dashboard"');
+    expect(gate).toContain('"/register-doctor"');
+    expect(gate).toContain('"/doctor-dashboard"');
     // Enterprise CTA + footer Support must not dead-end on coming-soon
-    expect(middleware).toContain('"/support"');
+    expect(gate).toContain('"/support"');
     expect(vercel).toMatch(/register-doctor/);
     expect(vercel).toMatch(/doctor-dashboard/);
     expect(vercel).toMatch(/support/);
     // Patient home still gated (no bare "/" allow in COMING_SOON list after soft-launch restore)
-    const allowBlock = middleware.slice(
-      middleware.indexOf("COMING_SOON_ALLOWED_PREFIXES"),
-      middleware.indexOf("COMING_SOON_ROOT_ALLOWED")
+    const allowBlock = gate.slice(
+      gate.indexOf("COMING_SOON_ALLOWED_PREFIXES"),
+      gate.indexOf("COMING_SOON_ROOT_ALLOWED")
     );
     expect(allowBlock).not.toMatch(/"\/",\s*\/\//); // no homepage comment alone
     expect(allowBlock).not.toContain('"/doctors"');
     expect(allowBlock).not.toContain('"/specialties"');
     expect(allowBlock).not.toContain('"/conditions"');
     // Preview/local must apply the same gate — vercel.json is host-scoped to prod
-    expect(middleware).toMatch(/comingSoonApplies/);
-    expect(middleware).toMatch(/vercelEnv !== "production"/);
+    expect(middleware).toMatch(/comingSoonGateApplies/);
+    expect(gate).toMatch(/vercelEnv !== "production"/);
   });
 
   it("middleware never swallows next-intl with NextResponse.next() on locale routes", () => {

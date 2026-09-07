@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
+import {
+  comingSoonGateApplies,
+  isAllowedOnComingSoon,
+} from "@/lib/soft-launch/coming-soon-gate";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -26,95 +30,6 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
-// Domains that should only serve the coming-soon page.
-// INTENTIONAL until go-live: keep this gate until the main homepage is opened
-// to public patient traffic. Do not remove without product sign-off.
-const COMING_SOON_HOSTS = [
-  "mydoctors360.com",
-  "www.mydoctors360.com",
-  "mydoctors360.co.uk",
-  "www.mydoctors360.co.uk",
-  "mydoctors360.eu",
-  "www.mydoctors360.eu",
-];
-
-// Paths that bypass the coming-soon gate so doctors can sign up and build
-// their profiles ahead of public launch. Locale prefix is stripped before
-// matching, so each entry is checked against e.g. "/login" or
-// "/doctor-dashboard/profile".
-//
-// Keep in sync with:
-//   - vercel.json rewrites (authoritative edge gate)
-//   - src/app/sitemap.ts SOFT_LAUNCH_PUBLIC_PAGES
-//
-// To allow a route, list it here as either an exact path (e.g. "/login") or
-// as a prefix that ends with "/" (e.g. "/doctor-dashboard/" matches all
-// sub-routes).
-const COMING_SOON_ALLOWED_PREFIXES = [
-  // Soft-launch: patient home/search stay gated. Coming-soon is the public face.
-  // Auth flow
-  "/login",
-  "/register",
-  "/verify-email",
-  "/verify-mfa",
-  "/forgot-password",
-  "/reset-password",
-  "/email-verified",
-  "/callback",
-  "/accept-terms",
-  // Doctor onboarding
-  "/register-doctor",
-  "/register-testing-service",
-  "/doctor-dashboard",
-  "/doctor-dashboard/",
-  // Doctor-facing marketing
-  "/pricing",
-  "/how-it-works",
-  "/how-it-works/",
-  "/contact",
-  "/support",
-  "/help-center",
-  "/help-center/",
-  // Legal pages linked from auth/registration flows
-  "/terms",
-  "/privacy",
-  "/cookie-policy",
-  "/about",
-  // UK regulatory and complaints pages (serve 200 on .co.uk, 404 on other
-  // regions — the page.tsx decides). Listed here so the coming-soon gate
-  // doesn't swallow them before the page-level region check runs.
-  "/regulatory",
-  "/complaints",
-  // Invite / invitation deep links (clinic seat + doctor invites)
-  "/invite",
-  "/invitation",
-  // Public survey pages
-  "/survey",
-  // Admin command centre — allowlisted admins only (RBAC enforced below)
-  "/admin",
-];
-
-// Root-level paths (no locale prefix) that bypass the gate.
-const COMING_SOON_ROOT_ALLOWED = new Set(["/sitemap.xml", "/robots.txt"]);
-
-function isAllowedOnComingSoon(pathname: string): boolean {
-  if (COMING_SOON_ROOT_ALLOWED.has(pathname)) return true;
-  // Strip the locale prefix so the allowlist stays locale-agnostic.
-  const withoutLocale = getPathnameWithoutLocale(pathname);
-  // Normalize trailing slash except for root
-  const path =
-    withoutLocale.length > 1 && withoutLocale.endsWith("/")
-      ? withoutLocale.slice(0, -1)
-      : withoutLocale || "/";
-  return COMING_SOON_ALLOWED_PREFIXES.some((entry) => {
-    if (entry === "/") return path === "/";
-    if (entry.endsWith("/")) {
-      return path === entry.slice(0, -1) || path.startsWith(entry);
-    }
-    return path === entry || path.startsWith(entry + "/");
-  });
-}
-
 export async function middleware(request: NextRequest) {
   // Serve /sitemap.xml and /robots.txt straight from the root-level metadata
   // routes (src/app/sitemap.ts, src/app/robots.ts). Without this early return,
@@ -133,10 +48,7 @@ export async function middleware(request: NextRequest) {
   // allowlist here so /en/doctors (and other patient marketplace surfaces)
   // rewrite to coming-soon instead of a live directory.
   const host = request.headers.get("host")?.replace(/:\d+$/, "") || "";
-  const vercelEnv = process.env.VERCEL_ENV;
-  const comingSoonApplies =
-    COMING_SOON_HOSTS.includes(host) || vercelEnv !== "production";
-  if (comingSoonApplies) {
+  if (comingSoonGateApplies(host)) {
     if (!isAllowedOnComingSoon(request.nextUrl.pathname)) {
       return NextResponse.rewrite(
         new URL("/coming-soon/index.html", request.url)
