@@ -42,11 +42,9 @@ export async function middleware(request: NextRequest) {
   }
 
   // Coming-soon gate — doctor-onboarding routes pass through.
-  // Prod custom domains: vercel.json is authoritative (host-scoped). This
-  // block is defence-in-depth on those hosts. Preview / local do not match
-  // mydoctors360.com|.co.uk|.eu, so vercel.json never fires — apply the same
-  // allowlist here so /en/doctors (and other patient marketplace surfaces)
-  // rewrite to coming-soon instead of a live directory.
+  // Prod custom domains: vercel.json is authoritative (host-scoped). Preview
+  // *.vercel.app does not match those hosts. While Soft Launch chrome is on,
+  // apply the same allowlist on every host so /en/doctors stays dark.
   const host = request.headers.get("host")?.replace(/:\d+$/, "") || "";
   if (comingSoonGateApplies(host)) {
     if (!isAllowedOnComingSoon(request.nextUrl.pathname)) {

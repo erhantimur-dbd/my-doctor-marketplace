@@ -102,6 +102,22 @@ describe("Soft Launch public claims", () => {
     expect(home).toMatch(/redirect\("\/coming-soon\/index.html"\)/);
   });
 
+  it("patient marketplace layouts Soft Launch-gate to coming-soon", () => {
+    const doctorsLayout = read(
+      "src/app/[locale]/(public)/doctors/layout.tsx"
+    );
+    const specialtiesLayout = read(
+      "src/app/[locale]/(public)/specialties/layout.tsx"
+    );
+    expect(doctorsLayout).toMatch(/soft-launch-dark-layout/);
+    expect(specialtiesLayout).toMatch(/soft-launch-dark-layout/);
+    const redirector = read(
+      "src/lib/soft-launch/redirect-patient-marketplace.ts"
+    );
+    expect(redirector).toMatch(/coming-soon\/index.html/);
+    expect(redirector).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
+  });
+
   it("header/footer hide patient-search CTAs while Soft Launch chrome is on", () => {
     const header = read("src/components/layout/header.tsx");
     const footer = read("src/components/layout/footer.tsx");

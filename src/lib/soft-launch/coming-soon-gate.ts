@@ -3,10 +3,13 @@
  * Keep in sync with vercel.json rewrites (authoritative on prod custom hosts)
  * and src/app/sitemap.ts SOFT_LAUNCH_PUBLIC_PAGES.
  *
- * Preview *.vercel.app does not match vercel.json hosts — middleware must
- * apply this same allowlist when VERCEL_ENV !== "production" so patient
- * marketplace routes (/doctors, specialties, …) stay dark.
+ * Preview *.vercel.app does not match vercel.json hosts. While
+ * SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME is on, middleware applies this
+ * allowlist on every host so /en/doctors stays coming-soon-dark (not a live
+ * directory). Do not key the Preview gate on VERCEL_ENV — Edge inlines it.
  */
+
+import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
 
 export const COMING_SOON_HOSTS = [
   "mydoctors360.com",
@@ -67,12 +70,10 @@ const LOCALE_PATTERN = /^\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/;
 
 export function comingSoonGateApplies(
   host: string,
-  vercelEnv: string | undefined = process.env.VERCEL_ENV
+  _vercelEnv?: string
 ): boolean {
-  return (
-    (COMING_SOON_HOSTS as readonly string[]).includes(host) ||
-    vercelEnv !== "production"
-  );
+  if (SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME) return true;
+  return (COMING_SOON_HOSTS as readonly string[]).includes(host);
 }
 
 export function isAllowedOnComingSoon(pathname: string): boolean {
@@ -108,6 +109,12 @@ export function isPatientMarketplacePath(pathname: string): boolean {
     path === "/find" ||
     path.startsWith("/find/") ||
     path === "/blog" ||
-    path.startsWith("/blog/")
+    path.startsWith("/blog/") ||
+    path === "/clinics" ||
+    path.startsWith("/clinics/") ||
+    path === "/rewards" ||
+    path.startsWith("/rewards/") ||
+    path === "/find-pharmacy" ||
+    path.startsWith("/find-pharmacy/")
   );
 }

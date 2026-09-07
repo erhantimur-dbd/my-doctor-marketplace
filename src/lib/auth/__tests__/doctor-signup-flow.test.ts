@@ -33,7 +33,7 @@ describe("doctor signup flow contracts", () => {
     expect(allowBlock).not.toContain('"/conditions"');
     // Preview/local must apply the same gate — vercel.json is host-scoped to prod
     expect(middleware).toMatch(/comingSoonGateApplies/);
-    expect(gate).toMatch(/vercelEnv !== "production"/);
+    expect(gate).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
   });
 
   it("middleware never swallows next-intl with NextResponse.next() on locale routes", () => {

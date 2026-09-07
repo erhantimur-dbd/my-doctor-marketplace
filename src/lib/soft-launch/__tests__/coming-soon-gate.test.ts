@@ -6,32 +6,21 @@ import {
 } from "@/lib/soft-launch/coming-soon-gate";
 
 describe("comingSoonGateApplies", () => {
-  it("applies on Preview even when host is not a prod Soft Launch domain", () => {
+  it("applies on every host while Soft Launch chrome is on (Preview FAIL)", () => {
     expect(
       comingSoonGateApplies(
         "mydoctors360-git-cursor-soft-launc.vercel.app",
         "preview"
       )
     ).toBe(true);
-  });
-
-  it("applies locally when VERCEL_ENV is unset", () => {
     expect(comingSoonGateApplies("localhost", undefined)).toBe(true);
-  });
-
-  it("applies on production Soft Launch hosts", () => {
     expect(comingSoonGateApplies("www.mydoctors360.com", "production")).toBe(
       true
     );
-    expect(comingSoonGateApplies("mydoctors360.co.uk", "production")).toBe(
-      true
-    );
-  });
-
-  it("does not apply on production non-Soft-Launch hosts", () => {
+    // Flag is compile-time true — do not leave Preview live if VERCEL_ENV inlines
     expect(
       comingSoonGateApplies("mydoctors360.vercel.app", "production")
-    ).toBe(false);
+    ).toBe(true);
   });
 });
 
