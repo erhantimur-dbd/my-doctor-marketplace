@@ -127,7 +127,7 @@ export const PACKAGE_MARKETING: Record<
       "Public profile after verification",
       "Practice profile, specialties & languages",
       "Doctor dashboard & completion checklist",
-      "Free forever — no card required",
+      "£0 — no card required",
     ],
     excludedFeatures: [
       "Featured profile visibility boost",

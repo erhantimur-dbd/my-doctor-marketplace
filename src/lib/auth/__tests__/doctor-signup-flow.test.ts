@@ -28,6 +28,11 @@ describe("doctor signup flow contracts", () => {
     );
     expect(allowBlock).not.toMatch(/"\/",\s*\/\//); // no homepage comment alone
     expect(allowBlock).not.toContain('"/doctors"');
+    expect(allowBlock).not.toContain('"/specialties"');
+    expect(allowBlock).not.toContain('"/conditions"');
+    // Preview/local must apply the same gate — vercel.json is host-scoped to prod
+    expect(middleware).toMatch(/comingSoonApplies/);
+    expect(middleware).toMatch(/vercelEnv !== "production"/);
   });
 
   it("middleware never swallows next-intl with NextResponse.next() on locale routes", () => {

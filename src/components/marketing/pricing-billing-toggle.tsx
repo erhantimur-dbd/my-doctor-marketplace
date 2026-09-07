@@ -149,7 +149,7 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
       // Same formatter + 3-line skeleton as paid so £0 shares the amount baseline
       amount = formatPriceForLocale(0, locale);
       unit = "per mo";
-      detail = "Free forever";
+      detail = "£0 — no card required";
     } else if (period === "annual") {
       const list = tier.priceMonthlyPence;
       const yearly = annualTotalPence(list);

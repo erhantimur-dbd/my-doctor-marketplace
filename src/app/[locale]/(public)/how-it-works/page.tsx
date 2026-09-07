@@ -251,8 +251,8 @@ export default function HowItWorksPage() {
             </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            First 100 founding doctors. Founding Free is free forever — no
-            credit card required.
+            First 100 founding doctors. Founding Free is £0 — no card
+            required.
           </p>
         </div>
       </section>

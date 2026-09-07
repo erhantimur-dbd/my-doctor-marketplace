@@ -126,12 +126,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Gate coming-soon domains — only doctor-onboarding routes pass through.
-  // NOTE: The authoritative gate lives in vercel.json (Vercel edge rewrites
-  // run before middleware). This block is a defence-in-depth backup in case
-  // the rewrite is misconfigured. Keep the two allowlists in sync.
+  // Coming-soon gate — doctor-onboarding routes pass through.
+  // Prod custom domains: vercel.json is authoritative (host-scoped). This
+  // block is defence-in-depth on those hosts. Preview / local do not match
+  // mydoctors360.com|.co.uk|.eu, so vercel.json never fires — apply the same
+  // allowlist here so /en/doctors (and other patient marketplace surfaces)
+  // rewrite to coming-soon instead of a live directory.
   const host = request.headers.get("host")?.replace(/:\d+$/, "") || "";
-  if (COMING_SOON_HOSTS.includes(host)) {
+  const vercelEnv = process.env.VERCEL_ENV;
+  const comingSoonApplies =
+    COMING_SOON_HOSTS.includes(host) || vercelEnv !== "production";
+  if (comingSoonApplies) {
     if (!isAllowedOnComingSoon(request.nextUrl.pathname)) {
       return NextResponse.rewrite(
         new URL("/coming-soon/index.html", request.url)

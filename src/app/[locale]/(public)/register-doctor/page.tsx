@@ -1620,7 +1620,7 @@ export default function RegisterDoctorPage() {
                       </p>
                       <p className="mt-1">
                         Build your profile, get verified and list publicly —
-                        free forever. Online bookings, video, reminders and AI
+                        £0, no card required. Online bookings, video, reminders and AI
                         unlock when you upgrade to Starter or higher from your
                         dashboard. UK doctors: GMC is verified before go-live.
                       </p>

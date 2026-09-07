@@ -17,8 +17,10 @@ const SOFT_LAUNCH_SURFACES = [
   "src/app/[locale]/(public)/how-it-works/page.tsx",
   "src/app/[locale]/(public)/contact/page.tsx",
   "src/app/[locale]/(auth)/register/page.tsx",
+  "src/app/[locale]/(public)/register-doctor/page.tsx",
   "src/components/layout/header.tsx",
   "src/components/layout/footer.tsx",
+  "src/components/marketing/pricing-billing-toggle.tsx",
 ];
 
 describe("Soft Launch public claims", () => {
@@ -42,7 +44,21 @@ describe("Soft Launch public claims", () => {
       expect(text, rel).not.toMatch(/treatment tags/i);
       expect(text, rel).not.toMatch(/Chat or speak to find a doctor/i);
       expect(text, rel).not.toMatch(/Book Instantly/);
+      expect(text, rel).not.toMatch(/free forever/i);
     }
+  });
+
+  it("Founding Free copy is £0 — no card required (not Free forever)", () => {
+    const features = read("src/lib/constants/package-features.ts");
+    const pricingToggle = read(
+      "src/components/marketing/pricing-billing-toggle.tsx"
+    );
+    const comingSoon = read("public/coming-soon/index.html");
+    expect(features).toMatch(/£0 — no card required/);
+    expect(pricingToggle).toMatch(/£0 — no card required/);
+    expect(comingSoon).toMatch(/£0 — no card required|no card required/i);
+    expect(features).not.toMatch(/free forever/i);
+    expect(pricingToggle).not.toMatch(/free forever/i);
   });
 
   it("pricing CRM + founding CTA use Legal replacements", () => {
