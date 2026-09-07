@@ -25,10 +25,9 @@ export function AboutDefault() {
         <CardContent className="prose prose-sm max-w-none p-6 dark:prose-invert sm:p-8">
           <h2>What we do</h2>
           <p>
-            {COMPANY} connects patients with independent private doctors. You can search by
-            specialty, location, language, or symptom; read verified profiles; check real
-            reviews; compare prices in your own currency; and book an appointment — all in a
-            few clicks.
+            {COMPANY} is a marketplace platform that will connect patients with independent
+            private doctors. Soft Launch is for founding doctors to register and build
+            profiles. Patient search and booking are not open yet.
           </p>
 
           <h2>How we&rsquo;re different</h2>

@@ -5,6 +5,7 @@ import { usePathname } from "@/i18n/navigation";
 import { useChatStore } from "@/stores/chat-store";
 import { ChatLauncher } from "./chat-launcher";
 import { ChatWindow } from "./chat-window";
+import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
 
 /**
  * Single patient AI surface: typed chat + Grok voice in one widget.
@@ -22,6 +23,7 @@ export function ChatWidget() {
   }, []);
 
   const hide =
+    SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME ||
     pathname === "/login" ||
     pathname === "/register" ||
     pathname?.startsWith("/login/") ||

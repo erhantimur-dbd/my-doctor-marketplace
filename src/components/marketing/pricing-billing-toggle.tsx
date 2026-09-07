@@ -97,6 +97,9 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
 
   function registerHref(tier: LicenseTierConfig) {
     const params = new URLSearchParams({ tier: tier.id });
+    if (tier.isFreeTier) {
+      params.set("founding", "1");
+    }
     if (!tier.isFreeTier && !tier.isCustomPricing) {
       params.set("billing", period);
     }

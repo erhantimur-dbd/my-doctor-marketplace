@@ -111,7 +111,7 @@ const platformFeatures = [
     icon: Users,
     title: "Patient CRM",
     description:
-      "Patient records, care plans and history — unlocked on Professional+.",
+      "Patient records and booking history — unlocked on Professional+.",
     bg: "bg-rose-50 dark:bg-rose-950/30",
     text: "text-rose-600",
   },
@@ -358,8 +358,8 @@ export default async function PricingPage() {
               {
                 step: "4",
                 icon: Zap,
-                title: "Start Receiving Patients",
-                desc: "Your profile goes live and patients can discover, book, and pay for appointments instantly.",
+                title: "Go live with us",
+                desc: "When we open to patients, your verified profile is ready — register and build it now on Founding Free.",
                 bg: "bg-amber-50 dark:bg-amber-950/30",
                 text: "text-amber-600",
                 ring: "ring-amber-200 dark:ring-amber-800",
@@ -401,8 +401,8 @@ export default async function PricingPage() {
                   Ready to Grow Your Practice?
                 </h2>
                 <p className="mx-auto mt-3 max-w-xl text-white/80">
-                  Join hundreds of doctors already using MyDoctors360 to reach new
-                  patients and streamline their practice.
+                  Join the Founding Doctor Programme — register, build your
+                  profile, go live with us.
                 </p>
 
                 {/* USP Feature Grid */}
@@ -463,8 +463,9 @@ export default async function PricingPage() {
                   className="mt-10 rounded-full bg-white text-primary font-semibold hover:bg-white/90"
                   asChild
                 >
-                  <Link href="/register-doctor?tier=professional">
-                    Join as a Doctor <ArrowRight className="ml-2 h-4 w-4" />
+                  <Link href="/register-doctor?tier=free&founding=1">
+                    Join the Founding Doctor Programme{" "}
+                    <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
               </div>

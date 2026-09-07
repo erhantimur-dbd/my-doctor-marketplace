@@ -89,3 +89,14 @@ export function getCompanyIdentity(): CompanyIdentity {
 
 /** Founding programme hard cap advertised on the soft-launch landing page. */
 export const FOUNDING_PROGRAMME_MAX_SPOTS = 100;
+
+/**
+ * Soft Launch: patient search/book routes stay dark. Public chrome must not
+ * look like a live patient marketplace (Legal P0, 2026-09-07).
+ * Lift only after Product + Legal + Sandy stamp the Preview.
+ */
+export const SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME = true;
+
+/** Founding Free primary CTA — keep query contract for register-doctor. */
+export const FOUNDING_REGISTER_HREF =
+  "/register-doctor?tier=free&founding=1";

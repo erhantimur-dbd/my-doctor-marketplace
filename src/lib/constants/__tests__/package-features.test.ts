@@ -97,6 +97,11 @@ describe("public packaging copy does not contradict matrix", () => {
     expect(html).toMatch(/3 seats included \(expand to 15\)/i);
     expect(html).toMatch(/Solo practice or multi-doctor clinic/i);
     expect(html).not.toMatch(/1–4 doctor|up to 4 seats|per-user multi/i);
+    expect(html).toMatch(/First 100 founding doctors/);
+    expect(html).not.toMatch(/filling up fast|Only 100 spots/i);
+    expect(html).not.toMatch(/patient CRM, care plans/i);
+    expect(html).not.toMatch(/treatment plans handled/i);
+    expect(html).toMatch(/marketplace platform, not a care provider/i);
   });
 
   it("EN FAQ doctor-subscription matches package matrix (no Starter WhatsApp, no Clinic branding)", async () => {
@@ -126,6 +131,13 @@ describe("public packaging copy does not contradict matrix", () => {
     )?.[0];
     expect(clinicSection).toBeTruthy();
     expect(clinicSection!.toLowerCase()).toMatch(/custom branding[\s\S]{0,40}enterprise|enterprise[\s\S]{0,20}custom branding/);
+    const proSection = answer.match(
+      /<strong>Professional[\s\S]*?(?=<strong>Clinic|$)/i
+    )?.[0];
+    expect(proSection).toBeTruthy();
+    expect(proSection!).toMatch(/patient CRM/i);
+    expect(proSection!).toMatch(/waitlist/i);
+    expect(proSection!).not.toMatch(/care plan|prescription/i);
   });
 });
 
@@ -157,5 +169,19 @@ describe("package marketing lists", () => {
       const errors = validatePackageMarketingConsistency(tier);
       expect(errors, `${tier}: ${errors.join("; ")}`).toEqual([]);
     }
+  });
+
+  it("Soft Launch paid-plan matrices do not claim care plans or prescriptions", () => {
+    expect(PACKAGE_MARKETING.professional.features).toContain("Patient CRM");
+    expect(PACKAGE_MARKETING.professional.features.join(" ")).not.toMatch(
+      /care plan|prescription/i
+    );
+    expect(PACKAGE_MARKETING.free.excludedFeatures.join(" ")).not.toMatch(
+      /care plan/i
+    );
+    expect(PACKAGE_MARKETING.starter.excludedFeatures).toContain("Patient CRM");
+    expect(PACKAGE_MARKETING.starter.excludedFeatures.join(" ")).not.toMatch(
+      /care plan/i
+    );
   });
 });
