@@ -167,8 +167,8 @@ export default function ContactPage() {
             Ready to Grow Your Practice?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-            Join hundreds of doctors across Europe who use MyDoctors360 to connect
-            with patients and manage their practice.
+            Join the Founding Doctor Programme — register, build your profile,
+            go live with us.
           </p>
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Button
@@ -177,8 +177,9 @@ export default function ContactPage() {
               className="rounded-full"
               asChild
             >
-              <Link href="/register-doctor">
-                Join as Doctor <ArrowRight className="ml-2 h-4 w-4" />
+              <Link href="/register-doctor?tier=free&founding=1">
+                Join the Founding Doctor Programme{" "}
+                <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button

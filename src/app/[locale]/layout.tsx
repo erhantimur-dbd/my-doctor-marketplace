@@ -13,6 +13,7 @@ import { CommandPalette } from "@/components/shared/command-palette";
 import { NavigationProgress } from "@/components/shared/navigation-progress";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { organizationJsonLd } from "@/lib/seo/json-ld";
+import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -102,8 +103,10 @@ export default async function LocaleLayout({
               <CookieConsentBanner />
               <PwaInstallPrompt />
               <CommandPalette />
-              {/* Single patient AI surface: chat + Grok voice in one widget */}
-              <ChatWidget />
+              {/* Patient finder chrome is dark during Soft Launch */}
+              {!SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME && (
+                <ChatWidget />
+              )}
             </AuthProvider>
           </CurrencyProvider>
         </NextIntlClientProvider>

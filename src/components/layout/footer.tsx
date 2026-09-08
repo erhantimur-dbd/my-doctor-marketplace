@@ -4,6 +4,10 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Logo } from "@/components/brand/logo";
 import { PaymentIcons } from "@/components/brand/payment-icons";
+import {
+  FOUNDING_REGISTER_HREF,
+  SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME,
+} from "@/lib/constants/company";
 
 export function Footer() {
   const t = useTranslations("footer");
@@ -18,53 +22,93 @@ export function Footer() {
               <Logo className="h-6 w-6 text-primary" />
               <div className="flex flex-col">
                 <span className="text-lg font-bold leading-tight">MyDoctors360</span>
-                <span className="text-[10px] text-muted-foreground">{t("brand_tagline")}</span>
+                <span className="text-[10px] text-muted-foreground">
+                  {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                    ? "Founding Doctor Programme"
+                    : t("brand_tagline")}
+                </span>
               </div>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
-              {t("brand_description")}
+              {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                ? "A private practice platform for founding doctors. Register, build your profile, and go live with us."
+                : t("brand_description")}
             </p>
           </div>
 
-          {/* Patients */}
+          {/* Patients — Soft Launch retargets search CTAs to Founding */}
           <div>
-            <h4 className="mb-3 text-sm font-semibold">{t("for_patients")}</h4>
+            <h4 className="mb-3 text-sm font-semibold">
+              {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                ? "Founding Programme"
+                : t("for_patients")}
+            </h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/doctors" className="hover:text-foreground">
-                  {t("find_doctor")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/specialties" className="hover:text-foreground">
-                  {t("specialties")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/how-it-works" className="hover:text-foreground">
-                  {t("how_it_works")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/support" className="hover:text-foreground">
-                  {t("support")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/help-center" className="hover:text-foreground">
-                  {t("help_center")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/find-pharmacy" className="hover:text-foreground">
-                  {t("find_pharmacy")}
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="hover:text-foreground">
-                  Blog
-                </Link>
-              </li>
+              {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME ? (
+                <>
+                  <li>
+                    <Link
+                      href={FOUNDING_REGISTER_HREF}
+                      className="hover:text-foreground"
+                    >
+                      {t("join_as_doctor")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/how-it-works" className="hover:text-foreground">
+                      {t("how_it_works")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/support" className="hover:text-foreground">
+                      {t("support")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/help-center" className="hover:text-foreground">
+                      {t("help_center")}
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <Link href="/doctors" className="hover:text-foreground">
+                      {t("find_doctor")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/specialties" className="hover:text-foreground">
+                      {t("specialties")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/how-it-works" className="hover:text-foreground">
+                      {t("how_it_works")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/support" className="hover:text-foreground">
+                      {t("support")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/help-center" className="hover:text-foreground">
+                      {t("help_center")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/find-pharmacy" className="hover:text-foreground">
+                      {t("find_pharmacy")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/blog" className="hover:text-foreground">
+                      Blog
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
 
