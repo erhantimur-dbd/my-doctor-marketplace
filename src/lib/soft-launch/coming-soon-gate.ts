@@ -62,7 +62,9 @@ export const COMING_SOON_ALLOWED_PREFIXES = [
   "/survey",
   // Admin command centre — allowlisted admins only (RBAC enforced below)
   "/admin",
-] as const;
+  // Do not use `as const` here — Next build typecheck fails TS2367 when
+  // the matcher compares entry to "/" (Vercel Preview dpl_H9zqKH5L5CKYoLwQmQtNNCUv5kny).
+] as readonly string[];
 
 const COMING_SOON_ROOT_ALLOWED = new Set(["/sitemap.xml", "/robots.txt"]);
 
@@ -84,7 +86,6 @@ export function isAllowedOnComingSoon(pathname: string): boolean {
       ? withoutLocale.slice(0, -1)
       : withoutLocale || "/";
   return COMING_SOON_ALLOWED_PREFIXES.some((entry) => {
-    if (entry === "/") return path === "/";
     if (entry.endsWith("/")) {
       return path === entry.slice(0, -1) || path.startsWith(entry);
     }
