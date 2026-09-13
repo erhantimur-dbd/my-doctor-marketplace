@@ -34,10 +34,10 @@ export function AboutUk() {
         <CardContent className="prose prose-sm max-w-none p-6 dark:prose-invert sm:p-8">
           <h2>What we do</h2>
           <p>
-            {COMPANY} helps patients in the UK find and book appointments with independent
-            private doctors. You can search by specialty, location, language, or symptom, view
-            a doctor&rsquo;s GMC number, check their fees upfront, and pay securely when you
-            book.
+            {COMPANY} is a marketplace platform for independent private doctors in the UK.
+            Soft Launch is the Founding Doctor Programme — register and build your profile.
+            Patient search and booking are not open yet. When we launch, patients will be
+            able to view a doctor&rsquo;s GMC number and fees before booking.
           </p>
 
           <h2>What we are — and what we&rsquo;re not</h2>

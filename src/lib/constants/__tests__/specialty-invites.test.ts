@@ -148,9 +148,12 @@ describe("specialty invite routes and gates", () => {
 
   it("soft-launch allowlists include /invite in middleware, vercel, and sitemap", () => {
     const middleware = read("middleware.ts");
+    const gate = read("src/lib/soft-launch/coming-soon-gate.ts");
     const vercel = read("vercel.json");
     const sitemap = read("src/app/sitemap.ts");
-    expect(middleware).toContain('"/invite"');
+    expect(gate).toContain('"/invite"');
+    expect(middleware).toContain("isAllowedOnComingSoon");
+    expect(middleware).toContain("comingSoonGateApplies");
     expect(vercel).toMatch(/invite/);
     expect(sitemap).toContain('"/invite"');
     expect(sitemap).toContain("getMedicalSpecialties");
@@ -176,6 +179,7 @@ describe("specialty invite routes and gates", () => {
     expect(nextConfig).not.toMatch(/async\s+rewrites\s*\(/);
     expect(nextConfig).not.toMatch(/invite\/accept\/:token/);
     expect(middleware).toContain("clinicInviteAcceptPath");
+    expect(middleware).toContain("rewritePreservingIntl");
     expect(middleware).toContain("isClinicInviteToken");
     expect(middleware).not.toMatch(/invocation failed/);
     expect(middleware).toContain("@/lib/clinic-invite-token");

@@ -42,6 +42,10 @@ import {
 } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/providers/auth-provider";
+import {
+  FOUNDING_REGISTER_HREF,
+  SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME,
+} from "@/lib/constants/company";
 
 interface PaletteCommand {
   label: string;
@@ -386,7 +390,37 @@ export function CommandPalette() {
         <CommandEmpty>No results found.</CommandEmpty>
 
         <CommandGroup heading="Navigation">
-          {PUBLIC_COMMANDS.map((cmd) => (
+          {(SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+            ? [
+                {
+                  label: "Founding Doctor Programme",
+                  href: FOUNDING_REGISTER_HREF,
+                  icon: Stethoscope,
+                  group: "Navigation",
+                  keywords: ["founding", "register", "doctor"],
+                },
+                {
+                  label: "How It Works",
+                  href: "/how-it-works",
+                  icon: HelpCircle,
+                  group: "Navigation",
+                  keywords: ["help", "guide", "about"],
+                },
+                {
+                  label: "Pricing",
+                  href: "/pricing",
+                  icon: DollarSign,
+                  group: "Navigation",
+                },
+                {
+                  label: "Home",
+                  href: "/",
+                  icon: Home,
+                  group: "Navigation",
+                },
+              ]
+            : PUBLIC_COMMANDS
+          ).map((cmd) => (
             <CommandItem
               key={cmd.href}
               onSelect={() => handleSelect(cmd.href)}

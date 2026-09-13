@@ -12,6 +12,10 @@ type SessionResult = {
  * Refresh the Supabase auth cookie. Must never throw: Preview Edge
  * MIDDLEWARE_INVOCATION_FAILED is a 500 on every path after SSO if
  * NEXT_PUBLIC_SUPABASE_* is missing/invalid or getUser rejects.
+ *
+ * Always return the same `response` (next-intl headers). Do not invent a
+ * NextResponse.next() here — that skips locale headers and makes getLocale()
+ * throw on /pricing (specialty #19).
  */
 export async function updateSession(
   request: NextRequest,

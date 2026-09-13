@@ -13,24 +13,47 @@ const read = (rel: string) => readFileSync(join(root, rel), "utf8");
 describe("doctor signup flow contracts", () => {
   it("soft-launch gate allows register-doctor and doctor-dashboard on prod hosts", () => {
     const middleware = read("middleware.ts");
+    const gate = read("src/lib/soft-launch/coming-soon-gate.ts");
     const vercel = read("vercel.json");
-    expect(middleware).toContain('"/register-doctor"');
-    expect(middleware).toContain('"/doctor-dashboard"');
+    expect(gate).toContain('"/register-doctor"');
+    expect(gate).toContain('"/doctor-dashboard"');
     // Enterprise CTA + footer Support must not dead-end on coming-soon
-    expect(middleware).toContain('"/support"');
+    expect(gate).toContain('"/support"');
     expect(vercel).toMatch(/register-doctor/);
     expect(vercel).toMatch(/doctor-dashboard/);
     expect(vercel).toMatch(/support/);
     // Specialty invite landings + clinic seat tokens share /invite
-    expect(middleware).toContain('"/invite"');
+    expect(gate).toContain('"/invite"');
+    expect(middleware).toContain("clinicInviteAcceptPath");
     expect(vercel).toMatch(/invite/);
     // Patient home still gated (no bare "/" allow in COMING_SOON list after soft-launch restore)
-    const allowBlock = middleware.slice(
-      middleware.indexOf("COMING_SOON_ALLOWED_PREFIXES"),
-      middleware.indexOf("COMING_SOON_ROOT_ALLOWED")
+    const allowBlock = gate.slice(
+      gate.indexOf("COMING_SOON_ALLOWED_PREFIXES"),
+      gate.indexOf("COMING_SOON_ROOT_ALLOWED")
     );
     expect(allowBlock).not.toMatch(/"\/",\s*\/\//); // no homepage comment alone
     expect(allowBlock).not.toContain('"/doctors"');
+    expect(allowBlock).not.toContain('"/specialties"');
+    expect(allowBlock).not.toContain('"/conditions"');
+    // Preview/local must apply the same gate — vercel.json is host-scoped to prod
+    expect(middleware).toMatch(/comingSoonGateApplies/);
+    expect(gate).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
+  });
+
+  it("middleware never swallows next-intl with NextResponse.next() on locale routes", () => {
+    const middleware = read("middleware.ts");
+    const session = read("src/lib/supabase/middleware.ts");
+    // Only sitemap/robots may use NextResponse.next(); locale paths return intlResponse
+    const nextCalls = middleware.match(/return NextResponse\.next\(\)/g) ?? [];
+    expect(nextCalls.length).toBe(1);
+    expect(middleware).toMatch(/sitemap\.xml/);
+    expect(middleware).toMatch(/return intlResponse/);
+    expect(middleware).not.toMatch(
+      /catch[\s\S]{0,200}return NextResponse\.next\(\)/
+    );
+    // Session refresh must not throw after SSO (Preview MIDDLEWARE_INVOCATION_FAILED)
+    expect(session).toMatch(/Must never throw/);
+    expect(session).toMatch(/return \{ supabase: null, user: null, response \}/);
   });
 
   it("exposes free and paid registration actions sharing account creation", () => {

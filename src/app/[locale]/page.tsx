@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "@/components/layout/dynamic-header";
@@ -58,6 +60,12 @@ const allSpecialties = [
 ];
 
 export default async function HomePage() {
+  // Preview hosts skip vercel.json coming-soon rewrite. Keep /en aligned with
+  // production Soft Launch so Legal does not see a live patient marketplace.
+  if (SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME) {
+    redirect("/coming-soon/index.html");
+  }
+
   const t = await getTranslations("home");
   const ts = await getTranslations("specialty");
 

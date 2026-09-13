@@ -6,7 +6,7 @@
   <title>MyDoctors360 — Founding Doctor Programme | Private Practice, Reimagined</title>
   <meta name="description" content="MyDoctors360 is launching soon across the UK and Europe. Join the Founding Doctor Programme — exclusive perks and pricing locked in for the first 100 doctors. Apply today." />
   <meta property="og:title" content="MyDoctors360 — Founding Doctor Programme" />
-  <meta property="og:description" content="A modern private practice platform for UK and European doctors. Limited founding spots — exclusive pricing and perks locked in for life." />
+  <meta property="og:description" content="A modern private practice platform for UK and European doctors. First 100 founding doctors — exclusive founding pricing and perks." />
   <meta property="og:type" content="website" />
   <meta name="google-site-verification" content="EdM0owW0expdv2fT1tiUvYx9ibGdw3FW_k7489bQRmE" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -502,7 +502,7 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </div>
           <h3>Automated admin</h3>
-          <p>Reminders, follow-ups, invoices and treatment plans handled for you. Reclaim hours every week.</p>
+          <p>Reminders, follow-ups and invoices handled for you. Reclaim hours every week.</p>
         </div>
 
         <div class="benefit-card">
@@ -520,13 +520,13 @@
   <section class="founding" id="founding">
     <div class="founding-inner">
       <div class="eyebrow">The Founding Doctor Programme</div>
-      <h2>Exclusive perks. Pricing locked in for life.</h2>
+      <h2>Exclusive perks. Founding pricing locked in.</h2>
       <p>The first 100 doctors who join us help shape the platform — and keep founding-tier benefits permanently. We're keeping the full perks list under wraps until launch, but here's a taste.</p>
 
       <div class="founding-perks">
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>Founding pricing locked for life</span>
+          <span>Founding pricing locked in</span>
         </div>
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
@@ -552,7 +552,7 @@
 
       <div class="scarcity" id="foundingScarcity">
         <span class="scarcity-dot"></span>
-        <span id="foundingSpotsLabel">Only 100 spots — filling up fast</span>
+        <span id="foundingSpotsLabel">First 100 founding doctors</span>
       </div>
 
       <div class="founding-ctas">
@@ -562,7 +562,7 @@
         </a>
         <a href="/en/pricing" class="btn-ghost-light">See free vs paid plans</a>
       </div>
-      <p class="founding-fineprint">Founding Free is free forever. Starter unlocks bookings, video and AI; Professional is solo growth tools (£299); multi-doctor practices use Clinic (3–15 seats). Upgrade anytime. Founding perks for the first 100 still apply.</p>
+      <p class="founding-fineprint">Founding Free is £0 — no card required. Starter unlocks bookings, video and AI; Professional is solo growth tools (£299); multi-doctor practices use Clinic (3–15 seats). Upgrade anytime. Founding perks for the first 100 still apply.</p>
     </div>
   </section>
 
@@ -722,7 +722,7 @@
           <p class="faq-a">
             <strong>Founding Free (£0):</strong> account, verified public listing and dashboard — no card required.<br /><br />
             <strong>Starter (£199/mo):</strong> solo — online bookings &amp; Stripe payouts, video, email reminders, messaging and AI. Medical testing optional (+£49/mo).<br /><br />
-            <strong>Professional (£299/mo, 1 doctor):</strong> solo growth — everything in Starter plus SMS &amp; WhatsApp, advanced analytics, patient CRM, care plans and waitlist auto-notify.<br /><br />
+            <strong>Professional (£299/mo, 1 doctor):</strong> solo growth — everything in Starter plus SMS &amp; WhatsApp, advanced analytics, patient CRM and waitlist auto-notify.<br /><br />
             <strong>Clinic (£897/mo):</strong> multi-doctor practices — 3 seats included (expand to 15), multi-location, team tools and medical testing included.<br /><br />
             Annual billing is 10 months for 12 (2 months free). Upgrade or change plan anytime from your dashboard. Full matrix on
             <a href="/en/pricing" style="color: inherit; font-weight: 600; text-decoration: underline;">pricing</a>.
@@ -754,6 +754,7 @@
   <footer>
     <p>&copy; 2026 MyDoctors360. All rights reserved.</p>
     <p>Questions? <a href="mailto:hello@mydoctors360.com">hello@mydoctors360.com</a></p>
+    <p>MyDoctors360 is a marketplace platform, not a care provider. We do not provide medical advice, diagnosis, treatment or prescriptions.</p>
   </footer>
 
   <script>
@@ -828,23 +829,7 @@
     });
 
 
-    // Live founding spots (best-effort; keep static fallback on failure)
-    (async function loadFoundingSpots() {
-      try {
-        const res = await fetch('/api/founding/status', { credentials: 'omit' });
-        if (!res.ok) return;
-        const data = await res.json();
-        const label = document.getElementById('foundingSpotsLabel');
-        if (!label || typeof data.remainingSpots !== 'number') return;
-        if (!data.isOpen || data.remainingSpots <= 0) {
-          label.textContent = 'Founding spots are full — you can still register on Free';
-        } else if (data.remainingSpots === 1) {
-          label.textContent = 'Only 1 founding spot left';
-        } else {
-          label.textContent = `Only ${data.remainingSpots} of ${data.maxSpots || 100} founding spots left`;
-        }
-      } catch (_) { /* keep static copy */ }
-    })();
+    // Do not overwrite the founding band with remaining-count occupancy.
 
     function showError(msg) {
       errorMsgEl.textContent = msg;
