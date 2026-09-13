@@ -99,7 +99,7 @@ describe("specialty invite config", () => {
 
   it("hard-rules: no Clinic £, live booking, care/Rx, or invented diagnoses", () => {
     const forbidden =
-      /£\d|clinic plan|patients booking now|prescription|care plan|symptom ai|diagnose |we provide care|we treat/i;
+      /£(?!0\b)\d|clinic plan|patients booking now|prescription|care plan|symptom ai|diagnose |we provide care|we treat/i;
     for (const slug of medicalSlugs) {
       const blob = getSpecialtyInvite(slug)!.usps.join(" ");
       expect(blob, slug).not.toMatch(forbidden);
@@ -109,6 +109,10 @@ describe("specialty invite config", () => {
     );
     expect(landing).not.toMatch(forbidden);
     expect(landing).toContain("foundingRegisterHref");
+    expect(landing).toMatch(/Founding Free — £0/);
+    expect(landing).toMatch(/founding-tier benefits/i);
+    expect(landing).not.toMatch(/free forever/i);
+    expect(landing).not.toMatch(/\bforever\b/i);
   });
 
   it("CTA helper points at founding free register with specialty", () => {

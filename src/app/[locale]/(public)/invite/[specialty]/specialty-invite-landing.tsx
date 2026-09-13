@@ -24,9 +24,9 @@ import {
 const FOUNDING_CALLOUTS = [
   {
     icon: Gift,
-    title: "Founding Free — free forever",
+    title: "Founding Free — £0",
     description:
-      "Claim a founding seat at no cost. Build your profile before patient launch. No card required.",
+      "Founding-tier benefits at £0 — no card required. Build your profile before patient launch.",
   },
   {
     icon: Users,
