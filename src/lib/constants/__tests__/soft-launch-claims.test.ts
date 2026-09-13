@@ -21,6 +21,8 @@ const SOFT_LAUNCH_SURFACES = [
   "src/components/layout/header.tsx",
   "src/components/layout/footer.tsx",
   "src/components/marketing/pricing-billing-toggle.tsx",
+  "src/app/[locale]/(public)/invite/[specialty]/specialty-invite-landing.tsx",
+  "src/lib/constants/specialty-invites.ts",
 ];
 
 describe("Soft Launch public claims", () => {
@@ -54,11 +56,17 @@ describe("Soft Launch public claims", () => {
       "src/components/marketing/pricing-billing-toggle.tsx"
     );
     const comingSoon = read("public/coming-soon/index.html");
+    const inviteLanding = read(
+      "src/app/[locale]/(public)/invite/[specialty]/specialty-invite-landing.tsx"
+    );
     expect(features).toMatch(/£0 — no card required/);
     expect(pricingToggle).toMatch(/£0 — no card required/);
     expect(comingSoon).toMatch(/£0 — no card required|no card required/i);
+    expect(inviteLanding).toMatch(/Founding Free — £0/);
+    expect(inviteLanding).toMatch(/founding-tier benefits/i);
     expect(features).not.toMatch(/free forever/i);
     expect(pricingToggle).not.toMatch(/free forever/i);
+    expect(inviteLanding).not.toMatch(/free forever/i);
   });
 
   it("pricing CRM + founding CTA use Legal replacements", () => {

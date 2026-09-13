@@ -55,7 +55,12 @@ export const COMING_SOON_ALLOWED_PREFIXES = [
   // doesn't swallow them before the page-level region check runs.
   "/regulatory",
   "/complaints",
-  // Invite / invitation deep links (clinic seat + doctor invites)
+  // Invite / invitation deep links (founding doctor promo + clinic seats):
+  //   /invite — specialty index
+  //   /invite/<medical-slug> — specialty landings (e.g. dentistry)
+  //   /invite/<64-hex> — rewritten in middleware to /invite/accept/[token]
+  //   /invitation — follow-up invitations (not clinic seats)
+  // Do not import invite pages, clinic-invitations, Stripe, or Resend (Edge).
   "/invite",
   "/invitation",
   // Public survey pages
