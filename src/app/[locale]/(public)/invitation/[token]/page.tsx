@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: InvitationPageProps): Promise
 
 export default async function InvitationPage({ params }: InvitationPageProps) {
   const { token, locale } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Fetch invitation with doctor details
   const { data: invitation } = await supabase

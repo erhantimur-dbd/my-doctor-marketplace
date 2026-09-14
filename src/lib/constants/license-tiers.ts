@@ -119,7 +119,8 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "free",
     name: "Founding Free",
-    description: "List your profile and prepare for launch",
+    description:
+      "Founding Doctor Programme (first 100): no monthly fee, patients can book you, 15% per booking. After the cohort is full this plan is listing-only.",
     priceMonthlyPence: 0,
     perUser: false,
     defaultSeats: 1,

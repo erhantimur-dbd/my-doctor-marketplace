@@ -199,6 +199,97 @@ export async function handoffConnectTransfer(
 }
 
 /**
+ * Pull destination-charge funds back to the platform without refunding the card.
+ * Used when the patient is credited in-wallet instead of a card refund.
+ */
+export async function reverseDestinationTransferToPlatform(opts: {
+  paymentIntentId?: string | null;
+  bookingId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const stripe = getStripe();
+  try {
+    let transferId: string | null = null;
+    if (opts.paymentIntentId) {
+      const found = await findDestinationTransfer(opts.paymentIntentId);
+      if (found) transferId = found.transferId;
+    }
+    if (!transferId) {
+      const { findWalletPayoutTransfer } = await import(
+        "@/lib/wallet/refund-path"
+      );
+      const list = await stripe.transfers.list({ limit: 40 });
+      const match = findWalletPayoutTransfer(list.data, opts.bookingId);
+      transferId = match?.id ?? null;
+    }
+    if (!transferId) {
+      return { success: true };
+    }
+    await stripe.transfers.createReversal(
+      transferId,
+      {
+        metadata: {
+          booking_id: opts.bookingId,
+          type: "wallet_refund_reversal",
+        },
+      },
+      { idempotencyKey: `wallet-refund-reverse-${opts.bookingId}` }
+    );
+    return { success: true };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Could not reverse doctor transfer";
+    log.error("[TransferHandoff] Wallet refund reversal failed", {
+      err,
+      paymentIntentId: opts.paymentIntentId,
+      bookingId: opts.bookingId,
+    });
+    return { success: false, error: message };
+  }
+}
+
+/** Pay the doctor net from platform balance after a wallet-only settlement. */
+export async function payoutWalletToConnectedAccount(opts: {
+  chargedCents: number;
+  currency: string;
+  destinationAccountId: string;
+  idempotencyKey: string;
+  bookingId?: string;
+  invoiceId?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  const { walletPayoutTransferCents } = await import("@/lib/wallet/refund-path");
+  const amount = walletPayoutTransferCents(opts.chargedCents);
+  if (amount <= 0) return { success: true };
+  if (!opts.destinationAccountId) {
+    return { success: false, error: "Doctor payout account is missing." };
+  }
+  try {
+    await getStripe().transfers.create(
+      {
+        amount,
+        currency: opts.currency.toLowerCase(),
+        destination: opts.destinationAccountId,
+        metadata: {
+          type: "wallet_payout",
+          ...(opts.bookingId ? { booking_id: opts.bookingId } : {}),
+          ...(opts.invoiceId ? { invoice_id: opts.invoiceId } : {}),
+        },
+      },
+      { idempotencyKey: opts.idempotencyKey }
+    );
+    return { success: true };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Doctor wallet payout failed";
+    log.error("[TransferHandoff] Wallet payout failed", {
+      err,
+      bookingId: opts.bookingId,
+      invoiceId: opts.invoiceId,
+    });
+    return { success: false, error: message };
+  }
+}
+
+/**
  * Doctor net from a destination charge = charged amount − application fee.
  * Prefer explicit values from booking when available.
  */

@@ -411,14 +411,17 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
       </div>
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        Paid plans include a {PLATFORM_BOOKING_FEE_PERCENT}% platform commission
-        on each booking (invoiced monthly). Annual licences are charged as 10×
-        the monthly price once a year (2 months free). Seats: Starter &amp;
-        Professional = 1 doctor · Clinic = 3 included (to 15).
+        All bookings (including Founding Doctors) include a{" "}
+        {PLATFORM_BOOKING_FEE_PERCENT}% platform fee collected via Stripe
+        Connect. Annual licences are charged as 10× the monthly price once a
+        year (2 months free). Seats: Starter &amp; Professional = 1 doctor ·
+        Clinic = 3 included (to 15).
       </p>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Founding Free is a permanent gateway (list &amp; prepare). Bookings,
-        video and AI start on Starter. SMS/WhatsApp, analytics, CRM and waitlist
+        The Founding Doctor Programme (first 100) is not the listing-only free
+        plan: founding doctors take bookings with no monthly fee after Stripe
+        Connect. After the cohort is full, Free is directory listing only.
+        Video and AI start on Starter. SMS/WhatsApp, analytics, CRM and waitlist
         are Professional+ (solo). Multi-doctor seats, multi-location, team tools
         and included medical testing are Clinic+. Custom branding &amp; API are
         Enterprise.

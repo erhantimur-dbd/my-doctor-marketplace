@@ -16,7 +16,8 @@ import { ClipboardList, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
-import { hasActiveLicense } from "@/lib/license/check";
+import { getDoctorLicenseTier } from "@/lib/license/check";
+import { hasFeature } from "@/lib/utils/feature-flags";
 
 const STATUS_STYLES: Record<string, { label: string; variant: string; className: string }> = {
   sent: {
@@ -67,8 +68,14 @@ export default async function TreatmentPlansPage() {
 
   if (!doctor) redirect("/en/register-doctor");
 
-  if (!(await hasActiveLicense(supabase, doctor.id))) {
-    return <UpgradePrompt feature="Care Plans" />;
+  const licenseTier = await getDoctorLicenseTier(supabase, doctor.id);
+  if (!hasFeature("treatment_plans", licenseTier)) {
+    return (
+      <UpgradePrompt
+        feature="Care Plans"
+        description="Care plans are available on Professional, Clinic, and Enterprise plans only."
+      />
+    );
   }
 
   const { data: plans } = await supabase

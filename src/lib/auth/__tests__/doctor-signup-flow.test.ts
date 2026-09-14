@@ -89,7 +89,10 @@ describe("doctor signup flow contracts", () => {
     expect(booking).toContain("stripe_account_id");
     expect(booking).toMatch(/status.*active.*trialing.*past_due|in\("status"/);
     // Prefer paid licence when free + paid coexist
-    expect(booking).toMatch(/pickEffectiveLicense|licenseAllowsOnlineBookings/);
+    expect(booking).toMatch(
+      /pickEffectiveLicense|licenseAllowsOnlineBookings|doctorCanAcceptOnlineBookings/
+    );
+    expect(booking).toContain("is_founding_member");
   });
 
   it("free→starter checkout is not blocked by active free licence", () => {
@@ -160,5 +163,31 @@ describe("doctor signup flow contracts", () => {
     const doctor = read("src/actions/doctor.ts");
     expect(doctor).toMatch(/export async function connectStripeAccount/);
     expect(doctor).toMatch(/account_onboarding|accountLinks\.create/);
+  });
+
+  it("payments page uses ConnectStripeButton not a missing /api/stripe/connect route", () => {
+    const payments = read(
+      "src/app/[locale]/(doctor)/doctor-dashboard/payments/page.tsx"
+    );
+    expect(payments).toContain("ConnectStripeButton");
+    expect(payments).not.toContain("/api/stripe/connect");
+  });
+
+  it("post-signup onboarding and email-verified send doctors to Stripe setup", () => {
+    const onboarding = read(
+      "src/app/[locale]/(doctor)/doctor-dashboard/onboarding/page.tsx"
+    );
+    expect(onboarding).toContain("ConnectStripeButton");
+    expect(onboarding).toContain("is_founding_member");
+    const verified = read("src/app/[locale]/(auth)/email-verified/page.tsx");
+    expect(verified).toContain("/doctor-dashboard/onboarding");
+  });
+
+  it("licence Checkout sessions set integration_identifier", () => {
+    const auth = read("src/actions/auth.ts");
+    expect(auth).toContain("licenseCheckoutTrackingFields");
+    const license = read("src/actions/license.ts");
+    expect(license).toContain("licenseCheckoutTrackingFields");
+    expect(license).toMatch(/getRequestOriginAndLocale/);
   });
 });

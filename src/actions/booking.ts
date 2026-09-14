@@ -209,6 +209,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         in_person_deposit_value,
         is_active,
         verification_status,
+        is_founding_member,
         organization_id,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
       `
@@ -231,8 +232,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
-    // Check doctor's org has an active paid-capable license.
-    // Free tier is listing-only — no online bookings. Prefer paid if dual rows.
+    // Paid licence or Founding Doctor Programme (not listing-only free).
     let hasActiveLicense = false;
 
     if (doctor.organization_id) {
@@ -242,12 +242,20 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         .eq("organization_id", doctor.organization_id)
         .in("status", ["active", "trialing", "past_due"]);
 
-      const { pickEffectiveLicense, licenseAllowsOnlineBookings } =
+      const { pickEffectiveLicense, doctorCanAcceptOnlineBookings } =
         await import("@/lib/license/tier-lifecycle");
       const orgLicense = pickEffectiveLicense(orgLicenses || []);
 
       if (orgLicense) {
-        if (!licenseAllowsOnlineBookings(orgLicense.tier, orgLicense.status)) {
+        if (
+          !doctorCanAcceptOnlineBookings({
+            tier: orgLicense.tier,
+            status: orgLicense.status,
+            isFoundingMember: Boolean(
+              (doctor as { is_founding_member?: boolean }).is_founding_member
+            ),
+          })
+        ) {
           return {
             error:
               "This doctor is on a free listing plan and does not accept online bookings yet.",
@@ -460,8 +468,27 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     }
     const remainingCharge = stripeChargeCents - walletCreditToApply;
 
-    // If wallet covers the full charge, confirm booking immediately (no Stripe needed)
+    // If wallet covers the full charge, pay the doctor from platform balance
+    // then confirm (no Checkout). Fail closed if the transfer cannot run.
     if (remainingCharge === 0 && walletCreditToApply > 0) {
+      const { payoutWalletToConnectedAccount } = await import(
+        "@/lib/stripe/transfer-handoff"
+      );
+      const payout = await payoutWalletToConnectedAccount({
+        chargedCents: walletCreditToApply,
+        currency: doctor.base_currency,
+        destinationAccountId: doctor.stripe_account_id,
+        idempotencyKey: `wallet-payout-booking-${booking.id}`,
+        bookingId: booking.id,
+      });
+      if (!payout.success) {
+        return {
+          error:
+            payout.error ||
+            "Could not pay the doctor from wallet balance. Please try card checkout.",
+        };
+      }
+
       await debitWallet({
         patientId,
         currency: doctor.base_currency,
@@ -471,7 +498,6 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         description: `Payment for booking ${booking.booking_number} (wallet only)`,
       });
 
-      // Confirm booking immediately
       await writeClient
         .from("bookings")
         .update({
@@ -668,21 +694,32 @@ export async function cancelBooking(input: CancelBookingInput) {
         (stripeChargedAmount * refundPercent) / 100
       );
 
-      if (refundDestination === "wallet") {
-        // Instant: credit patient wallet, still refund doctor via Stripe
+      const { shouldRefundStripeToCard } = await import(
+        "@/lib/wallet/refund-path"
+      );
+
+      if (!shouldRefundStripeToCard(refundDestination)) {
+        // Wallet: reverse the doctor transfer, keep funds on the platform, credit wallet.
+        // Do not refund the card — that would pay the patient twice.
         walletCreditCents = refundAmount;
 
-        // Refund Stripe to reverse the doctor's transfer + platform fee
         if (booking.stripe_payment_intent_id) {
-          await getStripe().refunds.create({
-            payment_intent: booking.stripe_payment_intent_id,
-            amount: refundAmount,
-            reverse_transfer: true,
-            refund_application_fee: true,
+          const { reverseDestinationTransferToPlatform } = await import(
+            "@/lib/stripe/transfer-handoff"
+          );
+          const reversed = await reverseDestinationTransferToPlatform({
+            paymentIntentId: booking.stripe_payment_intent_id,
+            bookingId: booking.id,
           });
+          if (!reversed.success) {
+            return {
+              error:
+                reversed.error ||
+                "Could not reverse the doctor payout for a wallet refund.",
+            };
+          }
         }
 
-        // Credit the patient's wallet balance
         await creditWallet({
           patientId: user.id,
           currency: booking.currency,
@@ -926,18 +963,26 @@ export async function cancelAndRebook(input: {
       : oldBooking.total_amount_cents;
     const refundAmount = Math.round((stripeCharged * refundPercent) / 100);
 
-    // 3. Refund old booking via Stripe (to reverse doctor transfer)
-    if (oldBooking.stripe_payment_intent_id && refundAmount > 0) {
-      await getStripe().refunds.create({
-        payment_intent: oldBooking.stripe_payment_intent_id,
-        amount: refundAmount,
-        reverse_transfer: true,
-        refund_application_fee: true,
-      });
-    }
-
-    // 4. Credit wallet with refund
+    // 3. Reverse the doctor transfer onto the platform, then credit wallet
+    // for the new checkout. Do not refund the card (that would double-pay).
     if (refundAmount > 0) {
+      if (oldBooking.stripe_payment_intent_id) {
+        const { reverseDestinationTransferToPlatform } = await import(
+          "@/lib/stripe/transfer-handoff"
+        );
+        const reversed = await reverseDestinationTransferToPlatform({
+          paymentIntentId: oldBooking.stripe_payment_intent_id,
+          bookingId: oldBooking.id,
+        });
+        if (!reversed.success) {
+          return {
+            error:
+              reversed.error ||
+              "Could not reverse the original doctor payout to rebook.",
+          };
+        }
+      }
+
       await creditWallet({
         patientId: user.id,
         currency: oldBooking.currency,

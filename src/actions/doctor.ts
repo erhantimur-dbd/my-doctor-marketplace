@@ -310,7 +310,8 @@ export async function connectStripeAccount() {
   const { error: authError, supabase, doctor } = await requireDoctor();
   if (authError || !supabase || !doctor) return { error: authError };
 
-  const { stripe } = await import("@/lib/stripe/client");
+  const { getStripe } = await import("@/lib/stripe/client");
+  const stripe = getStripe();
 
   let accountId = doctor.stripe_account_id;
 
@@ -327,12 +328,12 @@ export async function connectStripeAccount() {
       .eq("id", doctor.id);
   }
 
-  const { getRequestOrigin } = await import("@/lib/http/origin");
-  const origin = await getRequestOrigin();
+  const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
+  const { origin, locale } = await getRequestOriginAndLocale("en");
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${origin}/en/doctor-dashboard/payments`,
-    return_url: `${origin}/en/doctor-dashboard/payments`,
+    refresh_url: `${origin}/${locale}/doctor-dashboard/onboarding`,
+    return_url: `${origin}/${locale}/doctor-dashboard/onboarding`,
     type: "account_onboarding",
   });
 

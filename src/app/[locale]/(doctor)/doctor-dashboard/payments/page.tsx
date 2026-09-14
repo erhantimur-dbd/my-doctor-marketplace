@@ -16,13 +16,12 @@ import {
   DollarSign,
   TrendingUp,
   Clock,
-  ExternalLink,
   CreditCard,
   AlertCircle,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
-import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
-import { hasActiveLicense } from "@/lib/license/check";
+import { Link } from "@/i18n/navigation";
+import { ConnectStripeButton } from "@/components/doctor/connect-stripe-button";
 
 export default async function PaymentsPage() {
   const supabase = await createClient();
@@ -41,10 +40,6 @@ export default async function PaymentsPage() {
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
-
-  if (!(await hasActiveLicense(supabase, doctor.id))) {
-    return <UpgradePrompt feature="Payments" />;
-  }
 
   // Fetch completed/confirmed bookings with payments
   const { data: bookings } = await supabase
@@ -161,12 +156,9 @@ export default async function PaymentsPage() {
                   Connect your Stripe account to start receiving payouts. You will
                   be redirected to Stripe to complete the onboarding process.
                 </p>
-                <form action="/api/stripe/connect" method="POST" className="mt-3">
-                  <Button type="submit" size="sm">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Connect Stripe Account
-                  </Button>
-                </form>
+                <div className="mt-3">
+                  <ConnectStripeButton label="Connect Stripe Account" />
+                </div>
               </div>
             </div>
           ) : !doctor.stripe_onboarding_complete ? (
@@ -180,11 +172,12 @@ export default async function PaymentsPage() {
                   Your Stripe account setup is not yet complete. Please finish the
                   onboarding process to enable payouts.
                 </p>
-                <form action="/api/stripe/connect" method="POST" className="mt-3">
-                  <Button type="submit" size="sm" variant="outline">
-                    Complete Onboarding
-                  </Button>
-                </form>
+                <div className="mt-3">
+                  <ConnectStripeButton
+                    label="Complete Onboarding"
+                    variant="outline"
+                  />
+                </div>
               </div>
             </div>
           ) : (
@@ -204,14 +197,9 @@ export default async function PaymentsPage() {
                 </div>
               </div>
               <Button variant="outline" size="sm" asChild>
-                <a
-                  href="https://dashboard.stripe.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  View Stripe Dashboard
-                </a>
+                <Link href="/doctor-dashboard/onboarding">
+                  Setup status
+                </Link>
               </Button>
             </div>
           )}

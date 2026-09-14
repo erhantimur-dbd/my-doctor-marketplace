@@ -45,8 +45,8 @@ export async function getDoctorLicense(
 
 /**
  * True when the doctor has an active **paid** licence (Starter+).
- * Founding Free is active but listing-only — must return false so dashboard
- * gates do not treat free as subscribed.
+ * Generic listing-only free stays false so dashboard gates do not treat it
+ * as subscribed. Founding Doctors still use {@link doctorHasPayoutAccess}.
  */
 export async function hasActiveLicense(
   supabase: SupabaseClient,
@@ -60,6 +60,23 @@ export async function hasActiveLicense(
   return (
     isPaidTier(license.tier) && isActiveLicenseStatus(license.status)
   );
+}
+
+/**
+ * Payments / Connect UI: paid licence **or** Founding Doctor Programme.
+ * Every signup must be able to complete Stripe Connect.
+ */
+export async function doctorHasPayoutAccess(
+  supabase: SupabaseClient,
+  doctorId: string
+): Promise<boolean> {
+  const { data: doctor } = await supabase
+    .from("doctors")
+    .select("is_founding_member")
+    .eq("id", doctorId)
+    .maybeSingle();
+  if (doctor?.is_founding_member) return true;
+  return hasActiveLicense(supabase, doctorId);
 }
 
 /**

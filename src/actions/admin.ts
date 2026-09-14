@@ -28,17 +28,12 @@ import { headers } from "next/headers";
 
 import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
 import { log } from "@/lib/utils/logger";
+import { isAdminEmailDenied } from "@/lib/admin/allowlist";
 import {
   creditWallet,
   getAllWalletBalances,
   getWalletTransactions,
 } from "@/lib/wallet";
-
-// Admin email allowlist — mirrors middleware check for defense-in-depth
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -49,18 +44,7 @@ async function requireAdmin() {
 
   // Soft-launch fail-closed: in production an empty ADMIN_EMAILS deny-alls
   // so a missing env cannot authorize any role=admin account.
-  const isProduction =
-    process.env.VERCEL_ENV === "production" ||
-    process.env.NODE_ENV === "production";
-  if (isProduction && ADMIN_EMAILS.length === 0) {
-    return { error: "Not authorized", supabase: null, user: null };
-  }
-
-  // Check email allowlist (if configured; local/dev may use role-only)
-  if (
-    ADMIN_EMAILS.length > 0 &&
-    !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
-  ) {
+  if (isAdminEmailDenied(user.email)) {
     return { error: "Not authorized", supabase: null, user: null };
   }
 

@@ -73,6 +73,7 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
       in_person_deposit_value,
       stripe_account_id,
       stripe_onboarding_complete,
+      is_founding_member,
       organization_id,
       profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
       location:locations(city, country_code, timezone),
@@ -91,16 +92,22 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
 
   const doctor: any = doctorData2;
 
-  // Free gateway: listed but not bookable online
+  // Listing-only free: not bookable. Founding members and paid licences are.
   if (doctor.organization_id) {
-    const { data: freeLic } = await adminDb
+    const { data: licenses } = await adminDb
       .from("licenses")
-      .select("tier")
+      .select("tier, status, created_at")
       .eq("organization_id", doctor.organization_id)
-      .eq("tier", "free")
-      .in("status", ["active", "trialing", "past_due"])
-      .maybeSingle();
-    if (freeLic) {
+      .in("status", ["active", "trialing", "past_due"]);
+    const { bookPageAllowsOnlineBookings } = await import(
+      "@/lib/license/tier-lifecycle"
+    );
+    if (
+      !bookPageAllowsOnlineBookings({
+        licenses: licenses || [],
+        isFoundingMember: Boolean(doctor.is_founding_member),
+      })
+    ) {
       return (
         <div className="container mx-auto px-4 py-16">
           <div className="mx-auto max-w-md space-y-4 text-center">
@@ -108,9 +115,9 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
               Online booking coming soon
             </h1>
             <p className="text-muted-foreground">
-              This doctor is building their profile on our free founding plan.
-              Online booking unlocks when they upgrade — check back soon or
-              browse other doctors.
+              This doctor is on a listing-only free plan. Online booking
+              unlocks when they upgrade — check back soon or browse other
+              doctors.
             </p>
             <div className="flex flex-col gap-2 pt-2">
               <Button variant="outline" asChild className="w-full">

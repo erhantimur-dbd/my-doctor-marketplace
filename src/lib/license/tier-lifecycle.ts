@@ -272,13 +272,49 @@ export function buildFreeGatewayLicenseInsert(organizationId: string): {
   };
 }
 
-/** Online bookings require an active paid licence (not free gateway). */
+/** Online bookings require an active paid licence (not listing-only free). */
 export function licenseAllowsOnlineBookings(
   tier: string | null | undefined,
   status: string | null | undefined
 ): boolean {
   if (!isPaidTier(tier)) return false;
   return isActiveLicenseStatus(status);
+}
+
+/**
+ * Patient bookings vs licence.
+ *
+ * Founding Doctor Programme (first 100, `is_founding_member`) is not the
+ * listing-only free plan: founding doctors can take bookings with no monthly
+ * licence fee, still paying 15% per booking via Connect.
+ *
+ * Generic free-gateway doctors (programme full, or cancelled paid) stay listing-only.
+ */
+export function doctorCanAcceptOnlineBookings(opts: {
+  tier: string | null | undefined;
+  status: string | null | undefined;
+  isFoundingMember: boolean;
+}): boolean {
+  if (!isActiveLicenseStatus(opts.status)) return false;
+  if (opts.isFoundingMember) return true;
+  return licenseAllowsOnlineBookings(opts.tier, opts.status);
+}
+
+/**
+ * Book-page gate. Uses the effective licence so a leftover free row cannot
+ * hide a paid plan, and founding members stay bookable on free.
+ */
+export function bookPageAllowsOnlineBookings(opts: {
+  licenses: LicenseLike[];
+  isFoundingMember: boolean;
+}): boolean {
+  const license = pickEffectiveLicense(opts.licenses);
+  if (!license) return false;
+  return doctorCanAcceptOnlineBookings({
+    tier: license.tier,
+    status: license.status,
+    isFoundingMember: opts.isFoundingMember,
+  });
 }
 
 /**
