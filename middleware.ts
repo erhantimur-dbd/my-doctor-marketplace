@@ -7,6 +7,7 @@ import {
   isAllowedOnComingSoon,
 } from "@/lib/soft-launch/coming-soon-gate";
 import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
+import { isAdminEmailDenied } from "@/lib/admin/allowlist";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -23,13 +24,6 @@ function getLocaleFromPathname(pathname: string): string {
   const match = pathname.match(/^\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/);
   return match ? match[1] : "en";
 }
-
-// Admin email allowlist — only these emails can access /admin routes
-// Set ADMIN_EMAILS in .env.local as comma-separated list: "you@example.com,other@example.com"
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
 
 export async function middleware(request: NextRequest) {
   // Serve /sitemap.xml and /robots.txt straight from the root-level metadata
@@ -171,16 +165,7 @@ export async function middleware(request: NextRequest) {
     // Soft-launch fail-closed: in production an empty ADMIN_EMAILS deny-alls
     // so a missing env cannot open /admin to any role=admin account.
     if (isAdminRoute) {
-      const isProduction =
-        process.env.VERCEL_ENV === "production" ||
-        process.env.NODE_ENV === "production";
-      if (isProduction && ADMIN_EMAILS.length === 0) {
-        return NextResponse.redirect(new URL(`/${locale}`, request.url));
-      }
-      if (
-        ADMIN_EMAILS.length > 0 &&
-        !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
-      ) {
+      if (isAdminEmailDenied(user.email)) {
         return NextResponse.redirect(new URL(`/${locale}`, request.url));
       }
       if (userRole !== "admin") {

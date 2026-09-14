@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/email/client";
 import { log } from "@/lib/utils/logger";
+import { isAdminEmailDenied } from "@/lib/admin/allowlist";
 
 // ============================================================
 // Helpers
@@ -448,15 +449,7 @@ async function requireAdmin() {
 
   if (!user) return { error: "Unauthorized" };
 
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (
-    ADMIN_EMAILS.length > 0 &&
-    !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
-  ) {
+  if (isAdminEmailDenied(user.email)) {
     return { error: "Access denied" };
   }
 

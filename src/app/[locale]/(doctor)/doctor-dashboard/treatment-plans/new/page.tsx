@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { TreatmentPlanWizard } from "./wizard";
-import { hasActiveLicense } from "@/lib/license/check";
+import { getDoctorLicenseTier } from "@/lib/license/check";
+import { hasFeature } from "@/lib/utils/feature-flags";
 
 export default async function NewTreatmentPlanPage() {
   const supabase = await createClient();
@@ -17,9 +18,9 @@ export default async function NewTreatmentPlanPage() {
     .single();
   if (!doctor) redirect("/en/register-doctor");
 
-  // Check license
-  if (!(await hasActiveLicense(supabase, doctor.id))) {
-    redirect("/doctor-dashboard");
+  const licenseTier = await getDoctorLicenseTier(supabase, doctor.id);
+  if (!hasFeature("treatment_plans", licenseTier)) {
+    redirect("/doctor-dashboard/treatment-plans");
   }
 
   // Fetch services

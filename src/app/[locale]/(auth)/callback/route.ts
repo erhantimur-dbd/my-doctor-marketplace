@@ -4,8 +4,10 @@ import {
   AUTH_RETURN_COOKIE,
   DOCTOR_OAUTH_INTENT_COOKIE,
   isSafeRelativePath,
+  sanitizeAuthLocale,
 } from "@/lib/auth/return-cookie";
 import { bootstrapDoctorShell } from "@/lib/auth/bootstrap-doctor";
+import { resolveAppOrigin } from "@/lib/http/origin";
 
 function safeRelative(path: string | null | undefined, fallback: string): string {
   if (path && isSafeRelativePath(path)) return path;
@@ -16,8 +18,15 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ locale: string }> }
 ) {
-  const { locale } = await params;
-  const { searchParams, origin } = new URL(request.url);
+  const { locale: localeRaw } = await params;
+  const locale = sanitizeAuthLocale(localeRaw);
+  const { searchParams } = new URL(request.url);
+  const origin = resolveAppOrigin({
+    host: request.headers.get("host"),
+    forwardedHost: request.headers.get("x-forwarded-host"),
+    proto: request.headers.get("x-forwarded-proto"),
+    fallback: process.env.NEXT_PUBLIC_APP_URL,
+  });
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type");

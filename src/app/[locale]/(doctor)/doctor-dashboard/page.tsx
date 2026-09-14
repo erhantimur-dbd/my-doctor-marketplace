@@ -137,10 +137,10 @@ export default async function DoctorDashboard() {
                   : ""}
               </p>
               <p className="text-sm text-emerald-800/80 dark:text-emerald-200/70">
-                You&apos;re in the first 100 founding doctors. Founding pricing
-                is locked for life, and your profile has priority placement at
-                launch. Complete your profile and verification to go live on day
-                one.
+                You&apos;re in the first 100 founding doctors — no monthly
+                licence fee. Patients can book you once you are verified and
+                Stripe payouts are connected (15% platform fee per booking).
+                Complete Connect and your profile to go live.
               </p>
             </div>
           </CardContent>
@@ -203,7 +203,9 @@ export default async function DoctorDashboard() {
         </Card>
       )}
 
-      {isFreeTier && doctor.verification_status === "verified" && (
+      {isFreeTier &&
+        !doctor.is_founding_member &&
+        doctor.verification_status === "verified" && (
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
           <CardContent className="flex items-center justify-between p-5">
             <div className="flex items-center gap-3">
@@ -212,15 +214,17 @@ export default async function DoctorDashboard() {
               </div>
               <div>
                 <p className="font-semibold text-amber-900 dark:text-amber-100">
-                  You&apos;re on the Free Licence
+                  You&apos;re on the listing-only free plan
                 </p>
                 <p className="text-sm text-amber-800/80 dark:text-amber-200/70">
-                  Your profile is live in our directory. Upgrade to a Starter, Professional, or Clinic licence to unlock bookings, video consultations, analytics, and more.
+                  Your profile can appear in our directory. This is not the
+                  Founding Doctor Programme. Upgrade to Starter or above to
+                  accept online bookings.
                 </p>
               </div>
             </div>
             <Button size="sm" asChild>
-              <Link href="/doctor-dashboard/subscription">
+              <Link href="/doctor-dashboard/organization/billing">
                 Upgrade <ArrowRight className="ml-1 h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -246,6 +250,7 @@ export default async function DoctorDashboard() {
         hasServices={(servicesCount || 0) > 0}
         hasTestingServices={(priceBookCount || 0) > 0}
         isFreeTier={isFreeTier}
+        isFoundingMember={Boolean(doctor.is_founding_member)}
       />
       </div>
 

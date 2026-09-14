@@ -219,12 +219,16 @@ export async function createLicenseCheckout(
     ? quantity
     : tierConfig.includedSeats || 1;
 
-  const { getRequestOrigin } = await import("@/lib/http/origin");
-  const origin = await getRequestOrigin();
+  const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
+  const { origin, locale } = await getRequestOriginAndLocale("en");
+  const { licenseCheckoutTrackingFields } = await import(
+    "@/lib/stripe/checkout-ids"
+  );
 
   const sessionOptions: Record<string, unknown> = {
     customer: customerId,
     mode: "subscription",
+    ...licenseCheckoutTrackingFields(),
     line_items: [{ price: priceId, quantity }],
     metadata: {
       organization_id: org.id,
@@ -242,8 +246,8 @@ export async function createLicenseCheckout(
         billing_period: billingPeriod,
       },
     },
-    success_url: `${origin}/en/doctor-dashboard/organization/billing?success=true`,
-    cancel_url: `${origin}/en/doctor-dashboard/organization/billing`,
+    success_url: `${origin}/${locale}/doctor-dashboard/organization/billing?success=true`,
+    cancel_url: `${origin}/${locale}/doctor-dashboard/organization/billing`,
   };
 
   // Apply coupon if provided
@@ -287,12 +291,12 @@ export async function manageLicenseBilling() {
   if (!org.stripe_customer_id) return { error: "No billing account found. Please subscribe first." };
 
   const stripe = getStripe();
-  const { getRequestOrigin } = await import("@/lib/http/origin");
-  const origin = await getRequestOrigin();
+  const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
+  const { origin, locale } = await getRequestOriginAndLocale("en");
 
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: org.stripe_customer_id,
-    return_url: `${origin}/en/doctor-dashboard/organization/billing`,
+    return_url: `${origin}/${locale}/doctor-dashboard/organization/billing`,
   });
 
   return { url: portalSession.url };

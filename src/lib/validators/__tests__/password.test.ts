@@ -24,4 +24,11 @@ describe("password rules (client/server aligned)", () => {
     expect(passwordSchema.safeParse("Abcdefg1").success).toBe(true);
     expect(passwordSchema.safeParse("weakweak").success).toBe(false);
   });
+
+  it("passwordSchema rejects empty, short, and two-class passwords", () => {
+    expect(passwordSchema.safeParse("").success).toBe(false);
+    expect(passwordSchema.safeParse("Abcdef1").success).toBe(false);
+    expect(passwordSchema.safeParse("abcdefgh").success).toBe(false);
+    expect(passwordSchema.safeParse("ABCDEFG1").success).toBe(false);
+  });
 });

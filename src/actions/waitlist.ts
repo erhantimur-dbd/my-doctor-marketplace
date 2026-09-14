@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { log } from "@/lib/utils/logger";
+import { isAdminEmailDenied } from "@/lib/admin/allowlist";
 
 // ─── Public actions (no auth required) ────────────────────────────
 
@@ -84,11 +85,6 @@ export async function subscribeToLaunchNotification(formData: FormData) {
 
 // ─── Admin actions ────────────────────────────────────────────────
 
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
 async function requireAdmin() {
   const supabase = await createClient();
   const {
@@ -96,10 +92,7 @@ async function requireAdmin() {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" as const };
 
-  if (
-    ADMIN_EMAILS.length > 0 &&
-    !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
-  ) {
+  if (isAdminEmailDenied(user.email)) {
     return { error: "Not authorized" as const };
   }
 

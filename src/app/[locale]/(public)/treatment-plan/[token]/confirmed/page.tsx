@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,7 @@ export default async function TreatmentPlanConfirmedPage({
   params,
 }: ConfirmedPageProps) {
   const { token, locale } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Fetch treatment plan
   const { data: plan } = await supabase

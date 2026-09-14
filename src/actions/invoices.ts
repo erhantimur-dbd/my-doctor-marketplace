@@ -279,8 +279,26 @@ export async function createInvoiceCheckout(
     const walletCredit = Math.min(walletBalance, invoice.total_cents);
     const remainingCharge = invoice.total_cents - walletCredit;
 
-    // If wallet covers the full invoice, pay immediately
+    // If wallet covers the full invoice, pay the doctor from platform balance.
     if (remainingCharge === 0 && walletCredit > 0) {
+      const { payoutWalletToConnectedAccount } = await import(
+        "@/lib/stripe/transfer-handoff"
+      );
+      const payout = await payoutWalletToConnectedAccount({
+        chargedCents: walletCredit,
+        currency: invoice.currency,
+        destinationAccountId: doctor.stripe_account_id,
+        idempotencyKey: `wallet-payout-invoice-${invoice.id}`,
+        invoiceId: invoice.id,
+      });
+      if (!payout.success) {
+        return {
+          error:
+            payout.error ||
+            "Could not pay the doctor from wallet balance. Please try card checkout.",
+        };
+      }
+
       await debitWallet({
         patientId: user.id,
         currency: invoice.currency,

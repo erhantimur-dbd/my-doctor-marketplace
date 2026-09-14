@@ -427,7 +427,7 @@ export default function BillingPage() {
               ) : (
                 <ExternalLink className="mr-2 h-4 w-4" />
               )}
-              Manage Billing
+              Manage payment method & invoices
             </Button>
           </CardContent>
         </Card>

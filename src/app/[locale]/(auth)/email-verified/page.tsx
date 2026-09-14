@@ -25,13 +25,13 @@ export default async function EmailVerifiedPage() {
 
   const dashboardHref =
     role === "doctor"
-      ? "/doctor-dashboard"
+      ? "/doctor-dashboard/onboarding"
       : role === "admin"
         ? "/admin"
         : "/dashboard";
 
   const dashboardLabel =
-    role === "doctor" ? "Go to Doctor Dashboard" : "Go to Dashboard";
+    role === "doctor" ? "Finish Stripe setup" : "Go to Dashboard";
 
   return (
     <Card className="w-full max-w-md">
@@ -51,10 +51,10 @@ export default async function EmailVerifiedPage() {
         {role === "doctor" && (
           <div className="w-full rounded-lg border border-blue-200 bg-blue-50 p-4 text-left">
             <p className="text-sm text-blue-800">
-              <strong>Next steps:</strong> Complete your doctor profile by
-              adding your education, certifications, clinic photos, and
-              availability schedule. Your profile will be reviewed by our
-              team before it goes live.
+              <strong>Next steps:</strong> Connect Stripe so patients can pay
+              you (required for every doctor, including Founding Doctors — we
+              still take 15% per booking). Then finish your profile and
+              availability. Our team reviews your profile before it goes live.
             </p>
           </div>
         )}

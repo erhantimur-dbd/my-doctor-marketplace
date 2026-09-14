@@ -53,6 +53,8 @@ describe("cron routes use the fail-closed helper", () => {
     for (const file of routes) {
       const src = readFileSync(file, "utf8");
       expect(src, file).toContain("authorizeCronRequest");
+      expect(src, file).toMatch(/const denied = authorizeCronRequest\(request\)/);
+      expect(src, file).toMatch(/if \(denied\) return denied/);
       expect(src, file).not.toMatch(
         /authHeader !== `Bearer \$\{process\.env\.CRON_SECRET\}`/
       );
