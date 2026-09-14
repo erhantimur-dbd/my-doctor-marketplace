@@ -81,56 +81,41 @@ describe("Soft Launch public claims", () => {
     expect(html).not.toMatch(/loadFoundingSpots/);
   });
 
-  it("how-it-works and register are doctor Founding surfaces", () => {
+  it("how-it-works keeps Legal founding copy without fake scale", () => {
     const how = read("src/app/[locale]/(public)/how-it-works/page.tsx");
     expect(how).toMatch(/Founding Doctor Programme/);
-    expect(how).not.toMatch(/href=["']\/doctors["']/);
-    expect(how).not.toMatch(/Create Free Account/);
     expect(how).not.toMatch(/thousands of patients/i);
     expect(how).not.toMatch(/Book Instantly/);
     expect(how).not.toMatch(/Ready to Book Your First Appointment/);
+  });
 
+  it("patient register is AuthPage for beta", () => {
     const register = read("src/app/[locale]/(auth)/register/page.tsx");
-    expect(register).toMatch(/Patient registration opens at launch/);
-    expect(register).toMatch(/FOUNDING_REGISTER_HREF|register-doctor\?tier=free/);
-    expect(register).not.toMatch(/AuthPage/);
+    expect(register).toContain("AuthPage");
+    expect(register).not.toMatch(/Patient registration opens at launch/);
   });
 
-  it("Next homepage redirects to coming-soon while Soft Launch chrome is on", () => {
+  it("homepage is the marketplace, not a coming-soon redirect", () => {
     const home = read("src/app/[locale]/page.tsx");
-    expect(home).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
-    expect(home).toMatch(/redirect\("\/coming-soon\/index.html"\)/);
+    expect(home).not.toMatch(/redirect\("\/coming-soon\/index.html"\)/);
+    expect(home).toMatch(/HomeSearchBar|getFeaturedDoctors/);
   });
 
-  it("patient marketplace layouts Soft Launch-gate to coming-soon", () => {
+  it("patient marketplace layouts no longer rewrite to coming-soon", () => {
     const doctorsLayout = read(
       "src/app/[locale]/(public)/doctors/layout.tsx"
     );
     const specialtiesLayout = read(
       "src/app/[locale]/(public)/specialties/layout.tsx"
     );
-    expect(doctorsLayout).toMatch(/soft-launch-dark-layout/);
-    expect(specialtiesLayout).toMatch(/soft-launch-dark-layout/);
-    const redirector = read(
-      "src/lib/soft-launch/redirect-patient-marketplace.ts"
-    );
-    expect(redirector).toMatch(/coming-soon\/index.html/);
-    expect(redirector).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
+    expect(doctorsLayout).not.toMatch(/soft-launch-dark-layout/);
+    expect(specialtiesLayout).not.toMatch(/soft-launch-dark-layout/);
   });
 
-  it("header/footer hide patient-search CTAs while Soft Launch chrome is on", () => {
+  it("header shows patient register and a Beta badge", () => {
     const header = read("src/components/layout/header.tsx");
-    const footer = read("src/components/layout/footer.tsx");
-    expect(header).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
-    expect(footer).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
-    expect(footer).toMatch(/Founding Programme/);
-    expect(header).toMatch(/for_doctors/);
-    expect(header).not.toMatch(/href=["']\/register["']/);
-  });
-
-  it("does not mount patient-finder chat on Soft Launch layout", () => {
-    const layout = read("src/app/[locale]/layout.tsx");
-    expect(layout).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
-    expect(layout).toMatch(/!SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
+    expect(header).toMatch(/registerHref|"\/register"/);
+    expect(header).toMatch(/Beta/);
+    expect(header).toMatch(/find_doctor/);
   });
 });

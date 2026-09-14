@@ -71,11 +71,11 @@ const COMING_SOON_ROOT_ALLOWED = new Set(["/sitemap.xml", "/robots.txt"]);
 const LOCALE_PATTERN = /^\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/;
 
 export function comingSoonGateApplies(
-  host: string,
+  _host: string,
   _vercelEnv?: string
 ): boolean {
-  if (SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME) return true;
-  return (COMING_SOON_HOSTS as readonly string[]).includes(host);
+  if (!SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME) return false;
+  return true;
 }
 
 export function isAllowedOnComingSoon(pathname: string): boolean {

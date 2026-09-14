@@ -108,11 +108,16 @@ export function Header() {
         <Link href="/" className="flex items-center gap-2">
           <Logo className="h-7 w-7 text-primary" />
           <div className="flex flex-col">
-            <span className="text-xl font-bold tracking-tight leading-tight">MyDoctors360</span>
+            <span className="flex items-center gap-2">
+              <span className="text-xl font-bold tracking-tight leading-tight">MyDoctors360</span>
+              <Badge variant="secondary" className="hidden text-[10px] font-semibold uppercase tracking-wide sm:inline-flex">
+                Beta
+              </Badge>
+            </span>
             <span className="text-[10px] text-muted-foreground">
               {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
                 ? "Founding Doctor Programme"
-                : t("brand_tagline")}
+                : "Verified doctors before they appear in search"}
             </span>
           </div>
         </Link>

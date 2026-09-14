@@ -72,6 +72,12 @@ export async function sendWhatsAppTemplate({
   languageCode,
   components,
 }: SendTemplateParams): Promise<WhatsAppResult> {
+  const { isDemoSite } = await import("@/lib/site-mode");
+  if (isDemoSite()) {
+    log.info("[WhatsApp] skipped on demo site", { templateName });
+    return { success: true, messageId: "demo-skip" };
+  }
+
   const formattedPhone = formatPhoneForWhatsApp(to);
   if (!formattedPhone) {
     return { success: false, error: "Invalid phone number" };
@@ -141,6 +147,12 @@ export async function sendWhatsAppText({
   to,
   text,
 }: SendTextParams): Promise<WhatsAppResult> {
+  const { isDemoSite } = await import("@/lib/site-mode");
+  if (isDemoSite()) {
+    log.info("[WhatsApp] skipped on demo site");
+    return { success: true, messageId: "demo-skip" };
+  }
+
   const formattedPhone = formatPhoneForWhatsApp(to);
   if (!formattedPhone) {
     return { success: false, error: "Invalid phone number" };

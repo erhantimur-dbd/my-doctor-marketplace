@@ -14,6 +14,7 @@ import { NavigationProgress } from "@/components/shared/navigation-progress";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { organizationJsonLd } from "@/lib/seo/json-ld";
 import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
+import { DemoBanner } from "@/components/layout/demo-banner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -98,6 +99,7 @@ export default async function LocaleLayout({
               initialProfile={initialProfile}
             >
               <NavigationProgress />
+              <DemoBanner />
               {children}
               <Toaster position="top-right" />
               <CookieConsentBanner />

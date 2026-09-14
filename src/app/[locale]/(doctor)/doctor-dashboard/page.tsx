@@ -156,11 +156,12 @@ export default async function DoctorDashboard() {
             </div>
             <div>
               <p className="font-semibold text-blue-900 dark:text-blue-100">
-                Account Pending GMC Verification
+                Pending verification — not listed yet
               </p>
               <p className="text-sm text-blue-800/80 dark:text-blue-200/70">
-                Your GMC registration is being verified by our team. You&apos;ll receive an email once your account is approved.
-                In the meantime, feel free to complete your profile.
+                Patients cannot find or book you until our team verifies your
+                profile. Complete Stripe Connect and your profile while you wait.
+                You&apos;ll get an email when you are approved.
               </p>
             </div>
           </CardContent>

@@ -740,6 +740,33 @@ async function createDoctorAccount(formData: FormData): Promise<
     }
   }
 
+  try {
+    const { parseAdminEmails } = await import("@/lib/admin/allowlist");
+    const { doctorSignupAdminEmail } = await import("@/lib/email/templates");
+    const { sendEmail } = await import("@/lib/email/client");
+    const adminTo = [
+      ...parseAdminEmails(process.env.ADMIN_EMAILS),
+      ...(process.env.CONTACT_ADMIN_EMAIL
+        ? [process.env.CONTACT_ADMIN_EMAIL.trim().toLowerCase()]
+        : []),
+    ].filter(Boolean);
+    const unique = [...new Set(adminTo)];
+    if (unique.length > 0) {
+      const firstName = (formData.get("first_name") as string) || "";
+      const lastName = (formData.get("last_name") as string) || "";
+      const { subject, html } = doctorSignupAdminEmail({
+        name: `${firstName} ${lastName}`.trim(),
+        email,
+        doctorId: newDoctor.id,
+      });
+      await Promise.all(
+        unique.map((to) => sendEmail({ to, subject, html }).catch(() => {}))
+      );
+    }
+  } catch (notifyErr) {
+    log.error("[Auth] Admin doctor-signup notify failed:", { err: notifyErr });
+  }
+
   return { userId: data.user.id, doctorId: newDoctor.id, orgId, email, locale };
 }
 

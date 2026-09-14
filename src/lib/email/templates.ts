@@ -675,6 +675,28 @@ export function welcomeEmail({
   return { subject, html };
 }
 
+export function doctorSignupAdminEmail({
+  name,
+  email,
+  doctorId,
+}: {
+  name: string;
+  email: string;
+  doctorId: string;
+}): { subject: string; html: string } {
+  const subject = `New doctor signup pending verification: ${name || email}`;
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">New doctor signup</h2>
+    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+      ${name || "A doctor"} (${email}) registered and is pending verification.
+      They will not appear in search until you approve them in Admin.
+    </p>
+    <p style="margin: 0 0 16px; font-size: 13px; color: #6b7280;">Doctor id: ${doctorId}</p>
+    ${button("Open approvals", `${APP_URL}/en/admin/approvals`)}
+  `);
+  return { subject, html };
+}
+
 // ---------------------------------------------------------------------------
 // Doctor Verified Email
 // ---------------------------------------------------------------------------

@@ -19,9 +19,7 @@ describe("doctor signup flow contracts", () => {
     expect(gate).toContain('"/doctor-dashboard"');
     // Enterprise CTA + footer Support must not dead-end on coming-soon
     expect(gate).toContain('"/support"');
-    expect(vercel).toMatch(/register-doctor/);
-    expect(vercel).toMatch(/doctor-dashboard/);
-    expect(vercel).toMatch(/support/);
+    expect(vercel).not.toMatch(/coming-soon\/index.html/);
     // Patient home still gated (no bare "/" allow in COMING_SOON list after soft-launch restore)
     const allowBlock = gate.slice(
       gate.indexOf("COMING_SOON_ALLOWED_PREFIXES"),

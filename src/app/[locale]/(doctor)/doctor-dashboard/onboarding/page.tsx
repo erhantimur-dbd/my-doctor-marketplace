@@ -124,7 +124,33 @@ export default async function DoctorOnboardingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">3. Profile & availability</CardTitle>
+          <CardTitle className="text-base">3. Verification</CardTitle>
+          <CardDescription>
+            You will not appear in search or take bookings until an admin
+            verifies your profile.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center gap-3 text-sm">
+          {doctor.verification_status === "verified" ? (
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+          ) : (
+            <Circle className="h-5 w-5 text-muted-foreground" />
+          )}
+          <span>
+            {doctor.verification_status === "verified"
+              ? "Verified — patients can find you"
+              : doctor.verification_status === "rejected"
+                ? "Verification unsuccessful — contact support"
+                : doctor.verification_status === "under_review"
+                  ? "Under review"
+                  : "Pending admin approval"}
+          </span>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">4. Profile & availability</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" asChild>

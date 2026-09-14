@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import type { MetadataRoute } from "next";
+import { isDemoSite } from "@/lib/site-mode";
 
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const headersList = await headers();
@@ -8,6 +9,12 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
   const baseUrl = host
     ? `${protocol}://${host}`
     : (process.env.NEXT_PUBLIC_APP_URL || "https://www.mydoctors360.co.uk");
+
+  if (isDemoSite()) {
+    return {
+      rules: [{ userAgent: "*", disallow: "/" }],
+    };
+  }
 
   return {
     rules: [
