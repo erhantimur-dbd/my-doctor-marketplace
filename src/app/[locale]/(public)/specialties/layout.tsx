@@ -1,1 +1,1 @@
-export { default } from "@/lib/soft-launch/soft-launch-dark-layout";
+export { default } from "../passthrough-layout";

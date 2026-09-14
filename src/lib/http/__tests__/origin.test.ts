@@ -69,6 +69,7 @@ describe("resolveAppOrigin", () => {
 
   it("ignores untrusted forwarded hosts", () => {
     expect(isAllowedAppHost("evil.com")).toBe(false);
+    expect(isAllowedAppHost("attacker.vercel.app")).toBe(false);
     expect(
       resolveAppOrigin({
         host: "localhost:3000",
@@ -77,6 +78,42 @@ describe("resolveAppOrigin", () => {
         fallback: "https://www.mydoctors360.com",
       })
     ).toBe("http://localhost:3000");
+    expect(
+      resolveAppOrigin({
+        host: "localhost:3000",
+        forwardedHost: "attacker.vercel.app",
+        proto: "http",
+      })
+    ).toBe("http://localhost:3000");
+  });
+
+  it("allows this deployment's Vercel host but not an attacker preview", () => {
+    const prev = {
+      VERCEL_URL: process.env.VERCEL_URL,
+      VERCEL_BRANCH_URL: process.env.VERCEL_BRANCH_URL,
+      VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    };
+    process.env.VERCEL_URL = "mydoctors360-abc.vercel.app";
+    delete process.env.VERCEL_BRANCH_URL;
+    delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    expect(isAllowedAppHost("mydoctors360-abc.vercel.app")).toBe(true);
+    expect(isAllowedAppHost("attacker.vercel.app")).toBe(false);
+    expect(
+      resolveAppOrigin({
+        host: "mydoctors360-git-main-team.vercel.app",
+        proto: "https",
+      })
+    ).toBe("https://mydoctors360-git-main-team.vercel.app");
+    if (prev.VERCEL_URL === undefined) delete process.env.VERCEL_URL;
+    else process.env.VERCEL_URL = prev.VERCEL_URL;
+    if (prev.VERCEL_BRANCH_URL === undefined) delete process.env.VERCEL_BRANCH_URL;
+    else process.env.VERCEL_BRANCH_URL = prev.VERCEL_BRANCH_URL;
+    if (prev.VERCEL_PROJECT_PRODUCTION_URL === undefined) {
+      delete process.env.VERCEL_PROJECT_PRODUCTION_URL;
+    } else {
+      process.env.VERCEL_PROJECT_PRODUCTION_URL =
+        prev.VERCEL_PROJECT_PRODUCTION_URL;
+    }
   });
 
   it("falls back when host missing", () => {

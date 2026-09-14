@@ -95,7 +95,7 @@ export const FOUNDING_PROGRAMME_MAX_SPOTS = 100;
  * look like a live patient marketplace (Legal P0, 2026-09-07).
  * Lift only after Product + Legal + Sandy stamp the Preview.
  */
-export const SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME = true;
+export const SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME = false;
 
 /** Founding Free primary CTA — keep query contract for register-doctor. */
 export const FOUNDING_REGISTER_HREF =

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,7 @@ export default async function TreatmentPlanPage({
   params,
 }: TreatmentPlanPageProps) {
   const { token, locale } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Fetch treatment plan with doctor details
   const { data: plan } = await supabase

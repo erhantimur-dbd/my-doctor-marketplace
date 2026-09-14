@@ -27,20 +27,22 @@ import Stripe from "stripe";
 export async function POST(request: NextRequest) {
   const body = await request.text();
   const sig = request.headers.get("stripe-signature");
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!sig) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
+  }
+
+  if (!webhookSecret) {
+    console.error("Stripe webhook: STRIPE_WEBHOOK_SECRET is not set");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
   }
 
   const stripe = getStripe();
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
     console.error("Webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
@@ -146,7 +148,12 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      const bookingId = session.metadata?.booking_id;
+      const { bookingIdFromCheckoutMetadata } = await import(
+        "@/lib/stripe/webhook-ids"
+      );
+      const bookingId = bookingIdFromCheckoutMetadata(
+        session.metadata as Record<string, string | undefined> | null
+      );
       const invitationId = session.metadata?.invitation_id;
 
       const invoiceId = session.metadata?.invoice_id;
@@ -1052,9 +1059,12 @@ export async function POST(request: NextRequest) {
 
     case "account.updated": {
       const account = event.data.object as Stripe.Account;
+      const { connectAccountIsReady } = await import(
+        "@/lib/stripe/connect-readiness"
+      );
       const updateData: Record<string, unknown> = {
-        stripe_onboarding_complete: account.details_submitted,
-        stripe_payouts_enabled: account.payouts_enabled,
+        stripe_onboarding_complete: connectAccountIsReady(account),
+        stripe_payouts_enabled: Boolean(account.payouts_enabled),
       };
 
       // Detect restricted/disabled accounts
@@ -1082,8 +1092,20 @@ export async function POST(request: NextRequest) {
     }
 
     case "account.application.deauthorized": {
-      // Doctor disconnected their Stripe account
-      const account = event.data.object as unknown as { id: string };
+      // Connected account id is event.account (acct_…), not the application ca_…
+      const { deauthorizedConnectedAccountId } = await import(
+        "@/lib/stripe/webhook-ids"
+      );
+      const connectedAccountId = deauthorizedConnectedAccountId({
+        account: event.account,
+        data: event.data,
+      });
+      if (!connectedAccountId) {
+        console.warn(
+          "[Stripe] account.application.deauthorized missing event.account"
+        );
+        break;
+      }
       await supabase
         .from("doctors")
         .update({
@@ -1092,10 +1114,10 @@ export async function POST(request: NextRequest) {
           stripe_payouts_enabled: false,
           is_active: false, // Hide from search — can't accept payments
         })
-        .eq("stripe_account_id", account.id);
+        .eq("stripe_account_id", connectedAccountId);
 
       console.warn(
-        `[Stripe] Doctor deauthorized Connect account ${account.id}. Doctor deactivated.`
+        `[Stripe] Doctor deauthorized Connect account ${connectedAccountId}. Doctor deactivated.`
       );
       break;
     }

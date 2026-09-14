@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  bookPageAllowsOnlineBookings,
   buildFreeGatewayLicenseInsert,
+  doctorCanAcceptOnlineBookings,
   freeLicensesToSupersede,
   getPendingPlanChange,
   licenseAllowsOnlineBookings,
@@ -188,6 +190,71 @@ describe("licenseAllowsOnlineBookings + hasFeature matrix", () => {
     expect(licenseAllowsOnlineBookings("starter", "active")).toBe(true);
     expect(licenseAllowsOnlineBookings("professional", "trialing")).toBe(true);
     expect(licenseAllowsOnlineBookings("starter", "cancelled")).toBe(false);
+  });
+
+  it("founding doctors can take bookings on an active free licence; listing-only free cannot", () => {
+    expect(
+      doctorCanAcceptOnlineBookings({
+        tier: "free",
+        status: "active",
+        isFoundingMember: true,
+      })
+    ).toBe(true);
+    expect(
+      doctorCanAcceptOnlineBookings({
+        tier: "free",
+        status: "active",
+        isFoundingMember: false,
+      })
+    ).toBe(false);
+    expect(
+      doctorCanAcceptOnlineBookings({
+        tier: "starter",
+        status: "active",
+        isFoundingMember: false,
+      })
+    ).toBe(true);
+    expect(
+      doctorCanAcceptOnlineBookings({
+        tier: "free",
+        status: "cancelled",
+        isFoundingMember: true,
+      })
+    ).toBe(false);
+  });
+
+  it("book page allows founding free and paid; blocks listing-only free even if a free row exists beside paid", () => {
+    expect(
+      bookPageAllowsOnlineBookings({
+        licenses: [{ tier: "free", status: "active" }],
+        isFoundingMember: true,
+      })
+    ).toBe(true);
+    expect(
+      bookPageAllowsOnlineBookings({
+        licenses: [{ tier: "free", status: "active" }],
+        isFoundingMember: false,
+      })
+    ).toBe(false);
+    expect(
+      bookPageAllowsOnlineBookings({
+        licenses: [
+          { tier: "free", status: "active", created_at: "2026-06-01T00:00:00Z" },
+          {
+            tier: "starter",
+            status: "active",
+            created_at: "2026-05-01T00:00:00Z",
+          },
+        ],
+        isFoundingMember: false,
+      })
+    ).toBe(true);
+    expect(
+      bookPageAllowsOnlineBookings({
+        licenses: [],
+        isFoundingMember: true,
+      })
+    ).toBe(false);
   });
 
   it("feature matrix free vs starter vs professional", () => {

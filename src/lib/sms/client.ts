@@ -58,6 +58,12 @@ export function isSmsConfigured(): boolean {
  * Send an SMS via Twilio
  */
 export async function sendSms({ to, body }: SendSmsParams): Promise<SmsResult> {
+  const { isDemoSite } = await import("@/lib/site-mode");
+  if (isDemoSite()) {
+    log.info("[SMS] skipped on demo site", { to: to.slice(0, 6) });
+    return { success: true, messageId: "demo-skip" };
+  }
+
   const formattedPhone = formatPhoneForSms(to);
   if (!formattedPhone) {
     return { success: false, error: "Invalid phone number" };

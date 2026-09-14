@@ -448,6 +448,7 @@ export async function acceptTreatmentPlanFull(
       },
       metadata: {
         treatment_plan_id: planId,
+        booking_id: booking.id,
         first_booking_id: booking.id,
         booking_number: booking.booking_number,
       },

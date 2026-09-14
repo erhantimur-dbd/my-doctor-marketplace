@@ -263,8 +263,9 @@ async function createDoctorAccount(formData: FormData): Promise<
   const countryEarly = (formData.get("country") as string)?.trim() || "";
   const practisingEarly =
     (formData.get("practising_country") as string)?.trim() || countryEarly;
-  if (practisingEarly === "GB" || countryEarly === "GB") {
-    const { isValidGmcNumber } = await import("@/lib/founding/members");
+  const { isValidGmcNumber, requiresUkGmcNumber, normalizeCountryCode } =
+    await import("@/lib/founding/members");
+  if (requiresUkGmcNumber(countryEarly, practisingEarly)) {
     if (!isValidGmcNumber(gmcNumber)) {
       return {
         error:
@@ -378,7 +379,8 @@ async function createDoctorAccount(formData: FormData): Promise<
   const address = (formData.get("address") as string)?.trim() || null;
   const city = (formData.get("city") as string)?.trim() || null;
   const postalCode = (formData.get("postal_code") as string)?.trim() || null;
-  const countryCode = (formData.get("country") as string)?.trim() || null;
+  const countryCode =
+    normalizeCountryCode(formData.get("country") as string) || null;
 
   // UK regulatory fields (Workstream 2 of the UK CQC compliance plan).
   // Only populated when the doctor is UK-practising (country === "GB").
@@ -388,9 +390,13 @@ async function createDoctorAccount(formData: FormData): Promise<
   const practisingCountryRaw =
     (formData.get("practising_country") as string)?.trim() || null;
   // The wizard only sets practising_country=GB when country===GB. Keep
-  // them in lockstep so downstream gates are unambiguous.
-  const practisingCountry =
-    practisingCountryRaw === "GB" ? "GB" : null;
+  // them in lockstep so downstream gates are unambiguous (any-case GB).
+  const practisingCountry = requiresUkGmcNumber(
+    countryCode,
+    practisingCountryRaw
+  )
+    ? "GB"
+    : null;
   const isUkDoctor = practisingCountry === "GB";
 
   const cqcStatusRaw =
@@ -734,6 +740,33 @@ async function createDoctorAccount(formData: FormData): Promise<
     }
   }
 
+  try {
+    const { parseAdminEmails } = await import("@/lib/admin/allowlist");
+    const { doctorSignupAdminEmail } = await import("@/lib/email/templates");
+    const { sendEmail } = await import("@/lib/email/client");
+    const adminTo = [
+      ...parseAdminEmails(process.env.ADMIN_EMAILS),
+      ...(process.env.CONTACT_ADMIN_EMAIL
+        ? [process.env.CONTACT_ADMIN_EMAIL.trim().toLowerCase()]
+        : []),
+    ].filter(Boolean);
+    const unique = [...new Set(adminTo)];
+    if (unique.length > 0) {
+      const firstName = (formData.get("first_name") as string) || "";
+      const lastName = (formData.get("last_name") as string) || "";
+      const { subject, html } = doctorSignupAdminEmail({
+        name: `${firstName} ${lastName}`.trim(),
+        email,
+        doctorId: newDoctor.id,
+      });
+      await Promise.all(
+        unique.map((to) => sendEmail({ to, subject, html }).catch(() => {}))
+      );
+    }
+  } catch (notifyErr) {
+    log.error("[Auth] Admin doctor-signup notify failed:", { err: notifyErr });
+  }
+
   return { userId: data.user.id, doctorId: newDoctor.id, orgId, email, locale };
 }
 
@@ -870,9 +903,13 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     /* ignore */
   }
 
+  const { licenseCheckoutTrackingFields } = await import(
+    "@/lib/stripe/checkout-ids"
+  );
   const session = await stripe.checkout.sessions.create({
     customer: customer.id,
     mode: "subscription",
+    ...licenseCheckoutTrackingFields(),
     line_items: lineItems,
     subscription_data: {
       metadata: {
@@ -998,9 +1035,13 @@ export async function resumeDoctorLicenseCheckout(
     ? quantity
     : tierConfig.includedSeats || 1;
 
+  const { licenseCheckoutTrackingFields } = await import(
+    "@/lib/stripe/checkout-ids"
+  );
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
+    ...licenseCheckoutTrackingFields(),
     line_items: [{ price: priceId, quantity }],
     subscription_data: {
       metadata: {
@@ -1020,7 +1061,7 @@ export async function resumeDoctorLicenseCheckout(
       type: "license",
       billing_period: billingPeriod,
     },
-    success_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=success`,
+    success_url: `${origin}/${resumeLocale}/doctor-dashboard/onboarding?checkout=success`,
     cancel_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
   });
 

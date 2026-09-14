@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidGmcNumber } from "@/lib/founding/members";
+import { isValidGmcNumber, requiresUkGmcNumber } from "@/lib/founding/members";
 import { FOUNDING_PROGRAMME_MAX_SPOTS, getCompanyIdentity } from "@/lib/constants/company";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -19,6 +19,23 @@ describe("isValidGmcNumber", () => {
     expect(isValidGmcNumber("123456")).toBe(false);
     expect(isValidGmcNumber("12345678")).toBe(false);
     expect(isValidGmcNumber("123456A")).toBe(false);
+  });
+});
+
+describe("requiresUkGmcNumber", () => {
+  it("treats GB country or practising country as UK regardless of case or padding", () => {
+    expect(requiresUkGmcNumber("GB")).toBe(true);
+    expect(requiresUkGmcNumber("gb")).toBe(true);
+    expect(requiresUkGmcNumber(" Gb ")).toBe(true);
+    expect(requiresUkGmcNumber("IE", "GB")).toBe(true);
+    expect(requiresUkGmcNumber("ie", "gb")).toBe(true);
+  });
+
+  it("does not require GMC for non-UK practice", () => {
+    expect(requiresUkGmcNumber("IE")).toBe(false);
+    expect(requiresUkGmcNumber("US", "DE")).toBe(false);
+    expect(requiresUkGmcNumber("", "")).toBe(false);
+    expect(requiresUkGmcNumber(null, undefined)).toBe(false);
   });
 });
 
@@ -78,9 +95,18 @@ describe("founding + signup go-live contracts", () => {
     expect(mig).toMatch(/max_spots.*100|DEFAULT 100/);
   });
 
+  it("founding bookings are distinct from listing-only free", () => {
+    const lifecycle = read("src/lib/license/tier-lifecycle.ts");
+    expect(lifecycle).toContain("doctorCanAcceptOnlineBookings");
+    expect(lifecycle).toContain("isFoundingMember");
+    const booking = read("src/actions/booking.ts");
+    expect(booking).toContain("doctorCanAcceptOnlineBookings");
+  });
+
   it("createDoctorAccount enforces UK GMC + city/country and claims founding", () => {
     const auth = read("src/actions/auth.ts");
     expect(auth).toContain("isValidGmcNumber");
+    expect(auth).toContain("requiresUkGmcNumber");
     expect(auth).toContain("7-digit GMC");
     expect(auth).toContain("Please select the country where you practise");
     expect(auth).toContain("Please enter your practice city");
@@ -124,9 +150,7 @@ describe("founding + signup go-live contracts", () => {
   });
 
   it("gate allows register-testing-service", () => {
-    const middleware = read("middleware.ts");
-    const vercel = read("vercel.json");
-    expect(middleware).toContain('"/register-testing-service"');
-    expect(vercel).toMatch(/register-testing-service/);
+    const gate = read("src/lib/soft-launch/coming-soon-gate.ts");
+    expect(gate).toContain('"/register-testing-service"');
   });
 });

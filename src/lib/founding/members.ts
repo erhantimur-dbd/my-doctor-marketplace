@@ -92,3 +92,21 @@ export async function claimFoundingMembership(
 export function isValidGmcNumber(value: string | null | undefined): boolean {
   return typeof value === "string" && /^\d{7}$/.test(value.trim());
 }
+
+/** ISO country code, trimmed and uppercased. Empty string when missing. */
+export function normalizeCountryCode(
+  value: string | null | undefined
+): string {
+  return typeof value === "string" ? value.trim().toUpperCase() : "";
+}
+
+/** UK GMC is required when country or practising country is GB (any case). */
+export function requiresUkGmcNumber(
+  country: string | null | undefined,
+  practisingCountry?: string | null
+): boolean {
+  return (
+    normalizeCountryCode(country) === "GB" ||
+    normalizeCountryCode(practisingCountry) === "GB"
+  );
+}

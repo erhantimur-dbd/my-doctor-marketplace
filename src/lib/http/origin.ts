@@ -46,19 +46,65 @@ export function canonicalizeAppHost(host: string): string {
   return withoutPort;
 }
 
-export function isAllowedAppHost(host: string): boolean {
-  const h = host.toLowerCase().replace(/:\d+$/, "");
-  if (
-    h === "localhost" ||
-    h.startsWith("127.") ||
-    h.startsWith("0.0.0.0")
-  ) {
-    return true;
+function hostnameFromEnvUrl(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  try {
+    const withProto = value.includes("://") ? value : `https://${value}`;
+    const hostname = new URL(withProto).hostname.toLowerCase();
+    return hostname || null;
+  } catch {
+    const host = value
+      .toLowerCase()
+      .replace(/^https?:\/\//, "")
+      .split("/")[0]
+      .replace(/:\d+$/, "");
+    return host || null;
   }
-  if (h.endsWith(".vercel.app")) return true;
+}
+
+/** Hostnames for this Vercel deployment (not arbitrary *.vercel.app). */
+export function vercelDeploymentHosts(
+  env: NodeJS.ProcessEnv = process.env
+): Set<string> {
+  const hosts = new Set<string>();
+  for (const key of [
+    "VERCEL_URL",
+    "VERCEL_BRANCH_URL",
+    "VERCEL_PROJECT_PRODUCTION_URL",
+  ] as const) {
+    const host = hostnameFromEnvUrl(env[key] || "");
+    if (host) hosts.add(host);
+  }
+  return hosts;
+}
+
+function stripHostPort(host: string): string {
+  return host.toLowerCase().replace(/:\d+$/, "");
+}
+
+function isLocalHostName(h: string): boolean {
+  return h === "localhost" || h.startsWith("127.") || h.startsWith("0.0.0.0");
+}
+
+function isBrandAppHost(h: string): boolean {
   for (const suffix of APP_BRAND_HOST_SUFFIXES) {
     if (h === suffix || h === `www.${suffix}`) return true;
   }
+  return false;
+}
+
+/** Preview aliases on this request's Host header (not attacker x-forwarded-host). */
+function isVercelPreviewHost(h: string): boolean {
+  return h.endsWith(".vercel.app") && h !== "vercel.app" && !h.startsWith(".");
+}
+
+export function isAllowedAppHost(host: string): boolean {
+  const h = stripHostPort(host);
+  if (!h) return false;
+  if (isLocalHostName(h)) return true;
+  if (isBrandAppHost(h)) return true;
+  if (vercelDeploymentHosts().has(h)) return true;
   return false;
 }
 
@@ -68,10 +114,18 @@ export function resolveAppOrigin(input: {
   proto?: string | null;
   fallback?: string | null;
 }): string {
-  const candidates = [input.forwardedHost, input.host]
-    .map((v) => (v || "").split(",")[0].trim())
-    .filter(Boolean);
-  const raw = candidates.find((h) => isAllowedAppHost(h)) || "";
+  const forwarded = (input.forwardedHost || "").split(",")[0].trim();
+  const host = (input.host || "").split(",")[0].trim();
+  // Trust x-forwarded-host only when it is a brand / localhost / this
+  // deployment. Arbitrary *.vercel.app forwarded hosts are attacker-controlled.
+  let raw = "";
+  if (forwarded && isAllowedAppHost(forwarded)) {
+    raw = forwarded;
+  } else if (host && isAllowedAppHost(host)) {
+    raw = host;
+  } else if (host && isVercelPreviewHost(stripHostPort(host))) {
+    raw = host;
+  }
 
   if (raw) {
     const host = canonicalizeAppHost(raw);

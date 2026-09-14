@@ -29,8 +29,10 @@ interface ProfileCompletionCardProps {
   hasEducation: boolean;
   hasServices: boolean;
   hasTestingServices: boolean;
-  /** Free gateway — Stripe Connect is paid-only upsell */
+  /** Listing-only free (not Founding Doctor Programme) */
   isFreeTier?: boolean;
+  /** First-100 founding cohort — bookings + Connect, no licence fee */
+  isFoundingMember?: boolean;
 }
 
 export function ProfileCompletionCard({
@@ -42,6 +44,7 @@ export function ProfileCompletionCard({
   hasServices,
   hasTestingServices,
   isFreeTier = false,
+  isFoundingMember = false,
 }: ProfileCompletionCardProps) {
   const isTestingProvider = doctor.provider_type === "testing_service";
 
@@ -91,20 +94,25 @@ export function ProfileCompletionCard({
       completed: hasAvailability,
       href: "/doctor-dashboard/calendar",
     },
-    // Connect only when paid — free gateway should upgrade first
-    ...(isFreeTier
+    // Connect for every signup. Listing-only free (not founding) must upgrade first.
+    ...(isFreeTier && !isFoundingMember
       ? [
           {
             label: "Upgrade to accept online bookings",
             completed: false,
             href: "/doctor-dashboard/organization/billing",
           },
+          {
+            label: "Connect Stripe for payouts",
+            completed: !!doctor.stripe_account_id,
+            href: "/doctor-dashboard/onboarding",
+          },
         ]
       : [
           {
-            label: "Connect Stripe for payments",
+            label: "Connect Stripe for payouts",
             completed: !!doctor.stripe_account_id,
-            href: "/doctor-dashboard/organization/billing",
+            href: "/doctor-dashboard/onboarding",
           },
         ]),
   ];

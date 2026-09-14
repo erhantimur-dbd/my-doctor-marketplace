@@ -6,38 +6,6 @@ import { regionFromHost } from "@/lib/region";
 
 const { locales } = routing;
 
-/** Hosts that still serve the coming-soon gate for most patient paths. */
-const COMING_SOON_HOSTS = new Set([
-  "mydoctors360.com",
-  "www.mydoctors360.com",
-  "mydoctors360.co.uk",
-  "www.mydoctors360.co.uk",
-  "mydoctors360.eu",
-  "www.mydoctors360.eu",
-]);
-
-/**
- * Public paths allowed through the coming-soon gate (must stay in sync with
- * middleware.ts COMING_SOON_ALLOWED_PREFIXES and vercel.json rewrites).
- * Only these are listed in the sitemap while the gate is active so crawlers
- * are not fed URLs that rewrite to founding-doctor HTML.
- */
-const SOFT_LAUNCH_PUBLIC_PAGES = [
-  // Soft-launch: no patient home/search until go-live
-  "/pricing",
-  "/how-it-works",
-  "/contact",
-  "/support",
-  "/help-center",
-  "/terms",
-  "/privacy",
-  "/cookie-policy",
-  "/about",
-  "/login",
-  "/register",
-  "/register-doctor",
-];
-
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const headersList = await headers();
   const host = (headersList.get("host") || "").replace(/:\d+$/, "");
@@ -46,33 +14,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ? `${protocol}://${host}`
     : process.env.NEXT_PUBLIC_APP_URL || "https://www.mydoctors360.co.uk";
   const region = regionFromHost(host);
-  const softLaunch = COMING_SOON_HOSTS.has(host);
-
-  // While the coming-soon gate is active on production hosts, only emit URLs
-  // that actually return the app (doctor soft-launch allowlist). Full patient
-  // sitemap (home, doctors, blog, specialties) returns after gate lift.
-  if (softLaunch) {
-    const softEntries = locales.flatMap((locale) =>
-      SOFT_LAUNCH_PUBLIC_PAGES.map((page) => ({
-        url: `${BASE_URL}/${locale}${page}`,
-        lastModified: new Date(),
-        changeFrequency: "weekly" as const,
-        priority:
-          page === "/register-doctor" || page === "/pricing" ? 0.9 : 0.6,
-      }))
-    );
-
-    const ukOnlyPages = region === "uk" ? ["/regulatory", "/complaints"] : [];
-    const ukOnlyEntries = locales.flatMap((locale) =>
-      ukOnlyPages.map((page) => ({
-        url: `${BASE_URL}/${locale}${page}`,
-        lastModified: new Date(),
-        changeFrequency: "monthly" as const,
-        priority: 0.3,
-      }))
-    );
-
-    return [...softEntries, ...ukOnlyEntries];
+  const { isDemoSite } = await import("@/lib/site-mode");
+  if (isDemoSite()) {
+    return [];
   }
 
   // High-priority pages (homepage, search)

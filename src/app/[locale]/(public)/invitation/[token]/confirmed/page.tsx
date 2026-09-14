@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default async function InvitationConfirmedPage({ params }: ConfirmedPageProps) {
   const { token, locale } = await params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   // Fetch invitation with first booking
   const { data: invitation } = await supabase
