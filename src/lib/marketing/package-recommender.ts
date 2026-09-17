@@ -58,5 +58,5 @@ export function getPackageRecommendationReason(
     }
     return "With your patient volume, Starter is the right step for paid bookings, video, email and AI. Analytics, CRM and waitlist unlock on Professional.";
   }
-  return "Founding Free is ideal to start — public listing after verification and a dashboard, with no online bookings, video or AI until you upgrade to Starter.";
+  return "Founding Free is the Soft Launch thank-you — lifetime Solo Professional equivalent (value £299/mo) at £0. Bookings, video, payments, analytics, CRM and waitlist included. Clinic is the multi-doctor upgrade.";
 }

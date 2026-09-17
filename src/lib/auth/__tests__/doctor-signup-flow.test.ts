@@ -75,6 +75,8 @@ describe("doctor signup flow contracts", () => {
     expect(page).toContain("registerDoctorWithCheckout");
     expect(page).toContain('searchParams.get("ref")');
     expect(page).toContain('searchParams.get("tier")');
+    expect(page).toContain('searchParams.get("founding")');
+    expect(page).toMatch(/founding === "1"/);
     expect(page).toContain("DoctorWaitlistForm");
     // Pricing fields collected in UI but not all submitted — fee state exists
     expect(page).toContain("consultationFee");

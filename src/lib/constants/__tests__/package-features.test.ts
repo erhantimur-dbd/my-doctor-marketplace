@@ -20,14 +20,18 @@ const TIERS: LicenseTier[] = [
 ];
 
 describe("hasFeature matrix (enforcement)", () => {
-  it("free denies bookings, video, AI, WhatsApp, analytics, waitlist", () => {
-    expect(hasFeature("online_bookings", "free")).toBe(false);
-    expect(hasFeature("video_consultations", "free")).toBe(false);
-    expect(hasFeature("ai_review_summaries", "free")).toBe(false);
-    expect(hasFeature("whatsapp_notifications", "free")).toBe(false);
-    expect(hasFeature("analytics_dashboard", "free")).toBe(false);
-    expect(hasFeature("waitlist_auto_notify", "free")).toBe(false);
-    expect(getFeaturesForTier("free")).toEqual([]);
+  it("Founding Free matches Professional entitlements (not Clinic)", () => {
+    expect(hasFeature("online_bookings", "free")).toBe(true);
+    expect(hasFeature("video_consultations", "free")).toBe(true);
+    expect(hasFeature("ai_review_summaries", "free")).toBe(true);
+    expect(hasFeature("whatsapp_notifications", "free")).toBe(true);
+    expect(hasFeature("analytics_dashboard", "free")).toBe(true);
+    expect(hasFeature("waitlist_auto_notify", "free")).toBe(true);
+    expect(hasFeature("treatment_plans", "free")).toBe(true);
+    expect(hasFeature("multi_location", "free")).toBe(false);
+    expect(getFeaturesForTier("free")).toEqual(
+      getFeaturesForTier("professional")
+    );
   });
 
   it("starter allows bookings, video, AI, email; denies WhatsApp, waitlist, analytics, care plans", () => {

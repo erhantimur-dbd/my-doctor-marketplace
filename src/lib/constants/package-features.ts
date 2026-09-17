@@ -112,11 +112,13 @@ export const MARKETING_CAPABILITY_CHECKS: {
  * Inheritance is written out so cards read clearly without “see Starter”.
  *
  * Ladder (enforced):
- *   Free → profile/list only
- *   Starter → bookings, video, email, messaging, AI; testing add-on optional
- *   Professional → multi-channel reminders, analytics, CRM, waitlist (1 doctor)
+ *   Founding Free → lifetime Solo Professional equivalent (£0; value £299/mo)
+ *   Starter → paid bookings, video, email, messaging, AI; testing add-on optional
+ *   Professional → paid solo growth: analytics, CRM, waitlist (1 doctor)
  *   Clinic → multi-doctor (3–15), multi-location, team, testing included
  *   Enterprise → branding, API, SLA, dedicated AM
+ *
+ * Soft Launch copy: do not claim live SMS/WhatsApp or care plans / prescriptions.
  */
 export const PACKAGE_MARKETING: Record<
   "free" | "starter" | "professional" | "clinic" | "enterprise",
@@ -124,25 +126,30 @@ export const PACKAGE_MARKETING: Record<
 > = {
   free: {
     features: [
-      "Public profile after verification",
-      "Practice profile, specialties & languages",
-      "Doctor dashboard & completion checklist",
-      "£0 — no card required",
-    ],
-    excludedFeatures: [
-      "Featured profile visibility boost",
+      "Lifetime Solo Professional equivalent (value £299/mo)",
+      "Founding Free £0 — no card required",
       "Online bookings & Stripe payouts",
       "Video consultations",
-      "Patient messaging",
-      "AI review summaries",
+      "Featured profile visibility boost",
       "Email appointment reminders",
-      "Analytics & waitlist",
-      "Medical testing, multi-location & team tools",
+      "Patient messaging",
+      "AI review summaries & sentiment tags",
+      "Advanced analytics dashboard",
+      "Patient CRM",
+      "Waitlist auto-notify",
+      "Priority support",
+      "Single doctor seat (solo practice)",
+    ],
+    excludedFeatures: [
+      "Multi-doctor seats (Clinic 3–15)",
+      "Multi-location clinic tools",
+      "Team management & practice dashboard",
+      "Medical testing included (optional +£49/mo add-on)",
+      "Custom branding & API (Enterprise)",
     ],
   },
   starter: {
     features: [
-      "Everything in Founding Free",
       "Online bookings & Stripe payouts",
       "Video consultations",
       "Featured profile visibility boost",
@@ -269,27 +276,35 @@ export function validatePackageMarketingConsistency(
     }
   }
 
-  // Free must never claim bookings or AI
+  // Founding Free = lifetime Professional equivalent (Soft Launch product lock)
   if (tier === "free") {
-    const freeClaimsBook = marketing.features.some((f) =>
-      /online booking|stripe payout/i.test(f)
-    );
-    const freeClaimsAi = marketing.features.some((f) =>
-      /\bAI\b|review summar/i.test(f)
-    );
-    if (freeClaimsBook) errors.push("free: must not include online bookings");
-    if (freeClaimsAi) errors.push("free: must not include AI");
     if (
-      !marketing.excludedFeatures.some((f) =>
-        /online booking|stripe payout/i.test(f)
+      !marketing.features.some((f) =>
+        /lifetime.*professional equivalent/i.test(f)
       )
     ) {
-      errors.push("free: must list online bookings as excluded");
+      errors.push("free: must claim lifetime Professional equivalent");
+    }
+    if (!marketing.features.some((f) => /£299/i.test(f))) {
+      errors.push("free: must surface Soft Launch claim value £299/mo");
+    }
+    if (!marketing.features.some((f) => /£0/i.test(f))) {
+      errors.push("free: must list Founding Free £0");
     }
     if (
-      !marketing.excludedFeatures.some((f) => /\bAI\b|review summar/i.test(f))
+      !marketing.features.some((f) => /online booking|stripe payout/i.test(f))
     ) {
-      errors.push("free: must list AI as excluded");
+      errors.push("free: must include online bookings (Professional equivalent)");
+    }
+    if (marketing.features.some((f) => /care plan|prescription/i.test(f))) {
+      errors.push("free: must not claim care plans or prescriptions");
+    }
+    if (
+      marketing.features.some(
+        (f) => /whatsapp|\bSMS\b/i.test(f) && !/coming/i.test(f)
+      )
+    ) {
+      errors.push("free: must not claim live SMS/WhatsApp");
     }
   }
 

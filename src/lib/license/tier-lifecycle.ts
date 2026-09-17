@@ -3,6 +3,8 @@
  * Single source for “which licence row wins” and whether paid Checkout is allowed.
  */
 
+import { hasFeature } from "@/lib/utils/feature-flags";
+
 export const ACTIVE_LICENSE_STATUSES = [
   "active",
   "trialing",
@@ -247,6 +249,16 @@ export function paidFeaturesActiveDuringCancel(
   );
 }
 
+/** Lifetime Founding Free metadata — Professional entitlements, £0 billing. */
+export function foundingFreeLicenseMetadata(): Record<string, unknown> {
+  return {
+    founding_free: true,
+    entitlement_tier: "professional",
+    perk: "lifetime",
+    claim_value_gbp_monthly: 299,
+  };
+}
+
 /** Shape for free gateway row after paid subscription ends. */
 export function buildFreeGatewayLicenseInsert(organizationId: string): {
   organization_id: string;
@@ -258,6 +270,7 @@ export function buildFreeGatewayLicenseInsert(organizationId: string): {
   current_period_end: string;
   cancel_at_period_end: boolean;
   stripe_subscription_id: null;
+  metadata: Record<string, unknown>;
 } {
   return {
     organization_id: organizationId,
@@ -269,15 +282,16 @@ export function buildFreeGatewayLicenseInsert(organizationId: string): {
     current_period_end: "2099-12-31T23:59:59.000Z",
     cancel_at_period_end: false,
     stripe_subscription_id: null,
+    metadata: foundingFreeLicenseMetadata(),
   };
 }
 
-/** Online bookings require an active paid licence (not free gateway). */
+/** Online bookings: Founding Free lifetime Professional, or any paid active licence. */
 export function licenseAllowsOnlineBookings(
   tier: string | null | undefined,
   status: string | null | undefined
 ): boolean {
-  if (!isPaidTier(tier)) return false;
+  if (!hasFeature("online_bookings", tier)) return false;
   return isActiveLicenseStatus(status);
 }
 

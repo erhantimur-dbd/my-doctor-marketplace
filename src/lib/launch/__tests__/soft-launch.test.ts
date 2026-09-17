@@ -11,6 +11,10 @@ import {
   PUBLIC_CHAT_DISABLED_MESSAGE,
   SYMPTOM_ANALYSIS_DISABLED_MESSAGE,
 } from "../soft-launch";
+import {
+  getFeaturesForTier,
+  hasFeature,
+} from "@/lib/utils/feature-flags";
 
 describe("soft-launch kill-switch", () => {
   it("hard-disables prescriptions, care plans, public chat, and symptom analysis for every tier", () => {
@@ -18,6 +22,21 @@ describe("soft-launch kill-switch", () => {
     expect(isCarePlansEnabled()).toBe(false);
     expect(isPublicChatEnabled()).toBe(false);
     expect(isSymptomAnalysisEnabled()).toBe(false);
+  });
+
+  it("Founding Free Professional flags do not lift the clinical kill-switch", () => {
+    expect(hasFeature("prescriptions", "free")).toBe(
+      hasFeature("prescriptions", "professional")
+    );
+    expect(hasFeature("treatment_plans", "free")).toBe(
+      hasFeature("treatment_plans", "professional")
+    );
+    expect(getFeaturesForTier("free")).toEqual(
+      getFeaturesForTier("professional")
+    );
+    expect(isPrescriptionsEnabled()).toBe(false);
+    expect(isCarePlansEnabled()).toBe(false);
+    expect(isPublicChatEnabled()).toBe(false);
   });
 
   it("uses launch-disabled copy, not upgrade/unlock language", () => {

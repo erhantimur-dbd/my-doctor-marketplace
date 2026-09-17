@@ -80,7 +80,7 @@ const benefits = [
     icon: CreditCard,
     title: "Transparent pricing",
     description:
-      "Founding Free is £0. Starter £199, Professional £299, Clinic £897 — upgrade when you are ready.",
+      "Founding Free is a lifetime Solo Professional equivalent (value £299/mo) at £0. Paid Starter £199, Professional £299, Clinic £897 — Clinic is the multi-doctor upgrade.",
     color: { bg: "bg-emerald-50", text: "text-emerald-600" },
   },
   {
@@ -101,7 +101,7 @@ const faqs = [
   {
     question: "What does Founding Free include?",
     answer:
-      "A verified public listing and doctor dashboard after credential review. Online bookings, video, AI insights and email reminders unlock on paid plans.",
+      "Lifetime Solo Professional equivalent — value £299/mo, Founding Free £0, no card required. Bookings, video, payments, analytics, CRM, waitlist and priority support. SMS and WhatsApp reminders are coming soon. Soft Launch keeps prescriptions, care plans and public chat disabled.",
   },
   {
     question: "What is on Professional?",
@@ -130,7 +130,7 @@ export default function HowItWorksPage() {
           </p>
           <div className="mt-5 hidden items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary md:inline-flex">
             <CheckCircle2 className="h-4 w-4" />
-            First 100 founding doctors — Founding Free, no card required
+            First 100 founding doctors — lifetime Professional equivalent · £299/mo value · Founding Free £0
           </div>
         </div>
       </section>
@@ -258,8 +258,8 @@ export default function HowItWorksPage() {
             </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            First 100 founding doctors. Founding Free is £0 — no card
-            required.
+            First 100 founding doctors. Lifetime Professional equivalent ·
+            value £299/mo · Founding Free £0.
           </p>
         </div>
       </section>

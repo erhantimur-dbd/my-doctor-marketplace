@@ -46,7 +46,7 @@ export function organizationJsonLd() {
     "@type": "Organization",
     name: "MyDoctors360",
     description:
-      "A private practice platform for founding doctors. Join the Founding Doctor Programme — Founding Free is £0, no card required.",
+      "A private practice platform for founding doctors. Join the Founding Doctor Programme — Founding Free is a lifetime Solo Professional equivalent (value £299/mo) at £0, no card required.",
     url: process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com",
     logo: `${process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com"}/logo.png`,
   };

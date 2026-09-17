@@ -75,6 +75,28 @@ describe("Soft Launch public claims", () => {
     expect(pricingToggle).not.toMatch(/free forever/i);
   });
 
+  it("Founding Free surfaces lifetime Professional equivalent · value £299/mo · £0", () => {
+    const features = read("src/lib/constants/package-features.ts");
+    const pricing = read("src/app/[locale]/(public)/pricing/page.tsx");
+    const register = read(
+      "src/app/[locale]/(public)/register-doctor/page.tsx"
+    );
+    const toggle = read(
+      "src/components/marketing/pricing-billing-toggle.tsx"
+    );
+    for (const [rel, text] of [
+      ["package-features", features],
+      ["pricing", pricing],
+      ["register-doctor", register],
+      ["pricing-toggle", toggle],
+    ] as const) {
+      expect(text, rel).toMatch(/lifetime Solo Professional equivalent/i);
+      expect(text, rel).toMatch(/£299/);
+      expect(text, rel).toMatch(/£0/);
+      expect(text, rel).not.toMatch(/care marketplace/i);
+    }
+  });
+
   it("pricing CRM + founding CTA use Legal replacements", () => {
     const pricing = read("src/app/[locale]/(public)/pricing/page.tsx");
     expect(pricing).toMatch(/Patient records and booking history/);

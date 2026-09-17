@@ -1,10 +1,12 @@
 /**
  * Medical Testing entitlement — single product signal: doctors.has_testing_addon.
  *
- * - Free: never
- * - Starter / Professional: paid £49 add-on (Stripe subscription item)
+ * - Founding Free / Starter / Professional: paid £49 add-on (optional)
  * - Clinic / Enterprise: included with the licence (no extra fee)
+ * - Missing / unknown licence: denied
  */
+
+import { getEntitlementTier } from "@/lib/utils/feature-flags";
 
 export type MedicalTestingMode = "denied" | "paid_addon" | "included";
 
@@ -12,8 +14,11 @@ export type MedicalTestingMode = "denied" | "paid_addon" | "included";
 export function medicalTestingModeForTier(
   tier: string | null | undefined
 ): MedicalTestingMode {
-  if (tier === "clinic" || tier === "enterprise") return "included";
-  if (tier === "starter" || tier === "professional") return "paid_addon";
+  const entitlement = getEntitlementTier(tier);
+  if (entitlement === "clinic" || entitlement === "enterprise") return "included";
+  if (entitlement === "starter" || entitlement === "professional") {
+    return "paid_addon";
+  }
   return "denied";
 }
 
@@ -92,7 +97,7 @@ export function canToggleMedicalTestingModule(
     return {
       ok: false,
       reason:
-        "Medical Testing is not available on Founding Free. Upgrade to Starter or higher.",
+        "Medical Testing is an optional +£49/mo add-on on Founding Free and paid solo plans.",
     };
   }
   return { ok: true, mode };

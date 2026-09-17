@@ -10,8 +10,8 @@ import {
 } from "../medical-testing";
 
 describe("medicalTestingModeForTier", () => {
-  it("denies free and unknown", () => {
-    expect(medicalTestingModeForTier("free")).toBe("denied");
+  it("denies unknown; Founding Free matches Professional paid add-on", () => {
+    expect(medicalTestingModeForTier("free")).toBe("paid_addon");
     expect(medicalTestingModeForTier(null)).toBe("denied");
     expect(medicalTestingModeForTier("")).toBe("denied");
   });
@@ -29,10 +29,10 @@ describe("medicalTestingModeForTier", () => {
 });
 
 describe("shouldChargeTestingAddonAtCheckout", () => {
-  it("never charges free or included tiers", () => {
+  it("never charges included tiers; Founding Free is paid add-on like Professional", () => {
     expect(
       shouldChargeTestingAddonAtCheckout({ tier: "free", formWantsAddon: true })
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldChargeTestingAddonAtCheckout({
         tier: "clinic",
@@ -96,11 +96,17 @@ describe("shouldGrantTestingAfterLicenseActive", () => {
     ).toBe(false);
   });
 
-  it("never grants free", () => {
+  it("grants Founding Free only when a testing price item is present", () => {
     expect(
       shouldGrantTestingAfterLicenseActive({
         tier: "free",
         hasTestingPriceItem: true,
+      })
+    ).toBe(true);
+    expect(
+      shouldGrantTestingAfterLicenseActive({
+        tier: "free",
+        hasTestingPriceItem: false,
       })
     ).toBe(false);
   });
@@ -127,9 +133,11 @@ describe("shouldRevokePaidTestingAddon", () => {
 });
 
 describe("canToggleMedicalTestingModule", () => {
-  it("blocks free", () => {
-    const r = canToggleMedicalTestingModule("free");
-    expect(r.ok).toBe(false);
+  it("allows Founding Free as paid add-on", () => {
+    expect(canToggleMedicalTestingModule("free")).toEqual({
+      ok: true,
+      mode: "paid_addon",
+    });
   });
 
   it("allows paid_addon and included", () => {

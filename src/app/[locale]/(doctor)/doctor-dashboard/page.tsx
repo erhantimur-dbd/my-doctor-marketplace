@@ -137,10 +137,10 @@ export default async function DoctorDashboard() {
                   : ""}
               </p>
               <p className="text-sm text-emerald-800/80 dark:text-emerald-200/70">
-                You&apos;re in the first 100 founding doctors. Founding pricing
-                is locked for life, and your profile has priority placement at
-                launch. Complete your profile and verification to go live on day
-                one.
+                You&apos;re in the first 100 founding doctors. Founding Free is
+                a lifetime Solo Professional equivalent (value £299/mo) at £0,
+                and your profile has priority placement at launch. Complete your
+                profile and verification to go live on day one.
               </p>
             </div>
           </CardContent>
@@ -212,10 +212,13 @@ export default async function DoctorDashboard() {
               </div>
               <div>
                 <p className="font-semibold text-amber-900 dark:text-amber-100">
-                  You&apos;re on the Free Licence
+                  You&apos;re on Founding Free
                 </p>
                 <p className="text-sm text-amber-800/80 dark:text-amber-200/70">
-                  Your profile is live in our directory. Upgrade to a Starter, Professional, or Clinic licence to unlock bookings, video consultations, analytics, and more.
+                  Lifetime Solo Professional equivalent — value £299/mo,
+                  Founding Free £0. Bookings, video, payments and dashboard
+                  tools are included. Upgrade to Clinic only if you need
+                  multi-doctor seats.
                 </p>
               </div>
             </div>
@@ -245,7 +248,6 @@ export default async function DoctorDashboard() {
         hasEducation={(educationCount || 0) > 0}
         hasServices={(servicesCount || 0) > 0}
         hasTestingServices={(priceBookCount || 0) > 0}
-        isFreeTier={isFreeTier}
       />
       </div>
 

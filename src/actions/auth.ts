@@ -748,6 +748,9 @@ export async function registerDoctor(formData: FormData) {
   // Create free license for free tier
   if (tier === "free" && result.orgId) {
     const adminSupabase = createAdminClient();
+    const { foundingFreeLicenseMetadata } = await import(
+      "@/lib/license/tier-lifecycle"
+    );
     await adminSupabase.from("licenses").insert({
       organization_id: result.orgId,
       tier: "free",
@@ -756,6 +759,7 @@ export async function registerDoctor(formData: FormData) {
       used_seats: 1,
       current_period_start: new Date().toISOString(),
       current_period_end: "2099-12-31T23:59:59.000Z",
+      metadata: foundingFreeLicenseMetadata(),
     });
   }
 

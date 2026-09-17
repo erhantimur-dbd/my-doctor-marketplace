@@ -10,7 +10,7 @@ Pricing UI reads `LICENSE_TIERS` which pulls marketing lists from package-featur
 
 | Package | Monthly | Annual (2 mo free) | Includes (summary) | Excludes (summary) |
 |---------|---------|--------------------|--------------------|--------------------|
-| **Founding Free** | £0 | — | Verified public profile, practice profile, dashboard/checklist | Bookings, video, messaging, AI, all reminders, analytics/waitlist/CRM, testing, multi-location |
+| **Founding Free** | £0 (lifetime Solo Professional equivalent; Soft Launch claim value **£299/mo**) | — | Professional non-clinical entitlements for life: seats (1), bookings, video, payments, dashboard, analytics, CRM, waitlist, priority support | Multi-doctor seats, multi-location, team ops, branding/API. Soft Launch #18 keeps Rx / care plans / public chat fail-closed. SMS/WhatsApp Coming — not live |
 | **Starter** | £199 | £1,990/yr (~£165.83/mo) | Free + online bookings & Stripe, video, email reminders, messaging, AI; testing **add-on** optional | SMS/WhatsApp, advanced analytics, waitlist, CRM/care plans, multi-location/team, branding/API |
 | **Professional** | £299 flat | £2,990/yr | Starter + SMS/WhatsApp, analytics, CRM, care plans, waitlist, priority support; **1 doctor seat** | Multi-doctor seats, multi-location, team ops (Clinic), testing *included* (add-on on Pro), branding/API |
 | **Clinic** | £897 (3×£299) | £8,970/yr (~£748/mo) | Pro features + **3 doctor seats** (to 15), multi-location, team tools, **testing included**, clinic dashboard, bulk invoicing, onboarding | Branding, API, SLA (Enterprise) |
