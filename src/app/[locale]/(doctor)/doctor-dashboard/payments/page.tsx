@@ -23,6 +23,7 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 import { hasActiveLicense } from "@/lib/license/check";
+import { connectStripeAccount } from "@/actions/doctor";
 
 export default async function PaymentsPage() {
   const supabase = await createClient();
@@ -161,7 +162,7 @@ export default async function PaymentsPage() {
                   Connect your Stripe account to start receiving payouts. You will
                   be redirected to Stripe to complete the onboarding process.
                 </p>
-                <form action="/api/stripe/connect" method="POST" className="mt-3">
+                <form action={connectStripeAccount} className="mt-3">
                   <Button type="submit" size="sm">
                     <CreditCard className="mr-2 h-4 w-4" />
                     Connect Stripe Account
@@ -180,7 +181,7 @@ export default async function PaymentsPage() {
                   Your Stripe account setup is not yet complete. Please finish the
                   onboarding process to enable payouts.
                 </p>
-                <form action="/api/stripe/connect" method="POST" className="mt-3">
+                <form action={connectStripeAccount} className="mt-3">
                   <Button type="submit" size="sm" variant="outline">
                     Complete Onboarding
                   </Button>
