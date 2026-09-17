@@ -102,7 +102,7 @@ const platformFeatures = [
     icon: Bell,
     title: "Automated Reminders",
     description:
-      "Email reminders on Starter; SMS & WhatsApp on Professional+ to cut no-shows.",
+      "Email appointment reminders on Starter and above to cut no-shows.",
     bg: "bg-amber-50 dark:bg-amber-950/30",
     text: "text-amber-600",
   },
@@ -423,7 +423,7 @@ export default async function PricingPage() {
                     {
                       icon: Bell,
                       title: "Auto Reminders",
-                      desc: "Email on Starter; SMS & WhatsApp on Pro+",
+                      desc: "Email appointment reminders on Starter+",
                     },
                     {
                       icon: BarChart3,

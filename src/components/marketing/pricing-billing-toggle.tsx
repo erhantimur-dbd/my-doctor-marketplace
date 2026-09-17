@@ -418,10 +418,11 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
       </p>
       <p className="mt-3 text-center text-xs text-muted-foreground">
         Founding Free is a permanent gateway (list &amp; prepare). Bookings,
-        video and AI start on Starter. SMS/WhatsApp, analytics, CRM and waitlist
-        are Professional+ (solo). Multi-doctor seats, multi-location, team tools
+        video and AI start on Starter. Analytics, CRM and waitlist are
+        Professional+ (solo). Multi-doctor seats, multi-location, team tools
         and included medical testing are Clinic+. Custom branding &amp; API are
-        Enterprise.
+        Enterprise. SMS and WhatsApp reminders are coming soon — not available
+        at Soft Launch.
       </p>
     </div>
   );

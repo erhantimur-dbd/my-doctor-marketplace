@@ -73,14 +73,8 @@ describe("public packaging copy does not contradict matrix", () => {
       logic.indexOf('if (tierId === "starter")'),
       logic.indexOf('return "Founding Free')
     );
-    // Must not claim SMS/WhatsApp as included benefits for Starter
-    expect(starterBlock).not.toMatch(
-      /Starter gives you[^\n]*SMS\/WhatsApp|unlimited bookings[^\n]*SMS\/WhatsApp reminders to (manage|keep)/i
-    );
-    // If WhatsApp is mentioned, it must be as a later-tier unlock
-    if (/whatsapp/i.test(starterBlock)) {
-      expect(starterBlock).toMatch(/Professional|later for SMS|come with Professional/i);
-    }
+    // Soft Launch: do not claim SMS/WhatsApp as a live Starter or upgrade channel
+    expect(starterBlock).not.toMatch(/SMS|WhatsApp/i);
   });
 
   it("coming-soon FAQ lists Free → Starter → Pro solo → Clinic 3–15", async () => {
@@ -114,18 +108,14 @@ describe("public packaging copy does not contradict matrix", () => {
       helpArticles: { "doctor-subscription": { answer: string } };
     };
     const answer = en.helpArticles["doctor-subscription"].answer;
-    // Starter section must not claim SMS & WhatsApp as included
+    // Soft Launch: Starter must not claim SMS/WhatsApp as live or as a paid unlock
     const starterSection = answer.match(
       /<strong>Starter[\s\S]*?(?=<strong>Professional|$)/i
     )?.[0];
     expect(starterSection).toBeTruthy();
     expect(starterSection!).toMatch(/email reminders/i);
-    expect(starterSection!).toMatch(/SMS &amp; WhatsApp/i);
+    expect(starterSection!).not.toMatch(/SMS|WhatsApp/i);
     expect(starterSection!).toMatch(/not included/i);
-    // Must not say Starter "includes" SMS & WhatsApp without negation nearby
-    expect(starterSection!).not.toMatch(
-      /and SMS &amp; WhatsApp reminders\./i
-    );
     // Clinic must not claim custom branding as included
     const clinicSection = answer.match(
       /<strong>Clinic[\s\S]*?(?=<strong>Enterprise|$)/i
@@ -138,6 +128,7 @@ describe("public packaging copy does not contradict matrix", () => {
     expect(proSection).toBeTruthy();
     expect(proSection!).toMatch(/patient CRM/i);
     expect(proSection!).toMatch(/waitlist/i);
+    expect(proSection!).not.toMatch(/SMS|WhatsApp/i);
     expect(proSection!).not.toMatch(/care plan|prescription/i);
   });
 });

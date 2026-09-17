@@ -167,7 +167,7 @@ export function PackageRecommender() {
         {/* Question 4 — growth tools (solo path → Professional) */}
         <div>
           <p className="mb-3 text-sm font-semibold">
-            4. Do you need SMS/WhatsApp, analytics, CRM or waitlist tools?
+            4. Do you need analytics, CRM or waitlist tools?
           </p>
           <div className="grid grid-cols-2 gap-2">
             <OptionCard

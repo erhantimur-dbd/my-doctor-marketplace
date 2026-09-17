@@ -135,7 +135,7 @@ export const PACKAGE_MARKETING: Record<
       "Video consultations",
       "Patient messaging",
       "AI review summaries",
-      "Email, SMS & WhatsApp reminders",
+      "Email appointment reminders",
       "Analytics & waitlist",
       "Medical testing, multi-location & team tools",
     ],
@@ -152,7 +152,6 @@ export const PACKAGE_MARKETING: Record<
       "Medical testing add-on available (+£49/mo)",
     ],
     excludedFeatures: [
-      "SMS & WhatsApp reminders",
       "Advanced analytics dashboard",
       "Waitlist auto-notify",
       "Patient CRM",
@@ -163,7 +162,6 @@ export const PACKAGE_MARKETING: Record<
   professional: {
     features: [
       "Everything in Starter",
-      "SMS & WhatsApp reminders",
       "Advanced analytics dashboard",
       "Patient CRM",
       "Waitlist auto-notify",

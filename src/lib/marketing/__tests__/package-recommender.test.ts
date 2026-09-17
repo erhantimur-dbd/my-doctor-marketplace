@@ -94,13 +94,13 @@ describe("getPackageRecommendationReason", () => {
     expect(reason).not.toMatch(/1–4|per-user multi/i);
   });
 
-  it("Starter reason does not claim SMS/WhatsApp as included", () => {
+  it("Starter reason does not claim SMS/WhatsApp as a live Soft Launch channel", () => {
     const reason = getPackageRecommendationReason("starter", {
       ...baseSolo,
       needsVideo: "yes",
     });
     expect(reason).toMatch(/Professional/i);
-    expect(reason).toMatch(/SMS|WhatsApp/i);
-    expect(reason).toMatch(/come with Professional|upgrade to Professional/i);
+    expect(reason).not.toMatch(/SMS|WhatsApp/i);
+    expect(reason).toMatch(/come with Professional|unlock on Professional/i);
   });
 });

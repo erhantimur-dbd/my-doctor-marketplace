@@ -142,6 +142,32 @@ describe("Soft Launch public claims", () => {
     expect(header).not.toMatch(/href=["']\/register["']/);
   });
 
+  it("Soft Launch pricing chrome does not claim SMS/WhatsApp is live", () => {
+    const pricingSurfaces = [
+      "src/app/[locale]/(public)/pricing/page.tsx",
+      "src/components/marketing/pricing-billing-toggle.tsx",
+      "src/lib/constants/package-features.ts",
+      "src/lib/constants/license-tiers.ts",
+      "src/lib/marketing/package-recommender.ts",
+      "src/app/[locale]/(public)/contact/package-recommender.tsx",
+      "src/app/[locale]/(public)/how-it-works/page.tsx",
+      "public/coming-soon/index.html",
+    ];
+    for (const rel of pricingSurfaces) {
+      const text = read(rel);
+      expect(text, rel).not.toMatch(/Coming on SMS/i);
+      expect(text, rel).not.toMatch(/SMS & WhatsApp on (Professional|Pro)/i);
+      expect(text, rel).not.toMatch(/plus SMS & WhatsApp/i);
+      expect(text, rel).not.toMatch(/SMS\/WhatsApp, analytics/i);
+    }
+
+    const toggle = read("src/components/marketing/pricing-billing-toggle.tsx");
+    expect(toggle).toMatch(
+      /SMS and WhatsApp reminders are coming soon — not available/
+    );
+    expect(toggle).toMatch(/not available\s+at Soft Launch/);
+  });
+
   it("document title / meta / OG use Founding Doctor framing, not a care marketplace", () => {
     for (const rel of SOFT_LAUNCH_TITLE_SURFACES) {
       const text = read(rel);
