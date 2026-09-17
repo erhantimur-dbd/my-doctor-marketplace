@@ -1446,33 +1446,5 @@ export async function signInWithOAuthProvider(
   redirect(data.url);
 }
 
-export async function signInWithGoogle(
-  locale: string = "en",
-  redirectTo?: string,
-  options?: OAuthSignInOptions
-) {
-  return signInWithOAuthProvider("google", locale, redirectTo, options);
-}
-
-export async function signInWithApple(
-  locale: string = "en",
-  redirectTo?: string,
-  options?: OAuthSignInOptions
-) {
-  return signInWithOAuthProvider("apple", locale, redirectTo, options);
-}
-
-export async function signInWithFacebook(locale: string = "en", redirectTo?: string) {
-  return signInWithOAuthProvider("facebook", locale, redirectTo);
-}
-
-export async function signInWithAzure(locale: string = "en", redirectTo?: string) {
-  return signInWithOAuthProvider("azure", locale, redirectTo);
-}
-
-export async function signInWithTwitter(locale: string = "en", redirectTo?: string) {
-  return signInWithOAuthProvider("twitter", locale, redirectTo);
-}
-
 // Note: do NOT re-export non-async values from this "use server" file.
 // TERMS_VERSION is imported from @/lib/auth/oauth-providers where needed.

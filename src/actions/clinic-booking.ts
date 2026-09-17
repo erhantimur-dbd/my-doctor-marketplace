@@ -34,35 +34,6 @@ const CANCELLABLE_STATUSES = [
   "pending_reschedule_payment",
 ];
 
-// ─── Admin: Get org bookings ─────────────────────────────────
-
-export async function getOrgBookings(params: {
-  status?: string;
-  doctorId?: string;
-  locationId?: string;
-  fromDate?: string;
-  toDate?: string;
-  limit?: number;
-  offset?: number;
-}) {
-  const { error: authError, supabase, org } = await requireOrgMember(["owner", "admin"]);
-  if (authError || !supabase || !org) return { error: authError, bookings: [] };
-
-  const { data, error } = await supabase.rpc("get_org_bookings", {
-    p_org_id: org.id,
-    p_status: params.status ?? null,
-    p_doctor_id: params.doctorId ?? null,
-    p_location_id: params.locationId ?? null,
-    p_from_date: params.fromDate ?? null,
-    p_to_date: params.toDate ?? null,
-    p_limit: params.limit ?? 50,
-    p_offset: params.offset ?? 0,
-  });
-
-  if (error) return { error: error.message, bookings: [] };
-  return { error: null, bookings: data ?? [] };
-}
-
 // ─── Admin: Cancel any clinic booking ────────────────────────
 
 export async function adminCancelBooking(formData: FormData) {
@@ -378,29 +349,6 @@ export async function adminRescheduleBooking(formData: FormData) {
     newBookingId: newBooking.id,
     paymentLinkUrl,
   };
-}
-
-// ─── Get available slots for a doctor (for reschedule picker) ─
-
-export async function getDoctorAvailableSlots(doctorId: string, date: string) {
-  const { error: authError, supabase } = await requireOrgMember(["owner", "admin"]);
-  if (authError || !supabase) return { error: authError, slots: [] };
-
-  const { buildGetAvailableSlotsRpcArgs } = await import(
-    "@/lib/booking/available-slots"
-  );
-  // Must use unique 5-arg overload (3/4-arg are ambiguous in Postgres)
-  const { data, error } = await supabase.rpc(
-    "get_available_slots",
-    buildGetAvailableSlotsRpcArgs({
-      doctorId,
-      date,
-      consultationType: "in_person",
-    })
-  );
-
-  if (error) return { error: error.message, slots: [] };
-  return { error: null, slots: data ?? [] };
 }
 
 // ─── Get clinic doctors (for reschedule doctor picker) ────────

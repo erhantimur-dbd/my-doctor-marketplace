@@ -113,7 +113,7 @@ describe("request-origin wiring (signup / billing)", () => {
     // Billing checkout must not hardcode env for success/cancel only
     const checkoutBlock = license.slice(
       license.indexOf("export async function createLicenseCheckout"),
-      license.indexOf("export async function setProfessionalSeatCapacity")
+      license.indexOf("export async function manageLicenseBilling")
     );
     expect(checkoutBlock).toContain("getRequestOrigin");
     expect(checkoutBlock).not.toMatch(
