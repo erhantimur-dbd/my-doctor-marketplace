@@ -6,10 +6,12 @@ import { useChatStore } from "@/stores/chat-store";
 import { ChatLauncher } from "./chat-launcher";
 import { ChatWindow } from "./chat-window";
 import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
+import { isPublicChatEnabled } from "@/lib/launch/soft-launch";
 
 /**
  * Single patient AI surface: typed chat + Grok voice in one widget.
  * Mounted once from [locale]/layout. Hidden on staff/auth shells.
+ * Soft-launch: keep the widget dark — public chat is hard-disabled.
  */
 export function ChatWidget() {
   const [mounted, setMounted] = useState(false);
@@ -32,7 +34,7 @@ export function ChatWidget() {
     pathname?.startsWith("/admin") ||
     pathname?.startsWith("/verify-");
 
-  if (!mounted || hide) return null;
+  if (!isPublicChatEnabled() || !mounted || hide) return null;
 
   return isOpen ? (
     <ChatWindow />

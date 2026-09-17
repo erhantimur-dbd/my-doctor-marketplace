@@ -17,6 +17,10 @@ import {
 } from "@/lib/location/match-location";
 import crypto from "crypto";
 import { log } from "@/lib/utils/logger";
+import {
+  isSymptomAnalysisEnabled,
+  SYMPTOM_ANALYSIS_DISABLED_MESSAGE,
+} from "@/lib/launch/soft-launch";
 
 const AI_TIMEOUT_MS = 5000;
 const LOCATION_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
@@ -66,6 +70,10 @@ export async function analyzeSymptoms(
   input: string,
   locale: string
 ): Promise<{ data: SymptomAnalysis | null; error: string | null }> {
+  if (!isSymptomAnalysisEnabled()) {
+    return { data: null, error: SYMPTOM_ANALYSIS_DISABLED_MESSAGE };
+  }
+
   const trimmed = input.trim();
   if (trimmed.length < 3) {
     return { data: null, error: "Input too short" };

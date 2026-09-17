@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, CalendarDays, ArrowRight, Search } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import type { Metadata } from "next";
+import { FeatureUnavailable } from "@/components/shared/feature-unavailable";
+import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
 
 interface ConfirmedPageProps {
   params: Promise<{ locale: string; token: string }>;
@@ -18,6 +20,15 @@ export const metadata: Metadata = {
 export default async function TreatmentPlanConfirmedPage({
   params,
 }: ConfirmedPageProps) {
+  if (!isCarePlansEnabled()) {
+    return (
+      <FeatureUnavailable
+        title="Care plans unavailable"
+        description="Care plans are disabled for this launch."
+      />
+    );
+  }
+
   const { token, locale } = await params;
   const supabase = await createClient();
 
