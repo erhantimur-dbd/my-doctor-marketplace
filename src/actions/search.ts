@@ -190,7 +190,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
   const { filters, conditionMeta } = resolveConditionFilters(rawFilters);
   const supabase = createAdminClient();
 
-  // Detect if the location filter is a country-level slug (e.g. "country-gb")
   const isCountryFilter = filters.location?.startsWith("country-");
   const hasLocationFilter = !!filters.location;
 
@@ -234,7 +233,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     query = query.in("id", licensedIds);
   }
 
-  // Provider type filter (doctor vs testing_service)
   if (filters.providerType) {
     query = query.eq("provider_type", filters.providerType);
   }
@@ -415,7 +413,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     }
   }
 
-  // Apply filters
   if (filters.minPrice) {
     query = query.gte("consultation_fee_cents", filters.minPrice * 100);
   }
@@ -466,7 +463,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
         const proximityIds = withinRadius.map((r) => r.doctor_id);
         query = query.in("id", proximityIds);
 
-        // Store distances for potential use in sorting / response
         proximityDistances = new Map(
           withinRadius.map((r) => [r.doctor_id, r.distance_km])
         );
@@ -478,7 +474,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
   // multi-pass sorts (soonest) can safely re-select("id") without dropping embeds.
   if (filters.location) {
     if (isCountryFilter) {
-      // Country-level filter (e.g. "country-gb" → country_code "GB")
       const countryCode = filters.location
         .replace("country-", "")
         .toUpperCase();
@@ -545,7 +540,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
           if (withinRadius.length > 0) {
             const nearbyIds = withinRadius.map((r) => r.doctor_id);
             query = query.in("id", nearbyIds);
-            // Store distances for sorting/display
             if (!proximityDistances) {
               proximityDistances = new Map(
                 withinRadius.map((r) => [r.doctor_id, r.distance_km])
@@ -580,8 +574,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
       }
     }
   }
-  // ── Launch region check ──────────────────────────────────────────
-  // Detect if the user is searching in a region we haven't launched in yet.
   // For non-launch regions, only video consultations are available.
   let searchCountryCode: string | null = null;
   let outsideLaunchRegion = false;
@@ -590,7 +582,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     if (isCountryFilter) {
       searchCountryCode = filters.location.replace("country-", "").toUpperCase();
     } else {
-      // Look up the country_code from the location slug
       const { data: locRow } = await supabase
         .from("locations")
         .select("country_code")
@@ -620,7 +611,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     }
   }
 
-  // Free-text query: match against specialty names, keywords, doctor names, and bio
   let textFilterApplied = false;
   let matchedSpecialtySlug: string | null = null;
   let specialistSuggestion: string | null = null;
@@ -628,7 +618,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
   if (filters.query && !filters.specialty) {
     const term = filters.query.trim().toLowerCase();
 
-    // 1. Exact specialty name match
     const { data: matchingSpecs } = await supabase
       .from("specialties")
       .select("id, slug, name_key")
@@ -658,7 +647,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
       }
     }
 
-    // 2. Keyword-to-specialty mapping (GP + specialist for natural language queries)
     if (!textFilterApplied) {
       const words = term.split(/\s+/);
       let keywordMatch: { primary: string; specialist: string } | null = null;
@@ -699,14 +687,12 @@ export async function searchDoctors(rawFilters: SearchFilters) {
           matchedSpecialtySlug = keywordMatch.primary;
         }
 
-        // Track specialist for the suggestion banner
         if (keywordMatch.specialist !== keywordMatch.primary) {
           specialistSuggestion = keywordMatch.specialist;
         }
       }
     }
 
-    // 3. Bio + name search as last resort (but don't use for symptom-like phrases)
     if (!textFilterApplied && term.split(/\s+/).length <= 3) {
       query = query.ilike("bio", `%${filters.query}%`);
       textFilterApplied = true;
@@ -729,7 +715,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     query = query.eq("gender", filters.gender);
   }
 
-  // Pagination
   const page = filters.page || 1;
   const perPage = 12;
 
@@ -893,7 +878,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
           );
 
           if (pageIds.length > 0) {
-            // Re-fetch full rows for the page
             const { data: pageData, error: pageError } = await supabase
               .from("doctors")
               .select(
@@ -1085,7 +1069,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
       };
     }
   } else {
-    // Standard sort
     switch (filters.sort) {
       case "rating":
         query = query.order("avg_rating", { ascending: false });
@@ -1118,7 +1101,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     count = count ?? 0;
   }
 
-  // ── Zero-result fallback chain (specialty-preserving) ──────────
   // NEVER drop specialty to fill with unrelated doctors (e.g. dentists
   // for a dermatology/acne search). Expand geography and surface the
   // same specialty with upcoming availability instead.
@@ -1354,7 +1336,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     }
 
     if (primarySpecialty) {
-      // Step 1: Same specialty, widen proximity radius — sort by soonest
       if (
         filters.placeLat != null &&
         filters.placeLng != null &&
@@ -1395,7 +1376,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
         }
       }
 
-      // Step 2: Same specialty, country-wide, soonest availability
       if ((!fallbackData || fallbackData.length === 0) && fbCountry) {
         const locIds = await locationIdsForCountry(fbCountry);
         const res = await fetchSpecialtyDoctors({
@@ -1414,7 +1394,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
         }
       }
 
-      // Step 3: Same specialty, video across launch regions
       if (!fallbackData || fallbackData.length === 0) {
         const { data: launchLocs } = await supabase
           .from("locations")
@@ -1541,7 +1520,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
   const resultData = fallbackData || data;
   const resultCount = fallbackCount ?? count;
 
-  // Smart Match: compute match scores when best_match sort is active
   if (filters.sort === "best_match" && resultData && resultData.length > 0) {
     const context: MatchContext = {
       preferredSpecialty: filters.specialty,
@@ -1577,7 +1555,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
       sortedByScore as InventoryRankDoctor[]
     ) as Record<string, unknown>[];
 
-    // Build match score map for the client
     const matchScores: Record<string, { score: number; reasons: string[] }> = {};
     for (const s of scored) {
       matchScores[s.doctorId] = { score: s.matchScore, reasons: s.matchReasons };
@@ -1628,7 +1605,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     );
   }
 
-  // ── Inventory-first ranking (marketplace Phase B/C) ─────────────
   // Pure rank helper + batch availability. Fully booked stay at bottom.
   let doctorIdsFullyBooked: string[] = [];
   if (shouldInventoryRank) {
@@ -1675,7 +1651,6 @@ export async function searchDoctors(rawFilters: SearchFilters) {
     }
   }
 
-  // Build distance map for client
   let distances: Record<string, number> | undefined;
   if (proximityDistances && proximityDistances.size > 0) {
     distances = {};
@@ -1853,7 +1828,6 @@ export async function getFeaturedDoctors(
     };
   });
 
-  // Attach top patient skill endorsements (batch query)
   try {
     const endorsementMap = await getTopEndorsementsBatch(
       base.map((d) => d.id),
@@ -1933,8 +1907,6 @@ export async function getSameDayAvailabilityCount(): Promise<number> {
   return (data as string[]).length;
 }
 
-/* ── Batch next-availability for doctor cards ──────────────── */
-
 export interface NextAvailabilitySlot {
   start: string; // TIMESTAMPTZ string
   end: string;   // TIMESTAMPTZ string
@@ -1974,7 +1946,6 @@ export async function getNextAvailabilityBatch(
     return {};
   }
 
-  // Group flat rows by doctor_id
   const usedType = consultationType || "in_person";
   const result: Record<string, DoctorNextAvailability> = {};
   for (const row of data as {
@@ -1994,8 +1965,6 @@ export async function getNextAvailabilityBatch(
 
   return result;
 }
-
-/* ── Multi-day batch availability for doctor cards ────────── */
 
 export interface DoctorMultiDayAvailability {
   days: { date: string; slots: NextAvailabilitySlot[] }[];
@@ -2059,7 +2028,6 @@ export async function getMultiDayAvailabilityBatch(
 export async function getSpecialtyBySlug(slug: string) {
   const supabase = createAdminClient();
 
-  // Get the specialty record
   const { data: specialty } = await supabase
     .from("specialties")
     .select("*")
@@ -2069,7 +2037,6 @@ export async function getSpecialtyBySlug(slug: string) {
 
   if (!specialty) return null;
 
-  // Get doctor IDs for this specialty
   const { data: junctionRows } = await supabase
     .from("doctor_specialties")
     .select("doctor_id")
@@ -2089,7 +2056,6 @@ export async function getSpecialtyBySlug(slug: string) {
     };
   }
 
-  // Get accurate count of verified doctors in this specialty
   const { count } = await supabase
     .from("doctors")
     .select("id", { count: "exact", head: true })
@@ -2121,7 +2087,6 @@ export async function getSpecialtyBySlug(slug: string) {
 
   const verifiedDoctors = doctors || [];
 
-  // Calculate price range and avg rating from fetched doctors
   const fees = verifiedDoctors
     .map((d: Record<string, unknown>) => d.consultation_fee_cents as number)
     .filter(Boolean);
@@ -2142,7 +2107,6 @@ export async function getSpecialtyBySlug(slug: string) {
   };
 }
 
-// ── Search Expansion Suggestions ──────────────────────────────────────
 // When AI-parsed search returns ≤2 results, compute alternative counts
 // by relaxing one filter at a time so we can suggest broader searches.
 
@@ -2159,7 +2123,6 @@ export async function getSearchExpansionSuggestions(
   const supabase = createAdminClient();
   const suggestions: SearchExpansion[] = [];
 
-  // Helper: count verified active doctors matching given filters
   async function countDoctors(opts: {
     specialtySlug?: string;
     consultationType?: string;
@@ -2201,7 +2164,6 @@ export async function getSearchExpansionSuggestions(
     }
 
     if (opts.locationSlug) {
-      // Join on location to filter by slug
       const isCountry = opts.locationSlug.startsWith("country-");
       if (isCountry) {
         const code = opts.locationSlug.replace("country-", "").toUpperCase();
@@ -2253,10 +2215,8 @@ export async function getSearchExpansionSuggestions(
   const radius = filters.radius ? Number(filters.radius) : undefined;
   const hasLocation = !!location || (placeLat != null && placeLng != null);
 
-  // Build the base params (preserving existing params) for generating URLs
   function buildUrl(overrides: Record<string, string | undefined>): string {
     const params = new URLSearchParams();
-    // Start with current filters
     for (const [k, v] of Object.entries(filters)) {
       if (v != null && v !== "" && k !== "page") params.set(k, v);
     }
@@ -2271,10 +2231,8 @@ export async function getSearchExpansionSuggestions(
     return `/doctors?${params.toString()}`;
   }
 
-  // Run expansion checks in parallel
   const checks: Promise<void>[] = [];
 
-  // 1. Try video consultation (if currently filtering in_person)
   if (consultationType === "in_person" && specialty) {
     checks.push(
       countDoctors({
@@ -2298,7 +2256,6 @@ export async function getSearchExpansionSuggestions(
     );
   }
 
-  // 2. Remove location filter
   if (hasLocation && specialty) {
     checks.push(
       countDoctors({
@@ -2324,7 +2281,6 @@ export async function getSearchExpansionSuggestions(
     );
   }
 
-  // 3. Remove consultation type filter
   if (consultationType && specialty) {
     checks.push(
       countDoctors({
@@ -2347,7 +2303,6 @@ export async function getSearchExpansionSuggestions(
     );
   }
 
-  // 4. Broaden to General Practice (if searching a specialist)
   if (specialty && specialty !== "general-practice") {
     checks.push(
       countDoctors({
@@ -2373,7 +2328,6 @@ export async function getSearchExpansionSuggestions(
 
   await Promise.all(checks);
 
-  // Sort: video first, then location, then consultation type, then specialty
   const order: Record<string, number> = {
     try_video: 0,
     remove_location: 1,

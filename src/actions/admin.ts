@@ -93,8 +93,6 @@ async function logAdminAction(
   });
 }
 
-// ===================== Approval Checklist =====================
-
 export async function getApprovalChecklist(doctorId: string) {
   const { error: authError, supabase } = await requireAdmin();
   if (authError || !supabase) return { error: authError, data: null };
@@ -198,8 +196,6 @@ export async function saveApprovalChecklist(
   return { success: true };
 }
 
-// ===================== Doctor Verification =====================
-
 export async function updateDoctorVerification(
   doctorId: string,
   status: string
@@ -270,7 +266,6 @@ export async function updateDoctorVerification(
 
   await logAdminAction(supabase, user.id, `doctor_verification_${status}`, "doctor", doctorId);
 
-  // Send email notification on verification or rejection
   if (status === "verified" || status === "rejected") {
     const { data: doctor } = await supabase
       .from("doctors")
@@ -461,7 +456,6 @@ export async function sendUpgradeInvite(doctorId: string) {
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };
 
-  // Fetch doctor with profile
   const { data: doctor } = await supabase
     .from("doctors")
     .select("id, profile:profiles!doctors_profile_id_fkey(id, first_name, last_name, email)")
@@ -470,7 +464,6 @@ export async function sendUpgradeInvite(doctorId: string) {
 
   if (!doctor) return { error: "Doctor not found" };
 
-  // Check they don't already have an active license
   const { hasActiveLicense } = await import("@/lib/license/check");
   if (await hasActiveLicense(supabase, doctorId)) {
     return { error: "Doctor already has an active subscription" };
@@ -484,7 +477,6 @@ export async function sendUpgradeInvite(doctorId: string) {
     subscriptionUrl: `${appUrl}/en/doctor-dashboard/subscription`,
   });
 
-  // Send in-app notification + email
   await createNotification({
     userId: profile.id,
     type: "subscription_upgrade_invite",
@@ -501,13 +493,10 @@ export async function sendUpgradeInvite(doctorId: string) {
   return { success: true };
 }
 
-// ===================== Patient Management =====================
-
 export async function adminResetPatientPassword(patientId: string) {
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };
 
-  // Fetch patient email
   const { data: patient } = await supabase
     .from("profiles")
     .select("email")
@@ -516,7 +505,6 @@ export async function adminResetPatientPassword(patientId: string) {
 
   if (!patient?.email) return { error: "Patient not found or has no email" };
 
-  // Send password reset email via Supabase Auth
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const { error: resetError } = await supabase.auth.resetPasswordForEmail(
     patient.email,
@@ -537,8 +525,6 @@ export async function adminResetPatientPassword(patientId: string) {
   revalidatePath(`/admin/patients/${patientId}`);
   return { success: true };
 }
-
-// ===================== Coupon Management =====================
 
 export async function createCoupon(data: {
   code: string;
@@ -567,7 +553,6 @@ export async function createCoupon(data: {
     return { error: "Amount must be positive" };
   }
 
-  // Check uniqueness
   const { data: existing } = await supabase
     .from("coupons")
     .select("id")
@@ -575,7 +560,6 @@ export async function createCoupon(data: {
     .maybeSingle();
   if (existing) return { error: "A coupon with this code already exists" };
 
-  // Create Stripe coupon
   const { getStripe } = await import("@/lib/stripe/client");
   const stripe = getStripe();
 
@@ -606,7 +590,6 @@ export async function createCoupon(data: {
     return { error: safeError(err) };
   }
 
-  // Insert into DB
   const { error: insertError } = await supabase.from("coupons").insert({
     code,
     name: data.name,
@@ -672,7 +655,6 @@ export async function deleteCoupon(couponId: string) {
 
   if (!coupon) return { error: "Coupon not found" };
 
-  // Delete from Stripe
   if (coupon.stripe_coupon_id) {
     try {
       const { getStripe } = await import("@/lib/stripe/client");
@@ -697,8 +679,6 @@ export async function deleteCoupon(couponId: string) {
   revalidatePath("/admin/coupons");
   return { success: true };
 }
-
-// ===================== Booking Actions =====================
 
 export async function adminRefundBooking(
   bookingId: string,
@@ -810,8 +790,6 @@ export async function adminUpdateBookingStatus(
   return { success: true };
 }
 
-// ===================== Patient Suspension =====================
-
 export async function adminTogglePatientSuspension(
   patientId: string,
   suspend: boolean
@@ -843,8 +821,6 @@ export async function adminTogglePatientSuspension(
   revalidatePath(`/admin/patients/${patientId}`);
   return { success: true };
 }
-
-// ===================== Doctor Profile Editing =====================
 
 export async function adminUpdateDoctorProfile(
   doctorId: string,
@@ -888,10 +864,6 @@ export async function adminUpdateDoctorProfile(
   return { success: true };
 }
 
-// ===================== CSV Export Actions =====================
-
-// ===================== Bulk Review Moderation =====================
-
 export async function adminBulkModerateReviews(
   reviewIds: string[],
   action: "approve" | "hide"
@@ -912,7 +884,6 @@ export async function adminBulkModerateReviews(
 
   if (error) return { error: safeError(error) };
 
-  // Log each action
   for (const id of reviewIds) {
     await logAdminAction(
       supabase,
@@ -928,8 +899,6 @@ export async function adminBulkModerateReviews(
   return { success: true };
 }
 
-// ===================== Admin Email =====================
-
 export async function adminSendEmail(
   userId: string,
   subject: string,
@@ -942,7 +911,6 @@ export async function adminSendEmail(
     return { error: "Subject and message are required" };
   }
 
-  // Fetch recipient profile
   const { data: recipient } = await supabase
     .from("profiles")
     .select("first_name, last_name, email")
@@ -974,8 +942,6 @@ export async function adminSendEmail(
 
   return { success: true };
 }
-
-// ===================== CSV Export Actions =====================
 
 export async function exportBookingsCSV() {
   const { error: authError, supabase } = await requireAdmin();
@@ -1033,8 +999,6 @@ export async function exportPatientsCSV() {
 
   return { headers, rows };
 }
-
-// ===================== License Management =====================
 
 export async function adminOverrideLicenseStatus(
   licenseId: string,
@@ -1145,7 +1109,6 @@ export async function adminAdjustLicenseSeats(
     return { error: `Cannot reduce below current usage (${license.used_seats} seats in use)` };
   }
 
-  // Update DB
   const { error } = await supabase
     .from("licenses")
     .update({
@@ -1169,14 +1132,12 @@ export async function adminAdjustLicenseSeats(
       );
 
       if (existingItem && extraSeatCount > 0) {
-        // Update quantity on existing line item
         await getStripe().subscriptionItems.update(existingItem.id, {
           quantity: extraSeatCount,
           proration_behavior: "create_prorations",
         });
         stripeSynced = true;
       } else if (extraSeatCount > 0) {
-        // Add new line item
         await getStripe().subscriptions.update(license.stripe_subscription_id, {
           items: [
             ...subscription.items.data.map((item) => ({ id: item.id })),
@@ -1186,7 +1147,6 @@ export async function adminAdjustLicenseSeats(
         });
         stripeSynced = true;
       } else if (existingItem && extraSeatCount === 0) {
-        // Remove extra seat line item entirely
         await getStripe().subscriptionItems.del(existingItem.id, {
           proration_behavior: "create_prorations",
         });
@@ -1268,7 +1228,6 @@ export async function adminCreateLicense(data: {
     .single();
   if (!org) return { error: "Organization not found" };
 
-  // Check no existing non-cancelled license
   const { data: existing } = await supabase
     .from("licenses")
     .select("id, status")
@@ -1339,7 +1298,6 @@ export async function adminGrantDoctorSubscription(data: {
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };
 
-  // Look up doctor and their organization
   const adminDb = createAdminClient();
   const { data: doctor } = await adminDb
     .from("doctors")
@@ -1368,7 +1326,6 @@ export async function adminGrantDoctorSubscription(data: {
     .single();
   if (!org) return { error: "Organization not found" };
 
-  // Check for existing non-cancelled license
   const { data: existing } = await adminDb
     .from("licenses")
     .select("id, status, tier")
@@ -1411,7 +1368,6 @@ export async function adminGrantDoctorSubscription(data: {
     if (updateError) return { error: safeError(updateError) };
     licenseId = existing.id;
   } else {
-    // Create new license
     const insertData: Record<string, unknown> = {
       organization_id: doc.organization_id,
       tier: data.tier,
@@ -1454,10 +1410,6 @@ export async function adminGrantDoctorSubscription(data: {
   return { success: true, licenseId, tier: data.tier };
 }
 
-// ===================== CSV Export Actions =====================
-
-// ===================== Admin Booking on Behalf =====================
-
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
   const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
@@ -1493,7 +1445,6 @@ export async function adminCreatePatient(input: {
 
   const adminSupabase = createAdminClient();
 
-  // Check if email already exists
   const { data: existing } = await adminSupabase
     .from("profiles")
     .select("id, first_name, last_name, email")
@@ -1507,7 +1458,6 @@ export async function adminCreatePatient(input: {
     };
   }
 
-  // Create user via admin API
   const { data: authData, error: authCreateError } =
     await adminSupabase.auth.admin.createUser({
       email: input.email.toLowerCase(),
@@ -1549,7 +1499,6 @@ export async function adminCreatePatient(input: {
       email: input.email.toLowerCase(),
     });
   } else {
-    // Update profile with provided details
     await adminSupabase
       .from("profiles")
       .update({
@@ -1646,7 +1595,6 @@ export async function adminCreateBookingOnBehalf(input: {
 
   const adminSupabase = createAdminClient();
 
-  // Fetch doctor with profile + Stripe info
   const { data: doctor, error: doctorError } = await adminSupabase
     .from("doctors")
     .select(
@@ -1671,7 +1619,6 @@ export async function adminCreateBookingOnBehalf(input: {
     return { error: "This doctor does not offer the selected consultation type." };
   }
 
-  // Check org has active license
   let hasActiveLicense = false;
   if (doctor.organization_id) {
     const { data: orgLicense } = await adminSupabase
@@ -1687,7 +1634,6 @@ export async function adminCreateBookingOnBehalf(input: {
     return { error: "This doctor does not have an active subscription." };
   }
 
-  // Fetch patient
   const { data: patient } = await adminSupabase
     .from("profiles")
     .select("id, first_name, last_name, email")
@@ -1696,7 +1642,6 @@ export async function adminCreateBookingOnBehalf(input: {
 
   if (!patient) return { error: "Patient not found." };
 
-  // Check slot availability — make sure no existing booking occupies this slot
   const { data: existingBooking } = await adminSupabase
     .from("bookings")
     .select("id")
@@ -1711,7 +1656,6 @@ export async function adminCreateBookingOnBehalf(input: {
     return { error: "This time slot is no longer available." };
   }
 
-  // Calculate fees
   let consultationFeeCents: number;
   let serviceName: string | null = null;
 
@@ -1738,7 +1682,6 @@ export async function adminCreateBookingOnBehalf(input: {
   const platformFeeCents = 0;
   const totalAmountCents = consultationFeeCents;
 
-  // Insert booking with pending_payment + admin metadata
   const paymentLinkExpiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
 
   const { data: booking, error: bookingError } = await adminSupabase
@@ -1770,7 +1713,6 @@ export async function adminCreateBookingOnBehalf(input: {
     return { error: "Failed to create booking. Please try again." };
   }
 
-  // Create Stripe Checkout Session
   const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
   const doctorName = `${profile.first_name} ${profile.last_name}`;
   const consultationLabel = serviceName
@@ -1815,13 +1757,11 @@ export async function adminCreateBookingOnBehalf(input: {
     cancel_url: `${origin}/${locale}`,
   });
 
-  // Store checkout session ID on booking
   await adminSupabase
     .from("bookings")
     .update({ stripe_checkout_session_id: session.id })
     .eq("id", booking.id);
 
-  // Send payment link email
   const { subject, html } = adminBookingPaymentLinkEmail({
     patientName: patient.first_name || "Patient",
     doctorName,
@@ -1897,7 +1837,6 @@ export async function adminResendPaymentLink(bookingId: string) {
     return { error: "Maximum resend limit (5) reached." };
   }
 
-  // Expire old Stripe checkout session
   if (booking.stripe_checkout_session_id) {
     try {
       await getStripe().checkout.sessions.expire(booking.stripe_checkout_session_id);
@@ -1906,7 +1845,6 @@ export async function adminResendPaymentLink(bookingId: string) {
     }
   }
 
-  // Create new Stripe Checkout Session
   const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
   const doctor: any = booking.doctor;
   const doctorProfile: any = doctor?.profile
@@ -1957,7 +1895,6 @@ export async function adminResendPaymentLink(bookingId: string) {
     cancel_url: `${origin}/${locale}`,
   });
 
-  // Update booking with new session + extended expiry
   const newExpiry = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
   await adminSupabase
     .from("bookings")
@@ -1967,7 +1904,6 @@ export async function adminResendPaymentLink(bookingId: string) {
     })
     .eq("id", booking.id);
 
-  // Resend email
   const { subject, html } = adminBookingPaymentLinkEmail({
     patientName: patient.first_name || "Patient",
     doctorName,
@@ -2020,12 +1956,10 @@ export async function adminCancelBooking(
 
   if (!booking) return { error: "Booking not found." };
 
-  // Handle unpaid admin-created bookings
   if (
     booking.status === BOOKING_STATUSES.PENDING_PAYMENT &&
     booking.created_by_admin_id
   ) {
-    // Expire Stripe session
     if (booking.stripe_checkout_session_id) {
       try {
         await getStripe().checkout.sessions.expire(booking.stripe_checkout_session_id);
@@ -2047,7 +1981,6 @@ export async function adminCancelBooking(
     return { success: true, message: "Unpaid booking deleted and slot released." };
   }
 
-  // For paid bookings (confirmed/approved)
   const CANCELLABLE = [
     BOOKING_STATUSES.CONFIRMED,
     BOOKING_STATUSES.PENDING_APPROVAL,
@@ -2057,7 +1990,6 @@ export async function adminCancelBooking(
     return { error: `Cannot cancel a booking with status "${booking.status}".` };
   }
 
-  // Calculate refund based on cancellation policy
   const appointmentDateTime = new Date(
     `${booking.appointment_date}T${booking.start_time}`
   );
@@ -2083,7 +2015,6 @@ export async function adminCancelBooking(
     refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
   }
 
-  // Process Stripe refund
   let refundAmountCents = 0;
   if (
     booking.stripe_payment_intent_id &&
@@ -2107,7 +2038,6 @@ export async function adminCancelBooking(
     }
   }
 
-  // Update booking status
   const updateData: Record<string, unknown> = {
     status: BOOKING_STATUSES.CANCELLED_DOCTOR,
     cancelled_at: new Date().toISOString(),
@@ -2134,14 +2064,12 @@ export async function adminCancelBooking(
     log.error("CalDAV removal error:", { err: err })
   );
 
-  // Delete Daily.co video room
   if (booking.daily_room_name) {
     deleteRoom(booking.daily_room_name).catch((err) =>
       log.error("Daily.co room deletion error:", { err: err })
     );
   }
 
-  // Send cancellation email
   const patient: any = Array.isArray(booking.patient)
     ? booking.patient[0]
     : booking.patient;
@@ -2165,7 +2093,6 @@ export async function adminCancelBooking(
       log.error("Admin cancellation email error:", { err: err })
     );
 
-    // WhatsApp notification
     if (patient.notification_whatsapp && patient.phone) {
       const refundInfo =
         refundPercent > 0
@@ -2237,7 +2164,6 @@ export async function adminGetCancelPreview(bookingId: string) {
 
   if (!booking) return { error: "Booking not found." };
 
-  // Unpaid admin booking
   if (
     booking.status === BOOKING_STATUSES.PENDING_PAYMENT &&
     booking.created_by_admin_id
@@ -2292,8 +2218,6 @@ export async function adminGetCancelPreview(bookingId: string) {
         : `Based on the ${policy} policy, no refund is applicable.`,
   };
 }
-
-// ===================== Admin Wallet Management =====================
 
 export async function adminGetPatientWallet(patientId: string) {
   const { error: authError, supabase } = await requireAdmin();
@@ -2390,8 +2314,6 @@ export async function adminBulkCreditWallet(
   return { success: true, credited, failed };
 }
 
-// ===================== Contact Inquiries =====================
-
 export async function getAdminContactInquiries(filters?: {
   status?: string;
   inquiry_type?: string;
@@ -2453,8 +2375,6 @@ export async function updateContactInquiryStatus(
   return { success: true };
 }
 
-// ===================== Satisfaction Surveys =====================
-
 export async function getAdminSatisfactionSurveys(limit = 100) {
   const { error: authError, supabase } = await requireAdmin();
   if (authError || !supabase) return { error: authError, surveys: [] };
@@ -2475,8 +2395,6 @@ export async function getAdminSatisfactionSurveys(limit = 100) {
   if (error) return { error: safeError(error), surveys: [] };
   return { surveys: data || [] };
 }
-
-// ===================== CSV Export Actions =====================
 
 export async function exportRevenueCSV() {
   const { error: authError, supabase } = await requireAdmin();
