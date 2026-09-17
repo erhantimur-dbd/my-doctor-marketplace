@@ -30,6 +30,12 @@ describe("isAllowedOnComingSoon", () => {
     expect(isAllowedOnComingSoon("/en/how-it-works")).toBe(true);
     expect(isAllowedOnComingSoon("/en/register-doctor")).toBe(true);
     expect(isAllowedOnComingSoon("/en/login")).toBe(true);
+    expect(isAllowedOnComingSoon("/en/invite")).toBe(true);
+    expect(isAllowedOnComingSoon("/en/invite/dentistry")).toBe(true);
+    expect(isAllowedOnComingSoon("/en/invite/" + "a".repeat(64))).toBe(true);
+    expect(isAllowedOnComingSoon("/en/invite/accept/" + "b".repeat(64))).toBe(
+      true
+    );
   });
 
   it("does not allow patient marketplace / search", () => {

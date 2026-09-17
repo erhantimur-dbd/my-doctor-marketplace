@@ -29,7 +29,7 @@ import {
 import { Link } from "@/i18n/navigation";
 import { registerDoctor, registerDoctorWithCheckout } from "@/actions/auth";
 import { validateReferralCode } from "@/actions/referral";
-import { SPECIALTIES } from "@/lib/constants/specialties";
+import { SPECIALTIES, getMedicalSpecialties } from "@/lib/constants/specialties";
 import {
   MAX_DOCTOR_SKILLS,
   doctorDeclarableSkillsForSpecialties,
@@ -168,6 +168,16 @@ export default function RegisterDoctorPage() {
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [yearsOfExperience, setYearsOfExperience] = useState("");
+
+  // Prefill from specialty invite CTAs (?specialty=dentistry)
+  useEffect(() => {
+    const specialtyParam = searchParams.get("specialty");
+    if (!specialtyParam) return;
+    if (!getMedicalSpecialties().some((s) => s.slug === specialtyParam)) return;
+    setSelectedSpecialties((prev) =>
+      prev.length === 0 ? [specialtyParam] : prev
+    );
+  }, [searchParams]);
 
   // Step 3: Practice details
   const [clinicName, setClinicName] = useState("");

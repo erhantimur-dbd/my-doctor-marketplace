@@ -1,7 +1,6 @@
 import { resolveInviteToken } from "@/actions/clinic-invitations";
 import { createClient } from "@/lib/supabase/server";
 import { InviteAcceptClient } from "./invite-accept-client";
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 interface Props {
@@ -19,14 +18,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function InviteAcceptPage({ params }: Props) {
+export default async function ClinicInviteAcceptPage({ params }: Props) {
   const { locale, token } = await params;
 
   const { invite, error } = await resolveInviteToken(token);
 
-  // Get current session (if any)
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   let currentProfile = null;
   if (user) {

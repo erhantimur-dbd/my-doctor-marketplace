@@ -22,6 +22,10 @@ describe("doctor signup flow contracts", () => {
     expect(vercel).toMatch(/register-doctor/);
     expect(vercel).toMatch(/doctor-dashboard/);
     expect(vercel).toMatch(/support/);
+    // Specialty invite landings + clinic seat tokens share /invite
+    expect(gate).toContain('"/invite"');
+    expect(middleware).toContain("clinicInviteAcceptPath");
+    expect(vercel).toMatch(/invite/);
     // Patient home still gated (no bare "/" allow in COMING_SOON list after soft-launch restore)
     const allowBlock = gate.slice(
       gate.indexOf("COMING_SOON_ALLOWED_PREFIXES"),
@@ -75,6 +79,7 @@ describe("doctor signup flow contracts", () => {
     expect(page).toContain("registerDoctorWithCheckout");
     expect(page).toContain('searchParams.get("ref")');
     expect(page).toContain('searchParams.get("tier")');
+    expect(page).toContain('searchParams.get("specialty")');
     expect(page).toContain("DoctorWaitlistForm");
     // Pricing fields collected in UI but not all submitted — fee state exists
     expect(page).toContain("consultationFee");
