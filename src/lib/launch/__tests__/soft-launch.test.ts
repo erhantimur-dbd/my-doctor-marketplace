@@ -86,6 +86,15 @@ describe("public chat is hard-disabled even when authenticated", () => {
     expect(src).toContain("403");
   });
 
+  it("chat widget stays dark via the always-off kill-switch", () => {
+    const src = readFileSync(
+      join(process.cwd(), "src/components/chat/chat-widget.tsx"),
+      "utf8"
+    );
+    expect(src).toContain("isPublicChatEnabled");
+    expect(src).toContain("if (!isPublicChatEnabled()");
+  });
+
   it("analyzeSymptoms fails closed as a public entry point", () => {
     const src = readFileSync(join(process.cwd(), "src/actions/ai.ts"), "utf8");
     expect(src).toContain("isSymptomAnalysisEnabled");
