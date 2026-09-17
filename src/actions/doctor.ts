@@ -309,7 +309,7 @@ export async function updateBookingStatus(
 
 export async function connectStripeAccount() {
   const { error: authError, supabase, doctor } = await requireDoctor();
-  if (authError || !supabase || !doctor) return { error: authError };
+  if (authError || !supabase || !doctor) return;
 
   const stripe = (await import("@/lib/stripe/client")).getStripe();
 
