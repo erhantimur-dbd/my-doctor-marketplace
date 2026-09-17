@@ -32,6 +32,13 @@ import {
   formatPrice,
 } from "@/lib/constants/license-tiers";
 import { getLocale } from "next-intl/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Founding Doctor Programme plans. Founding Free is £0 — no card required. Register, build your profile, and go live with us.",
+};
 
 const BENEFITS = [
   {

@@ -13,14 +13,28 @@ const SOFT_LAUNCH_SURFACES = [
   "public/coming-soon/index.html",
   "src/lib/constants/package-features.ts",
   "src/lib/marketing/package-recommender.ts",
+  "src/app/layout.tsx",
+  "src/lib/seo/json-ld.ts",
   "src/app/[locale]/(public)/pricing/page.tsx",
   "src/app/[locale]/(public)/how-it-works/page.tsx",
   "src/app/[locale]/(public)/contact/page.tsx",
   "src/app/[locale]/(auth)/register/page.tsx",
+  "src/app/[locale]/(auth)/login/page.tsx",
   "src/app/[locale]/(public)/register-doctor/page.tsx",
+  "src/app/[locale]/(public)/register-doctor/layout.tsx",
   "src/components/layout/header.tsx",
   "src/components/layout/footer.tsx",
   "src/components/marketing/pricing-billing-toggle.tsx",
+];
+
+const SOFT_LAUNCH_TITLE_SURFACES = [
+  "src/app/layout.tsx",
+  "src/lib/seo/json-ld.ts",
+  "src/app/[locale]/(public)/pricing/page.tsx",
+  "src/app/[locale]/(public)/how-it-works/page.tsx",
+  "src/app/[locale]/(auth)/login/page.tsx",
+  "src/app/[locale]/(public)/register-doctor/layout.tsx",
+  "public/coming-soon/index.html",
 ];
 
 describe("Soft Launch public claims", () => {
@@ -126,6 +140,39 @@ describe("Soft Launch public claims", () => {
     expect(footer).toMatch(/Founding Programme/);
     expect(header).toMatch(/for_doctors/);
     expect(header).not.toMatch(/href=["']\/register["']/);
+  });
+
+  it("document title / meta / OG use Founding Doctor framing, not a care marketplace", () => {
+    for (const rel of SOFT_LAUNCH_TITLE_SURFACES) {
+      const text = read(rel);
+      expect(text, rel).not.toMatch(/Premium Private Healthcare Marketplace/i);
+      expect(text, rel).not.toMatch(/private healthcare marketplace/i);
+      expect(text, rel).not.toMatch(/receive premium healthcare/i);
+      expect(text, rel).not.toMatch(/book instantly/i);
+    }
+
+    const root = read("src/app/layout.tsx");
+    expect(root).toMatch(/MyDoctors360 — Founding Doctor Programme/);
+    expect(root).toMatch(/private practice platform for UK and European doctors/);
+
+    const jsonLd = read("src/lib/seo/json-ld.ts");
+    expect(jsonLd).toMatch(/private practice platform for founding doctors/);
+    expect(jsonLd).toMatch(/Founding Doctor Programme/);
+
+    const pricing = read("src/app/[locale]/(public)/pricing/page.tsx");
+    expect(pricing).toMatch(/title: "Pricing"/);
+    expect(pricing).toMatch(/Founding Doctor Programme plans/);
+
+    const login = read("src/app/[locale]/(auth)/login/page.tsx");
+    expect(login).toMatch(/title: "Sign in"/);
+    expect(login).toMatch(/Founding Doctor Programme/);
+
+    const registerLayout = read(
+      "src/app/[locale]/(public)/register-doctor/layout.tsx"
+    );
+    expect(registerLayout).toMatch(
+      /title: "Join the Founding Doctor Programme"/
+    );
   });
 
   it("does not mount patient-finder chat on Soft Launch layout", () => {

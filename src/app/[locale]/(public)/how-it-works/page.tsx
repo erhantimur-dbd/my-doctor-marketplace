@@ -21,6 +21,13 @@ import {
 } from "lucide-react";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { FOUNDING_REGISTER_HREF } from "@/lib/constants/company";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "How the Founding Doctor Programme works",
+  description:
+    "Register, build your profile, and go live with us. Patient booking opens at public launch — this page is for founding doctors.",
+};
 
 const steps = [
   {
