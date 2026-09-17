@@ -149,7 +149,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "professional",
     name: "Professional",
-    description: "Solo growth: SMS, analytics, CRM and waitlist",
+    description: "Solo growth: analytics, CRM and waitlist",
     priceMonthlyPence: 29900, // £299 flat — one doctor seat (not per-user multi-seat)
     perUser: false,
     defaultSeats: 1,
@@ -230,7 +230,6 @@ export const TESTING_STANDALONE_PLAN = {
     "Online booking calendar",
     "Unlimited bookings",
     "Email reminders",
-    "SMS & WhatsApp reminders",
   ],
 };
 

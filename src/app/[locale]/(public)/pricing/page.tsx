@@ -32,6 +32,13 @@ import {
   formatPrice,
 } from "@/lib/constants/license-tiers";
 import { getLocale } from "next-intl/server";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Pricing",
+  description:
+    "Founding Doctor Programme plans. Founding Free is £0 — no card required. Register, build your profile, and go live with us.",
+};
 
 const BENEFITS = [
   {
@@ -95,7 +102,7 @@ const platformFeatures = [
     icon: Bell,
     title: "Automated Reminders",
     description:
-      "Email reminders on Starter; SMS & WhatsApp on Professional+ to cut no-shows.",
+      "Email appointment reminders on Starter and above to cut no-shows.",
     bg: "bg-amber-50 dark:bg-amber-950/30",
     text: "text-amber-600",
   },
@@ -416,7 +423,7 @@ export default async function PricingPage() {
                     {
                       icon: Bell,
                       title: "Auto Reminders",
-                      desc: "Email on Starter; SMS & WhatsApp on Pro+",
+                      desc: "Email appointment reminders on Starter+",
                     },
                     {
                       icon: BarChart3,

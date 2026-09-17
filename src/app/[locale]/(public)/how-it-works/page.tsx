@@ -21,6 +21,13 @@ import {
 } from "lucide-react";
 import { HeroSpecialtyIcons } from "@/components/shared/hero-specialty-icons";
 import { FOUNDING_REGISTER_HREF } from "@/lib/constants/company";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "How the Founding Doctor Programme works",
+  description:
+    "Register, build your profile, and go live with us. Patient booking opens at public launch — this page is for founding doctors.",
+};
 
 const steps = [
   {
@@ -94,12 +101,12 @@ const faqs = [
   {
     question: "What does Founding Free include?",
     answer:
-      "A verified public listing and doctor dashboard after credential review. Online bookings, video, AI insights and multi-channel reminders unlock on paid plans.",
+      "A verified public listing and doctor dashboard after credential review. Online bookings, video, AI insights and email reminders unlock on paid plans.",
   },
   {
     question: "What is on Professional?",
     answer:
-      "Everything in Starter plus SMS & WhatsApp reminders, advanced analytics, patient CRM, waitlist auto-notify and priority support. One doctor seat — multi-doctor practices use Clinic.",
+      "Everything in Starter plus advanced analytics, patient CRM, waitlist auto-notify and priority support. One doctor seat — multi-doctor practices use Clinic.",
   },
   {
     question: "Is MyDoctors360 a care provider?",
