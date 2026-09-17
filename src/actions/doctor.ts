@@ -3,6 +3,7 @@ import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import type Stripe from "stripe";
 import { log } from "@/lib/utils/logger";
 
@@ -310,7 +311,7 @@ export async function connectStripeAccount() {
   const { error: authError, supabase, doctor } = await requireDoctor();
   if (authError || !supabase || !doctor) return { error: authError };
 
-  const { stripe } = await import("@/lib/stripe/client");
+  const stripe = (await import("@/lib/stripe/client")).getStripe();
 
   let accountId = doctor.stripe_account_id;
 
@@ -336,7 +337,7 @@ export async function connectStripeAccount() {
     type: "account_onboarding",
   });
 
-  return { url: accountLink.url };
+  redirect(accountLink.url);
 }
 
 // ---------------------------------------------------------------------------
@@ -404,7 +405,7 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
   const { error: authError, supabase, doctor } = await requireDoctor();
   if (authError || !supabase || !doctor) return { error: authError };
 
-  const { stripe } = await import("@/lib/stripe/client");
+  const stripe = (await import("@/lib/stripe/client")).getStripe();
 
   // Get or create Stripe customer — check licenses (org-based) first
   let customerId: string | null = null;

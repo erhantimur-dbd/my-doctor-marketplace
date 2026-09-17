@@ -15,8 +15,3 @@ export function getStripe(): Stripe {
   }
   return _stripe;
 }
-
-/** @deprecated Use getStripe() instead */
-export const stripe = typeof process !== "undefined" && process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { typescript: true })
-  : (null as unknown as Stripe);
