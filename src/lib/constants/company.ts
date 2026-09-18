@@ -112,8 +112,9 @@ export const FOUNDING_FREE_LICENSE_VALUE_LINE =
   "Solo Professional equivalent · value £299/mo · Founding Free £0, no card";
 
 /**
- * Soft Launch: patient search/book routes stay dark. Public chrome must not
- * look like a live patient marketplace (Legal P0, 2026-09-07).
+ * Soft Launch: patient search/directory stay dark. Book deep-link
+ * `/doctors/:slug/book` is allowlisted for Soft Launch Soft CTA smoke.
+ * Public chrome must not look like a live patient marketplace (Legal P0).
  * Lift only after Product + Legal + Sandy stamp the Preview.
  */
 export const SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME = true;
