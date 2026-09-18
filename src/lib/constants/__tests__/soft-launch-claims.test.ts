@@ -97,6 +97,21 @@ describe("Soft Launch public claims", () => {
     }
   });
 
+  it("Founding Free register path shows quiet Soft CTA chrome under the H1", () => {
+    const company = read("src/lib/constants/company.ts");
+    const register = read(
+      "src/app/[locale]/(public)/register-doctor/page.tsx"
+    );
+    expect(company).toMatch(
+      /lifetime Founding Free · Solo Professional · value £299\/mo/
+    );
+    expect(register).toMatch(/FOUNDING_FREE_SOFT_LAUNCH_CHROME_LINE/);
+    expect(register).toMatch(/isFoundingFreeCta/);
+    expect(register).toMatch(/founding === "1"/);
+    expect(register).toMatch(/tier === "free"/);
+    expect(register).not.toMatch(/free forever/i);
+  });
+
   it("pricing CRM + founding CTA use Legal replacements", () => {
     const pricing = read("src/app/[locale]/(public)/pricing/page.tsx");
     expect(pricing).toMatch(/Patient records and booking history/);

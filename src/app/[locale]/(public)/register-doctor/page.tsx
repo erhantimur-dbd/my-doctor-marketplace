@@ -36,6 +36,7 @@ import {
 } from "@/lib/constants/skills";
 import { COUNTRIES, LANGUAGES } from "@/lib/constants/countries";
 import { isLaunchRegion } from "@/lib/constants/launch-regions";
+import { FOUNDING_FREE_SOFT_LAUNCH_CHROME_LINE } from "@/lib/constants/company";
 import { DoctorWaitlistForm } from "@/components/shared/doctor-waitlist-form";
 import {
   LICENSE_TIERS,
@@ -83,6 +84,9 @@ const STEPS = [
 export default function RegisterDoctorPage() {
   const searchParams = useSearchParams();
   const locale = useLocale();
+  const isFoundingFreeCta =
+    searchParams.get("founding") === "1" ||
+    searchParams.get("tier") === "free";
   const [step, setStep] = useState(1);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -561,7 +565,16 @@ export default function RegisterDoctorPage() {
 
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Join MyDoctors360 as a Doctor</CardTitle>
+          <div className="space-y-2">
+            <CardTitle className="text-2xl">
+              Join MyDoctors360 as a Doctor
+            </CardTitle>
+            {isFoundingFreeCta && (
+              <p className="text-sm font-normal text-muted-foreground">
+                {FOUNDING_FREE_SOFT_LAUNCH_CHROME_LINE}
+              </p>
+            )}
+          </div>
           <CardDescription>
             Step {step} of 5 -{" "}
             {STEPS.find((s) => s.number === step)?.title}

@@ -100,6 +100,10 @@ export const FOUNDING_FREE_PRICE_GBP = 0;
 export const FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE =
   "Lifetime Solo Professional equivalent · value £299/mo · Founding Free £0";
 
+/** Quiet under-H1 chrome on the Founding Free register path. */
+export const FOUNDING_FREE_SOFT_LAUNCH_CHROME_LINE =
+  "lifetime Founding Free · Solo Professional · value £299/mo";
+
 /**
  * Soft Launch: patient search/book routes stay dark. Public chrome must not
  * look like a live patient marketplace (Legal P0, 2026-09-07).
