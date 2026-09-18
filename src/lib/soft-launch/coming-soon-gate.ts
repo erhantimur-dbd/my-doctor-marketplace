@@ -25,6 +25,9 @@ export const COMING_SOON_ALLOWED_PREFIXES = [
   // Auth flow
   "/login",
   "/register",
+  // Authenticated Soft Launch Soft CTA patient surfaces (bookings, video-room).
+  // Marketplace chrome stays dark — do not add /doctors, /specialties, /find.
+  "/dashboard",
   "/verify-email",
   "/verify-mfa",
   "/forgot-password",

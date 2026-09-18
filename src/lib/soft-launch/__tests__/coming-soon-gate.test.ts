@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   comingSoonGateApplies,
@@ -32,13 +34,34 @@ describe("isAllowedOnComingSoon", () => {
     expect(isAllowedOnComingSoon("/en/login")).toBe(true);
   });
 
+  it("allows Soft Launch Soft CTA authenticated patient dashboard surfaces", () => {
+    expect(isAllowedOnComingSoon("/en/dashboard")).toBe(true);
+    expect(isAllowedOnComingSoon("/en/dashboard/bookings")).toBe(true);
+    expect(isAllowedOnComingSoon("/en/dashboard/bookings/abc/video-room")).toBe(
+      true
+    );
+    expect(isAllowedOnComingSoon("/en/register")).toBe(true);
+  });
+
   it("does not allow patient marketplace / search", () => {
     expect(isAllowedOnComingSoon("/en/doctors")).toBe(false);
     expect(isAllowedOnComingSoon("/en/doctors/dr-jane")).toBe(false);
     expect(isAllowedOnComingSoon("/en/specialties")).toBe(false);
     expect(isAllowedOnComingSoon("/en/conditions")).toBe(false);
+    expect(isAllowedOnComingSoon("/en/find")).toBe(false);
     expect(isAllowedOnComingSoon("/en/blog")).toBe(false);
+    expect(isAllowedOnComingSoon("/en/clinics")).toBe(false);
+    expect(isAllowedOnComingSoon("/en/rewards")).toBe(false);
+    expect(isAllowedOnComingSoon("/en/find-pharmacy")).toBe(false);
     expect(isAllowedOnComingSoon("/en")).toBe(false);
+  });
+
+  it("keeps vercel.json coming-soon rewrite in sync for patient dashboard", () => {
+    const vercel = readFileSync(join(process.cwd(), "vercel.json"), "utf8");
+    // Prod custom hosts use this rewrite before middleware. Must include
+    // dashboard as its own token, not only doctor-dashboard.
+    expect(vercel).toMatch(/accept-terms\|dashboard\|doctor-dashboard/);
+    expect(vercel).not.toMatch(/\|doctors\|/);
   });
 });
 
