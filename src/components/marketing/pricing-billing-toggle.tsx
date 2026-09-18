@@ -420,8 +420,8 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
         Founding Free includes Professional features for life (£299/mo value)
         at £0 — no card required. Soft Launch clinical tools stay off.
         Multi-doctor seats, multi-location, team tools and included medical
-        testing are Clinic+. Custom branding &amp; API are Enterprise. SMS and
-        WhatsApp reminders are coming soon — not available at Soft Launch.
+        testing are Clinic+. Custom branding &amp; API are Enterprise. SMS and WhatsApp reminders are coming soon — not available
+        at Soft Launch.
       </p>
     </div>
   );

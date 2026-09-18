@@ -298,8 +298,8 @@ export function validatePackageMarketingConsistency(
     if (marketing.features.some((f) => /whatsapp|SMS/i.test(f))) {
       errors.push("free: must not claim SMS/WhatsApp as live");
     }
-    if (marketing.features.some((f) => /free forever/i.test(f))) {
-      errors.push("free: must not say free forever");
+    if (marketing.features.some((f) => /free\s+forever/i.test(f))) {
+      errors.push("free: must not claim complementary access without end date");
     }
   }
 
