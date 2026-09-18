@@ -96,9 +96,13 @@ export const FOUNDING_FREE_CLAIM_VALUE_GBP = 299;
 /** Founding Free list price (billing identity stays £0). */
 export const FOUNDING_FREE_PRICE_GBP = 0;
 
-/** Doctor-facing Soft Launch one-liner for Founding Free. */
+/**
+ * Doctor-facing Soft Launch Soft CTA perk line (register-doctor H1).
+ * Legal-safe: lifetime Founding Free / founding-tier benefits at £0 for life.
+ * Features of Solo Professional, not clinical care. Not a lifetime-gratis slogan.
+ */
 export const FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE =
-  "Lifetime Solo Professional equivalent · value £299/mo · Founding Free £0";
+  "Lifetime Founding Free · Solo Professional features · value £299/mo · Founding Free £0, no card";
 
 /**
  * Soft Launch: patient search/book routes stay dark. Public chrome must not

@@ -35,8 +35,8 @@ Replace `BASE` with the Vercel Preview URL for this branch (or `https://www.mydo
 
 | # | URL | Expected | Result |
 |---|-----|----------|--------|
-| S1 | `{BASE}/en/register-doctor?tier=free&founding=1` | App wizard (not coming-soon). Title: Join the Founding Doctor Programme. Founding Free pre-selected. Copy: lifetime Professional equivalent · £299/mo · £0. | _pending Preview_ |
-| S2 | `{BASE}/en/register-doctor` | Same wizard; plan step includes Founding Free £0. | _pending Preview_ |
+| S1 | `{BASE}/en/register-doctor?tier=free&founding=1` | App wizard (not coming-soon). H1: Join the Founding Doctor Programme. Perk line under H1: lifetime Founding Free · Solo Professional features · value £299/mo · Founding Free £0, no card. Founding Free pre-selected. | _pending Preview_ |
+| S2 | `{BASE}/en/register-doctor` | Same wizard H1 + perk line; plan step includes Founding Free £0. | _pending Preview_ |
 | S3 | `{BASE}/en/pricing` | Founding Free card: £0, lifetime Professional equivalent, value £299/mo. Footer: SMS/WhatsApp Coming. No care-marketplace title. | _pending Preview_ |
 | S4 | `{BASE}/en/how-it-works` | Founding FAQ matches lock. Marketplace-not-care-provider disclaimer present. | _pending Preview_ |
 | S5 | `{BASE}/coming-soon/index.html` | Claim CTA → register-doctor `tier=free&founding=1`. Fine print: lifetime Pro / £299 / £0. | _pending Preview_ |

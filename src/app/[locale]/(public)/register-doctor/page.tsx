@@ -10,8 +10,8 @@ import {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
+import { FoundingSoftCtaHeading } from "@/components/marketing/founding-soft-cta-heading";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordStrength } from "@/components/ui/password-strength";
@@ -498,7 +498,7 @@ export default function RegisterDoctorPage() {
     return (
       <div className="container mx-auto max-w-2xl px-4 py-8">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold">Register as a Doctor</h1>
+          <FoundingSoftCtaHeading />
           <p className="mt-1 text-sm text-muted-foreground">
             We&apos;re not yet available in your region, but you can join our waitlist
           </p>
@@ -561,7 +561,7 @@ export default function RegisterDoctorPage() {
 
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Join MyDoctors360 as a Doctor</CardTitle>
+          <FoundingSoftCtaHeading />
           <CardDescription>
             Step {step} of 5 -{" "}
             {STEPS.find((s) => s.number === step)?.title}
