@@ -41,6 +41,7 @@ import { doctorJsonLd, faqJsonLd } from "@/lib/seo/json-ld";
 import { getInsurerLabel } from "@/lib/constants/insurers";
 import { WEEKDAY_KEYS, WEEKDAY_LABELS, getFacilityLabel } from "@/lib/constants/location-facilities";
 import type { Metadata } from "next";
+import { redirectPatientMarketplaceIfSoftLaunch } from "@/lib/soft-launch/redirect-patient-marketplace";
 
 interface DoctorPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -83,6 +84,7 @@ export async function generateMetadata({
 }
 
 export default async function DoctorProfilePage({ params }: DoctorPageProps) {
+  redirectPatientMarketplaceIfSoftLaunch();
   const { slug, locale } = await params;
   const adminDb = createAdminClient();
 

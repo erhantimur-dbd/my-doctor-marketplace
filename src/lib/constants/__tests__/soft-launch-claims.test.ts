@@ -172,10 +172,23 @@ describe("Soft Launch public claims", () => {
     const doctorsLayout = read(
       "src/app/[locale]/(public)/doctors/layout.tsx"
     );
+    const doctorsListing = read(
+      "src/app/[locale]/(public)/doctors/page.tsx"
+    );
+    const doctorsProfile = read(
+      "src/app/[locale]/(public)/doctors/[slug]/page.tsx"
+    );
+    const doctorsBook = read(
+      "src/app/[locale]/(public)/doctors/[slug]/book/page.tsx"
+    );
     const specialtiesLayout = read(
       "src/app/[locale]/(public)/specialties/layout.tsx"
     );
-    expect(doctorsLayout).toMatch(/soft-launch-dark-layout/);
+    // Whole-tree dark layout would swallow the Soft Launch Soft CTA book deep-link.
+    expect(doctorsLayout).not.toMatch(/soft-launch-dark-layout/);
+    expect(doctorsListing).toMatch(/redirectPatientMarketplaceIfSoftLaunch/);
+    expect(doctorsProfile).toMatch(/redirectPatientMarketplaceIfSoftLaunch/);
+    expect(doctorsBook).not.toMatch(/redirectPatientMarketplaceIfSoftLaunch/);
     expect(specialtiesLayout).toMatch(/soft-launch-dark-layout/);
     const redirector = read(
       "src/lib/soft-launch/redirect-patient-marketplace.ts"
