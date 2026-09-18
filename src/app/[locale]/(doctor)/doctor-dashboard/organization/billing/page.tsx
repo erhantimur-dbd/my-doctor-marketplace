@@ -63,7 +63,13 @@ import {
   isPaidTier,
   TIER_RANK,
   getPendingPlanChange,
+  isActiveLicenseStatus,
 } from "@/lib/license/tier-lifecycle";
+import {
+  formatDoctorLicensePeriodLine,
+  formatDoctorLicenseTitle,
+  isFoundingFreeLicense,
+} from "@/lib/license/display";
 
 export default function BillingPage() {
   const searchParams = useSearchParams();
@@ -288,10 +294,10 @@ export default function BillingPage() {
   }
 
   const currentTier = license?.tier || null;
-  const needsPaidPlan =
-    !license ||
-    license.tier === "free" ||
-    !["active", "trialing", "past_due"].includes(license.status);
+  const licenseIsActive = isActiveLicenseStatus(license?.status);
+  const foundingFree = isFoundingFreeLicense(license) && licenseIsActive;
+  const needsPaidCheckout = !license || !licenseIsActive;
+  const showPaidBillingPeriod = needsPaidCheckout || foundingFree;
 
   return (
     <div className="space-y-6">
@@ -355,7 +361,7 @@ export default function BillingPage() {
         </Card>
       )}
 
-      {(showResumeCheckout || needsPaidPlan) && (
+      {(showResumeCheckout || needsPaidCheckout) && (
         <Card className="border-amber-200 bg-amber-50/50">
           <CardContent className="flex flex-col gap-3 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -363,8 +369,7 @@ export default function BillingPage() {
                 Complete your paid plan
               </p>
               <p className="text-sm text-amber-800/80">
-                Online bookings require a Starter or higher licence. Resume
-                Checkout if you cancelled during sign-up.
+                Resume Checkout if you cancelled during sign-up.
               </p>
             </div>
             <Button
@@ -393,8 +398,12 @@ export default function BillingPage() {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="font-semibold capitalize">
-                    {license.tier} License
+                  <p
+                    className={
+                      foundingFree ? "font-semibold" : "font-semibold capitalize"
+                    }
+                  >
+                    {formatDoctorLicenseTitle(license)}
                   </p>
                   <Badge
                     variant={
@@ -411,13 +420,7 @@ export default function BillingPage() {
                     <Users className="h-3 w-3" />
                     {license.used_seats}/{license.max_seats} seats
                   </span>
-                  <span>
-                    Period ends:{" "}
-                    {new Date(license.current_period_end).toLocaleDateString(
-                      "en-GB",
-                      { day: "numeric", month: "short", year: "numeric" }
-                    )}
-                  </span>
+                  <span>{formatDoctorLicensePeriodLine(license)}</span>
                 </div>
               </div>
             </div>
@@ -521,7 +524,7 @@ export default function BillingPage() {
           <h2 className="text-lg font-semibold">
             {license ? "Available Plans" : "Choose a Plan"}
           </h2>
-          {needsPaidPlan && (
+          {showPaidBillingPeriod && (
             <div className="inline-flex items-center self-start rounded-full border bg-muted/40 p-1">
               <button
                 type="button"
@@ -590,7 +593,7 @@ export default function BillingPage() {
                       <span className="text-2xl font-bold">Custom</span>
                     ) : tier.isFreeTier ? (
                       <span className="text-2xl font-bold">Free</span>
-                    ) : billingPeriod === "annual" && needsPaidPlan ? (
+                    ) : billingPeriod === "annual" && showPaidBillingPeriod ? (
                       <>
                         <span className="text-2xl font-bold tabular-nums">
                           {formatAnnualEffectiveMonthlyForLocale(
