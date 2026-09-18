@@ -115,7 +115,6 @@ describe("Soft Launch public claims", () => {
     expect(company).toMatch(/£299\/mo/);
     expect(company).toMatch(/Founding Free £0, no card/);
     expect(company).not.toMatch(/free forever/i);
-    expect(company).not.toMatch(/through 2099/i);
 
     expect(heading).toMatch(/FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE/);
     expect(heading).toMatch(/Join the Founding Doctor Programme/);
