@@ -108,7 +108,7 @@ describe("Soft Launch public claims", () => {
     expect(register).toMatch(/FOUNDING_FREE_SOFT_LAUNCH_CHROME_LINE/);
     expect(register).toMatch(/isFoundingFreeCta/);
     expect(register).toMatch(/founding === "1"/);
-    expect(register).toMatch(/tier === "free"/);
+    expect(register).toMatch(/get\("tier"\) === "free"/);
     expect(register).not.toMatch(/free forever/i);
   });
 
