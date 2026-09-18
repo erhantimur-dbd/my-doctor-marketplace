@@ -30,6 +30,7 @@ import {
   createOrganization,
   updateOrganization,
 } from "@/actions/organization";
+import { formatDoctorLicensePlanName } from "@/lib/license/display";
 
 export default function OrganizationPage() {
   const [loading, setLoading] = useState(true);
@@ -191,8 +192,8 @@ export default function OrganizationPage() {
               <Crown className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold capitalize">
-                {license?.tier || "No License"}
+              <p className="text-2xl font-bold">
+                {formatDoctorLicensePlanName(license)}
               </p>
               <p className="text-sm text-muted-foreground">Current Plan</p>
             </div>

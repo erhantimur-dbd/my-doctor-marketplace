@@ -279,6 +279,7 @@ export function buildFreeGatewayLicenseInsert(organizationId: string): {
     max_seats: 1,
     used_seats: 1,
     current_period_start: new Date().toISOString(),
+    // Sentinel only — doctor UI must not format this as an expiry (see display.ts).
     current_period_end: "2099-12-31T23:59:59.000Z",
     cancel_at_period_end: false,
     stripe_subscription_id: null,

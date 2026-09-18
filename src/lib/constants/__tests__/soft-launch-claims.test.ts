@@ -108,6 +108,8 @@ describe("Soft Launch public claims", () => {
     );
 
     expect(company).toMatch(/FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE/);
+    expect(company).toMatch(/FOUNDING_FREE_LICENSE_TITLE/);
+    expect(company).toMatch(/lifetime Founding Free/);
     expect(company).toMatch(/Lifetime Founding Free/);
     expect(company).toMatch(/Solo Professional features/);
     expect(company).toMatch(/£299\/mo/);
@@ -255,5 +257,30 @@ describe("Soft Launch public claims", () => {
     const layout = read("src/app/[locale]/layout.tsx");
     expect(layout).toMatch(/SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
     expect(layout).toMatch(/!SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME/);
+  });
+
+  it("doctor billing Founding Free copy is lifetime perk, not through-2099 Free License", () => {
+    const billing = read(
+      "src/app/[locale]/(doctor)/doctor-dashboard/organization/billing/page.tsx"
+    );
+    const org = read(
+      "src/app/[locale]/(doctor)/doctor-dashboard/organization/page.tsx"
+    );
+    const display = read("src/lib/license/display.ts");
+
+    expect(billing).toMatch(/formatDoctorLicenseTitle/);
+    expect(billing).toMatch(/formatDoctorLicensePeriodLine/);
+    expect(billing).toMatch(/isFoundingFreeLicense/);
+    expect(billing).not.toMatch(/\{license\.tier\} License/);
+    expect(billing).not.toMatch(/Period ends:/);
+    expect(billing).not.toMatch(/free forever/i);
+    expect(billing).not.toMatch(/Online bookings require a Starter/);
+
+    expect(org).toMatch(/formatDoctorLicensePlanName/);
+    expect(org).not.toMatch(/\{license\?\.tier \|\| "No License"\}/);
+
+    expect(display).toMatch(/FOUNDING_FREE_LICENSE_TITLE/);
+    expect(display).toMatch(/FOUNDING_FREE_LICENSE_VALUE_LINE/);
+    expect(display).not.toMatch(/free forever/i);
   });
 });

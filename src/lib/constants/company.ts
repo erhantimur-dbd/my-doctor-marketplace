@@ -104,6 +104,13 @@ export const FOUNDING_FREE_PRICE_GBP = 0;
 export const FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE =
   "Lifetime Founding Free · Solo Professional features · value £299/mo · Founding Free £0, no card";
 
+/** Doctor billing / org licence title (lifetime perk, not a dated expiry). */
+export const FOUNDING_FREE_LICENSE_TITLE = "lifetime Founding Free";
+
+/** Doctor billing period line for Founding Free (claim value, not a period end). */
+export const FOUNDING_FREE_LICENSE_VALUE_LINE =
+  "Solo Professional equivalent · value £299/mo · Founding Free £0, no card";
+
 /**
  * Soft Launch: patient search/book routes stay dark. Public chrome must not
  * look like a live patient marketplace (Legal P0, 2026-09-07).
