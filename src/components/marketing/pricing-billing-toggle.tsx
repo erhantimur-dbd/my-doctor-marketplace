@@ -421,8 +421,8 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
         £299/mo, Founding Free £0). Bookings, video, payments, analytics, CRM
         and waitlist are included. Multi-doctor seats, multi-location, team
         tools and included medical testing are Clinic+. Custom branding &amp;
-        API are Enterprise. SMS and WhatsApp reminders are coming soon — not
-        available at Soft Launch.
+        API are Enterprise. SMS and WhatsApp reminders are coming soon — not available
+        at Soft Launch.
       </p>
     </div>
   );

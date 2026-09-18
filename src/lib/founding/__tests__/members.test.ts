@@ -125,9 +125,9 @@ describe("founding + signup go-live contracts", () => {
   });
 
   it("gate allows register-testing-service", () => {
-    const middleware = read("middleware.ts");
+    const gate = read("src/lib/soft-launch/coming-soon-gate.ts");
     const vercel = read("vercel.json");
-    expect(middleware).toContain('"/register-testing-service"');
+    expect(gate).toContain('"/register-testing-service"');
     expect(vercel).toMatch(/register-testing-service/);
   });
 });

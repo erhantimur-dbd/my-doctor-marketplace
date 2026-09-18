@@ -49,14 +49,14 @@ Replace `BASE` with the Vercel Preview URL for this branch (or `https://www.mydo
 
 ## Local / contract smoke (this agent)
 
-Recorded after implementation. Preview URL rows stay pending until Vercel Preview is up.
+Recorded 2026-09-17 on `cursor/founding-free-lifetime-pro-84ad` (`npm test` — **462 passed / 51 files**). Preview host rows above stay pending until Vercel Preview is stamped.
 
 | Check | Result | Notes |
 |-------|--------|-------|
-| Entitlement unit tests (`hasFeature("free") === professional`) | _see CI / local vitest_ | Missing licence still denies |
-| Soft Launch #18 kill-switch tests | _see CI / local vitest_ | Rx / care / chat remain `false` |
-| Soft Launch claims (no live SMS/WhatsApp, no care marketplace title) | _see CI / local vitest_ | Coming footer still required |
-| Founding signup structural contracts (wizard + `registerDoctor` + founding claim + lifetime metadata) | _see CI / local vitest_ | Invite path unchanged |
+| Entitlement unit tests (`hasFeature("free") === professional`) | **PASS** | Missing licence still denies. `getFeaturesForTier("free")` equals Professional. `multi_location` false. |
+| Soft Launch #18 kill-switch tests | **PASS** | Rx / care / chat / STT-TTS remain `false` even though Founding Free has Pro flags |
+| Soft Launch claims (no live SMS/WhatsApp, no care marketplace title) | **PASS** | Coming footer still required on pricing chrome |
+| Founding signup structural contracts (wizard + `registerDoctor` + `founding=1` + lifetime metadata) | **PASS** | Invite path unchanged |
 
 ## Pass criteria
 
@@ -66,4 +66,4 @@ Recorded after implementation. Preview URL rows stay pending until Vercel Previe
 - S10 #18 still fail-closed
 - S11 invite path not broken
 
-**Overall:** Soft Launch Preview Ready once S1–S11 are stamped PASS on the Preview host.
+**Overall:** Soft Launch Preview Ready for code + contracts (S9 entitlement + #18 kill-switch **PASS** locally). S1–S8 / S11 need Parker/Sandy Preview host stamp. Do not merge. Do not promote.
