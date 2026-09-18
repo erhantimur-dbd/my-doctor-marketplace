@@ -123,8 +123,12 @@ export default function RegisterDoctorPage() {
       });
     }
 
+    const founding = searchParams.get("founding");
     const tier = searchParams.get("tier");
-    if (tier && LICENSE_TIERS.some((t) => t.id === tier)) {
+    if (founding === "1") {
+      // Soft Launch CTA contract: founding=1 always lands on Founding Free
+      setSelectedTier("free");
+    } else if (tier && LICENSE_TIERS.some((t) => t.id === tier)) {
       setSelectedTier(tier as LicenseTier);
     }
 
@@ -1619,10 +1623,11 @@ export default function RegisterDoctorPage() {
                         You&apos;re starting on Founding Free
                       </p>
                       <p className="mt-1">
-                        Build your profile, get verified and list publicly —
-                        £0, no card required. Online bookings, video, reminders and AI
-                        unlock when you upgrade to Starter or higher from your
-                        dashboard. UK doctors: GMC is verified before go-live.
+                        Lifetime Solo Professional equivalent — value £299/mo,
+                        Founding Free £0, no card required. Bookings, video,
+                        payments, analytics, CRM and waitlist are included.
+                        SMS and WhatsApp reminders are coming soon. UK doctors:
+                        GMC is verified before go-live.
                       </p>
                     </div>
                   </div>

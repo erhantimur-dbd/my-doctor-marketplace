@@ -173,27 +173,34 @@ describe("resolvePlanChange (upgrade now / schedule downgrade)", () => {
     ).toBe("starter");
   });
 
-  it("buildFreeGatewayLicenseInsert is free active listing row", () => {
+  it("buildFreeGatewayLicenseInsert is free active lifetime Professional row", () => {
     const row = buildFreeGatewayLicenseInsert("org-1");
     expect(row.tier).toBe("free");
     expect(row.status).toBe("active");
     expect(row.organization_id).toBe("org-1");
     expect(row.stripe_subscription_id).toBeNull();
+    expect(row.metadata).toMatchObject({
+      founding_free: true,
+      entitlement_tier: "professional",
+      perk: "lifetime",
+      claim_value_gbp_monthly: 299,
+    });
   });
 });
 
 describe("licenseAllowsOnlineBookings + hasFeature matrix", () => {
-  it("free never allows bookings; starter/professional do when active", () => {
-    expect(licenseAllowsOnlineBookings("free", "active")).toBe(false);
+  it("Founding Free and paid plans allow bookings when active", () => {
+    expect(licenseAllowsOnlineBookings("free", "active")).toBe(true);
     expect(licenseAllowsOnlineBookings("starter", "active")).toBe(true);
     expect(licenseAllowsOnlineBookings("professional", "trialing")).toBe(true);
     expect(licenseAllowsOnlineBookings("starter", "cancelled")).toBe(false);
+    expect(licenseAllowsOnlineBookings(null, "active")).toBe(false);
   });
 
-  it("feature matrix free vs starter vs professional", () => {
-    expect(hasFeature("online_bookings", "free")).toBe(false);
-    expect(hasFeature("ai_review_summaries", "free")).toBe(false);
-    expect(hasFeature("whatsapp_notifications", "free")).toBe(false);
+  it("feature matrix Founding Free matches professional; starter stays below Pro", () => {
+    expect(hasFeature("online_bookings", "free")).toBe(true);
+    expect(hasFeature("ai_review_summaries", "free")).toBe(true);
+    expect(hasFeature("whatsapp_notifications", "free")).toBe(true);
 
     expect(hasFeature("online_bookings", "starter")).toBe(true);
     expect(hasFeature("video_consultations", "starter")).toBe(true);
@@ -218,25 +225,25 @@ describe("licenseAllowsOnlineBookings + hasFeature matrix", () => {
 });
 
 describe("dashboard paid-only gates (structural)", () => {
-  it("hasActiveLicense source excludes free via isPaidTier", async () => {
+  it("hasActiveLicense source uses product entitlements (Founding Free included)", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const check = readFileSync(
       join(process.cwd(), "src/lib/license/check.ts"),
       "utf8"
     );
-    expect(check).toMatch(/isPaidTier/);
+    expect(check).toMatch(/hasProductEntitlements/);
     expect(check).toMatch(/hasActiveLicense/);
   });
 
-  it("SubscriptionGate requires isPaidTier not bare license id", async () => {
+  it("SubscriptionGate requires product entitlements not bare license id", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const gate = readFileSync(
       join(process.cwd(), "src/components/shared/subscription-gate.tsx"),
       "utf8"
     );
-    expect(gate).toMatch(/isPaidTier/);
+    expect(gate).toMatch(/hasProductEntitlements/);
     expect(gate).toMatch(/pickEffectiveLicense/);
   });
 

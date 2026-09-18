@@ -63,9 +63,22 @@ export function LicenseGate({
           if (license) {
             // If a specific feature is required, check tier feature mapping
             if (requiredFeature) {
+              const professionalFeatures = [
+                "profile",
+                "bookings",
+                "basic_analytics",
+                "email_notifications",
+                "crm",
+                "video",
+                "treatment_plans",
+                "advanced_analytics",
+                "priority_support",
+                "calendar_sync",
+              ];
               const tierFeatures: Record<string, string[]> = {
+                free: professionalFeatures,
                 starter: ["profile", "bookings", "basic_analytics", "email_notifications", "crm"],
-                professional: ["profile", "bookings", "basic_analytics", "email_notifications", "crm", "video", "treatment_plans", "advanced_analytics", "priority_support", "calendar_sync"],
+                professional: professionalFeatures,
                 clinic: ["profile", "bookings", "basic_analytics", "email_notifications", "crm", "video", "treatment_plans", "advanced_analytics", "priority_support", "calendar_sync", "team_dashboard", "shared_calendar", "invoicing", "bulk_import", "staff_accounts"],
                 enterprise: ["all"],
               };

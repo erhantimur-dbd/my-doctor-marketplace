@@ -6,7 +6,7 @@
 
 | Package | Seats | Price model | Job |
 |---------|-------|-------------|-----|
-| Free | 1 | £0 | List & prepare |
+| Founding Free | 1 | £0 (lifetime Solo Professional equivalent; value £299/mo) | Soft Launch thank-you: Professional non-clinical entitlements for life |
 | Starter | 1 | Flat £199 | Solo paid marketplace |
 | **Professional** | **1** | Flat £299 | Solo growth tools (not multi-user) |
 | **Clinic** | **3 included → 15** | Flat £897 + £299 extra seats | Practice / multi-doctor |

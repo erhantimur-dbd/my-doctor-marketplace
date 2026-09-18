@@ -90,6 +90,16 @@ export function getCompanyIdentity(): CompanyIdentity {
 /** Founding programme hard cap advertised on the soft-launch landing page. */
 export const FOUNDING_PROGRAMME_MAX_SPOTS = 100;
 
+/** Soft Launch claim value for the Founding Free lifetime Professional perk. */
+export const FOUNDING_FREE_CLAIM_VALUE_GBP = 299;
+
+/** Founding Free list price (billing identity stays £0). */
+export const FOUNDING_FREE_PRICE_GBP = 0;
+
+/** Doctor-facing Soft Launch one-liner for Founding Free. */
+export const FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE =
+  "Lifetime Solo Professional equivalent · value £299/mo · Founding Free £0";
+
 /**
  * Soft Launch: patient search/book routes stay dark. Public chrome must not
  * look like a live patient marketplace (Legal P0, 2026-09-07).

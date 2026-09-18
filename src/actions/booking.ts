@@ -231,8 +231,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
-    // Check doctor's org has an active paid-capable license.
-    // Free tier is listing-only — no online bookings. Prefer paid if dual rows.
+    // Check doctor's org has an active booking-capable license.
+    // Founding Free = lifetime Solo Professional (bookings on). Prefer paid if dual rows.
     let hasActiveLicense = false;
 
     if (doctor.organization_id) {
@@ -250,7 +250,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         if (!licenseAllowsOnlineBookings(orgLicense.tier, orgLicense.status)) {
           return {
             error:
-              "This doctor is on a free listing plan and does not accept online bookings yet.",
+              "This doctor does not accept online bookings on their current plan.",
           };
         }
         hasActiveLicense = true;

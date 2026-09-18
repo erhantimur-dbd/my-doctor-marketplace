@@ -37,7 +37,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Founding Doctor Programme plans. Founding Free is £0 — no card required. Register, build your profile, and go live with us.",
+    "Founding Doctor Programme plans. Founding Free is a lifetime Solo Professional equivalent (value £299/mo) at £0 — no card required.",
 };
 
 const BENEFITS = [
@@ -102,7 +102,7 @@ const platformFeatures = [
     icon: Bell,
     title: "Automated Reminders",
     description:
-      "Email appointment reminders on Starter and above to cut no-shows.",
+      "Email appointment reminders on Founding Free and paid plans to cut no-shows.",
     bg: "bg-amber-50 dark:bg-amber-950/30",
     text: "text-amber-600",
   },
@@ -110,7 +110,7 @@ const platformFeatures = [
     icon: BarChart3,
     title: "Revenue Analytics",
     description:
-      "Track earnings, bookings and growth — advanced dashboard on Professional+.",
+      "Track earnings, bookings and growth — advanced dashboard on Founding Free and Professional+.",
     bg: "bg-cyan-50 dark:bg-cyan-950/30",
     text: "text-cyan-600",
   },
@@ -118,7 +118,7 @@ const platformFeatures = [
     icon: Users,
     title: "Patient CRM",
     description:
-      "Patient records and booking history — unlocked on Professional+.",
+      "Patient records and booking history — included on Founding Free and Professional+.",
     bg: "bg-rose-50 dark:bg-rose-950/30",
     text: "text-rose-600",
   },
@@ -148,9 +148,9 @@ export default async function PricingPage() {
             Build trust, grow your practice with MyDoctors360
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Start free with a founding profile. Upgrade when you&apos;re ready to
-            accept online bookings — paid plans unlock video, reminders and AI
-            insights.
+            Founding Free is a lifetime Solo Professional equivalent — value
+            £299/mo, Founding Free £0, no card required. Clinic is the
+            multi-doctor upgrade.
           </p>
         </div>
       </section>

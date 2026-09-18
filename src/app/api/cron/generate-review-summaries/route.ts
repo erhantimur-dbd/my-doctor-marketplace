@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   // Find doctors that need summary generation:
   // 1. Have enough reviews
   // 2. Either no summary exists OR review count has changed
-  // 3. Not on free licence (AI features are Starter+)
+  // 3. Active doctors (Founding Free inherits Professional AI entitlements)
   const { data: doctors, error: doctorError } = await supabase
     .from("doctors")
     .select("id, total_reviews, organization_id")
@@ -37,30 +37,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Exclude free-tier orgs (gateway plan — no AI)
-  const orgIds = [
-    ...new Set(
-      doctors
-        .map((d) => d.organization_id)
-        .filter((id): id is string => typeof id === "string" && !!id)
-    ),
-  ];
-  const freeOrgIds = new Set<string>();
-  if (orgIds.length > 0) {
-    const { data: freeLicenses } = await supabase
-      .from("licenses")
-      .select("organization_id")
-      .in("organization_id", orgIds)
-      .eq("tier", "free")
-      .in("status", ["active", "trialing", "past_due"]);
-    for (const row of freeLicenses || []) {
-      if (row.organization_id) freeOrgIds.add(row.organization_id);
-    }
-  }
-
-  const paidDoctors = doctors.filter(
-    (d) => !d.organization_id || !freeOrgIds.has(d.organization_id)
-  );
+  const paidDoctors = doctors;
 
   // Check which doctors need an update
   const doctorIds = paidDoctors.map((d) => d.id);

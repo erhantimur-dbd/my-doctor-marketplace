@@ -46,7 +46,7 @@ describe("Medical Testing signup / add-on flow contracts", () => {
         tier: "free",
         formWantsAddon: true,
       })
-    ).toBe(false);
+    ).toBe(true);
     expect(
       shouldChargeTestingAddonAtCheckout({
         tier: "clinic",

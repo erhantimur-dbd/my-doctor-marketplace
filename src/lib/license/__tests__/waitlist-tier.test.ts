@@ -8,8 +8,8 @@ describe("doctorTierHasWaitlistAutoNotify", () => {
     expect(doctorTierHasWaitlistAutoNotify("enterprise")).toBe(true);
   });
 
-  it("blocks free and starter", () => {
-    expect(doctorTierHasWaitlistAutoNotify("free")).toBe(false);
+  it("allows Founding Free (Professional equivalent); blocks starter and missing licence", () => {
+    expect(doctorTierHasWaitlistAutoNotify("free")).toBe(true);
     expect(doctorTierHasWaitlistAutoNotify("starter")).toBe(false);
     expect(doctorTierHasWaitlistAutoNotify(null)).toBe(false);
   });

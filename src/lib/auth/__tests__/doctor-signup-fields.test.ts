@@ -68,11 +68,11 @@ describe("referral cold-code + free booking gate", () => {
     expect(wh).toContain("max_seats");
   });
 
-  it("booking rejects free tier for online bookings", () => {
+  it("booking uses entitlement helper (Founding Free can accept online bookings)", () => {
     const booking = read("src/actions/booking.ts");
-    // Effective licence helper (not raw tier === "free" — free can coexist until webhook)
     expect(booking).toMatch(/licenseAllowsOnlineBookings|pickEffectiveLicense/);
-    expect(booking.toLowerCase()).toMatch(/free listing|does not accept online/);
+    expect(booking.toLowerCase()).toMatch(/does not accept online/);
+    expect(booking.toLowerCase()).not.toMatch(/free listing plan/);
   });
 
   it("resumeDoctorLicenseCheckout is exported", () => {
