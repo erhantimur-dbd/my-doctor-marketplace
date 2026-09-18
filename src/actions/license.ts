@@ -78,38 +78,6 @@ export async function getOrganizationLicense() {
   return { error: null, license, modules: modules || [] };
 }
 
-/**
- * Check the effective license status for the current user's org.
- * Light-weight check for enforcement in actions and middleware.
- */
-export async function checkLicenseStatus() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { status: null };
-
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .single();
-
-  if (!membership) return { status: null };
-
-  const { data: license } = await supabase
-    .from("licenses")
-    .select("status")
-    .eq("organization_id", membership.organization_id)
-    .in("status", ["active", "trialing", "past_due", "grace_period", "suspended"])
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return { status: license?.status || null };
-}
-
 // ─── Billing Actions ────────────────────────────────────────
 
 type LicenseCheckoutResult = {
@@ -263,21 +231,6 @@ export async function createLicenseCheckout(
   );
 
   return { url: session.url };
-}
-
-/**
- * @deprecated Professional is a single-doctor flat plan.
- * Multi-doctor seats are Clinic (3–15) via addExtraSeats.
- */
-export async function setProfessionalSeatCapacity(_formData: FormData): Promise<{
-  error?: string | null;
-  maxSeats?: number;
-}> {
-  void _formData;
-  return {
-    error:
-      "Professional includes one doctor seat. For 3–15 doctors on one bill, upgrade to Clinic from Billing.",
-  };
 }
 
 export async function manageLicenseBilling() {
