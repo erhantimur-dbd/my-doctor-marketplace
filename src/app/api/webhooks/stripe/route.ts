@@ -986,9 +986,10 @@ export async function POST(request: NextRequest) {
           .eq("stripe_subscription_id", subscription.id);
 
         // Restore Founding Free gateway so listing/dashboard remain usable
-        const { buildFreeGatewayLicenseInsert } = await import(
-          "@/lib/license/tier-lifecycle"
-        );
+        const {
+          buildFreeGatewayLicenseInsert,
+          FOUNDING_FREE_LIFETIME_PERIOD_END,
+        } = await import("@/lib/license/tier-lifecycle");
         const { data: freeRows } = await supabase
           .from("licenses")
           .select("id, status")
@@ -1004,7 +1005,7 @@ export async function POST(request: NextRequest) {
               cancelled_at: null,
               cancel_at_period_end: false,
               current_period_start: new Date().toISOString(),
-              current_period_end: "2099-12-31T23:59:59.000Z",
+              current_period_end: FOUNDING_FREE_LIFETIME_PERIOD_END,
               stripe_subscription_id: null,
             })
             .eq("id", freeRow.id);

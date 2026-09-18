@@ -1,8 +1,13 @@
 /**
  * Feature flags — tier-based gating for organizations.
  *
- * Free is a deliberate GTM gateway: listing + profile only.
- * All paid marketplace ops and AI are Starter+ (or Pro+ as noted).
+ * Founding Free (`free`) is a lifetime Solo Professional perk for founding
+ * doctors (value framing £299/mo): same non-clinical Professional
+ * entitlements, not a trial. Soft Launch #18 still hard-disables
+ * prescriptions, care plans, public chat, symptom analysis, and voice.
+ *
+ * Missing/unknown license still denies — do not treat unlicensed rows as
+ * Founding Free.
  *
  * Keep in sync with PACKAGE_MARKETING in package-features.ts
  * (tests enforce consistency).
@@ -39,8 +44,18 @@ export type FeatureKey =
   | "stripe_connect";
 
 /**
- * Feature matrix — which tiers unlock which features.
- * Free intentionally has an empty set for paid product features.
+ * Clinical Professional features. Founding Free never grants these, and
+ * Soft Launch #18 hard-disables the surfaces regardless of tier.
+ */
+export const CLINICAL_FEATURE_KEYS: readonly FeatureKey[] = [
+  "treatment_plans",
+  "prescriptions",
+];
+
+/**
+ * Feature matrix — which paid / entitlement tiers unlock which features.
+ * Founding Free is not listed here; `hasFeature` maps explicit `free` onto
+ * Professional and then subtracts clinical keys.
  */
 const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
   // Starter+ (core paid marketplace)
@@ -49,7 +64,7 @@ const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
   email_reminders: ["starter", "professional", "clinic", "enterprise"],
   messaging: ["starter", "professional", "clinic", "enterprise"],
   stripe_connect: ["starter", "professional", "clinic", "enterprise"],
-  // AI — never free
+  // AI — never unlicensed
   ai_review_summaries: ["starter", "professional", "clinic", "enterprise"],
   ai_sentiment_tags: ["starter", "professional", "clinic", "enterprise"],
   // Medical testing: available on paid (addon on Starter/Pro; included Clinic+)
@@ -75,53 +90,83 @@ const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
   api_access: ["enterprise"],
 };
 
+const KNOWN_TIERS: readonly LicenseTier[] = [
+  "free",
+  "starter",
+  "professional",
+  "clinic",
+  "enterprise",
+];
+
+export function isKnownLicenseTier(
+  tier: string | null | undefined
+): tier is LicenseTier {
+  return !!tier && (KNOWN_TIERS as readonly string[]).includes(tier);
+}
+
 /**
- * Normalize missing license to free (gateway) — do not grant paid features
- * to unlicensed/legacy rows by default.
+ * Normalize missing license to free (gateway) for display / billing labels.
+ * Entitlement checks must use `hasFeature` / `resolveEntitlementTier` so
+ * unlicensed rows do not inherit Founding Free Professional perks.
  */
 export function normalizeLicenseTier(
   tier: string | null | undefined
 ): LicenseTier {
-  if (
-    tier === "starter" ||
-    tier === "professional" ||
-    tier === "clinic" ||
-    tier === "enterprise" ||
-    tier === "free"
-  ) {
-    return tier;
-  }
+  if (isKnownLicenseTier(tier)) return tier;
   return "free";
 }
 
 /**
+ * Map an explicit license row to the entitlement tier used by `hasFeature`.
+ * Founding Free → Solo Professional. Null/unknown → no entitlements.
+ */
+export function resolveEntitlementTier(
+  tier: string | null | undefined
+): Exclude<LicenseTier, "free"> | null {
+  if (tier === "free") return "professional";
+  if (
+    tier === "starter" ||
+    tier === "professional" ||
+    tier === "clinic" ||
+    tier === "enterprise"
+  ) {
+    return tier;
+  }
+  return null;
+}
+
+/**
  * Check if a feature is available for the given tier.
- * Null/unknown tier is treated as free (deny paid features).
+ * Explicit Founding Free (`free`) = lifetime non-clinical Professional.
+ * Null/unknown tier is denied (not Founding Free).
  */
 export function hasFeature(
   feature: FeatureKey,
   tier: string | null | undefined
 ): boolean {
-  const normalized = normalizeLicenseTier(tier);
-  if (normalized === "free") return false;
+  const entitlement = resolveEntitlementTier(tier);
+  if (!entitlement) return false;
+
+  if (tier === "free" && CLINICAL_FEATURE_KEYS.includes(feature)) {
+    return false;
+  }
 
   const allowed = FEATURE_MATRIX[feature];
   if (!allowed) return false;
 
-  return allowed.includes(normalized);
+  return allowed.includes(entitlement);
 }
 
-/** True when org is on founding free gateway plan */
+/** True when org is on founding free gateway plan (billing SKU, not entitlements). */
 export function isFreeLicenseTier(tier: string | null | undefined): boolean {
   return normalizeLicenseTier(tier) === "free";
 }
 
 /** Get all features available for a tier */
 export function getFeaturesForTier(tier: string): FeatureKey[] {
-  const normalized = normalizeLicenseTier(tier);
-  if (normalized === "free") return [];
+  if (!isKnownLicenseTier(tier)) return [];
   return (Object.entries(FEATURE_MATRIX) as [FeatureKey, LicenseTier[]][])
-    .filter(([, tiers]) => tiers.includes(normalized))
+    .filter(([feature]) => hasFeature(feature, tier))
     .map(([key]) => key);
 }
 

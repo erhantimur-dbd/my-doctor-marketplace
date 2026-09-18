@@ -417,12 +417,11 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
         Professional = 1 doctor · Clinic = 3 included (to 15).
       </p>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Founding Free is a permanent gateway (list &amp; prepare). Bookings,
-        video and AI start on Starter. Analytics, CRM and waitlist are
-        Professional+ (solo). Multi-doctor seats, multi-location, team tools
-        and included medical testing are Clinic+. Custom branding &amp; API are
-        Enterprise. SMS and WhatsApp reminders are coming soon — not available
-        at Soft Launch.
+        Founding Free includes Professional features for life (£299/mo value)
+        at £0 — no card required. Soft Launch clinical tools stay off.
+        Multi-doctor seats, multi-location, team tools and included medical
+        testing are Clinic+. Custom branding &amp; API are Enterprise. SMS and
+        WhatsApp reminders are coming soon — not available at Soft Launch.
       </p>
     </div>
   );

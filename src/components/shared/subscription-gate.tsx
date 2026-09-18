@@ -49,7 +49,7 @@ export function SubscriptionGate({
           return;
         }
 
-        // Paid licence only (Founding Free is not "subscribed" for product gates)
+        // Founding Free grants lifetime Professional (non-clinical) access.
         if (doctor.organization_id) {
           const { data: licenses } = await supabase
             .from("licenses")
@@ -57,11 +57,13 @@ export function SubscriptionGate({
             .eq("organization_id", doctor.organization_id)
             .in("status", ["active", "trialing", "past_due"]);
 
-          const { pickEffectiveLicense, isPaidTier } = await import(
-            "@/lib/license/tier-lifecycle"
-          );
+          const { pickEffectiveLicense, licenseGrantsProductAccess } =
+            await import("@/lib/license/tier-lifecycle");
           const license = pickEffectiveLicense(licenses || []);
-          if (license && isPaidTier(license.tier)) {
+          if (
+            license &&
+            licenseGrantsProductAccess(license.tier, license.status)
+          ) {
             setStatus("subscribed");
             return;
           }

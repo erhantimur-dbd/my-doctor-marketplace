@@ -119,7 +119,7 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
   {
     id: "free",
     name: "Founding Free",
-    description: "List your profile and prepare for launch",
+    description: "Professional features for life (£299/mo value) — £0, no card",
     priceMonthlyPence: 0,
     perUser: false,
     defaultSeats: 1,

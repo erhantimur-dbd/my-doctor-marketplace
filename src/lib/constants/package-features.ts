@@ -112,9 +112,9 @@ export const MARKETING_CAPABILITY_CHECKS: {
  * Inheritance is written out so cards read clearly without “see Starter”.
  *
  * Ladder (enforced):
- *   Free → profile/list only
+ *   Founding Free → lifetime Solo Professional (non-clinical), £0
  *   Starter → bookings, video, email, messaging, AI; testing add-on optional
- *   Professional → multi-channel reminders, analytics, CRM, waitlist (1 doctor)
+ *   Professional → analytics, CRM, waitlist (1 doctor)
  *   Clinic → multi-doctor (3–15), multi-location, team, testing included
  *   Enterprise → branding, API, SLA, dedicated AM
  */
@@ -124,25 +124,33 @@ export const PACKAGE_MARKETING: Record<
 > = {
   free: {
     features: [
+      "Professional features for life (£299/mo value)",
+      "£0 — no card required",
       "Public profile after verification",
       "Practice profile, specialties & languages",
       "Doctor dashboard & completion checklist",
-      "£0 — no card required",
-    ],
-    excludedFeatures: [
-      "Featured profile visibility boost",
       "Online bookings & Stripe payouts",
       "Video consultations",
       "Patient messaging",
       "AI review summaries",
       "Email appointment reminders",
-      "Analytics & waitlist",
-      "Medical testing, multi-location & team tools",
+      "Advanced analytics dashboard",
+      "Patient CRM",
+      "Waitlist auto-notify",
+      "Priority support",
+      "Single doctor seat (solo practice)",
+    ],
+    excludedFeatures: [
+      "Multi-doctor seats (Clinic 3–15)",
+      "Multi-location clinic tools",
+      "Team management & practice dashboard",
+      "Medical testing included (optional +£49/mo add-on)",
+      "Custom branding & API (Enterprise)",
     ],
   },
   starter: {
     features: [
-      "Everything in Founding Free",
+      "Practice profile & doctor dashboard",
       "Online bookings & Stripe payouts",
       "Video consultations",
       "Featured profile visibility boost",
@@ -269,27 +277,29 @@ export function validatePackageMarketingConsistency(
     }
   }
 
-  // Free must never claim bookings or AI
+  // Founding Free = lifetime Professional (non-clinical). Soft Launch-safe.
   if (tier === "free") {
-    const freeClaimsBook = marketing.features.some((f) =>
-      /online booking|stripe payout/i.test(f)
-    );
-    const freeClaimsAi = marketing.features.some((f) =>
-      /\bAI\b|review summar/i.test(f)
-    );
-    if (freeClaimsBook) errors.push("free: must not include online bookings");
-    if (freeClaimsAi) errors.push("free: must not include AI");
     if (
-      !marketing.excludedFeatures.some((f) =>
-        /online booking|stripe payout/i.test(f)
+      !marketing.features.some((f) =>
+        /Professional features for life \(£299\/mo value\)/i.test(f)
       )
     ) {
-      errors.push("free: must list online bookings as excluded");
+      errors.push("free: must list lifetime Professional perk (£299/mo value)");
     }
-    if (
-      !marketing.excludedFeatures.some((f) => /\bAI\b|review summar/i.test(f))
-    ) {
-      errors.push("free: must list AI as excluded");
+    if (!marketing.features.some((f) => /online booking|stripe payout/i.test(f))) {
+      errors.push("free: must include online bookings (Professional perk)");
+    }
+    if (!marketing.features.some((f) => /\bAI\b|review summar/i.test(f))) {
+      errors.push("free: must include AI (Professional perk)");
+    }
+    if (marketing.features.some((f) => /care plan|prescription/i.test(f))) {
+      errors.push("free: must not claim care plans or prescriptions");
+    }
+    if (marketing.features.some((f) => /whatsapp|SMS/i.test(f))) {
+      errors.push("free: must not claim SMS/WhatsApp as live");
+    }
+    if (marketing.features.some((f) => /free forever/i.test(f))) {
+      errors.push("free: must not say free forever");
     }
   }
 

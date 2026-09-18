@@ -173,27 +173,36 @@ describe("resolvePlanChange (upgrade now / schedule downgrade)", () => {
     ).toBe("starter");
   });
 
-  it("buildFreeGatewayLicenseInsert is free active listing row", () => {
+  it("buildFreeGatewayLicenseInsert is lifetime Founding Free (not a trial)", async () => {
+    const { FOUNDING_FREE_LIFETIME_PERIOD_END } = await import(
+      "@/lib/license/tier-lifecycle"
+    );
     const row = buildFreeGatewayLicenseInsert("org-1");
     expect(row.tier).toBe("free");
     expect(row.status).toBe("active");
     expect(row.organization_id).toBe("org-1");
     expect(row.stripe_subscription_id).toBeNull();
+    expect(row.current_period_end).toBe(FOUNDING_FREE_LIFETIME_PERIOD_END);
+    expect(Date.parse(row.current_period_end)).toBeGreaterThan(
+      Date.parse("2090-01-01T00:00:00.000Z")
+    );
   });
 });
 
 describe("licenseAllowsOnlineBookings + hasFeature matrix", () => {
-  it("free never allows bookings; starter/professional do when active", () => {
-    expect(licenseAllowsOnlineBookings("free", "active")).toBe(false);
+  it("Founding Free allows bookings when active; cancelled still denied", () => {
+    expect(licenseAllowsOnlineBookings("free", "active")).toBe(true);
     expect(licenseAllowsOnlineBookings("starter", "active")).toBe(true);
     expect(licenseAllowsOnlineBookings("professional", "trialing")).toBe(true);
     expect(licenseAllowsOnlineBookings("starter", "cancelled")).toBe(false);
+    expect(licenseAllowsOnlineBookings("free", "cancelled")).toBe(false);
   });
 
-  it("feature matrix free vs starter vs professional", () => {
-    expect(hasFeature("online_bookings", "free")).toBe(false);
-    expect(hasFeature("ai_review_summaries", "free")).toBe(false);
-    expect(hasFeature("whatsapp_notifications", "free")).toBe(false);
+  it("feature matrix Founding Free vs starter vs professional", () => {
+    expect(hasFeature("online_bookings", "free")).toBe(true);
+    expect(hasFeature("ai_review_summaries", "free")).toBe(true);
+    expect(hasFeature("whatsapp_notifications", "free")).toBe(true);
+    expect(hasFeature("treatment_plans", "free")).toBe(false);
 
     expect(hasFeature("online_bookings", "starter")).toBe(true);
     expect(hasFeature("video_consultations", "starter")).toBe(true);
@@ -209,35 +218,40 @@ describe("licenseAllowsOnlineBookings + hasFeature matrix", () => {
     expect(hasFeature("online_bookings", "professional")).toBe(true);
   });
 
-  it("isPaidTier treats free as unpaid for dashboard gates", async () => {
-    const { isPaidTier } = await import("@/lib/license/tier-lifecycle");
+  it("isPaidTier stays false for Founding Free billing; product access is separate", async () => {
+    const { isPaidTier, licenseGrantsProductAccess } = await import(
+      "@/lib/license/tier-lifecycle"
+    );
     expect(isPaidTier("free")).toBe(false);
     expect(isPaidTier("starter")).toBe(true);
     expect(isPaidTier("professional")).toBe(true);
+    expect(licenseGrantsProductAccess("free", "active")).toBe(true);
+    expect(licenseGrantsProductAccess("free", "cancelled")).toBe(false);
   });
 });
 
 describe("dashboard paid-only gates (structural)", () => {
-  it("hasActiveLicense source excludes free via isPaidTier", async () => {
+  it("hasActiveLicense source uses licenseGrantsProductAccess", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const check = readFileSync(
       join(process.cwd(), "src/lib/license/check.ts"),
       "utf8"
     );
-    expect(check).toMatch(/isPaidTier/);
+    expect(check).toMatch(/licenseGrantsProductAccess/);
     expect(check).toMatch(/hasActiveLicense/);
   });
 
-  it("SubscriptionGate requires isPaidTier not bare license id", async () => {
+  it("SubscriptionGate uses licenseGrantsProductAccess not isPaidTier", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const gate = readFileSync(
       join(process.cwd(), "src/components/shared/subscription-gate.tsx"),
       "utf8"
     );
-    expect(gate).toMatch(/isPaidTier/);
+    expect(gate).toMatch(/licenseGrantsProductAccess/);
     expect(gate).toMatch(/pickEffectiveLicense/);
+    expect(gate).not.toMatch(/isPaidTier/);
   });
 
   it("analytics page uses hasFeature analytics_dashboard", async () => {

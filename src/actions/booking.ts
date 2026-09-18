@@ -231,8 +231,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
-    // Check doctor's org has an active paid-capable license.
-    // Free tier is listing-only — no online bookings. Prefer paid if dual rows.
+    // Check doctor's org has product access (paid or lifetime Founding Free).
+    // Prefer paid if dual rows. Soft Launch #18 still blocks clinical surfaces.
     let hasActiveLicense = false;
 
     if (doctor.organization_id) {

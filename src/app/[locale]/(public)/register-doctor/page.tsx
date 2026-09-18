@@ -124,8 +124,11 @@ export default function RegisterDoctorPage() {
     }
 
     const tier = searchParams.get("tier");
+    const founding = searchParams.get("founding");
     if (tier && LICENSE_TIERS.some((t) => t.id === tier)) {
       setSelectedTier(tier as LicenseTier);
+    } else if (founding === "1") {
+      setSelectedTier("free");
     }
 
     const billing = searchParams.get("billing");
@@ -1619,10 +1622,10 @@ export default function RegisterDoctorPage() {
                         You&apos;re starting on Founding Free
                       </p>
                       <p className="mt-1">
-                        Build your profile, get verified and list publicly —
-                        £0, no card required. Online bookings, video, reminders and AI
-                        unlock when you upgrade to Starter or higher from your
-                        dashboard. UK doctors: GMC is verified before go-live.
+                        Includes Professional features for life (£299/mo value)
+                        — £0, no card required. Soft Launch keeps prescriptions,
+                        care plans and public chat off. UK doctors: GMC is
+                        verified before go-live.
                       </p>
                     </div>
                   </div>

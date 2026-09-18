@@ -58,8 +58,9 @@ describe("doctor signup flow contracts", () => {
     expect(auth).toMatch(/export async function registerDoctor\b/);
     expect(auth).toMatch(/export async function registerDoctorWithCheckout\b/);
     expect(auth).toMatch(/supabase\.auth\.signUp/);
-    // Free license insert
+    // Free license insert — lifetime, not a trial
     expect(auth).toMatch(/tier:\s*"free"/);
+    expect(auth).toMatch(/FOUNDING_FREE_LIFETIME_PERIOD_END/);
     // Paid path creates Stripe Checkout subscription with tier metadata
     expect(auth).toMatch(/mode:\s*"subscription"/);
     expect(auth).toMatch(/checkoutUrl/);
@@ -75,6 +76,9 @@ describe("doctor signup flow contracts", () => {
     expect(page).toContain("registerDoctorWithCheckout");
     expect(page).toContain('searchParams.get("ref")');
     expect(page).toContain('searchParams.get("tier")');
+    expect(page).toContain('searchParams.get("founding")');
+    expect(page).toMatch(/Professional features for life/);
+    expect(page).toMatch(/£299\/mo value/);
     expect(page).toContain("DoctorWaitlistForm");
     // Pricing fields collected in UI but not all submitted — fee state exists
     expect(page).toContain("consultationFee");

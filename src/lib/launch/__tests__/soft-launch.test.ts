@@ -20,6 +20,16 @@ describe("soft-launch kill-switch", () => {
     expect(isSymptomAnalysisEnabled()).toBe(false);
   });
 
+  it("Founding Free Professional entitlements do not lift #18 clinical kill-switches", async () => {
+    const { hasFeature } = await import("@/lib/utils/feature-flags");
+    expect(hasFeature("treatment_plans", "free")).toBe(false);
+    expect(hasFeature("prescriptions", "free")).toBe(false);
+    expect(isPrescriptionsEnabled()).toBe(false);
+    expect(isCarePlansEnabled()).toBe(false);
+    expect(isPublicChatEnabled()).toBe(false);
+    expect(isSymptomAnalysisEnabled()).toBe(false);
+  });
+
   it("uses launch-disabled copy, not upgrade/unlock language", () => {
     expect(PRESCRIPTIONS_DISABLED_MESSAGE).toBe(
       "Prescriptions are disabled for this launch"

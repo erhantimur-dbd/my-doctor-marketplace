@@ -20,14 +20,16 @@ const TIERS: LicenseTier[] = [
 ];
 
 describe("hasFeature matrix (enforcement)", () => {
-  it("free denies bookings, video, AI, WhatsApp, analytics, waitlist", () => {
-    expect(hasFeature("online_bookings", "free")).toBe(false);
-    expect(hasFeature("video_consultations", "free")).toBe(false);
-    expect(hasFeature("ai_review_summaries", "free")).toBe(false);
-    expect(hasFeature("whatsapp_notifications", "free")).toBe(false);
-    expect(hasFeature("analytics_dashboard", "free")).toBe(false);
-    expect(hasFeature("waitlist_auto_notify", "free")).toBe(false);
-    expect(getFeaturesForTier("free")).toEqual([]);
+  it("Founding Free matches non-clinical Professional entitlements", () => {
+    expect(hasFeature("online_bookings", "free")).toBe(true);
+    expect(hasFeature("video_consultations", "free")).toBe(true);
+    expect(hasFeature("ai_review_summaries", "free")).toBe(true);
+    expect(hasFeature("whatsapp_notifications", "free")).toBe(true);
+    expect(hasFeature("analytics_dashboard", "free")).toBe(true);
+    expect(hasFeature("waitlist_auto_notify", "free")).toBe(true);
+    expect(hasFeature("treatment_plans", "free")).toBe(false);
+    expect(hasFeature("prescriptions", "free")).toBe(false);
+    expect(getFeaturesForTier("free").length).toBeGreaterThan(0);
   });
 
   it("starter allows bookings, video, AI, email; denies WhatsApp, waitlist, analytics, care plans", () => {
@@ -85,6 +87,7 @@ describe("public packaging copy does not contradict matrix", () => {
       "utf8"
     );
     expect(html).toMatch(/Founding Free \(£0\)/i);
+    expect(html).toMatch(/Professional features for life \(£299\/mo value\)/);
     expect(html).toMatch(/Starter \(£199\/mo\)/i);
     expect(html).toMatch(/Professional \(£299\/mo, 1 doctor\)/i);
     expect(html).toMatch(/Clinic \(£897\/mo\)/i);
@@ -108,6 +111,14 @@ describe("public packaging copy does not contradict matrix", () => {
       helpArticles: { "doctor-subscription": { answer: string } };
     };
     const answer = en.helpArticles["doctor-subscription"].answer;
+    const foundingSection = answer.match(
+      /<strong>Founding Free[\s\S]*?(?=<strong>Starter|$)/i
+    )?.[0];
+    expect(foundingSection).toBeTruthy();
+    expect(foundingSection!).toMatch(/Professional features for life/i);
+    expect(foundingSection!).toMatch(/£299\/mo value/i);
+    expect(foundingSection!).not.toMatch(/care plan|prescription/i);
+    expect(foundingSection!).not.toMatch(/SMS|WhatsApp/i);
     // Soft Launch: Starter must not claim SMS/WhatsApp as live or as a paid unlock
     const starterSection = answer.match(
       /<strong>Starter[\s\S]*?(?=<strong>Professional|$)/i
@@ -166,6 +177,12 @@ describe("package marketing lists", () => {
   it("Soft Launch paid-plan matrices do not claim care plans or prescriptions", () => {
     expect(PACKAGE_MARKETING.professional.features).toContain("Patient CRM");
     expect(PACKAGE_MARKETING.professional.features.join(" ")).not.toMatch(
+      /care plan|prescription/i
+    );
+    expect(PACKAGE_MARKETING.free.features).toContain(
+      "Professional features for life (£299/mo value)"
+    );
+    expect(PACKAGE_MARKETING.free.features.join(" ")).not.toMatch(
       /care plan|prescription/i
     );
     expect(PACKAGE_MARKETING.free.excludedFeatures.join(" ")).not.toMatch(

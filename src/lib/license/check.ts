@@ -1,4 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { hasFeature } from "@/lib/utils/feature-flags";
 
 interface LicenseInfo {
   id: string;
@@ -44,9 +45,9 @@ export async function getDoctorLicense(
 }
 
 /**
- * True when the doctor has an active **paid** licence (Starter+).
- * Founding Free is active but listing-only — must return false so dashboard
- * gates do not treat free as subscribed.
+ * True when the doctor has product access: paid Starter+ or lifetime
+ * Founding Free (non-clinical Professional entitlements). Billing still
+ * uses `isPaidTier` — this is the dashboard / CRM / bookings gate.
  */
 export async function hasActiveLicense(
   supabase: SupabaseClient,
@@ -54,12 +55,10 @@ export async function hasActiveLicense(
 ): Promise<boolean> {
   const license = await getDoctorLicense(supabase, doctorId);
   if (!license) return false;
-  const { isPaidTier, isActiveLicenseStatus } = await import(
+  const { licenseGrantsProductAccess } = await import(
     "@/lib/license/tier-lifecycle"
   );
-  return (
-    isPaidTier(license.tier) && isActiveLicenseStatus(license.status)
-  );
+  return licenseGrantsProductAccess(license.tier, license.status);
 }
 
 /**
@@ -80,12 +79,7 @@ export async function getDoctorLicenseTier(
 export function doctorTierHasWaitlistAutoNotify(
   tier: string | null | undefined
 ): boolean {
-  if (!tier) return false;
-  return (
-    tier === "professional" ||
-    tier === "clinic" ||
-    tier === "enterprise"
-  );
+  return hasFeature("waitlist_auto_notify", tier);
 }
 
 /**

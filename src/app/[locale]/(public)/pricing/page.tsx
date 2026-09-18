@@ -37,7 +37,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Founding Doctor Programme plans. Founding Free is £0 — no card required. Register, build your profile, and go live with us.",
+    "Founding Doctor Programme plans. Founding Free includes Professional features for life (£299/mo value) — £0, no card required.",
 };
 
 const BENEFITS = [
@@ -148,9 +148,8 @@ export default async function PricingPage() {
             Build trust, grow your practice with MyDoctors360
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Start free with a founding profile. Upgrade when you&apos;re ready to
-            accept online bookings — paid plans unlock video, reminders and AI
-            insights.
+            Founding Free includes Professional features for life (£299/mo
+            value) — £0, no card required. Soft Launch clinical tools stay off.
           </p>
         </div>
       </section>

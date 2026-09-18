@@ -80,7 +80,7 @@ const benefits = [
     icon: CreditCard,
     title: "Transparent pricing",
     description:
-      "Founding Free is £0. Starter £199, Professional £299, Clinic £897 — upgrade when you are ready.",
+      "Founding Free is £0 and includes Professional features for life (£299/mo value). Starter £199, Professional £299, Clinic £897.",
     color: { bg: "bg-emerald-50", text: "text-emerald-600" },
   },
   {
@@ -101,7 +101,7 @@ const faqs = [
   {
     question: "What does Founding Free include?",
     answer:
-      "A verified public listing and doctor dashboard after credential review. Online bookings, video, AI insights and email reminders unlock on paid plans.",
+      "Professional features for life (£299/mo value) at £0 — no card required. Soft Launch keeps prescriptions, care plans and public chat off.",
   },
   {
     question: "What is on Professional?",
@@ -259,7 +259,8 @@ export default function HowItWorksPage() {
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
             First 100 founding doctors. Founding Free is £0 — no card
-            required.
+            required — and includes Professional features for life (£299/mo
+            value).
           </p>
         </div>
       </section>

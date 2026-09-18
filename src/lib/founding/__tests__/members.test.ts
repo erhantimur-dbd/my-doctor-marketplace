@@ -78,6 +78,16 @@ describe("founding + signup go-live contracts", () => {
     expect(mig).toMatch(/max_spots.*100|DEFAULT 100/);
   });
 
+  it("Founding Free signup is lifetime Professional entitlements, not a trial", () => {
+    const auth = read("src/actions/auth.ts");
+    const flags = read("src/lib/utils/feature-flags.ts");
+    const lifecycle = read("src/lib/license/tier-lifecycle.ts");
+    expect(auth).toMatch(/FOUNDING_FREE_LIFETIME_PERIOD_END/);
+    expect(lifecycle).toMatch(/FOUNDING_FREE_LIFETIME_PERIOD_END/);
+    expect(flags).toMatch(/if \(tier === "free"\) return "professional"/);
+    expect(flags).toMatch(/CLINICAL_FEATURE_KEYS/);
+  });
+
   it("createDoctorAccount enforces UK GMC + city/country and claims founding", () => {
     const auth = read("src/actions/auth.ts");
     expect(auth).toContain("isValidGmcNumber");
@@ -124,9 +134,10 @@ describe("founding + signup go-live contracts", () => {
   });
 
   it("gate allows register-testing-service", () => {
-    const middleware = read("middleware.ts");
+    const gate = read("src/lib/soft-launch/coming-soon-gate.ts");
     const vercel = read("vercel.json");
-    expect(middleware).toContain('"/register-testing-service"');
+    expect(gate).toContain('"/register-testing-service"');
+    expect(gate).toContain('"/register-doctor"');
     expect(vercel).toMatch(/register-testing-service/);
   });
 });

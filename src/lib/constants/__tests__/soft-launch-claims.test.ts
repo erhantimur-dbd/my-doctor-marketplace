@@ -75,6 +75,26 @@ describe("Soft Launch public claims", () => {
     expect(pricingToggle).not.toMatch(/free forever/i);
   });
 
+  it("Founding Free Soft Launch copy notes lifetime Professional value", () => {
+    const features = read("src/lib/constants/package-features.ts");
+    const pricing = read("src/app/[locale]/(public)/pricing/page.tsx");
+    const register = read(
+      "src/app/[locale]/(public)/register-doctor/page.tsx"
+    );
+    const comingSoon = read("public/coming-soon/index.html");
+    for (const [rel, text] of [
+      ["package-features", features],
+      ["pricing", pricing],
+      ["register-doctor", register],
+      ["coming-soon", comingSoon],
+    ] as const) {
+      expect(text, rel).toMatch(/Professional features for life/);
+      expect(text, rel).toMatch(/£299\/mo value/);
+      expect(text, rel).not.toMatch(/free forever/i);
+      expect(text, rel).not.toMatch(/Care plans & prescriptions/);
+    }
+  });
+
   it("pricing CRM + founding CTA use Legal replacements", () => {
     const pricing = read("src/app/[locale]/(public)/pricing/page.tsx");
     expect(pricing).toMatch(/Patient records and booking history/);

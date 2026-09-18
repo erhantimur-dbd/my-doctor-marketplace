@@ -52,6 +52,27 @@ export function isPaidTier(tier: string | null | undefined): boolean {
 }
 
 /**
+ * Lifetime Founding Free licence end — not a trial window.
+ * Shared by signup insert and webhook restore-to-free.
+ */
+export const FOUNDING_FREE_LIFETIME_PERIOD_END =
+  "2099-12-31T23:59:59.000Z";
+
+/**
+ * Product access for dashboard / booking gates.
+ * Founding Free (`free` + active) grants lifetime Solo Professional
+ * (non-clinical) entitlements. Billing still uses `isPaidTier`.
+ */
+export function licenseGrantsProductAccess(
+  tier: string | null | undefined,
+  status: string | null | undefined
+): boolean {
+  if (!isActiveLicenseStatus(status)) return false;
+  if (tier === "free") return true;
+  return isPaidTier(tier);
+}
+
+/**
  * Prefer highest paid active tier; among ties, newest row.
  * Ensures a leftover free row never shadows a paid licence after upgrade.
  */
@@ -266,19 +287,18 @@ export function buildFreeGatewayLicenseInsert(organizationId: string): {
     max_seats: 1,
     used_seats: 1,
     current_period_start: new Date().toISOString(),
-    current_period_end: "2099-12-31T23:59:59.000Z",
+    current_period_end: FOUNDING_FREE_LIFETIME_PERIOD_END,
     cancel_at_period_end: false,
     stripe_subscription_id: null,
   };
 }
 
-/** Online bookings require an active paid licence (not free gateway). */
+/** Online bookings: active paid licence or lifetime Founding Free. */
 export function licenseAllowsOnlineBookings(
   tier: string | null | undefined,
   status: string | null | undefined
 ): boolean {
-  if (!isPaidTier(tier)) return false;
-  return isActiveLicenseStatus(status);
+  return licenseGrantsProductAccess(tier, status);
 }
 
 /**

@@ -123,6 +123,9 @@ export async function bootstrapDoctorShell(params: {
           .update({ organization_id: newOrg.id })
           .eq("id", newDoctor.id);
 
+        const { FOUNDING_FREE_LIFETIME_PERIOD_END } = await import(
+          "@/lib/license/tier-lifecycle"
+        );
         await admin.from("licenses").insert({
           organization_id: newOrg.id,
           tier: "free",
@@ -130,7 +133,7 @@ export async function bootstrapDoctorShell(params: {
           max_seats: 1,
           used_seats: 1,
           current_period_start: new Date().toISOString(),
-          current_period_end: "2099-12-31T23:59:59.000Z",
+          current_period_end: FOUNDING_FREE_LIFETIME_PERIOD_END,
         });
       }
     } catch (orgErr) {

@@ -745,8 +745,11 @@ export async function registerDoctor(formData: FormData) {
 
   const tier = (formData.get("tier") as string) || "free";
 
-  // Create free license for free tier
+  // Create free license for free tier — lifetime Professional entitlements
   if (tier === "free" && result.orgId) {
+    const { FOUNDING_FREE_LIFETIME_PERIOD_END } = await import(
+      "@/lib/license/tier-lifecycle"
+    );
     const adminSupabase = createAdminClient();
     await adminSupabase.from("licenses").insert({
       organization_id: result.orgId,
@@ -755,7 +758,7 @@ export async function registerDoctor(formData: FormData) {
       max_seats: 1,
       used_seats: 1,
       current_period_start: new Date().toISOString(),
-      current_period_end: "2099-12-31T23:59:59.000Z",
+      current_period_end: FOUNDING_FREE_LIFETIME_PERIOD_END,
     });
   }
 

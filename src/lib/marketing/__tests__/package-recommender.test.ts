@@ -94,6 +94,14 @@ describe("getPackageRecommendationReason", () => {
     expect(reason).not.toMatch(/1–4|per-user multi/i);
   });
 
+  it("Founding Free reason names lifetime Professional value", () => {
+    const reason = getPackageRecommendationReason("free", baseSolo);
+    expect(reason).toMatch(/Professional features for life/i);
+    expect(reason).toMatch(/£299\/mo value/);
+    expect(reason).not.toMatch(/no online bookings/i);
+    expect(reason).not.toMatch(/SMS|WhatsApp/i);
+  });
+
   it("Starter reason does not claim SMS/WhatsApp as a live Soft Launch channel", () => {
     const reason = getPackageRecommendationReason("starter", {
       ...baseSolo,

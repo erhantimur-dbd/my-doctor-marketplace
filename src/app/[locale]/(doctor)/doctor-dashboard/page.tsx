@@ -137,10 +137,10 @@ export default async function DoctorDashboard() {
                   : ""}
               </p>
               <p className="text-sm text-emerald-800/80 dark:text-emerald-200/70">
-                You&apos;re in the first 100 founding doctors. Founding pricing
-                is locked for life, and your profile has priority placement at
-                launch. Complete your profile and verification to go live on day
-                one.
+                You&apos;re in the first 100 founding doctors. Founding Free
+                includes Professional features for life (£299/mo value). Soft
+                Launch clinical tools stay off. Complete your profile and
+                verification to go live on day one.
               </p>
             </div>
           </CardContent>
