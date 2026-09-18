@@ -22,6 +22,7 @@ const SOFT_LAUNCH_SURFACES = [
   "src/app/[locale]/(auth)/login/page.tsx",
   "src/app/[locale]/(public)/register-doctor/page.tsx",
   "src/app/[locale]/(public)/register-doctor/layout.tsx",
+  "src/components/marketing/founding-soft-cta-heading.tsx",
   "src/components/layout/header.tsx",
   "src/components/layout/footer.tsx",
   "src/components/marketing/pricing-billing-toggle.tsx",
@@ -95,6 +96,33 @@ describe("Soft Launch public claims", () => {
       expect(text, rel).toMatch(/£0/);
       expect(text, rel).not.toMatch(/care marketplace/i);
     }
+  });
+
+  it("register-doctor Soft Launch Soft CTA H1 shows the perk line", () => {
+    const company = read("src/lib/constants/company.ts");
+    const heading = read(
+      "src/components/marketing/founding-soft-cta-heading.tsx"
+    );
+    const register = read(
+      "src/app/[locale]/(public)/register-doctor/page.tsx"
+    );
+
+    expect(company).toMatch(/FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE/);
+    expect(company).toMatch(/Lifetime Founding Free/);
+    expect(company).toMatch(/Solo Professional features/);
+    expect(company).toMatch(/£299\/mo/);
+    expect(company).toMatch(/Founding Free £0, no card/);
+    expect(company).not.toMatch(/free forever/i);
+
+    expect(heading).toMatch(/FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE/);
+    expect(heading).toMatch(/Join the Founding Doctor Programme/);
+    expect(heading).toMatch(/Thanks/);
+    expect(heading).not.toMatch(/free forever/i);
+    expect(heading).not.toMatch(/care marketplace/i);
+    expect(heading).not.toMatch(/prescription|care plan|WhatsApp/i);
+
+    expect(register).toMatch(/FoundingSoftCtaHeading/);
+    expect(register).not.toMatch(/Join MyDoctors360 as a Doctor/);
   });
 
   it("pricing CRM + founding CTA use Legal replacements", () => {
