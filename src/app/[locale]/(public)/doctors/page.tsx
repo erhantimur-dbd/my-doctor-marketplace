@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
+import { redirectPatientMarketplaceIfSoftLaunch } from "@/lib/soft-launch/redirect-patient-marketplace";
 
 export const metadata: Metadata = {
   title: "Find a Doctor",
@@ -48,6 +49,7 @@ export default async function DoctorsPage({
   params,
   searchParams,
 }: DoctorsPageProps) {
+  redirectPatientMarketplaceIfSoftLaunch();
   const { locale } = await params;
   const sp = await searchParams;
   const t = await getTranslations("search");

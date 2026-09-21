@@ -27,6 +27,7 @@ export const COMING_SOON_ALLOWED_PREFIXES = [
   "/register",
   // Authenticated Soft Launch Soft CTA patient surfaces (bookings, video-room).
   // Marketplace chrome stays dark — do not add /doctors, /specialties, /find.
+  // Book deep-link `/doctors/:slug/book` is a path matcher, not a prefix.
   "/dashboard",
   "/verify-email",
   "/verify-mfa",
@@ -73,6 +74,22 @@ const COMING_SOON_ROOT_ALLOWED = new Set(["/sitemap.xml", "/robots.txt"]);
 
 const LOCALE_PATTERN = /^\/(en|de|tr|fr|it|es|pt|zh|ja)(\/|$)/;
 
+/** `/[locale]/doctors/:slug/book` only — listing and profile stay gated. */
+const COMING_SOON_BOOK_DEEP_LINK = /^\/doctors\/[^/]+\/book$/;
+
+export function normalizeComingSoonPath(pathname: string): string {
+  const noQuery = pathname.split("?")[0] ?? pathname;
+  const withoutLocale = noQuery.replace(LOCALE_PATTERN, "/");
+  return withoutLocale.length > 1 && withoutLocale.endsWith("/")
+    ? withoutLocale.slice(0, -1)
+    : withoutLocale || "/";
+}
+
+/** Soft Launch Soft CTA book entry: `/doctors/:slug/book` (+ trailing slash). */
+export function isComingSoonBookDeepLink(pathname: string): boolean {
+  return COMING_SOON_BOOK_DEEP_LINK.test(normalizeComingSoonPath(pathname));
+}
+
 export function comingSoonGateApplies(
   host: string,
   _vercelEnv?: string
@@ -83,11 +100,8 @@ export function comingSoonGateApplies(
 
 export function isAllowedOnComingSoon(pathname: string): boolean {
   if (COMING_SOON_ROOT_ALLOWED.has(pathname)) return true;
-  const withoutLocale = pathname.replace(LOCALE_PATTERN, "/");
-  const path =
-    withoutLocale.length > 1 && withoutLocale.endsWith("/")
-      ? withoutLocale.slice(0, -1)
-      : withoutLocale || "/";
+  const path = normalizeComingSoonPath(pathname);
+  if (COMING_SOON_BOOK_DEEP_LINK.test(path)) return true;
   return COMING_SOON_ALLOWED_PREFIXES.some((entry) => {
     if (entry.endsWith("/")) {
       return path === entry.slice(0, -1) || path.startsWith(entry);
@@ -98,11 +112,7 @@ export function isAllowedOnComingSoon(pathname: string): boolean {
 
 /** Patient marketplace / search surfaces that must stay coming-soon-dark. */
 export function isPatientMarketplacePath(pathname: string): boolean {
-  const withoutLocale = pathname.replace(LOCALE_PATTERN, "/") || "/";
-  const path =
-    withoutLocale.length > 1 && withoutLocale.endsWith("/")
-      ? withoutLocale.slice(0, -1)
-      : withoutLocale;
+  const path = normalizeComingSoonPath(pathname);
   return (
     path === "/doctors" ||
     path.startsWith("/doctors/") ||
