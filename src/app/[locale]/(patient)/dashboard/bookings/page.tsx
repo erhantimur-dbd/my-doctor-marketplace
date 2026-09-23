@@ -15,6 +15,10 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import {
+  PATIENT_BOOKINGS_LIST_SELECT,
+  patientBookingDoctorName,
+} from "@/lib/patient/booking-doctor-embed";
 import { CalendarView } from "./calendar-view";
 import type { Metadata } from "next";
 
@@ -94,7 +98,7 @@ function BookingCard({
   booking: BookingRow;
   locale: string;
 }) {
-  const doctorName = `${booking.doctor.title || ""} ${booking.doctor.profile.first_name} ${booking.doctor.profile.last_name}`.trim();
+  const doctorName = patientBookingDoctorName(booking.doctor);
   const startDate = new Date(booking.start_time);
 
   return (
@@ -107,7 +111,7 @@ function BookingCard({
               <div className="flex items-start justify-between sm:justify-start sm:gap-3">
                 <div>
                   <p className="font-semibold">{doctorName}</p>
-                  {booking.doctor.clinic_name && (
+                  {booking.doctor?.clinic_name && (
                     <p className="text-sm text-muted-foreground">
                       {booking.doctor.clinic_name}
                     </p>
@@ -196,26 +200,7 @@ export default async function BookingsPage({
 
   const { data: bookings, error } = await supabase
     .from("bookings")
-    .select(
-      `
-      id,
-      booking_number,
-      start_time,
-      end_time,
-      status,
-      consultation_type,
-      consultation_fee_cents,
-      platform_fee_cents,
-      total_amount_cents,
-      currency,
-      patient_notes,
-      created_at,
-      doctor:doctors(
-        slug, title, clinic_name,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url)
-      )
-    `
-    )
+    .select(PATIENT_BOOKINGS_LIST_SELECT)
     .eq("patient_id", user.id)
     .order("start_time", { ascending: false });
 

@@ -28,6 +28,10 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
+import {
+  BOOKING_CURRENT_DOCTOR_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 import { CancelBookingDialog } from "./cancel-booking-dialog";
 import { AddToCalendarButton } from "./add-to-calendar-button";
 import { RescheduleDialog } from "@/components/booking/reschedule-dialog";
@@ -220,10 +224,10 @@ export default async function BookingDetailPage({
     .select(
       `
       *,
-      doctor:doctors(
+      doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(
         id, slug, title, clinic_name, address,
         consultation_fee_cents, base_currency,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name, avatar_url),
         location:locations(city, country_code),
         specialties:doctor_specialties(
           specialty:specialties(name_key, slug),
@@ -241,6 +245,27 @@ export default async function BookingDetailPage({
 
   // Verify booking belongs to current user
   if (typedBooking.patient_id !== user.id) notFound();
+
+  // Suspended / non-public doctors are hidden by doctors RLS. The booking
+  // row is still the patient's; don't crash the detail view.
+  if (!typedBooking.doctor?.profile) {
+    typedBooking.doctor = {
+      id: typedBooking.doctor_id,
+      slug: "",
+      title: null,
+      clinic_name: typedBooking.doctor?.clinic_name ?? null,
+      address: typedBooking.doctor?.address ?? null,
+      consultation_fee_cents: typedBooking.consultation_fee_cents,
+      base_currency: typedBooking.currency,
+      profile: {
+        first_name: typedBooking.doctor?.profile?.first_name || "Doctor",
+        last_name: typedBooking.doctor?.profile?.last_name || "",
+        avatar_url: typedBooking.doctor?.profile?.avatar_url ?? null,
+      },
+      location: typedBooking.doctor?.location ?? null,
+      specialties: typedBooking.doctor?.specialties ?? [],
+    };
+  }
 
   // Check if there's already a review for this booking
   const { data: existingReview } = await supabase
@@ -367,12 +392,16 @@ export default async function BookingDetailPage({
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <Link
-                    href={`/doctors/${doctor.slug}`}
-                    className="font-semibold hover:text-primary hover:underline"
-                  >
-                    {doctorName}
-                  </Link>
+                  {doctor.slug ? (
+                    <Link
+                      href={`/doctors/${doctor.slug}`}
+                      className="font-semibold hover:text-primary hover:underline"
+                    >
+                      {doctorName}
+                    </Link>
+                  ) : (
+                    <p className="font-semibold">{doctorName}</p>
+                  )}
                   {primarySpecialty && (
                     <p className="text-sm text-muted-foreground">
                       {formatSpecialtyName(primarySpecialty.name_key)}
@@ -804,11 +833,13 @@ export default async function BookingDetailPage({
                 </Button>
               )}
 
-              <Button variant="ghost" className="w-full" asChild>
-                <Link href={`/doctors/${doctor.slug}`}>
-                  View Doctor Profile
-                </Link>
-              </Button>
+              {doctor.slug ? (
+                <Button variant="ghost" className="w-full" asChild>
+                  <Link href={`/doctors/${doctor.slug}`}>
+                    View Doctor Profile
+                  </Link>
+                </Button>
+              ) : null}
 
               <PrintButton label="Print Details" />
             </CardContent>
