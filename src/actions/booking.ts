@@ -38,6 +38,10 @@ import {
 import { createNotification } from "@/lib/notifications";
 import { log } from "@/lib/utils/logger";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  isSoftsmokeConnectChargeSkipped,
+  readJoinedProfileEmail,
+} from "@/lib/soft-launch/softsmoke-connect-bypass";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -224,11 +228,27 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       return { error: "This doctor is not currently accepting appointments." };
     }
 
+    const doctorProfile = (
+      Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile
+    ) as { first_name?: string; last_name?: string; email?: string | null } | null;
+
+    // Soft Launch Soft CTA: only the allowlisted smoke doctor may book
+    // without a Connect destination. Everyone else keeps this wall.
+    const connectChargeSkipped = isSoftsmokeConnectChargeSkipped({
+      id: doctor.id,
+      slug: doctor.slug,
+      email: readJoinedProfileEmail(doctor.profile) ?? doctorProfile?.email,
+      stripeAccountId: doctor.stripe_account_id,
+      stripeOnboardingComplete: doctor.stripe_onboarding_complete,
+    });
+
     if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
-      return {
-        error:
-          "This doctor has not completed their payment setup. Please try again later.",
-      };
+      if (!connectChargeSkipped) {
+        return {
+          error:
+            "This doctor has not completed their payment setup. Please try again later.",
+        };
+      }
     }
 
     // Check doctor's org has an active booking-capable license.
@@ -440,8 +460,32 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       return { error: "Failed to create booking. Please try again." };
     }
 
+    // Smoke doctor only: confirm without a Connect destination charge.
+    // No SMS, WhatsApp, or other outbound is sent from this branch.
+    if (connectChargeSkipped) {
+      // Admin write: patient RLS can insert pending_payment but must not be
+      // the thing that flips a smoke booking to confirmed.
+      const { error: confirmError } = await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.CONFIRMED })
+        .eq("id", booking.id);
+
+      if (confirmError) {
+        log.error("Softsmoke connect bypass confirm failed", {
+          err: confirmError,
+        });
+        return { error: "Failed to create booking. Please try again." };
+      }
+
+      const { origin, locale } = await getOriginAndLocale();
+      return {
+        url: `${origin}/${locale}/booking-confirmation?booking_id=${booking.id}`,
+        bookingId: booking.id,
+      };
+    }
+
     // Compose a readable description for the checkout line item
-    const profile = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
+    const profile = doctorProfile ?? { first_name: "", last_name: "" };
     const doctorName = `${profile.first_name} ${profile.last_name}`;
     const consultationLabel = serviceName
       ? serviceName

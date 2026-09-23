@@ -9,6 +9,9 @@ import { NotifyMeButton } from "@/components/doctors/notify-me-button";
 import { Button } from "@/components/ui/button";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
+import { resolveBookPageAccess } from "@/lib/booking/book-page-access";
+import { readJoinedProfileEmail } from "@/lib/soft-launch/softsmoke-connect-bypass";
+import type { LicenseLike } from "@/lib/license/tier-lifecycle";
 
 interface BookPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -74,7 +77,7 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
       stripe_account_id,
       stripe_onboarding_complete,
       organization_id,
-      profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+      profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url, email),
       location:locations(city, country_code, timezone),
       specialties:doctor_specialties(
         specialty:specialties(id, name_key, slug),
@@ -91,43 +94,52 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
 
   const doctor: any = doctorData2;
 
-  // Free gateway: listed but not bookable online
+  // Entitlement gate: explicit Founding Free (tier=free, active) is bookable.
+  // Null / unknown / inactive licences are not Founding Free.
+  let licenses: LicenseLike[] = [];
   if (doctor.organization_id) {
-    const { data: freeLic } = await adminDb
+    const { data: orgLicenses } = await adminDb
       .from("licenses")
-      .select("tier")
+      .select("id, tier, status, created_at")
       .eq("organization_id", doctor.organization_id)
-      .eq("tier", "free")
-      .in("status", ["active", "trialing", "past_due"])
-      .maybeSingle();
-    if (freeLic) {
-      return (
-        <div className="container mx-auto px-4 py-16">
-          <div className="mx-auto max-w-md space-y-4 text-center">
-            <h1 className="text-2xl font-bold">
-              Online booking coming soon
-            </h1>
-            <p className="text-muted-foreground">
-              This doctor is building their profile on our free founding plan.
-              Online booking unlocks when they upgrade — check back soon or
-              browse other doctors.
-            </p>
-            <div className="flex flex-col gap-2 pt-2">
-              <Button variant="outline" asChild className="w-full">
-                <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
-              </Button>
-              <Button asChild className="w-full">
-                <Link href="/doctors">{t("browse_doctors")}</Link>
-              </Button>
-            </div>
+      .in("status", ["active", "trialing", "past_due"]);
+    licenses = (orgLicenses ?? []) as LicenseLike[];
+  }
+
+  const bookAccess = resolveBookPageAccess({
+    id: doctor.id,
+    slug: doctor.slug,
+    email: readJoinedProfileEmail(doctor.profile),
+    isActive: !!doctor.is_active,
+    verificationStatus: doctor.verification_status,
+    stripeAccountId: doctor.stripe_account_id,
+    stripeOnboardingComplete: doctor.stripe_onboarding_complete,
+    licenses,
+  });
+
+  if (bookAccess === "plan_blocked") {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <div className="mx-auto max-w-md space-y-4 text-center">
+          <h1 className="text-2xl font-bold">Online booking unavailable</h1>
+          <p className="text-muted-foreground">
+            This doctor is not currently accepting online bookings.
+          </p>
+          <div className="flex flex-col gap-2 pt-2">
+            <Button variant="outline" asChild className="w-full">
+              <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
+            </Button>
+            <Button asChild className="w-full">
+              <Link href="/doctors">{t("browse_doctors")}</Link>
+            </Button>
           </div>
         </div>
-      );
-    }
+      </div>
+    );
   }
 
   // Check if doctor is eligible for bookings
-  if (doctor.verification_status !== "verified" || !doctor.is_active) {
+  if (bookAccess === "unavailable") {
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="mx-auto max-w-md space-y-4 text-center">
@@ -161,7 +173,7 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
   // Guests (unauthenticated) skip dependents — progressive checkout
   const dependents = user ? await getDependents() : [];
 
-  if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
+  if (bookAccess === "payment_pending") {
     return (
       <div className="container mx-auto px-4 py-16">
         <div className="mx-auto max-w-md space-y-4 text-center">
