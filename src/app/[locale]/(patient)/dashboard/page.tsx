@@ -24,6 +24,10 @@ import {
 } from "lucide-react";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { patientDashboardSteps } from "@/components/shared/onboarding-steps";
+import {
+  BOOKING_CURRENT_DOCTOR_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 
 function getCountdownBadge(startTime: string) {
   const now = new Date();
@@ -91,9 +95,9 @@ export default async function PatientDashboard() {
       .select(
         `
         *,
-        doctor:doctors(
+        doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(
           slug, title, clinic_name,
-          profile:profiles(first_name, last_name)
+          profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
         )
       `
       )

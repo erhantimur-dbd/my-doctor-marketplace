@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/popover";
 import { ChevronLeft, ChevronRight, Video, User, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { patientBookingDoctorName } from "@/lib/patient/booking-doctor-embed";
 
 interface CalendarBooking {
   id: string;
@@ -24,8 +25,8 @@ interface CalendarBooking {
     profile: {
       first_name: string;
       last_name: string;
-    };
-  };
+    } | null;
+  } | null;
 }
 
 interface CalendarViewProps {
@@ -340,7 +341,7 @@ export function CalendarView({ bookings, locale }: CalendarViewProps) {
                     </div>
                     <div className="max-h-60 divide-y overflow-y-auto">
                       {dayBookings.map((booking) => {
-                        const doctorName = `${booking.doctor.title || ""} ${booking.doctor.profile.first_name} ${booking.doctor.profile.last_name}`.trim();
+                        const doctorName = patientBookingDoctorName(booking.doctor);
                         const startTime = new Date(booking.start_time);
 
                         return (
