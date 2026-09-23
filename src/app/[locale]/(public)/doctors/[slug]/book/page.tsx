@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { resolveBookPageAccess } from "@/lib/booking/book-page-access";
-import { readJoinedProfileEmail } from "@/lib/soft-launch/softsmoke-connect-bypass";
 import type { LicenseLike } from "@/lib/license/tier-lifecycle";
 
 interface BookPageProps {
@@ -77,7 +76,7 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
       stripe_account_id,
       stripe_onboarding_complete,
       organization_id,
-      profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url, email),
+      profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
       location:locations(city, country_code, timezone),
       specialties:doctor_specialties(
         specialty:specialties(id, name_key, slug),
@@ -107,9 +106,6 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
   }
 
   const bookAccess = resolveBookPageAccess({
-    id: doctor.id,
-    slug: doctor.slug,
-    email: readJoinedProfileEmail(doctor.profile),
     isActive: !!doctor.is_active,
     verificationStatus: doctor.verification_status,
     stripeAccountId: doctor.stripe_account_id,
