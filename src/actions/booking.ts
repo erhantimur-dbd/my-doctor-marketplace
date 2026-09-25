@@ -42,6 +42,10 @@ import {
   isSoftsmokeConnectChargeSkipped,
   readJoinedProfileEmail,
 } from "@/lib/soft-launch/softsmoke-connect-bypass";
+import {
+  confirmBookingWithoutStripeCheckout,
+  finalizeConfirmedBookingById,
+} from "@/lib/booking/finalize-confirmed-booking";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -457,18 +461,13 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     }
 
     // Allowlisted smoke doctor with incomplete Connect: do not create a
-    // destination charge and do not send SMS, WhatsApp, or other outbound.
+    // destination charge, and do not send patient SMS/WhatsApp. Video room +
+    // doctor notify still run, same as Checkout success.
     if (connectChargeSkipped) {
-      const { error: confirmError } = await adminSupabase
-        .from("bookings")
-        .update({ status: BOOKING_STATUSES.CONFIRMED })
-        .eq("id", booking.id);
+      const confirmed = await confirmBookingWithoutStripeCheckout(booking.id);
 
-      if (confirmError) {
-        log.error("Softsmoke connect bypass confirm failed", {
-          err: confirmError,
-        });
-        return { error: "Failed to create booking. Please try again." };
+      if (confirmed.error) {
+        return { error: confirmed.error };
       }
 
       const { origin, locale } = await getOriginAndLocale();
@@ -518,6 +517,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
           wallet_credit_applied_cents: walletCreditToApply,
         })
         .eq("id", booking.id);
+
+      await finalizeConfirmedBookingById(booking.id);
 
       const { origin, locale } = await getOriginAndLocale();
 
