@@ -257,7 +257,7 @@ describe("dashboard paid-only gates (structural)", () => {
     const page = readFileSync(
       join(
         process.cwd(),
-        "src/app/[locale]/(doctor)/doctor-dashboard/bookings/page.tsx"
+        "src/app/[locale]/(doctor)/doctor-dashboard/bookings/bookings-client.tsx"
       ),
       "utf8"
     );
