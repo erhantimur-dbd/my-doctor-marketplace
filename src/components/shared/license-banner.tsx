@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { useAuth } from "@/providers/auth-provider";
 import { AlertTriangle, XCircle, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -22,21 +23,21 @@ function createSupabase() {
 }
 
 export function LicenseBanner() {
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [info, setInfo] = useState<LicenseInfo | null>(null);
 
   useEffect(() => {
+    if (authLoading || !userId) return;
+
     async function checkLicense() {
       try {
         const supabase = createSupabase();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
 
         const { data: membership } = await supabase
           .from("organization_members")
           .select("organization_id")
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .eq("status", "active")
           .limit(1)
           .maybeSingle();
@@ -88,8 +89,8 @@ export function LicenseBanner() {
       }
     }
 
-    checkLicense();
-  }, []);
+    void checkLicense();
+  }, [authLoading, userId]);
 
   if (!info || info.level === "none") return null;
 

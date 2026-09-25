@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { SubscriptionGate } from "@/components/shared/subscription-gate";
+import { useAuth } from "@/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -81,6 +82,8 @@ export default function BookingsPage() {
 }
 
 function BookingsContent() {
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [doctorCurrency, setDoctorCurrency] = useState("EUR");
@@ -106,54 +109,60 @@ function BookingsContent() {
   const [summaryText, setSummaryText] = useState("");
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const loadData = useCallback(async () => {
+    // Same session as the header. Do not call getUser() here: a missing
+    // user/doctor used to return before setLoading(false), and a thrown
+    // auth-lock error had no finally, so the panel spun forever.
+    try {
+      if (!userId) return;
 
-  async function loadData() {
-    const supabase = createSupabase();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+      const supabase = createSupabase();
+      const { data: doctor } = await supabase
+        .from("doctors")
+        .select("id, base_currency")
+        .eq("profile_id", userId)
+        .single();
+      if (!doctor) return;
 
-    const { data: doctor } = await supabase
-      .from("doctors")
-      .select("id, base_currency")
-      .eq("profile_id", user.id)
-      .single();
-    if (!doctor) return;
+      setDoctorId(doctor.id);
+      setDoctorCurrency(doctor.base_currency);
 
-    setDoctorId(doctor.id);
-    setDoctorCurrency(doctor.base_currency);
+      const { data } = await supabase
+        .from("bookings")
+        .select(
+          "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, is_gp_pool, gp_reassignment_status, display_doctor_as, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
+        )
+        .eq("doctor_id", doctor.id)
+        .order("appointment_date", { ascending: false })
+        .order("start_time", { ascending: false });
 
-    const { data } = await supabase
-      .from("bookings")
-      .select(
-        "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, is_gp_pool, gp_reassignment_status, display_doctor_as, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)"
-      )
-      .eq("doctor_id", doctor.id)
-      .order("appointment_date", { ascending: false })
-      .order("start_time", { ascending: false });
+      setBookings((data as unknown as BookingRow[]) || []);
 
-    setBookings((data as unknown as BookingRow[]) || []);
-
-    // Fetch pending reschedule requests for this doctor's bookings
-    const { data: reschedules } = await supabase
-      .from("reschedule_requests")
-      .select(
-        `*, booking:bookings!inner(
+      // Fetch pending reschedule requests for this doctor's bookings
+      const { data: reschedules } = await supabase
+        .from("reschedule_requests")
+        .select(
+          `*, booking:bookings!inner(
           id, booking_number, appointment_date, start_time, end_time,
           patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)
         )`
-      )
-      .eq("status", "pending")
-      .eq("booking.doctor_id", doctor.id)
-      .order("created_at", { ascending: false });
+        )
+        .eq("status", "pending")
+        .eq("booking.doctor_id", doctor.id)
+        .order("created_at", { ascending: false });
 
-    setRescheduleRequests((reschedules as unknown as any[]) || []);
-    setLoading(false);
-  }
+      setRescheduleRequests((reschedules as unknown as any[]) || []);
+    } catch {
+      // Render the empty panel instead of leaving the spinner up.
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    void loadData();
+  }, [authLoading, loadData]);
 
   async function acceptBooking(bookingId: string) {
     setActionLoading(bookingId);

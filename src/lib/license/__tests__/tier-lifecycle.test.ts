@@ -245,6 +245,49 @@ describe("dashboard paid-only gates (structural)", () => {
     );
     expect(gate).toMatch(/hasProductEntitlements/);
     expect(gate).toMatch(/pickEffectiveLicense/);
+    // Signed-in header already has the server session. A second getUser()
+    // contends for the Navigator lock and leaves this spinner up.
+    expect(gate).toMatch(/useAuth\(/);
+    expect(gate).not.toMatch(/auth\.getUser\(/);
+  });
+
+  it("doctor bookings load always clears the panel spinner", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const page = readFileSync(
+      join(
+        process.cwd(),
+        "src/app/[locale]/(doctor)/doctor-dashboard/bookings/page.tsx"
+      ),
+      "utf8"
+    );
+    expect(page).toMatch(/useAuth\(/);
+    expect(page).not.toMatch(/auth\.getUser\(/);
+    expect(page).toMatch(/finally\s*\{[\s\S]*?setLoading\(false\)/);
+    // Route-level loading.tsx is a different spinner (text-primary). The
+    // hang is the client panel, which stays on Loader2 until loading is false.
+    const routeLoading = readFileSync(
+      join(
+        process.cwd(),
+        "src/app/[locale]/(doctor)/doctor-dashboard/loading.tsx"
+      ),
+      "utf8"
+    );
+    expect(routeLoading).toMatch(/text-primary/);
+    expect(page).toMatch(/text-muted-foreground/);
+  });
+
+  it("doctor layout banners do not take a parallel getUser lock", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    for (const rel of [
+      "src/components/shared/license-banner.tsx",
+      "src/components/shared/invitation-banner.tsx",
+    ]) {
+      const src = readFileSync(join(process.cwd(), rel), "utf8");
+      expect(src).toMatch(/useAuth\(/);
+      expect(src).not.toMatch(/auth\.getUser\(/);
+    }
   });
 
   it("analytics page uses hasFeature analytics_dashboard", async () => {

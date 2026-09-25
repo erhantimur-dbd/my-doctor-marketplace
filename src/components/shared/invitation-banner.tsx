@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { createBrowserClient } from "@supabase/ssr";
+import { useAuth } from "@/providers/auth-provider";
 import { Building2, Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { acceptInvitation, declineInvitation } from "@/actions/organization";
@@ -23,19 +24,19 @@ function createSupabase() {
 }
 
 export function InvitationBanner() {
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [invite, setInvite] = useState<PendingInvite | null>(null);
   const [isAccepting, startAccepting] = useTransition();
   const [isDeclining, startDeclining] = useTransition();
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    if (authLoading || !userId) return;
+
     async function checkInvitations() {
       try {
         const supabase = createSupabase();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) return;
 
         // Check for pending invitations
         const { data: membership } = await supabase
@@ -45,7 +46,7 @@ export function InvitationBanner() {
              organization:organizations(name),
              inviter:profiles!organization_members_invited_by_fkey(first_name, last_name)`
           )
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .eq("status", "invited")
           .limit(1)
           .maybeSingle();
@@ -73,8 +74,8 @@ export function InvitationBanner() {
       }
     }
 
-    checkInvitations();
-  }, []);
+    void checkInvitations();
+  }, [authLoading, userId]);
 
   if (!invite || dismissed) return null;
 
