@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@/lib/supabase/client";
+import { useAuth } from "@/providers/auth-provider";
 import { Loader2 } from "lucide-react";
 import { UpgradePrompt } from "./upgrade-prompt";
 
@@ -11,39 +12,40 @@ interface SubscriptionGateProps {
   description?: string;
 }
 
-function createSupabase() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 export function SubscriptionGate({
   children,
   feature,
   description,
 }: SubscriptionGateProps) {
+  const { user, loading: authLoading } = useAuth();
+  const userId = user?.id ?? null;
   const [status, setStatus] = useState<"loading" | "subscribed" | "free">(
     "loading"
   );
 
   useEffect(() => {
-    async function checkSubscription() {
-      try {
-        const supabase = createSupabase();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          setStatus("free");
-          return;
-        }
+    // AuthProvider already has the server-rendered session. A parallel
+    // auth user fetch takes the Navigator lock and can leave this gate on
+    // the spinner after the header has already painted the user.
+    // Key on user id so a token refresh does not re-run this check.
+    if (authLoading) return;
 
+    let cancelled = false;
+
+    async function checkSubscription() {
+      if (!userId) {
+        setStatus("free");
+        return;
+      }
+
+      try {
+        const supabase = createClient();
         const { data: doctor } = await supabase
           .from("doctors")
           .select("id, organization_id")
-          .eq("profile_id", user.id)
+          .eq("profile_id", userId)
           .single();
+        if (cancelled) return;
         if (!doctor) {
           setStatus("free");
           return;
@@ -64,6 +66,7 @@ export function SubscriptionGate({
             "@/lib/utils/feature-flags"
           );
           const license = pickEffectiveLicense(licenses || []);
+          if (cancelled) return;
           if (license && hasProductEntitlements(license.tier)) {
             setStatus("subscribed");
             return;
@@ -72,12 +75,15 @@ export function SubscriptionGate({
 
         setStatus("free");
       } catch {
-        setStatus("free");
+        if (!cancelled) setStatus("free");
       }
     }
 
-    checkSubscription();
-  }, []);
+    void checkSubscription();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, userId]);
 
   if (status === "loading") {
     return (
