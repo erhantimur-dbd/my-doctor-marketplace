@@ -14,7 +14,7 @@ function getApiKey(): string {
   return key;
 }
 
-interface CreateRoomOptions {
+export interface CreateRoomOptions {
   /** Custom room name (e.g. "md-bk-20260224-a1b2"). Auto-generated if omitted. */
   name?: string;
   /** Unix timestamp (seconds) for auto-deletion of the room. */
@@ -23,7 +23,7 @@ interface CreateRoomOptions {
   maxParticipants?: number;
 }
 
-interface DailyRoom {
+export interface DailyRoom {
   id: string;
   name: string;
   url: string;
@@ -58,6 +58,28 @@ export async function createRoom(options: CreateRoomOptions): Promise<DailyRoom>
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Daily.co createRoom failed (${response.status}): ${error}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Fetch an existing Daily.co room by name.
+ * Used when create hits "already exists" so a retry can still persist the URL.
+ */
+export async function getRoom(name: string): Promise<DailyRoom> {
+  const response = await fetch(
+    `${DAILY_API_BASE}/rooms/${encodeURIComponent(name)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${getApiKey()}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Daily.co getRoom failed (${response.status}): ${error}`);
   }
 
   return response.json();

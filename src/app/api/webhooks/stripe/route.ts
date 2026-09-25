@@ -4,7 +4,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { exportBookingToGoogleCalendar } from "@/lib/google/sync";
 import { exportBookingToMicrosoftCalendar } from "@/lib/microsoft/sync";
 import { exportBookingToCalDAV } from "@/lib/caldav/sync";
-import { createRoom } from "@/lib/daily/client";
+import {
+  ensureDailyVideoRoom,
+  finalizeConfirmedBooking,
+} from "@/lib/booking/finalize-confirmed-booking";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
 import { sendGuestAccountClaimEmail } from "@/lib/auth/guest-claim";
@@ -19,7 +22,6 @@ import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
 import { creditWallet, debitWallet } from "@/lib/wallet";
 import { createNotification } from "@/lib/notifications";
-import { notifyDoctorOfNewBooking } from "@/lib/notifications/doctor-new-booking";
 import { earnPoints } from "@/lib/points";
 import Stripe from "stripe";
 
@@ -220,6 +222,8 @@ export async function POST(request: NextRequest) {
               platform_fee_cents,
               total_amount_cents,
               currency,
+              video_room_url,
+              daily_room_name,
               patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
               doctor:doctors!inner(
                 id,
@@ -263,23 +267,18 @@ export async function POST(request: NextRequest) {
             // Create video room if video consultation
             if (booking.consultation_type === "video") {
               try {
-                const roomName = `md-${booking.booking_number.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
-                const endTime = new Date(`${booking.appointment_date}T${booking.end_time}`);
-                const expiresAt = Math.floor(endTime.getTime() / 1000) + 3600;
-
-                const room = await createRoom({
-                  name: roomName,
-                  expiresAt,
-                  maxParticipants: 2,
-                });
-
-                await supabase
-                  .from("bookings")
-                  .update({
-                    video_room_url: room.url,
-                    daily_room_name: room.name,
-                  })
-                  .eq("id", firstBookingId);
+                await ensureDailyVideoRoom(
+                  {
+                    id: firstBookingId,
+                    bookingNumber: booking.booking_number,
+                    appointmentDate: booking.appointment_date,
+                    endTime: booking.end_time,
+                    consultationType: booking.consultation_type,
+                    videoRoomUrl: booking.video_room_url,
+                    dailyRoomName: booking.daily_room_name,
+                  },
+                  supabase
+                );
               } catch (err) {
                 console.error("Daily.co room creation error (follow-up):", err);
               }
@@ -369,6 +368,8 @@ export async function POST(request: NextRequest) {
             platform_fee_cents,
             total_amount_cents,
             currency,
+            video_room_url,
+            daily_room_name,
             payment_mode,
             deposit_amount_cents,
             remainder_due_cents,
@@ -429,41 +430,37 @@ export async function POST(request: NextRequest) {
             console.error("CalDAV export error:", err)
           );
 
-          // Create Daily.co video room for video consultations
-          let videoRoomUrl: string | null = null;
-          if (booking.consultation_type === "video") {
-            try {
-              const roomName = `md-${booking.booking_number.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
-              const endTime = new Date(`${booking.appointment_date}T${booking.end_time}`);
-              const expiresAt = Math.floor(endTime.getTime() / 1000) + 3600; // end_time + 1 hour
-
-              const room = await createRoom({
-                name: roomName,
-                expiresAt,
-                maxParticipants: 2,
-              });
-
-              videoRoomUrl = room.url;
-
-              await supabase
-                .from("bookings")
-                .update({
-                  video_room_url: room.url,
-                  daily_room_name: room.name,
-                })
-                .eq("id", bookingId);
-            } catch (err) {
-              console.error("Daily.co room creation error:", err);
-              // Non-fatal: booking is still confirmed, just no video room yet
-            }
-          }
-
-          // Send confirmation email (non-blocking)
           const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
           const doctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
           const doctorProfile: any = doctor?.profile
             ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
             : null;
+
+          // Daily room + doctor notify. Same helper as Softsmoke charge-skip.
+          const { videoRoomUrl } = await finalizeConfirmedBooking(
+            {
+              id: booking.id,
+              bookingNumber: booking.booking_number,
+              patientId: booking.patient_id,
+              doctorId: booking.doctor_id,
+              appointmentDate: booking.appointment_date,
+              startTime: booking.start_time,
+              endTime: booking.end_time,
+              consultationType: booking.consultation_type,
+              totalAmountCents: booking.total_amount_cents,
+              currency: booking.currency,
+              videoRoomUrl: booking.video_room_url,
+              dailyRoomName: booking.daily_room_name,
+              patientFirstName: patient?.first_name ?? null,
+              patientLastName: patient?.last_name ?? null,
+              clinicName: doctor?.clinic_name ?? null,
+              address: doctor?.address ?? null,
+              notifyDoctor: Boolean(patient && doctorProfile),
+            },
+            { supabase }
+          );
+
+          // Send confirmation email (non-blocking)
 
           if (patient?.email && doctorProfile) {
             const consultationLabel = booking.consultation_type === "video"
@@ -567,7 +564,7 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // ── In-app + doctor email/SMS notifications ──
+          // Patient in-app notification. Doctor notify already ran in finalizeConfirmedBooking.
           if (patient && doctorProfile) {
             const doctorName = `${doctorProfile.first_name} ${doctorProfile.last_name}`;
             const dateStr = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
@@ -583,25 +580,6 @@ export async function POST(request: NextRequest) {
               channels: ["in_app"],
               metadata: { booking_id: bookingId },
             }).catch((err) => console.error("Booking confirmed notification (patient):", err));
-
-            // Notify doctor: in-app + email (default on) + SMS if opted-in & within 1 hour
-            notifyDoctorOfNewBooking({
-              bookingId,
-              doctorId: booking.doctor_id,
-              patientId: booking.patient_id,
-              patientFirstName: patient.first_name,
-              patientLastName: patient.last_name,
-              appointmentDate: booking.appointment_date,
-              startTime: booking.start_time,
-              consultationType: booking.consultation_type,
-              bookingNumber: booking.booking_number,
-              totalAmountCents: booking.total_amount_cents,
-              currency: booking.currency,
-              clinicName: doctor?.clinic_name,
-              address: doctor?.address,
-            }).catch((err) =>
-              console.error("New booking notification (doctor):", err)
-            );
           }
 
           // ── P0: Referral points — reward both referrer and referred on first booking ──
