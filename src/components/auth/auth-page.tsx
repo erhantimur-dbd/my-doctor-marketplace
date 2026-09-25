@@ -23,7 +23,10 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BookingAuthSummary } from "@/components/auth/booking-auth-summary";
-import { isBookRedirect } from "@/lib/chat/booking-href";
+import {
+  defaultAuthTabForRedirect,
+  isBookRedirect,
+} from "@/lib/chat/booking-href";
 import type { BookingAuthContext } from "@/lib/auth/booking-context";
 
 import { login, register } from "@/actions/auth";
@@ -62,10 +65,14 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
     string | null
   >(null);
 
-  // Smart default: show sign-up when coming from a booking redirect
+  // Smart default: show sign-up when coming from a patient book redirect.
+  // Doctor-dashboard /bookings must stay on Sign In (see isBookRedirect).
   const isBookingRedirect = isBookRedirect(redirectTo) || !!bookingContext;
-  const smartDefault =
-    defaultTab === "sign-in" && isBookingRedirect ? "sign-up" : defaultTab;
+  const smartDefault = defaultAuthTabForRedirect(
+    defaultTab,
+    redirectTo,
+    !!bookingContext
+  );
 
   const [activeTab, setActiveTab] = useState<string>(smartDefault);
 

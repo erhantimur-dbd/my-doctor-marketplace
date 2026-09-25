@@ -35,20 +35,54 @@ export interface BookRedirectContext {
   redirectPath: string;
 }
 
+function redirectPathname(redirectTo: string): string {
+  const cut = redirectTo.search(/[?#]/);
+  return cut === -1 ? redirectTo : redirectTo.slice(0, cut);
+}
+
 /**
- * True when the post-auth destination is a doctor booking URL.
- * Matches `/en/doctors/slug/book` and legacy paths that contain booking intent.
+ * True when the post-auth destination is a patient book URL.
+ * Matches `/en/doctors/:slug/book` (optional query) and legacy banner paths
+ * that contain booking intent.
+ *
+ * Staff lists such as `/en/doctor-dashboard/bookings` are not book flows.
+ * `includes("/booking")` false-positives because `/bookings` contains that
+ * substring. `doctor-dashboard` does not contain `/dashboard` (hyphen, not
+ * slash), so the legacy dashboard+book clause is not what matches it.
  */
 export function isBookRedirect(redirectTo: string | null | undefined): boolean {
   if (!redirectTo) return false;
-  if (redirectTo.includes("/doctors/") && redirectTo.includes("/book")) {
+  const pathname = redirectPathname(redirectTo);
+
+  if (/(?:^|\/)doctor-dashboard(?:\/|$)/.test(pathname)) {
+    return false;
+  }
+
+  if (pathname.includes("/doctors/") && /\/book(?:\/|$)/.test(pathname)) {
     return true;
   }
-  // Legacy / soft matches used by older banners
-  return (
-    redirectTo.includes("/booking") ||
-    (redirectTo.includes("/dashboard") && redirectTo.includes("book"))
-  );
+
+  // Legacy banners: a "/booking…" path, but not the plural list "/bookings".
+  if (/\/booking(?!s)/.test(pathname)) {
+    return true;
+  }
+
+  return redirectTo.includes("/dashboard") && redirectTo.includes("book");
+}
+
+export type AuthTabId = "sign-up" | "sign-in";
+
+/**
+ * Login defaults to Create Account only for a real patient book redirect.
+ * A doctor-dashboard bookings redirect stays on Sign In.
+ */
+export function defaultAuthTabForRedirect(
+  defaultTab: AuthTabId,
+  redirectTo: string | null | undefined,
+  hasBookingContext = false
+): AuthTabId {
+  const isBookingRedirect = isBookRedirect(redirectTo) || hasBookingContext;
+  return defaultTab === "sign-in" && isBookingRedirect ? "sign-up" : defaultTab;
 }
 
 /**
