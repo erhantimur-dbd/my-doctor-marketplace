@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+import {
+  copyResponseCookies,
+  updateSession,
+} from "@/lib/supabase/middleware";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import {
@@ -67,6 +70,11 @@ export async function middleware(request: NextRequest) {
 
   const { supabase, user } = await updateSession(request, intlResponse);
 
+  // Redirects are a new response. Without this, rotated Supabase cookies
+  // stay on intlResponse and the browser keeps the old refresh token.
+  const redirectWithSession = (url: URL) =>
+    copyResponseCookies(intlResponse, NextResponse.redirect(url));
+
   const pathname = request.nextUrl.pathname;
   const pathnameWithoutLocale = getPathnameWithoutLocale(pathname);
   const locale = getLocaleFromPathname(pathname);
@@ -85,7 +93,7 @@ export async function middleware(request: NextRequest) {
   if ((isPatientRoute || isDoctorRoute || isAdminRoute) && !user) {
     const loginUrl = new URL(`/${locale}/login`, request.url);
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    return redirectWithSession(loginUrl);
   }
 
   // Block unverified-email users from protected routes
@@ -95,7 +103,7 @@ export async function middleware(request: NextRequest) {
       if (user.email) {
         verifyUrl.searchParams.set("email", user.email);
       }
-      return NextResponse.redirect(verifyUrl);
+      return redirectWithSession(verifyUrl);
     }
   }
 
@@ -106,7 +114,7 @@ export async function middleware(request: NextRequest) {
       const { data: aal } =
         await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aal?.nextLevel === "aal2" && aal?.currentLevel === "aal1") {
-        return NextResponse.redirect(
+        return redirectWithSession(
           new URL(`/${locale}/verify-mfa`, request.url)
         );
       }
@@ -134,37 +142,37 @@ export async function middleware(request: NextRequest) {
     ) {
       const acceptUrl = new URL(`/${locale}/accept-terms`, request.url);
       acceptUrl.searchParams.set("next", pathname);
-      return NextResponse.redirect(acceptUrl);
+      return redirectWithSession(acceptUrl);
     }
 
     // Patient routes: only accessible by patients
     if (isPatientRoute && userRole !== "patient") {
       if (userRole === "doctor") {
-        return NextResponse.redirect(
+        return redirectWithSession(
           new URL(`/${locale}/doctor-dashboard`, request.url)
         );
       }
       if (userRole === "admin") {
-        return NextResponse.redirect(
+        return redirectWithSession(
           new URL(`/${locale}/admin`, request.url)
         );
       }
-      return NextResponse.redirect(new URL(`/${locale}`, request.url));
+      return redirectWithSession(new URL(`/${locale}`, request.url));
     }
 
     // Doctor routes: only accessible by doctors
     if (isDoctorRoute && userRole !== "doctor") {
       if (userRole === "patient") {
-        return NextResponse.redirect(
+        return redirectWithSession(
           new URL(`/${locale}/dashboard`, request.url)
         );
       }
       if (userRole === "admin") {
-        return NextResponse.redirect(
+        return redirectWithSession(
           new URL(`/${locale}/admin`, request.url)
         );
       }
-      return NextResponse.redirect(new URL(`/${locale}`, request.url));
+      return redirectWithSession(new URL(`/${locale}`, request.url));
     }
 
     // Admin routes: must be admin AND on email allowlist.
@@ -175,16 +183,16 @@ export async function middleware(request: NextRequest) {
         process.env.VERCEL_ENV === "production" ||
         process.env.NODE_ENV === "production";
       if (isProduction && ADMIN_EMAILS.length === 0) {
-        return NextResponse.redirect(new URL(`/${locale}`, request.url));
+        return redirectWithSession(new URL(`/${locale}`, request.url));
       }
       if (
         ADMIN_EMAILS.length > 0 &&
         !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
       ) {
-        return NextResponse.redirect(new URL(`/${locale}`, request.url));
+        return redirectWithSession(new URL(`/${locale}`, request.url));
       }
       if (userRole !== "admin") {
-        return NextResponse.redirect(new URL(`/${locale}`, request.url));
+        return redirectWithSession(new URL(`/${locale}`, request.url));
       }
     }
   }
@@ -216,7 +224,7 @@ export async function middleware(request: NextRequest) {
           .maybeSingle();
 
         if (license) {
-          return NextResponse.redirect(
+          return redirectWithSession(
             new URL(
               `/${locale}/doctor-dashboard/organization/billing`,
               request.url
