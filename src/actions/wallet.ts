@@ -3,9 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import crypto from "crypto";
 
 async function getOriginAndLocale() {
   const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
@@ -15,17 +13,6 @@ async function getOriginAndLocale() {
 // ---------------------------------------------------------------------------
 // Wallet Top-Up
 // ---------------------------------------------------------------------------
-
-const TOP_UP_AMOUNTS: Record<string, number[]> = {
-  GBP: [2500, 5000, 10000],    // £25, £50, £100
-  EUR: [2500, 5000, 10000],    // €25, €50, €100
-  USD: [2500, 5000, 10000],    // $25, $50, $100
-  TRY: [50000, 100000, 250000], // ₺500, ₺1000, ₺2500
-};
-
-export async function getTopUpOptions(currency: string) {
-  return TOP_UP_AMOUNTS[currency.toUpperCase()] || TOP_UP_AMOUNTS.GBP;
-}
 
 export async function topUpWallet(amountCents: number, currency: string) {
   const supabase = await createClient();
@@ -69,96 +56,6 @@ export async function topUpWallet(amountCents: number, currency: string) {
 // ---------------------------------------------------------------------------
 // Gift Cards
 // ---------------------------------------------------------------------------
-
-function generateGiftCardCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No ambiguous chars (0/O, 1/I)
-  let code = "";
-  const bytes = crypto.randomBytes(12);
-  for (let i = 0; i < 12; i++) {
-    code += chars[bytes[i] % chars.length];
-  }
-  // Format: XXXX-XXXX-XXXX
-  return `${code.slice(0, 4)}-${code.slice(4, 8)}-${code.slice(8, 12)}`;
-}
-
-export async function purchaseGiftCard(input: {
-  amountCents: number;
-  currency: string;
-  recipientEmail: string;
-  recipientName: string;
-  message?: string;
-}) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  if (input.amountCents < 1000) return { error: "Minimum gift card is £10" };
-  if (input.amountCents > 50000) return { error: "Maximum gift card is £500" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("email")
-    .eq("id", user.id)
-    .single();
-
-  const cur = input.currency.toUpperCase();
-  const code = generateGiftCardCode();
-  const { origin, locale } = await getOriginAndLocale();
-
-  // Create gift card as pending — only activated after Stripe payment
-  const adminClient = createAdminClient();
-  const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 year
-
-  const { data: giftCard, error: insertError } = await adminClient
-    .from("gift_cards")
-    .insert({
-      code,
-      amount_cents: input.amountCents,
-      currency: cur,
-      purchased_by: user.id,
-      purchased_email: profile?.email,
-      recipient_email: input.recipientEmail,
-      recipient_name: input.recipientName,
-      message: input.message || null,
-      status: "pending",
-      expires_at: expiresAt,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !giftCard) {
-    return { error: "Failed to create gift card" };
-  }
-
-  // Create Stripe checkout for purchase
-  const session = await getStripe().checkout.sessions.create({
-    mode: "payment",
-    line_items: [
-      {
-        price_data: {
-          currency: cur.toLowerCase(),
-          product_data: {
-            name: `Gift Card for ${input.recipientName}`,
-            description: `MyDoctors360 gift card — ${cur} ${(input.amountCents / 100).toFixed(2)}`,
-          },
-          unit_amount: input.amountCents,
-        },
-        quantity: 1,
-      },
-    ],
-    metadata: {
-      type: "gift_card_purchase",
-      gift_card_id: giftCard.id,
-      gift_card_code: code,
-      recipient_email: input.recipientEmail,
-      recipient_name: input.recipientName,
-    },
-    success_url: `${origin}/${locale}/dashboard/wallet?gift_sent=true`,
-    cancel_url: `${origin}/${locale}/dashboard/wallet`,
-  });
-
-  return { url: session.url, giftCardId: giftCard.id };
-}
 
 export async function redeemGiftCard(code: string) {
   const supabase = await createClient();

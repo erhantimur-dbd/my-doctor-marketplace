@@ -3,9 +3,9 @@ import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stopWatching, getValidAccessToken as getGoogleToken, listCalendars as listGoogleCalendars, type GoogleTokens } from "@/lib/google/calendar";
+import { stopWatching, getValidAccessToken as getGoogleToken, type GoogleTokens } from "@/lib/google/calendar";
 import { importGoogleCalendarEvents, setupCalendarWebhook as setupGoogleWebhook } from "@/lib/google/sync";
-import { getValidAccessToken as getMicrosoftToken, listCalendars as listMicrosoftCalendars, deleteSubscription, type MicrosoftTokens } from "@/lib/microsoft/calendar";
+import { getValidAccessToken as getMicrosoftToken, deleteSubscription, type MicrosoftTokens } from "@/lib/microsoft/calendar";
 import { importMicrosoftCalendarEvents, setupMicrosoftWebhook } from "@/lib/microsoft/sync";
 import { testConnection as testCalDAV, listCalendars as listCalDAVCalendars, CALDAV_PROVIDERS, type CalDAVProvider, type CalDAVCredentials } from "@/lib/caldav/client";
 import { importCalDAVEvents } from "@/lib/caldav/sync";
@@ -127,61 +127,6 @@ export async function toggleCalendarSync(enabled: boolean): Promise<{ success: b
   return { success: true };
 }
 
-export async function getCalendarList(): Promise<{ calendars: { id: string; summary: string; primary: boolean }[]; error?: string }> {
-  const doctorId = await getDoctorId();
-  if (!doctorId) return { calendars: [], error: "Not authenticated" };
-
-  const adminSupabase = createAdminClient();
-  const { data: connection } = await adminSupabase
-    .from("doctor_calendar_connections")
-    .select("access_token, refresh_token, token_expires_at, id")
-    .eq("doctor_id", doctorId)
-    .eq("provider", "google")
-    .single();
-
-  if (!connection) return { calendars: [], error: "Not connected" };
-
-  try {
-    const tokens: GoogleTokens = {
-      access_token: connection.access_token,
-      refresh_token: connection.refresh_token,
-      expires_at: connection.token_expires_at,
-    };
-    const { access_token, refreshed, new_expires_at } = await getGoogleToken(tokens);
-
-    if (refreshed && new_expires_at) {
-      await adminSupabase
-        .from("doctor_calendar_connections")
-        .update({ access_token, token_expires_at: new_expires_at })
-        .eq("id", connection.id);
-    }
-
-    const cals = await listGoogleCalendars(access_token);
-    return { calendars: cals.map((c) => ({ ...c, primary: c.primary ?? false })) };
-  } catch (err) {
-    return { calendars: [], error: safeError(err) };
-  }
-}
-
-export async function selectCalendar(calendarId: string): Promise<{ success: boolean; error?: string }> {
-  const doctorId = await getDoctorId();
-  if (!doctorId) return { success: false, error: "Not authenticated" };
-
-  const adminSupabase = createAdminClient();
-  const { error } = await adminSupabase
-    .from("doctor_calendar_connections")
-    .update({ calendar_id: calendarId })
-    .eq("doctor_id", doctorId)
-    .eq("provider", "google");
-
-  if (error) return { success: false, error: safeError(error) };
-
-  importGoogleCalendarEvents(doctorId).catch((err) => log.error("Google calendar import failed", { err }));
-  setupGoogleWebhook(doctorId).catch((err) => log.error("Google webhook setup failed", { err }));
-
-  return { success: true };
-}
-
 // ---- Microsoft Calendar ----
 
 export async function getMicrosoftCalendarConnection() {
@@ -272,64 +217,6 @@ export async function toggleMicrosoftCalendarSync(enabled: boolean): Promise<{ s
     importMicrosoftCalendarEvents(doctorId).catch((err) => log.error("Microsoft calendar import failed", { err }));
     setupMicrosoftWebhook(doctorId).catch((err) => log.error("Microsoft webhook setup failed", { err }));
   }
-
-  return { success: true };
-}
-
-export async function getMicrosoftCalendarList(): Promise<{ calendars: { id: string; name: string; isDefault: boolean }[]; error?: string }> {
-  const doctorId = await getDoctorId();
-  if (!doctorId) return { calendars: [], error: "Not authenticated" };
-
-  const adminSupabase = createAdminClient();
-  const { data: connection } = await adminSupabase
-    .from("doctor_calendar_connections")
-    .select("access_token, refresh_token, token_expires_at, id")
-    .eq("doctor_id", doctorId)
-    .eq("provider", "microsoft")
-    .single();
-
-  if (!connection) return { calendars: [], error: "Not connected" };
-
-  try {
-    const tokens: MicrosoftTokens = {
-      access_token: connection.access_token,
-      refresh_token: connection.refresh_token,
-      expires_at: connection.token_expires_at,
-    };
-    const { access_token, refreshed, new_expires_at, new_refresh_token } = await getMicrosoftToken(tokens);
-
-    if (refreshed) {
-      const updateData: Record<string, string> = { access_token };
-      if (new_expires_at) updateData.token_expires_at = new_expires_at;
-      if (new_refresh_token) updateData.refresh_token = new_refresh_token;
-      await adminSupabase
-        .from("doctor_calendar_connections")
-        .update(updateData)
-        .eq("id", connection.id);
-    }
-
-    const cals = await listMicrosoftCalendars(access_token);
-    return { calendars: cals.map((c) => ({ ...c, isDefault: c.isDefaultCalendar ?? false })) };
-  } catch (err) {
-    return { calendars: [], error: safeError(err) };
-  }
-}
-
-export async function selectMicrosoftCalendar(calendarId: string): Promise<{ success: boolean; error?: string }> {
-  const doctorId = await getDoctorId();
-  if (!doctorId) return { success: false, error: "Not authenticated" };
-
-  const adminSupabase = createAdminClient();
-  const { error } = await adminSupabase
-    .from("doctor_calendar_connections")
-    .update({ calendar_id: calendarId })
-    .eq("doctor_id", doctorId)
-    .eq("provider", "microsoft");
-
-  if (error) return { success: false, error: safeError(error) };
-
-  importMicrosoftCalendarEvents(doctorId).catch((err) => log.error("Microsoft calendar import failed", { err }));
-  setupMicrosoftWebhook(doctorId).catch((err) => log.error("Microsoft webhook setup failed", { err }));
 
   return { success: true };
 }
@@ -501,24 +388,6 @@ export async function toggleCalDAVSync(enabled: boolean): Promise<{ success: boo
   if (enabled) {
     importCalDAVEvents(doctorId).catch((err) => log.error("CalDAV import failed", { err }));
   }
-
-  return { success: true };
-}
-
-export async function selectCalDAVCalendar(calendarHref: string): Promise<{ success: boolean; error?: string }> {
-  const doctorId = await getDoctorId();
-  if (!doctorId) return { success: false, error: "Not authenticated" };
-
-  const adminSupabase = createAdminClient();
-  const { error } = await adminSupabase
-    .from("doctor_calendar_connections")
-    .update({ calendar_id: calendarHref })
-    .eq("doctor_id", doctorId)
-    .eq("provider", "caldav");
-
-  if (error) return { success: false, error: safeError(error) };
-
-  importCalDAVEvents(doctorId).catch((err) => log.error("CalDAV import failed", { err }));
 
   return { success: true };
 }

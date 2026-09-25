@@ -22,24 +22,6 @@ const sendInviteSchema = z.object({
 
 // ─── Read ────────────────────────────────────────────────────
 
-/** Get all pending/active invitations for the org (admin view) */
-export async function getClinicInvitations() {
-  const { error: authError, supabase, org } = await requireOrgMember(["owner", "admin"]);
-  if (authError || !supabase || !org) return { error: authError, invitations: [] };
-
-  const { data, error } = await supabase
-    .from("clinic_invitations")
-    .select(`
-      *,
-      inviter:profiles!clinic_invitations_invited_by_fkey(first_name, last_name, email)
-    `)
-    .eq("organization_id", org.id)
-    .order("created_at", { ascending: false });
-
-  if (error) return { error: error.message, invitations: [] };
-  return { error: null, invitations: data ?? [] };
-}
-
 /** Resolve an invitation token — called on the public /invite/[token] page */
 export async function resolveInviteToken(token: string) {
   const adminSupabase = createAdminClient();
@@ -62,17 +44,6 @@ export async function resolveInviteToken(token: string) {
     : invite.organization;
 
   return { error: null, invite: { ...invite, organization: org } };
-}
-
-/** Check if an email already has an account */
-export async function checkEmailRegistered(email: string) {
-  const adminSupabase = createAdminClient();
-  const { data } = await adminSupabase
-    .from("profiles")
-    .select("id")
-    .eq("email", email.toLowerCase())
-    .maybeSingle();
-  return { registered: !!data };
 }
 
 // ─── Send Invitation ─────────────────────────────────────────
@@ -223,24 +194,6 @@ export async function sendClinicInvitation(formData: FormData) {
 
   revalidatePath("/doctor-dashboard/organization/members");
   return { error: null, token: invite.token };
-}
-
-export async function revokeClinicInvitation(invitationId: string) {
-  const { error: authError, org } = await requireOrgMember(["owner", "admin"]);
-  if (authError || !org) return { error: authError };
-
-  const adminSupabase = createAdminClient();
-  const { error } = await adminSupabase
-    .from("clinic_invitations")
-    .update({ status: "revoked" })
-    .eq("id", invitationId)
-    .eq("organization_id", org.id)
-    .eq("status", "pending");
-
-  if (error) return { error: error.message };
-
-  revalidatePath("/doctor-dashboard/organization/members");
-  return { error: null };
 }
 
 // ─── Accept Invitation (existing user) ───────────────────────
@@ -486,11 +439,3 @@ async function _completeInviteAcceptance(
   };
 }
 
-// ─── New user signup via invite link ─────────────────────────
-// This is called AFTER the new user has completed Supabase signup.
-// The invite token is stored in their session metadata / passed as param.
-
-export async function claimInviteAfterSignup(token: string) {
-  // Same as acceptClinicInvitation — re-uses the same flow
-  return acceptClinicInvitation(token);
-}
