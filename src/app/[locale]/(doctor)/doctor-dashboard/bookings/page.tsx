@@ -38,6 +38,10 @@ import {
   FileText,
   ArrowRight,
 } from "lucide-react";
+import {
+  doctorBookingPatientEmail,
+  doctorBookingPatientName,
+} from "@/lib/doctor/booking-patient";
 import { formatCurrency } from "@/lib/utils/currency";
 import { respondToReschedule } from "@/actions/reschedule";
 import { saveVisitSummary } from "@/actions/booking";
@@ -337,10 +341,10 @@ function BookingsContent() {
               <TableCell>
                 <div>
                   <p className="font-medium">
-                    {booking.patient.first_name} {booking.patient.last_name}
+                    {doctorBookingPatientName(booking.patient)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {booking.patient.email}
+                    {doctorBookingPatientEmail(booking.patient)}
                   </p>
                 </div>
               </TableCell>
@@ -606,9 +610,6 @@ function BookingsContent() {
                   <TableBody>
                     {rescheduleRequests.map((req) => {
                       const booking: any = Array.isArray(req.booking) ? req.booking[0] : req.booking;
-                      const patient: any = booking?.patient
-                        ? (Array.isArray(booking.patient) ? booking.patient[0] : booking.patient)
-                        : null;
                       return (
                         <TableRow key={req.id}>
                           <TableCell className="font-mono text-sm">
@@ -617,10 +618,10 @@ function BookingsContent() {
                           <TableCell>
                             <div>
                               <p className="font-medium">
-                                {patient?.first_name} {patient?.last_name}
+                                {doctorBookingPatientName(booking?.patient)}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {patient?.email}
+                                {doctorBookingPatientEmail(booking?.patient)}
                               </p>
                             </div>
                           </TableCell>
