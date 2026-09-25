@@ -67,35 +67,6 @@ export async function getPostBySlug(slug: string) {
 }
 
 /**
- * Get all blog posts (admin).
- */
-export async function getAdminPosts(page = 1, perPage = 20) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { posts: [], total: 0, page, perPage };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") return { posts: [], total: 0, page, perPage };
-
-  const adminDb = createAdminClient();
-  const from = (page - 1) * perPage;
-
-  const { data: posts, count } = await adminDb
-    .from("blog_posts")
-    .select("id, slug, title, status, locale, published_at, view_count, created_at", { count: "exact" })
-    .order("created_at", { ascending: false })
-    .range(from, from + perPage - 1);
-
-  return { posts: posts || [], total: count || 0, page, perPage };
-}
-
-/**
  * Create a blog post (admin only).
  */
 export async function createBlogPost(input: BlogPostInput) {

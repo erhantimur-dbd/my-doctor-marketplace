@@ -5,7 +5,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { requireOrgMember } from "./organization";
 import { z } from "zod/v4";
-import type { ClinicLocation, DoctorLocationAssignment } from "@/types";
 
 // ─── Validators ──────────────────────────────────────────────
 
@@ -31,45 +30,6 @@ const upsertLocationSchema = z.object({
     .default({}),
   facilities: z.array(z.string().max(50)).optional().default([]),
 });
-
-// ─── Read ────────────────────────────────────────────────────
-
-export async function getClinicLocations() {
-  const { error: authError, supabase, org } = await requireOrgMember();
-  if (authError || !supabase || !org) return { error: authError, locations: [] };
-
-  const { data, error } = await supabase
-    .from("clinic_locations")
-    .select("*")
-    .eq("organization_id", org.id)
-    .order("is_primary", { ascending: false })
-    .order("created_at", { ascending: true });
-
-  if (error) return { error: error.message, locations: [] };
-  return { error: null, locations: (data ?? []) as ClinicLocation[] };
-}
-
-export async function getClinicLocationDoctors(locationId: string) {
-  const { error: authError, supabase, org } = await requireOrgMember();
-  if (authError || !supabase || !org) return { error: authError, assignments: [] };
-
-  const { data, error } = await supabase
-    .from("doctor_location_assignments")
-    .select(`
-      *,
-      doctor:doctors(
-        id, slug, consultation_fee_cents,
-        profile:profiles(first_name, last_name, avatar_url),
-        specialties:doctor_specialties(specialty:specialties(name_key))
-      )
-    `)
-    .eq("clinic_location_id", locationId)
-    .eq("organization_id", org.id)
-    .eq("is_active", true);
-
-  if (error) return { error: error.message, assignments: [] };
-  return { error: null, assignments: data ?? [] };
-}
 
 // ─── Mutations ───────────────────────────────────────────────
 
@@ -227,47 +187,6 @@ export async function deactivateClinicLocation(locationId: string) {
 }
 
 // ─── Doctor ↔ Location Assignment ────────────────────────────
-
-export async function assignDoctorToLocation(doctorId: string, locationId: string) {
-  const { error: authError, org } = await requireOrgMember(["owner", "admin"]);
-  if (authError || !org) return { error: authError };
-
-  const adminSupabase = createAdminClient();
-
-  // Upsert: re-activate if previously removed
-  const { error } = await adminSupabase
-    .from("doctor_location_assignments")
-    .upsert({
-      doctor_id: doctorId,
-      clinic_location_id: locationId,
-      organization_id: org.id,
-      is_active: true,
-    }, { onConflict: "doctor_id,clinic_location_id" });
-
-  if (error) return { error: error.message };
-
-  revalidatePath("/doctor-dashboard/organization/locations");
-  return { error: null };
-}
-
-export async function removeDoctorFromLocation(doctorId: string, locationId: string) {
-  const { error: authError, org } = await requireOrgMember(["owner", "admin"]);
-  if (authError || !org) return { error: authError };
-
-  const adminSupabase = createAdminClient();
-
-  const { error } = await adminSupabase
-    .from("doctor_location_assignments")
-    .update({ is_active: false })
-    .eq("doctor_id", doctorId)
-    .eq("clinic_location_id", locationId)
-    .eq("organization_id", org.id);
-
-  if (error) return { error: error.message };
-
-  revalidatePath("/doctor-dashboard/organization/locations");
-  return { error: null };
-}
 
 export async function setDoctorLocations(doctorId: string, locationIds: string[]) {
   const { error: authError, org } = await requireOrgMember(["owner", "admin"]);

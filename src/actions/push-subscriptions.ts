@@ -76,15 +76,3 @@ export async function hasPushSubscription() {
 
   return (count || 0) > 0;
 }
-
-/**
- * Get push subscriptions for a user (for sending notifications).
- */
-export async function getUserPushSubscriptions(userId: string) {
-  const adminDb = createAdminClient();
-  const { data } = await adminDb
-    .from("push_subscriptions")
-    .select("endpoint, p256dh, auth")
-    .eq("user_id", userId);
-  return data || [];
-}

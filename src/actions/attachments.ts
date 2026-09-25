@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { log } from "@/lib/utils/logger";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -133,37 +132,4 @@ export async function getAttachmentUrl(
   }
 
   return { url: data.signedUrl };
-}
-
-/**
- * Save attachment metadata after a message with attachment is sent.
- * Called from sendMessageWithAttachment.
- */
-export async function saveAttachmentRecord(data: {
-  messageId: string;
-  conversationId: string;
-  fileName: string;
-  fileType: string;
-  fileSize: number;
-  storagePath: string;
-  uploadedBy: string;
-}): Promise<{ success: boolean; error?: string }> {
-  const admin = createAdminClient();
-
-  const { error } = await admin.from("message_attachments").insert({
-    message_id: data.messageId,
-    conversation_id: data.conversationId,
-    file_name: data.fileName,
-    file_type: data.fileType,
-    file_size: data.fileSize,
-    storage_path: data.storagePath,
-    uploaded_by: data.uploadedBy,
-  });
-
-  if (error) {
-    log.error("[Attachments] Save record error:", { err: error });
-    return { success: false, error: "Failed to save attachment record." };
-  }
-
-  return { success: true };
 }
