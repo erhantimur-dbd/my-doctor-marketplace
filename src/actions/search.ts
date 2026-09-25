@@ -1923,14 +1923,7 @@ export async function searchSuggestions(
             .replace(/\b\w/g, (l: string) => l.toUpperCase())
         : "",
     };
-  });
-}
-
-export async function getSameDayAvailabilityCount(): Promise<number> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase.rpc("get_doctor_ids_available_today");
-  if (error || !data) return 0;
-  return (data as string[]).length;
+    });
 }
 
 /* ── Batch next-availability for doctor cards ──────────────── */

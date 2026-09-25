@@ -22,14 +22,14 @@ describe("OAuth doctor bootstrap contracts", () => {
   it("register-doctor uses email/password (OAuth intent lives on auth helpers)", () => {
     // Product choice: full doctor wizard is email/password only so we always
     // collect GMC/practice fields. OAuth doctorIntent remains available for
-    // future entry points via signInWithGoogle({ doctorIntent: true }).
+    // future entry points via signInWithOAuthProvider(..., { doctorIntent: true }).
     const page = read("src/app/[locale]/(public)/register-doctor/page.tsx");
     expect(page).toContain("registerDoctor");
     expect(page).toContain("registerDoctorWithCheckout");
-    expect(page).not.toMatch(/signInWithGoogle/);
+    expect(page).not.toMatch(/signInWithOAuthProvider/);
     const auth = read("src/actions/auth.ts");
     expect(auth).toMatch(/doctorIntent\?: boolean/);
-    expect(auth).toMatch(/export async function signInWithGoogle/);
+    expect(auth).toMatch(/export async function signInWithOAuthProvider/);
   });
 });
 

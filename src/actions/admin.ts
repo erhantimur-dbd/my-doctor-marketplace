@@ -95,20 +95,6 @@ async function logAdminAction(
 
 // ===================== Approval Checklist =====================
 
-export async function getApprovalChecklist(doctorId: string) {
-  const { error: authError, supabase } = await requireAdmin();
-  if (authError || !supabase) return { error: authError, data: null };
-
-  const { data, error } = await supabase
-    .from("doctor_approval_checklist")
-    .select("*")
-    .eq("doctor_id", doctorId)
-    .maybeSingle();
-
-  if (error) return { error: safeError(error), data: null };
-  return { data };
-}
-
 export async function saveApprovalChecklist(
   doctorId: string,
   values: {
@@ -408,11 +394,6 @@ export async function hideReview(reviewId: string) {
 
   revalidatePath("/admin/reviews");
   return { success: true };
-}
-
-/** @deprecated Use hideReview instead */
-export async function deleteReview(reviewId: string) {
-  return hideReview(reviewId);
 }
 
 export async function updatePlatformSetting(key: string, value: string) {
@@ -2339,54 +2320,6 @@ export async function adminCreditWallet(
   }
 }
 
-export async function adminBulkCreditWallet(
-  patientIds: string[],
-  currency: string,
-  amountCents: number,
-  description: string,
-  expiresAt?: string
-) {
-  const { error: authError, supabase, user } = await requireAdmin();
-  if (authError || !supabase || !user) return { error: authError };
-
-  if (amountCents <= 0) return { error: "Amount must be positive" };
-  if (!description) return { error: "Description is required" };
-  if (patientIds.length === 0) return { error: "No patients selected" };
-  if (patientIds.length > 500) return { error: "Maximum 500 patients per batch" };
-
-  let credited = 0;
-  let failed = 0;
-
-  for (const patientId of patientIds) {
-    try {
-      await creditWallet({
-        patientId,
-        currency: currency.toUpperCase(),
-        amountCents,
-        sourceType: "promotion",
-        description,
-        expiresAt: expiresAt || undefined,
-      });
-      credited++;
-    } catch {
-      failed++;
-    }
-  }
-
-  await logAdminAction(supabase, user.id, "wallet_bulk_credit", "promotion", "bulk", {
-    patient_count: patientIds.length,
-    credited,
-    failed,
-    amount_cents: amountCents,
-    currency,
-    description,
-    expires_at: expiresAt || null,
-  });
-
-  revalidatePath("/admin/patients");
-  return { success: true, credited, failed };
-}
-
 // ===================== Contact Inquiries =====================
 
 export async function getAdminContactInquiries(filters?: {
@@ -2448,29 +2381,6 @@ export async function updateContactInquiryStatus(
 
   revalidatePath("/admin/inquiries");
   return { success: true };
-}
-
-// ===================== Satisfaction Surveys =====================
-
-export async function getAdminSatisfactionSurveys(limit = 100) {
-  const { error: authError, supabase } = await requireAdmin();
-  if (authError || !supabase) return { error: authError, surveys: [] };
-
-  const { data, error } = await supabase
-    .from("satisfaction_surveys")
-    .select(
-      `id, nps_score, would_recommend, feedback_text, submitted_at, sent_at, created_at,
-       booking_id, patient_id, doctor_id,
-       booking:bookings(booking_number),
-       patient:profiles!satisfaction_surveys_patient_id_fkey(first_name, last_name, email),
-       doctor:doctors(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
-    )
-    .not("submitted_at", "is", null)
-    .order("submitted_at", { ascending: false })
-    .limit(limit);
-
-  if (error) return { error: safeError(error), surveys: [] };
-  return { surveys: data || [] };
 }
 
 // ===================== CSV Export Actions =====================

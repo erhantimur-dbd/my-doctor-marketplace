@@ -139,7 +139,7 @@ describe("doctor signup flow contracts", () => {
     expect(referral).toMatch(/sendReferralInvitation|processReferralSignup/);
 
     const license = read("src/actions/license.ts");
-    expect(license).toMatch(/setProfessionalSeatCapacity/);
+    expect(license).toMatch(/export async function addExtraSeats/);
   });
 
   it("exposes schedulePlanChange and restores free on subscription delete", () => {
