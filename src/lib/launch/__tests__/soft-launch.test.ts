@@ -3,10 +3,12 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   isCarePlansEnabled,
+  isNaturalLanguageSearchEnabled,
   isPrescriptionsEnabled,
   isPublicChatEnabled,
   isSymptomAnalysisEnabled,
   CARE_PLANS_DISABLED_MESSAGE,
+  NL_SEARCH_DISABLED_MESSAGE,
   PRESCRIPTIONS_DISABLED_MESSAGE,
   PUBLIC_CHAT_DISABLED_MESSAGE,
   SYMPTOM_ANALYSIS_DISABLED_MESSAGE,
@@ -17,11 +19,12 @@ import {
 } from "@/lib/utils/feature-flags";
 
 describe("soft-launch kill-switch", () => {
-  it("hard-disables prescriptions, care plans, public chat, and symptom analysis for every tier", () => {
+  it("hard-disables prescriptions, care plans, public chat, symptom analysis, and natural-language search", () => {
     expect(isPrescriptionsEnabled()).toBe(false);
     expect(isCarePlansEnabled()).toBe(false);
     expect(isPublicChatEnabled()).toBe(false);
     expect(isSymptomAnalysisEnabled()).toBe(false);
+    expect(isNaturalLanguageSearchEnabled()).toBe(false);
   });
 
   it("Founding Free Professional flags do not lift the clinical kill-switch", () => {
@@ -48,6 +51,7 @@ describe("soft-launch kill-switch", () => {
     );
     expect(PUBLIC_CHAT_DISABLED_MESSAGE).toMatch(/unavailable/i);
     expect(SYMPTOM_ANALYSIS_DISABLED_MESSAGE).toMatch(/unavailable/i);
+    expect(NL_SEARCH_DISABLED_MESSAGE).toMatch(/unavailable/i);
     expect(PRESCRIPTIONS_DISABLED_MESSAGE).not.toMatch(/upgrade|unlock|professional/i);
     expect(CARE_PLANS_DISABLED_MESSAGE).not.toMatch(/upgrade|unlock|professional/i);
   });
