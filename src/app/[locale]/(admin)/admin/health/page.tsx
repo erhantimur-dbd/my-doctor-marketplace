@@ -29,7 +29,7 @@ const CRON_JOBS = [
   {
     path: "/api/cron/sync-calendars",
     schedule: "*/10 * * * *",
-    description: "Google / Microsoft / CalDAV calendar sync",
+    description: "CalDAV poll and Google / Microsoft webhook renewal",
   },
   {
     path: "/api/cron/treatment-reminders",
