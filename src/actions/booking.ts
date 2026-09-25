@@ -38,6 +38,10 @@ import {
 import { createNotification } from "@/lib/notifications";
 import { log } from "@/lib/utils/logger";
 import { rateLimit } from "@/lib/rate-limit";
+import {
+  isSoftsmokeConnectChargeSkipped,
+  readJoinedProfileEmail,
+} from "@/lib/soft-launch/softsmoke-connect-bypass";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -224,7 +228,19 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       return { error: "This doctor is not currently accepting appointments." };
     }
 
-    if (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) {
+    const connectChargeSkipped = isSoftsmokeConnectChargeSkipped({
+      id: doctor.id,
+      slug: doctor.slug,
+      email: readJoinedProfileEmail(doctor.profile),
+      stripeAccountId: doctor.stripe_account_id,
+      stripeOnboardingComplete: doctor.stripe_onboarding_complete,
+    });
+
+    // Smoke-only. Every other incomplete Connect account keeps this wall.
+    if (
+      (!doctor.stripe_account_id || !doctor.stripe_onboarding_complete) &&
+      !connectChargeSkipped
+    ) {
       return {
         error:
           "This doctor has not completed their payment setup. Please try again later.",
@@ -438,6 +454,28 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
     if (bookingError || !booking) {
       log.error("Booking insert error:", { err: bookingError });
       return { error: "Failed to create booking. Please try again." };
+    }
+
+    // Allowlisted smoke doctor with incomplete Connect: do not create a
+    // destination charge and do not send SMS, WhatsApp, or other outbound.
+    if (connectChargeSkipped) {
+      const { error: confirmError } = await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.CONFIRMED })
+        .eq("id", booking.id);
+
+      if (confirmError) {
+        log.error("Softsmoke connect bypass confirm failed", {
+          err: confirmError,
+        });
+        return { error: "Failed to create booking. Please try again." };
+      }
+
+      const { origin, locale } = await getOriginAndLocale();
+      return {
+        url: `${origin}/${locale}/booking-confirmation?booking_id=${booking.id}`,
+        bookingId: booking.id,
+      };
     }
 
     // Compose a readable description for the checkout line item
