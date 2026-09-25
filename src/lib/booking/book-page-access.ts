@@ -9,9 +9,9 @@
  * (`hasFeature(*, null)` is false) and stay `plan_blocked`.
  *
  * Unverified or inactive doctors stay `unavailable`.
- * Connect-incomplete doctors stay `payment_pending`. Softsmoke is Founding
- * Free with incomplete Connect, so she still hits that existing wall until
- * a later product choice bypasses Connect or switches the smoke doctor.
+ * Connect-incomplete doctors stay `payment_pending`, except the Soft Launch
+ * Soft CTA smoke doctor (id + slug + email). That bypass is not a general
+ * Production Connect exception.
  */
 
 import {
@@ -19,6 +19,7 @@ import {
   pickEffectiveLicense,
   type LicenseLike,
 } from "@/lib/license/tier-lifecycle";
+import { allowsSoftLaunchSoftsmokeConnectBypass } from "@/lib/soft-launch/softsmoke-connect-bypass";
 
 export type BookPageAccess =
   | "wizard"
@@ -27,6 +28,9 @@ export type BookPageAccess =
   | "payment_pending";
 
 export type BookPageDoctorGate = {
+  id?: string | null;
+  slug?: string | null;
+  email?: string | null;
   isActive: boolean;
   verificationStatus: string | null | undefined;
   stripeAccountId: string | null | undefined;
@@ -51,7 +55,14 @@ export function resolveBookPageAccess(
 
   const connectReady =
     !!doctor.stripeAccountId && !!doctor.stripeOnboardingComplete;
-  if (!connectReady) {
+  if (
+    !connectReady &&
+    !allowsSoftLaunchSoftsmokeConnectBypass({
+      id: doctor.id,
+      slug: doctor.slug,
+      email: doctor.email,
+    })
+  ) {
     return "payment_pending";
   }
 
