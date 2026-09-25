@@ -47,7 +47,7 @@ describe("doctor booking patient label", () => {
 
 describe("doctor bookings page patient access", () => {
   const page = read(
-    "src/app/[locale]/(doctor)/doctor-dashboard/bookings/page.tsx"
+    "src/app/[locale]/(doctor)/doctor-dashboard/bookings/bookings-client.tsx"
   );
 
   it("does not read booking.patient.first_name unprotected", () => {

@@ -10,6 +10,7 @@ import {
   ReactNode,
 } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { deferUntilAuthLockReleased } from "@/lib/auth/defer-auth-lock";
 import type { User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Profile } from "@/types";
@@ -74,36 +75,51 @@ export function AuthProvider({
   // We skip INITIAL_SESSION because the server already provided that data
   // — this avoids the NavigatorLock contention that caused 10s timeouts.
   useEffect(() => {
+    let active = true;
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       // Server-rendered data covers the initial session; skip to avoid
       // redundant lock acquisition during Supabase's internal _initialize().
       if (event === "INITIAL_SESSION") return;
 
-      try {
-        const sessionUser = session?.user ?? null;
-        setUser(sessionUser);
+      const sessionUser = session?.user ?? null;
+      // Profile reads must not run in this turn. This callback runs inside
+      // the auth lock while initializePromise is still pending (SIGNED_IN /
+      // TOKEN_REFRESHED from _recoverAndRefresh). A query here calls
+      // getSession(), which waits on that promise, and the doctor bookings
+      // spinner never leaves.
+      deferUntilAuthLockReleased(() => {
+        if (!active) return;
+        void (async () => {
+          try {
+            if (!active) return;
+            setUser(sessionUser);
 
-        if (sessionUser) {
-          const { data } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", sessionUser.id)
-            .single();
-          setProfile(data);
-        } else {
-          setProfile(null);
-        }
-      } catch (err) {
-        // Don't clear server-provided data on transient errors (lock timeout)
-        console.error("Auth state change error:", err);
-      } finally {
-        setLoading(false);
-      }
+            if (sessionUser) {
+              const { data } = await supabase
+                .from("profiles")
+                .select("*")
+                .eq("id", sessionUser.id)
+                .single();
+              setProfile(data);
+            } else {
+              setProfile(null);
+            }
+          } catch (err) {
+            // Don't clear server-provided data on transient errors (lock timeout)
+            console.error("Auth state change error:", err);
+          } finally {
+            if (active) setLoading(false);
+          }
+        })();
+      });
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   // Shared signOut so consumers don't need their own Supabase client
