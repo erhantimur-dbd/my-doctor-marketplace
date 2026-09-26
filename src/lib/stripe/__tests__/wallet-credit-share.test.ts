@@ -743,17 +743,24 @@ describe("credit payout is wired into consult checkout, not the other products",
     expect(branch).not.toContain("debitWallet");
   });
 
-  it("patient, admin, and GP refunds reverse the credit share with the card charge", () => {
+  it("patient, admin, clinic, and GP refunds reverse the credit share with the card charge", () => {
     for (const rel of [
       "src/actions/booking.ts",
       "src/actions/admin.ts",
       "src/lib/gp/reassign.ts",
     ]) {
-      expect(read(rel), rel).toContain("refundConsultCardAndCreditShare");
+      expect(read(rel), rel).toContain("refundConsultSplit");
     }
+    expect(read("src/actions/clinic-booking.ts")).toContain(
+      "refundClinicCancellation"
+    );
+    const split = read("src/lib/stripe/consult-refund.ts");
+    expect(split).toContain("refundConsultCardAndCreditShare");
+    expect(split).toContain("export async function refundClinicCancellation");
     const helper = read("src/lib/stripe/wallet-credit-share.ts");
     expect(helper).toContain("reverse_transfer: true");
     expect(helper).toContain("refund_application_fee: true");
+    expect(helper).toContain("consultCardRefundIdempotencyKey");
     expect(helper).toContain("reverseConnectTransfer");
     const handoff = read("src/lib/stripe/transfer-handoff.ts");
     const gp = handoff.slice(

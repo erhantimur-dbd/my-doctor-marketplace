@@ -41,7 +41,7 @@ export function CancelBookingDialog({
         return;
       }
 
-      toast.success("Booking cancelled successfully.");
+      toast.success(result.message || "Booking cancelled successfully.");
       setOpen(false);
       setReason("");
       router.refresh();
