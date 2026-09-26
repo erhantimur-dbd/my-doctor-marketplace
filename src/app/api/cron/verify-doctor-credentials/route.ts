@@ -5,7 +5,17 @@ import {
   indemnityExpiryChaseEmail,
   credentialsSuspendedEmail,
 } from "@/lib/email/templates";
-import { fetchCqcProvider } from "@/lib/verification/cqc";
+import { resolveAuditSystemActor } from "@/lib/audit/system-actor";
+import {
+  SOFTSMOKE_CREDENTIALS_SKIP_REASON,
+  isSoftLaunchSoftsmokeCredentialsSkip,
+} from "@/lib/soft-launch/softsmoke-connect-bypass";
+import {
+  cqcErrorHttpStatus,
+  fetchCqcProvider,
+  isDefinitiveCqcNotFound,
+  type CqcFetchError,
+} from "@/lib/verification/cqc";
 import { log } from "@/lib/utils/logger";
 import { authorizeCronRequest } from "@/lib/cron/authorize";
 
@@ -21,9 +31,11 @@ import { authorizeCronRequest } from "@/lib/cron/authorize";
  * What it does, for every doctor where `practising_country = 'GB'`:
  *
  * 1. If `cqc_status = 'registered'` and `cqc_provider_id` is set, re-check
- *    the CQC Syndication API. If the provider has been deregistered, mark
- *    the doctor as suspended on `.co.uk` and email them. Otherwise update
- *    `cqc_verified_at` to now.
+ *    the CQC Syndication API. Suspend only when the register says the
+ *    provider is deregistered, or returns a real HTTP 404 for that id.
+ *    Timeouts, network errors, HTTP 429, any 5xx, and unreadable or
+ *    malformed bodies are logged and left unchanged so the next night
+ *    retries. A successful `Registered` result refreshes `cqc_verified_at`.
  *
  * 2. If `indemnity_expiry` is within 30 days but still in the future, send
  *    a chase email. Deduplicated via `compliance_notifications_sent` so we
@@ -39,6 +51,14 @@ import { authorizeCronRequest } from "@/lib/cron/authorize";
  *    UK patient-facing work, but a lapsed DBS beyond the 3-year standard is
  *    a red flag worth surfacing).
  *
+ * The Softsmoke test doctor is skipped for the CQC re-check and for every
+ * auto-suspension when `SOFT_LAUNCH_SOFTSMOKE_CREDENTIALS_SKIP=1`. The match
+ * is by doctor id only. Unset does not skip.
+ *
+ * Each successful auto-suspension writes `audit_log` (`doctor_auto_suspended`).
+ * See `resolveAuditSystemActor` for how `actor_id` is chosen without a
+ * migration.
+ *
  * Protected by `CRON_SECRET` in the Authorization header, same as the other
  * crons under `src/app/api/cron/`. Returns a JSON summary of actions taken.
  */
@@ -46,11 +66,32 @@ import { authorizeCronRequest } from "@/lib/cron/authorize";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const INDEMNITY_CHASE_WINDOW_DAYS = 30;
 const DBS_MAX_AGE_YEARS = 3;
+const INCONCLUSIVE_CQC =
+  "[verify-doctor-credentials] CQC check inconclusive; doctor left unchanged";
 
 type DoctorProfile = {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
+};
+
+type DoctorRow = {
+  id: string;
+  profile_id: string;
+  verification_status: string | null;
+  cqc_status: string | null;
+  cqc_provider_id: string | null;
+  indemnity_insurer: string | null;
+  indemnity_expiry: string | null;
+  dbs_check_date: string | null;
+  profile: DoctorProfile | DoctorProfile[] | null;
+};
+
+type CqcCheckSnapshot = {
+  providerId: string;
+  httpStatus: number | null;
+  registrationStatus: string | null;
+  errorKind: string | null;
 };
 
 export async function GET(request: NextRequest) {
@@ -60,6 +101,7 @@ export async function GET(request: NextRequest) {
   const supabase = createAdminClient();
   const now = new Date();
   const nowIso = now.toISOString();
+  const systemActor = await resolveAuditSystemActor(supabase);
 
   const { data: doctors, error: doctorsError } = await supabase
     .from("doctors")
@@ -101,7 +143,7 @@ export async function GET(request: NextRequest) {
   let indemnitySuspended = 0;
   let dbsWarnings = 0;
 
-  for (const raw of doctors as any[]) {
+  for (const raw of doctors as DoctorRow[]) {
     // Supabase returns nested joins as arrays in some cases; resolve once.
     const profile: DoctorProfile | null = Array.isArray(raw.profile)
       ? (raw.profile[0] ?? null)
@@ -114,36 +156,76 @@ export async function GET(request: NextRequest) {
 
     checked++;
 
+    const skipCredentials = isSoftLaunchSoftsmokeCredentialsSkip(raw.id);
+    if (skipCredentials) {
+      log.info(
+        "[verify-doctor-credentials] Skipping CQC re-check and auto-suspension",
+        {
+          doctor_id: raw.id,
+          reason: SOFTSMOKE_CREDENTIALS_SKIP_REASON,
+        }
+      );
+    }
+
     const suspensionReasons: string[] = [];
+    let cqcCheck: CqcCheckSnapshot | null = null;
 
     // ── 1. CQC re-verification ──────────────────────────────────────────
-    if (raw.cqc_status === "registered" && raw.cqc_provider_id) {
-      const result = await fetchCqcProvider(raw.cqc_provider_id);
+    if (
+      !skipCredentials &&
+      raw.cqc_status === "registered" &&
+      raw.cqc_provider_id
+    ) {
+      const providerId = raw.cqc_provider_id;
+      const result = await fetchCqcProvider(providerId);
       if (result.ok) {
+        cqcCheck = {
+          providerId,
+          httpStatus: 200,
+          registrationStatus: result.data.registrationStatus,
+          errorKind: null,
+        };
         if (result.data.registrationStatus === "Deregistered") {
           suspensionReasons.push(
-            `CQC provider ID ${raw.cqc_provider_id} is marked as deregistered on the CQC register.`
+            `CQC provider ID ${providerId} is deregistered on the CQC register.`
           );
           cqcSuspended++;
-        } else {
+        } else if (result.data.registrationStatus === "Registered") {
           await supabase
             .from("doctors")
             .update({ cqc_verified_at: nowIso })
             .eq("id", raw.id);
           cqcRefreshed++;
+        } else {
+          log.warn(INCONCLUSIVE_CQC, {
+            doctor_id: raw.id,
+            cqc_provider_id: providerId,
+            http_status: 200,
+            registration_status: result.data.registrationStatus,
+            error_kind: null,
+          });
         }
-      } else if (
-        result.error.kind === "not_found" ||
-        result.error.kind === "unexpected_status"
-      ) {
-        // A previously-valid provider ID that now 404s is a strong signal
-        // the registration has been withdrawn. Flag it for the admin.
+      } else if (isDefinitiveCqcNotFound(result.error)) {
+        cqcCheck = {
+          providerId,
+          httpStatus: 404,
+          registrationStatus: null,
+          errorKind: "not_found",
+        };
         suspensionReasons.push(
-          `CQC provider ID ${raw.cqc_provider_id} could not be located on the CQC register (status ${result.error.kind}).`
+          `CQC provider ID ${providerId} was not found on the CQC register (HTTP 404).`
         );
         cqcSuspended++;
+      } else {
+        const httpStatus = cqcErrorHttpStatus(result.error);
+        cqcCheck = {
+          providerId,
+          httpStatus,
+          registrationStatus: null,
+          errorKind: result.error.kind,
+        };
+        log.warn(INCONCLUSIVE_CQC, inconclusiveDetails(raw.id, providerId, result.error));
       }
-      // Rate-limited and network errors are transient — leave for next run
     }
 
     // ── 2. Indemnity chase / expiry ─────────────────────────────────────
@@ -154,10 +236,12 @@ export async function GET(request: NextRequest) {
       );
 
       if (daysUntilExpiry <= 0) {
-        suspensionReasons.push(
-          `Professional indemnity certificate expired on ${raw.indemnity_expiry}.`
-        );
-        indemnitySuspended++;
+        if (!skipCredentials) {
+          suspensionReasons.push(
+            `Professional indemnity certificate expired on ${raw.indemnity_expiry}.`
+          );
+          indemnitySuspended++;
+        }
       } else if (daysUntilExpiry <= INDEMNITY_CHASE_WINDOW_DAYS) {
         // Deduplicate via compliance_notifications_sent to avoid daily spam.
         const notificationKey = `indemnity_chase:${raw.indemnity_expiry}`;
@@ -206,6 +290,7 @@ export async function GET(request: NextRequest) {
 
     // ── 4. Apply suspension if any hard reason accumulated ──────────────
     if (
+      !skipCredentials &&
       suspensionReasons.length > 0 &&
       raw.verification_status !== "suspended"
     ) {
@@ -215,15 +300,44 @@ export async function GET(request: NextRequest) {
         .eq("id", raw.id);
 
       if (!updateError) {
-        // No admin actor on a cron, so we don't write to audit_log
-        // (which requires actor_id). Structured log is the audit trail
-        // here — the suspension itself is recorded via the status
-        // transition on the doctors table, and the admin panel will
-        // surface it to a human on the next review cycle.
         log.info("[verify-doctor-credentials] Doctor auto-suspended", {
           doctor_id: raw.id,
           reasons: suspensionReasons,
         });
+
+        if (systemActor) {
+          const { error: auditError } = await supabase.from("audit_log").insert({
+            actor_id: systemActor.actorId,
+            action: "doctor_auto_suspended",
+            target_type: "doctor",
+            target_id: raw.id,
+            metadata: {
+              reason: suspensionReasons.join("; "),
+              cqc_provider_id: cqcCheck?.providerId ?? null,
+              register_response: {
+                http_status: cqcCheck?.httpStatus ?? null,
+                registration_status: cqcCheck?.registrationStatus ?? null,
+                error_kind: cqcCheck?.errorKind ?? null,
+              },
+              actor_kind: "system",
+              actor_resolution: systemActor.via,
+              source: "verify-doctor-credentials",
+            },
+          });
+          if (auditError) {
+            log.error("[verify-doctor-credentials] audit_log insert failed", {
+              doctor_id: raw.id,
+              err: auditError,
+            });
+          }
+        } else {
+          // actor_id is NOT NULL and references profiles. Without a configured
+          // system profile or an admin profile there is no legal insert.
+          log.error(
+            "[verify-doctor-credentials] audit_log skipped; no profile available for actor_id",
+            { doctor_id: raw.id, reasons: suspensionReasons }
+          );
+        }
 
         if (profile?.email) {
           const { subject, html } = credentialsSuspendedEmail({
@@ -251,4 +365,18 @@ export async function GET(request: NextRequest) {
     dbs_warnings: dbsWarnings,
     ran_at: nowIso,
   });
+}
+
+function inconclusiveDetails(
+  doctorId: string,
+  providerId: string,
+  error: CqcFetchError
+) {
+  return {
+    doctor_id: doctorId,
+    cqc_provider_id: providerId,
+    http_status: cqcErrorHttpStatus(error),
+    registration_status: null,
+    error_kind: error.kind,
+  };
 }
