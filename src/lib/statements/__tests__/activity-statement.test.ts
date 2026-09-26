@@ -14,6 +14,7 @@ import {
   ACTIVITY_STATEMENT_HREF,
   ACTIVITY_STATEMENT_TITLE,
   RESCHEDULE_BALANCE_LABEL,
+  accumulateActivityStatementTotals,
   activityStatementSelect,
   allocateRefund,
   assertActivityStatementSelectIsSafe,
@@ -451,6 +452,72 @@ describe("buildActivityStatement", () => {
       refundsCents: 0,
       platformFeeCents: 600,
       netConnectedAccountCents: 3400,
+    });
+  });
+
+  it("excludes a paid reschedule successor from totals by flag, not by label", () => {
+    const statement = buildActivityStatement({
+      year: 2026,
+      month: 9,
+      bookings: [
+        booking({ bookingNumber: "BK-ORD", paidAt: "2026-09-10T09:00:00.000Z" }),
+        booking({
+          id: "booking-successor",
+          bookingNumber: "BK-100-R",
+          paidAt: "2026-09-12T09:00:00.000Z",
+          consultationFeeCents: 5500,
+          totalAmountCents: 5500,
+          commissionCents: 0,
+          platformFeeCents: 0,
+          reschedulePaymentStatus: "paid",
+          rescheduledFromBookingId: "booking-original",
+          stripePaymentIntentId: "pi_balance",
+        }),
+      ],
+      payeeName: "Dr Vera Softsmoke",
+      scopeLabel: "This doctor",
+      now,
+    });
+
+    const ordinary = statement.lines.find((line) => line.bookingNumber === "BK-ORD");
+    const successor = statement.lines.find((line) => line.bookingNumber === "BK-100-R");
+    expect(ordinary?.excludeFromTotals).toBe(false);
+    expect(successor?.excludeFromTotals).toBe(true);
+    expect(statement.totals[0]).toMatchObject({
+      bookingsCount: 1,
+      grossConsultCents: 4000,
+      refundsCents: 0,
+      platformFeeCents: 600,
+      netConnectedAccountCents: 3400,
+    });
+
+    const relabeled = statement.lines.map((line) => ({
+      ...line,
+      statusLabel: "Balance received",
+    }));
+    expect(accumulateActivityStatementTotals(relabeled)).toEqual(statement.totals);
+
+    const successorWithMoney = {
+      ...successor!,
+      statusLabel: "Balance received",
+      grossConsultCents: 5500,
+      platformFeeCents: 825,
+      connectedAccountCents: 4675,
+      refundAmountCents: 100,
+    };
+    expect(
+      accumulateActivityStatementTotals([ordinary!, successorWithMoney])
+    ).toEqual(statement.totals);
+    expect(
+      accumulateActivityStatementTotals([
+        { ...successorWithMoney, excludeFromTotals: false },
+      ])[0]
+    ).toMatchObject({
+      bookingsCount: 1,
+      grossConsultCents: 5500,
+      platformFeeCents: 825,
+      netConnectedAccountCents: 4675,
+      refundsCents: 100,
     });
   });
 
