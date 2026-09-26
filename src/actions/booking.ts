@@ -52,6 +52,7 @@ import {
   readJoinedProfileEmail,
 } from "@/lib/soft-launch/softsmoke-connect-bypass";
 import {
+  CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
@@ -632,6 +633,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
+      payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
       customer_email: guestEmail || undefined,
       line_items: [
         {

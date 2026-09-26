@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   EXPRESS_CONNECT_CAPABILITIES,
   cardPaymentsCapabilityStatus,
@@ -12,6 +13,73 @@ import {
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");
+}
+
+/** Argument text of each `callee(` call, with strings and template braces ignored. */
+function callArgs(src: string, callee: string): string[] {
+  const args: string[] = [];
+  let from = 0;
+  while (from < src.length) {
+    const at = src.indexOf(callee, from);
+    if (at < 0) break;
+    const paren = src.indexOf("(", at + callee.length);
+    if (paren < 0) break;
+    if (paren - (at + callee.length) > 5) {
+      from = at + callee.length;
+      continue;
+    }
+    args.push(sliceBalanced(src, paren));
+    from = paren + 1;
+  }
+  return args;
+}
+
+function sliceBalanced(src: string, openIndex: number): string {
+  const pairs: Record<string, string> = { "(": ")", "{": "}", "[": "]" };
+  const openCh = src[openIndex];
+  const closeCh = pairs[openCh];
+  let depth = 0;
+  let i = openIndex;
+  let quote: "'" | '"' | "`" | null = null;
+  while (i < src.length) {
+    const ch = src[i];
+    if (quote) {
+      if (ch === "\\") {
+        i += 2;
+        continue;
+      }
+      if (quote === "`" && ch === "$" && src[i + 1] === "{") {
+        const inner = sliceBalanced(src, i + 1);
+        i += 2 + inner.length;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      i += 1;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === "`") {
+      quote = ch;
+      i += 1;
+      continue;
+    }
+    if (ch === "/" && src[i + 1] === "/") {
+      const nl = src.indexOf("\n", i);
+      i = nl < 0 ? src.length : nl + 1;
+      continue;
+    }
+    if (ch === openCh) depth += 1;
+    if (ch === closeCh) {
+      depth -= 1;
+      if (depth === 0) return src.slice(openIndex + 1, i);
+    }
+    i += 1;
+  }
+  throw new Error(`unbalanced ${openCh} at ${openIndex}`);
+}
+
+function enclosingFunction(src: string, index: number): string {
+  const matches = [...src.slice(0, index).matchAll(/export async function (\w+)/g)];
+  return matches.at(-1)?.[1] ?? "";
 }
 
 function stripeWith(status: string | null | undefined, onUpdate?: () => void) {
@@ -251,6 +319,80 @@ describe("consult charges set on_behalf_of", () => {
     expect(reschedule).toContain("doctorCanAcceptConsultCardPayment");
     expect(reschedule).not.toContain("debitWallet");
     expect(reschedule).not.toContain("wallet_credit_applied_cents");
+  });
+});
+
+describe("consult charges are card-only", () => {
+  it("exports payment method types as exactly card", () => {
+    expect(CONSULT_PAYMENT_METHOD_TYPES).toEqual(["card"]);
+  });
+
+  it("sets payment_method_types to that list on every consult session and intent, and keeps on_behalf_of where it was set", () => {
+    const cardOnly = /payment_method_types:\s*CONSULT_PAYMENT_METHOD_TYPES\b/;
+    const behalf = "on_behalf_of: doctor.stripe_account_id";
+
+    const bookingSrc = read("src/actions/booking.ts");
+    const bookingCalls = callArgs(bookingSrc, "checkout.sessions.create");
+    expect(bookingCalls).toHaveLength(1);
+    expect(enclosingFunction(bookingSrc, bookingSrc.indexOf("checkout.sessions.create"))).toBe(
+      "createBookingAndCheckout"
+    );
+    // Full payment, deposit, guest, and signed-in all share this one session.
+    expect(bookingCalls[0]).toMatch(cardOnly);
+    expect(bookingCalls[0]).toContain(behalf);
+    expect(bookingCalls[0]).toContain('payment_mode: isDeposit ? "deposit" : "full"');
+    expect(bookingCalls[0]).toContain('is_guest: isGuest ? "1" : "0"');
+    expect(bookingCalls[0]).toContain("customer_email: guestEmail || undefined");
+    expect(bookingCalls[0]).not.toContain("automatic_payment_methods");
+
+    const followUpSrc = read("src/actions/follow-up.ts");
+    const followUpAt = followUpSrc.indexOf("checkout.sessions.create");
+    const followUpCalls = callArgs(followUpSrc, "checkout.sessions.create");
+    expect(followUpCalls).toHaveLength(1);
+    expect(enclosingFunction(followUpSrc, followUpAt)).toBe("createInvitationCheckout");
+    expect(followUpCalls[0]).toMatch(cardOnly);
+    expect(followUpCalls[0]).toContain(behalf);
+    expect(followUpCalls[0]).not.toContain("automatic_payment_methods");
+
+    const adminSrc = read("src/actions/admin.ts");
+    const adminCalls = callArgs(adminSrc, "checkout.sessions.create");
+    expect(adminCalls).toHaveLength(2);
+    const adminFns = [...adminSrc.matchAll(/checkout\.sessions\.create/g)].map((match) =>
+      enclosingFunction(adminSrc, match.index ?? -1)
+    );
+    expect(adminFns).toEqual(["adminCreateBookingOnBehalf", "adminResendPaymentLink"]);
+    for (const arg of adminCalls) {
+      expect(arg).toMatch(cardOnly);
+      expect(arg).toContain(behalf);
+      expect(arg).not.toContain("automatic_payment_methods");
+    }
+
+    const clinicSrc = read("src/actions/clinic-booking.ts");
+    const clinicAt = clinicSrc.indexOf("paymentIntents.create");
+    const clinicCalls = callArgs(clinicSrc, "paymentIntents.create");
+    expect(clinicCalls).toHaveLength(1);
+    expect(enclosingFunction(clinicSrc, clinicAt)).toBe("adminRescheduleBooking");
+    expect(clinicCalls[0]).toMatch(cardOnly);
+    expect(clinicCalls[0]).not.toContain("on_behalf_of");
+    expect(clinicCalls[0]).not.toContain("automatic_payment_methods");
+  });
+
+  it("leaves non-consult checkouts on dynamic payment methods", () => {
+    for (const rel of [
+      "src/actions/doctor.ts",
+      "src/actions/license.ts",
+      "src/actions/auth.ts",
+      "src/actions/wallet.ts",
+      "src/actions/coupon.ts",
+      "src/actions/referral.ts",
+      "src/actions/invoices.ts",
+      "src/actions/treatment-plan.ts",
+      "src/lib/gp/reassign.ts",
+    ]) {
+      const src = read(rel);
+      expect(src, rel).not.toContain("CONSULT_PAYMENT_METHOD_TYPES");
+      expect(src, rel).not.toMatch(/payment_method_types\s*:/);
+    }
   });
 });
 

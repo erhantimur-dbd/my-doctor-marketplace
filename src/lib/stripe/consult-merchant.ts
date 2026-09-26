@@ -1,6 +1,12 @@
 import type Stripe from "stripe";
 
 /**
+ * Pay-later stays off consult Checkout and the clinic reschedule balance.
+ * Apple Pay and Google Pay still run as cards.
+ */
+export const CONSULT_PAYMENT_METHOD_TYPES: ["card"] = ["card"];
+
+/**
  * Patient-facing copy when a consult charge would otherwise run on the
  * platform merchant account. Never fall back to that charge.
  */

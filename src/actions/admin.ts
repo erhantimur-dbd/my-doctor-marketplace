@@ -10,6 +10,7 @@ import { getStripe } from "@/lib/stripe/client";
 import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
 import { refundReschedulePairIfPaid } from "@/lib/booking/reschedule-balance";
 import {
+  CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
@@ -1904,6 +1905,7 @@ export async function adminCreateBookingOnBehalf(input: {
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
     customer_email: patient.email,
     line_items: [
       {
@@ -2060,6 +2062,7 @@ export async function adminResendPaymentLink(bookingId: string) {
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
     customer_email: patient.email,
     line_items: [
       {

@@ -7,6 +7,7 @@ import { requireOrgMember } from "./organization";
 import { getStripe } from "@/lib/stripe/client";
 import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
 import {
+  CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
@@ -411,6 +412,7 @@ export async function adminRescheduleBooking(formData: FormData) {
     const intent = await stripe.paymentIntents.create({
       amount: priceDiffCents,
       currency: booking.currency.toLowerCase(),
+      payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
       customer: undefined, // We'll use email receipt
       receipt_email: patient.email,
       description: `Reschedule balance for booking ${booking.booking_number}`,
