@@ -129,7 +129,7 @@ export function consultCardClawbackIdempotencyKey(
   bookingId: string,
   cardRefundCents: number
 ): string {
-  return `consult-card-clawback-${bookingId}-${cardRefundCents}`;
+  return `wallet-refund-reversal-${bookingId}-${cardRefundCents}`;
 }
 
 export function clinicianReassignmentBlockReason(booking: {
@@ -207,7 +207,7 @@ function defaultWallet(): ConsultRefundWallet {
 
 export async function clawbackCardDestinationShare(
   input: CardClawbackInput,
-  deps?: Pick<ConsultRefundDeps, "findTransfer" | "reverseTransfer">
+  deps?: Pick<ConsultRefundDeps, "findTransfer" | "reverseTransfer" | "stripe">
 ): Promise<CardClawbackResult> {
   const find = deps?.findTransfer ?? findDestinationTransfer;
   const reverse = deps?.reverseTransfer ?? reverseConnectTransfer;
@@ -223,6 +223,8 @@ export async function clawbackCardDestinationShare(
   if (amount <= 0) {
     return { reversalId: null, reversedCents: 0, transferFound: true };
   }
+  // charge.transfer is the doctor's net. Reversing it leaves the application
+  // fee on the platform, which funds the wallet credit.
   const reversal = await reverse({
     transferId: found.transferId,
     amountCents: amount,
@@ -231,6 +233,7 @@ export async function clawbackCardDestinationShare(
       booking_id: input.bookingId,
       kind: "consult_card_wallet_clawback",
     },
+    stripe: deps?.stripe,
   });
   return {
     reversalId: reversal.reversalId,
