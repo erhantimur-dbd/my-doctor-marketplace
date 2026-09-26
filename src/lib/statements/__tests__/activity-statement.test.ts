@@ -563,6 +563,15 @@ describe("rendered statement", () => {
     expect(html).toContain('<span class="d">Saturday 26 September 2026</span><span class="t">9:00am BST</span>');
     expect(html).toContain("max-width: 860px");
     expect(html).toContain('<table class="lines__table">');
+    expect(html).toContain('<div class="brand">');
+    expect(html).toContain('<div class="foot">');
+    expect(html).not.toMatch(/<header[\s>]/);
+    expect(html).not.toMatch(/<footer[\s>]/);
+    expect(html).toContain("print-color-adjust: exact !important");
+    expect(html).toContain("background-color: #0B6BCB !important");
+    expect(html).toContain("background-color: #f3f4f6 !important");
+    expect(html).toContain("background-color: #f9fafb !important");
+    expect(html).toContain(".col-action { display: none !important");
     expect(html).not.toMatch(/<button/i);
     expect(html.toLowerCase()).not.toMatch(/\bbill\b/);
   });
