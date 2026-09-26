@@ -15,6 +15,7 @@ import {
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
 import {
+  CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
@@ -442,6 +443,7 @@ export async function createInvitationCheckout(
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
+      payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
       line_items: [
         {
           price_data: {
