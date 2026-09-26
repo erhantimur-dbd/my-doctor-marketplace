@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   BOOKING_CURRENT_DOCTOR_EMBED,
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
   PATIENT_BOOKINGS_LIST_SELECT,
   patientBookingDoctorName,
@@ -42,10 +43,26 @@ describe("patient bookings doctor embed", () => {
       "src/app/[locale]/(patient)/dashboard/bookings/[id]/page.tsx"
     );
     const dashboard = read("src/app/[locale]/(patient)/dashboard/page.tsx");
+    const payments = read(
+      "src/app/[locale]/(patient)/dashboard/payments/page.tsx"
+    );
+    const reviews = read(
+      "src/app/[locale]/(patient)/dashboard/reviews/page.tsx"
+    );
 
     expect(listPage).toContain("PATIENT_BOOKINGS_LIST_SELECT");
     expect(listPage).not.toMatch(/doctor:doctors\(/);
     expect(listPage).not.toMatch(/profile:profiles\(/);
+
+    expect(payments).toContain("PATIENT_PAYMENTS_LIST_SELECT");
+    expect(payments).not.toMatch(/doctor:doctors\(/);
+    expect(payments).not.toMatch(/profile:profiles\(/);
+
+    expect(reviews).toContain("PATIENT_PENDING_REVIEW_BOOKINGS_SELECT");
+    expect(reviews).toContain("BOOKING_DOCTOR_PROFILE_EMBED");
+    expect(reviews).toContain("patientBookingDoctorName");
+    expect(reviews).not.toMatch(/profile:profiles\(/);
+    expect(reviews).not.toMatch(/booking\.doctor\.profile\.first_name/);
 
     for (const source of [detailPage, dashboard]) {
       expect(source).toContain("BOOKING_CURRENT_DOCTOR_EMBED");
@@ -53,6 +70,15 @@ describe("patient bookings doctor embed", () => {
       expect(source).not.toMatch(/doctor:doctors\(/);
       expect(source).not.toMatch(/profile:profiles\(/);
     }
+  });
+
+  it("exports an inner-join current-doctor embed for finalize/webhook selects", () => {
+    expect(BOOKING_CURRENT_DOCTOR_INNER_EMBED).toBe(
+      "doctors!bookings_doctor_id_fkey!inner"
+    );
+    const finalize = read("src/lib/booking/finalize-confirmed-booking.ts");
+    expect(finalize).toContain("BOOKING_CURRENT_DOCTOR_INNER_EMBED");
+    expect(finalize).not.toMatch(/doctor:doctors!inner\(/);
   });
 
   it("still shows a booking when the doctor row is hidden", () => {

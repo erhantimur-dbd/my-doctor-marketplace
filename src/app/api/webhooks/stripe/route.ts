@@ -8,6 +8,10 @@ import {
   ensureDailyVideoRoom,
   finalizeConfirmedBooking,
 } from "@/lib/booking/finalize-confirmed-booking";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
 import { sendGuestAccountClaimEmail } from "@/lib/auth/guest-claim";
@@ -225,11 +229,11 @@ export async function POST(request: NextRequest) {
               video_room_url,
               daily_room_name,
               patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
-              doctor:doctors!inner(
+              doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
                 id,
                 clinic_name,
                 address,
-                profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+                profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
               )
             `)
             .eq("id", firstBookingId)
@@ -378,11 +382,11 @@ export async function POST(request: NextRequest) {
             deposit_value,
             is_guest,
             patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
-            doctor:doctors!inner(
+            doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
               id,
               clinic_name,
               address,
-              profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+              profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
             )
           `)
           .eq("id", bookingId)
@@ -1129,11 +1133,11 @@ export async function POST(request: NextRequest) {
           reschedule_price_diff_cents,
           currency,
           patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
-          doctor:doctors!inner(
+          doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
             id,
             clinic_name,
             address,
-            profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+            profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
           )
         `)
         .eq("id", newBookingId)

@@ -4,6 +4,10 @@ import { sendEmail } from "@/lib/email/client";
 import { reviewRequestEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
 import { authorizeCronRequest } from "@/lib/cron/authorize";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 
 /**
  * Wave B5 — automated review requests after completed appointments.
@@ -25,10 +29,10 @@ export async function GET(request: NextRequest) {
     .select(
       `id, booking_number, appointment_date, patient_id, doctor_id, completed_at,
        patient:profiles!bookings_patient_id_fkey(first_name, email),
-       doctor:doctors!inner(
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
          slug,
          title,
-         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+         profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
        )`
     )
     .eq("status", "completed")

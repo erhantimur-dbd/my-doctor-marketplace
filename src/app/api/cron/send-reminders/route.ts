@@ -11,6 +11,10 @@ import {
 import { sendSms } from "@/lib/sms/client";
 import { appointmentReminderSms } from "@/lib/sms/templates";
 import { authorizeCronRequest } from "@/lib/cron/authorize";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 
 // Default reminders used when a doctor hasn't configured their own
 const DEFAULT_REMINDERS = [
@@ -45,11 +49,11 @@ export async function GET(request: NextRequest) {
       consultation_type,
       video_room_url,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         clinic_name,
         address,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
       )
     `)
     .in("status", ["confirmed", "approved"])

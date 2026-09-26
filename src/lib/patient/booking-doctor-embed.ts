@@ -12,6 +12,10 @@
  */
 export const BOOKING_CURRENT_DOCTOR_EMBED = "doctors!bookings_doctor_id_fkey";
 
+/** Inner join on the current-doctor FK (not reassigned_from_doctor_id). */
+export const BOOKING_CURRENT_DOCTOR_INNER_EMBED =
+  "doctors!bookings_doctor_id_fkey!inner";
+
 export const BOOKING_DOCTOR_PROFILE_EMBED = "profiles!doctors_profile_id_fkey";
 
 export const PATIENT_BOOKINGS_LIST_SELECT = `
@@ -30,6 +34,30 @@ export const PATIENT_BOOKINGS_LIST_SELECT = `
       doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(
         slug, title, clinic_name,
         profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name, avatar_url)
+      )
+    `;
+
+/** Payment history — same FK disambiguation as the bookings list. */
+export const PATIENT_PAYMENTS_LIST_SELECT = `
+      id, booking_number, appointment_date, start_time, consultation_type,
+      total_amount_cents, currency, status, paid_at, created_at,
+      doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(
+        title, clinic_name,
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
+      )
+    `;
+
+/** Completed bookings awaiting a review — same FK disambiguation. */
+export const PATIENT_PENDING_REVIEW_BOOKINGS_SELECT = `
+      id,
+      booking_number,
+      start_time,
+      consultation_type,
+      doctor_id,
+      doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(
+        id, title, slug,
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name),
+        doctor_specialties(specialty:specialties(slug))
       )
     `;
 

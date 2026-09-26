@@ -24,6 +24,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 import { hasActiveLicense } from "@/lib/license/check";
 import { connectStripeAccount } from "@/actions/doctor";
+import { doctorBookingPatientName } from "@/lib/doctor/booking-patient";
 
 export default async function PaymentsPage() {
   const supabase = await createClient();
@@ -263,7 +264,7 @@ export default async function PaymentsPage() {
                       {booking.booking_number}
                     </TableCell>
                     <TableCell>
-                      {booking.patient.first_name} {booking.patient.last_name}
+                      {doctorBookingPatientName(booking.patient)}
                     </TableCell>
                     <TableCell>
                       {formatCurrency(

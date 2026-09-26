@@ -9,6 +9,7 @@ import { ProfileCompletionCard } from "@/components/doctor/profile-completion-ca
 import { getDoctorLicense } from "@/lib/license/check";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { doctorDashboardSteps } from "@/components/shared/onboarding-steps";
+import { doctorBookingPatientName } from "@/lib/doctor/booking-patient";
 import { Link } from "@/i18n/navigation";
 
 export default async function DoctorDashboard() {
@@ -349,8 +350,7 @@ export default async function DoctorDashboard() {
                     >
                       <div>
                         <p className="font-medium">
-                          {booking.patient.first_name}{" "}
-                          {booking.patient.last_name}
+                          {doctorBookingPatientName(booking.patient)}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
