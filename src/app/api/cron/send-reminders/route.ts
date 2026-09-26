@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { bookingReminderEmail } from "@/lib/email/templates";
+import {
+  isSoftsmokeTransactionalDoctor,
+  manageBookingUrl,
+  softsmokeDoctorReminderEmail,
+  softsmokePatientReminderEmail,
+} from "@/lib/email/softsmoke-templates";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
 import {
   TEMPLATE_APPOINTMENT_REMINDER,
@@ -52,9 +58,10 @@ export async function GET(request: NextRequest) {
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
+        slug,
         clinic_name,
         address,
-        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name, email)
       )
     `)
     .in("status", ["confirmed", "approved"])
@@ -134,6 +141,11 @@ export async function GET(request: NextRequest) {
         ? doctor.profile[0]
         : doctor.profile
       : null;
+    const softsmokeDoctor = isSoftsmokeTransactionalDoctor({
+      id: doctor?.id || booking.doctor_id,
+      slug: doctor?.slug,
+      email: doctorProfile?.email,
+    });
 
     for (const pref of doctorPrefs) {
       if (!pref.is_enabled) continue;
@@ -142,13 +154,22 @@ export async function GET(request: NextRequest) {
       // and the appointment hasn't passed yet
       if (minutesUntil > pref.minutes_before || minutesUntil < 0) continue;
 
-      // Check if already sent
+      // Check if already sent. Tester doctor diary reminders use a separate
+      // channel so a previously sent patient email does not block them.
       const key = `${booking.id}:${pref.minutes_before}:${pref.channel}`;
-      if (sentSet.has(key)) continue;
+      const doctorKey = `${booking.id}:${pref.minutes_before}:doctor_email`;
+      if (sentSet.has(key)) {
+        const doctorStillDue =
+          pref.channel === "email" &&
+          softsmokeDoctor &&
+          doctorProfile?.email &&
+          !sentSet.has(doctorKey);
+        if (!doctorStillDue) continue;
+      }
 
       let delivered = false;
 
-      if (pref.channel === "email" && patient?.email && doctorProfile) {
+      if (pref.channel === "email" && doctorProfile && (patient?.email || softsmokeDoctor)) {
         const consultationLabel =
           booking.consultation_type === "video"
             ? "Video Consultation"
@@ -156,18 +177,30 @@ export async function GET(request: NextRequest) {
               ? "Phone Consultation"
               : "In-Person Consultation";
 
-        const { subject, html } = bookingReminderEmail({
-          patientName: patient.first_name || "Patient",
-          doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
-          date: booking.appointment_date,
-          time: booking.start_time,
-          consultationType: consultationLabel,
-          bookingNumber: booking.booking_number,
-          videoRoomUrl: booking.video_room_url,
-          minutesBefore: pref.minutes_before,
-          clinicName: doctor.clinic_name,
-          address: doctor.address,
-        });
+        if (patient?.email && !sentSet.has(key)) {
+        const { subject, html } = softsmokeDoctor
+          ? softsmokePatientReminderEmail({
+              patientFirstName: patient.first_name || "there",
+              doctorDisplayName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+              appointmentDate: booking.appointment_date,
+              appointmentTime: booking.start_time,
+              bookingRef: booking.booking_number,
+              appointmentType: booking.consultation_type,
+              joinUrl: booking.video_room_url,
+              manageUrl: manageBookingUrl(booking.id),
+            })
+          : bookingReminderEmail({
+              patientName: patient.first_name || "Patient",
+              doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+              date: booking.appointment_date,
+              time: booking.start_time,
+              consultationType: consultationLabel,
+              bookingNumber: booking.booking_number,
+              videoRoomUrl: booking.video_room_url,
+              minutesBefore: pref.minutes_before,
+              clinicName: doctor.clinic_name,
+              address: doctor.address,
+            });
 
         const emailResult = await sendEmail({
           to: patient.email,
@@ -177,6 +210,34 @@ export async function GET(request: NextRequest) {
         if (emailResult.success) {
           emailsSent++;
           delivered = true;
+        }
+        }
+
+        // Doctor diary reminder is tester-path only (Jim inventory). Tracked
+        // separately so a patient send does not suppress it.
+        if (softsmokeDoctor && doctorProfile.email && !sentSet.has(doctorKey)) {
+            const doctorMail = softsmokeDoctorReminderEmail({
+              doctorFirstName: doctorProfile.first_name || "there",
+              patientFirstName: patient.first_name || "A patient",
+              appointmentDate: booking.appointment_date,
+              appointmentTime: booking.start_time,
+              bookingRef: booking.booking_number,
+              appointmentType: booking.consultation_type,
+            });
+            const doctorResult = await sendEmail({
+              to: doctorProfile.email,
+              subject: doctorMail.subject,
+              html: doctorMail.html,
+            });
+            if (doctorResult.success) {
+              emailsSent++;
+              await supabase.from("booking_reminders_sent").insert({
+                booking_id: booking.id,
+                minutes_before: pref.minutes_before,
+                channel: "doctor_email",
+              });
+              sentSet.add(doctorKey);
+            }
         }
       } else if (pref.channel === "in_app") {
         // Create in-app notification

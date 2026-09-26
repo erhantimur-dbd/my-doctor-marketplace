@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/client";
 import * as templates from "@/lib/email/templates";
+import * as softsmoke from "@/lib/email/softsmoke-templates";
 import { TEMPLATE_LIST, type TemplateKey } from "@/lib/email/template-list";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
@@ -245,6 +246,89 @@ const SAMPLE_DATA = {
       doctorName: "Dr. Sarah Williams",
       date: "1 April 2026",
       reviewUrl: `${APP_URL}/en/dashboard/reviews?booking=test-booking-id`,
+    }),
+  softsmokePatientConfirm: () =>
+    softsmoke.softsmokePatientConfirmEmail({
+      patientFirstName: "Darren",
+      doctorDisplayName: "Vera Softsmoke",
+      appointmentDate: "2026-09-26",
+      appointmentTime: "2026-09-26T08:00:00+00:00",
+      bookingRef: "BK-SOFTSMOKE-001",
+      appointmentType: "video",
+      joinUrl: `${APP_URL}/en/dashboard/bookings/preview`,
+      manageUrl: `${APP_URL}/en/dashboard/bookings/preview`,
+    }),
+  softsmokePatientReminder: () =>
+    softsmoke.softsmokePatientReminderEmail({
+      patientFirstName: "Darren",
+      doctorDisplayName: "Vera Softsmoke",
+      appointmentDate: "2026-09-26",
+      appointmentTime: "09:00",
+      bookingRef: "BK-SOFTSMOKE-001",
+      appointmentType: "video",
+      joinUrl: `${APP_URL}/en/dashboard/bookings/preview`,
+      manageUrl: `${APP_URL}/en/dashboard/bookings/preview`,
+    }),
+  softsmokePatientReschedule: () =>
+    softsmoke.softsmokePatientRescheduleEmail({
+      patientFirstName: "Darren",
+      doctorDisplayName: "Vera Softsmoke",
+      bookingRef: "BK-SOFTSMOKE-001",
+      oldDate: "2026-09-26",
+      oldTime: "09:00",
+      newDate: "2026-09-27",
+      newTime: "11:30",
+      appointmentType: "video",
+      manageUrl: `${APP_URL}/en/dashboard/bookings/preview`,
+    }),
+  softsmokePatientRefund: () =>
+    softsmoke.softsmokePatientRefundEmail({
+      patientFirstName: "Darren",
+      bookingRef: "BK-SOFTSMOKE-001",
+      refundRef: "re_preview",
+      refundAmount: 49,
+      currency: "GBP",
+      originalPaidAt: "2026-09-20T09:00:00+00:00",
+      manageUrl: `${APP_URL}/en/dashboard/bookings/preview`,
+    }),
+  softsmokeDoctorNewBooking: () =>
+    softsmoke.softsmokeDoctorNewBookingEmail({
+      doctorFirstName: "Vera",
+      patientFirstName: "Darren",
+      appointmentDate: "2026-09-26",
+      appointmentTime: "09:00",
+      bookingRef: "BK-SOFTSMOKE-001",
+      appointmentType: "video",
+    }),
+  softsmokeDoctorReminder: () =>
+    softsmoke.softsmokeDoctorReminderEmail({
+      doctorFirstName: "Vera",
+      patientFirstName: "Darren",
+      appointmentDate: "2026-09-26",
+      appointmentTime: "09:00",
+      bookingRef: "BK-SOFTSMOKE-001",
+      appointmentType: "video",
+    }),
+  softsmokeDoctorCancelReschedule: () =>
+    softsmoke.softsmokeDoctorCancelRescheduleEmail({
+      kind: "cancel",
+      doctorFirstName: "Vera",
+      patientFirstName: "Darren",
+      bookingRef: "BK-SOFTSMOKE-001",
+      oldDate: "2026-09-26",
+      oldTime: "09:00",
+      appointmentType: "video",
+    }),
+  softsmokeDoctorPayout: () =>
+    softsmoke.softsmokeDoctorPayoutEmail({
+      doctorFirstName: "Vera",
+      grossAmount: 80,
+      platformFee: 12,
+      netToConnectedAccount: 68,
+      currency: "GBP",
+      bookingRef: "BK-SOFTSMOKE-001",
+      payoutOrTransferRef: "tr_preview",
+      periodOrDate: "2026-09-26",
     }),
 };
 

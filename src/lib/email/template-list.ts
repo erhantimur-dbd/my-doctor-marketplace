@@ -29,7 +29,15 @@ export type TemplateKey =
   | "availabilityAlert"
   | "satisfactionSurvey"
   | "guestAccountClaim"
-  | "reviewRequest";
+  | "reviewRequest"
+  | "softsmokePatientConfirm"
+  | "softsmokePatientReminder"
+  | "softsmokePatientReschedule"
+  | "softsmokePatientRefund"
+  | "softsmokeDoctorNewBooking"
+  | "softsmokeDoctorReminder"
+  | "softsmokeDoctorCancelReschedule"
+  | "softsmokeDoctorPayout";
 
 export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string }[] = [
   // Booking
@@ -70,4 +78,13 @@ export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string 
   { key: "availabilityAlert", label: "Availability Alert", category: "Notifications" },
   { key: "satisfactionSurvey", label: "Satisfaction Survey (NPS)", category: "Notifications" },
   { key: "guestAccountClaim", label: "Guest Account Claim", category: "Onboarding" },
+  // Softsmoke tester path only. Soft CTA founding email stays HOLD.
+  { key: "softsmokePatientConfirm", label: "Softsmoke · Patient confirm", category: "Softsmoke" },
+  { key: "softsmokePatientReminder", label: "Softsmoke · Patient reminder", category: "Softsmoke" },
+  { key: "softsmokePatientReschedule", label: "Softsmoke · Patient reschedule", category: "Softsmoke" },
+  { key: "softsmokePatientRefund", label: "Softsmoke · Patient refund", category: "Softsmoke" },
+  { key: "softsmokeDoctorNewBooking", label: "Softsmoke · Doctor new booking", category: "Softsmoke" },
+  { key: "softsmokeDoctorReminder", label: "Softsmoke · Doctor reminder", category: "Softsmoke" },
+  { key: "softsmokeDoctorCancelReschedule", label: "Softsmoke · Doctor cancel/reschedule", category: "Softsmoke" },
+  { key: "softsmokeDoctorPayout", label: "Softsmoke · Stripe payout", category: "Softsmoke" },
 ];

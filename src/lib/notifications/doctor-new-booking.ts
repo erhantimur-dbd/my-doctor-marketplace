@@ -12,6 +12,10 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { doctorNewBookingEmail } from "@/lib/email/templates";
+import {
+  isSoftsmokeTransactionalDoctor,
+  softsmokeDoctorNewBookingEmail,
+} from "@/lib/email/softsmoke-templates";
 import { sendSms } from "@/lib/sms/client";
 import { doctorNewBookingSms } from "@/lib/sms/templates";
 import { createNotification } from "@/lib/notifications";
@@ -90,6 +94,7 @@ export async function notifyDoctorOfNewBooking(
     .select(
       `
       id,
+      slug,
       profile_id,
       profile:profiles!doctors_profile_id_fkey(
         first_name,
@@ -183,23 +188,40 @@ export async function notifyDoctorOfNewBooking(
     log.error("[DoctorNotify] In-app notification failed", { err })
   );
 
-  // Email — always required for all appointments
+  // Email — always required for all appointments.
+  // Softsmoke tester uses the Creative hairline body; everyone else stays on
+  // the existing template (emoji header unchanged).
   if (profile.email) {
-    const { subject, html } = doctorNewBookingEmail({
-      doctorName: profile.first_name || doctorName,
-      patientName,
-      date: dateStr,
-      time: timeStr,
-      consultationType: consultationLabel(input.consultationType),
-      bookingNumber: input.bookingNumber,
-      amount: input.totalAmountCents / 100,
-      currency: (input.currency || "GBP").toUpperCase(),
-      isUrgent,
-      minutesUntil,
-      dashboardUrl: `${APP_URL}/en/doctor-dashboard/bookings`,
-      clinicName: input.clinicName,
-      address: input.address,
+    const softsmoke = isSoftsmokeTransactionalDoctor({
+      id: input.doctorId,
+      slug: (doctorRow as { slug?: string | null }).slug,
+      email: profile.email,
     });
+    const { subject, html } = softsmoke
+      ? softsmokeDoctorNewBookingEmail({
+          doctorFirstName: profile.first_name || doctorName,
+          patientFirstName: input.patientFirstName || "A patient",
+          appointmentDate: input.appointmentDate,
+          appointmentTime: input.startTime,
+          bookingRef: input.bookingNumber,
+          appointmentType: input.consultationType,
+          diaryUrl: `${APP_URL}/en/doctor-dashboard/bookings`,
+        })
+      : doctorNewBookingEmail({
+          doctorName: profile.first_name || doctorName,
+          patientName,
+          date: dateStr,
+          time: timeStr,
+          consultationType: consultationLabel(input.consultationType),
+          bookingNumber: input.bookingNumber,
+          amount: input.totalAmountCents / 100,
+          currency: (input.currency || "GBP").toUpperCase(),
+          isUrgent,
+          minutesUntil,
+          dashboardUrl: `${APP_URL}/en/doctor-dashboard/bookings`,
+          clinicName: input.clinicName,
+          address: input.address,
+        });
 
     await sendEmail({ to: profile.email, subject, html }).catch((err) =>
       log.error("[DoctorNotify] Email failed", { err, to: profile.email })
