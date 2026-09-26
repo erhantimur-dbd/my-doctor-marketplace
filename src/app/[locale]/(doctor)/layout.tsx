@@ -6,23 +6,34 @@ import { DoctorSessionGuard } from "@/components/shared/session-timeout-guard";
 import { DashboardMobileNav } from "@/components/layout/dashboard-mobile-nav";
 import { LicenseBanner } from "@/components/shared/license-banner";
 import { InvitationBanner } from "@/components/shared/invitation-banner";
-import { doctorSidebarLinks } from "@/lib/constants/sidebar-links";
+import {
+  doctorSidebarLinks,
+  withActivityStatementLink,
+} from "@/lib/constants/sidebar-links";
+import { canShowActivityStatementNav } from "@/lib/statements/access";
 
-export default function DoctorLayout({
+export default async function DoctorLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const showActivityStatement = await canShowActivityStatementNav();
+  const links = showActivityStatement
+    ? withActivityStatementLink(doctorSidebarLinks)
+    : doctorSidebarLinks;
+
   return (
     <div className="flex min-h-screen flex-col">
-      <DoctorSessionGuard />
-      <Header />
-      <InvitationBanner />
-      <LicenseBanner />
-      <div className="container mx-auto flex flex-1 gap-8 px-4 py-8 pb-20 md:pb-8">
-        <aside className="hidden w-56 shrink-0 md:block">
+      <div className="print:hidden">
+        <DoctorSessionGuard />
+        <Header />
+        <InvitationBanner />
+        <LicenseBanner />
+      </div>
+      <div className="container mx-auto flex flex-1 gap-8 px-4 py-8 pb-20 md:pb-8 print:block print:p-0">
+        <aside className="hidden w-56 shrink-0 md:block print:hidden">
           <nav className="sticky top-24 space-y-1">
-            {doctorSidebarLinks.map((link) => (
+            {links.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -41,14 +52,17 @@ export default function DoctorLayout({
         </aside>
         <main className="min-w-0 flex-1">{children}</main>
       </div>
-      <DashboardMobileNav
-        portal="doctor"
-        messagesBadge={
-          <Suspense fallback={null}>
-            <UnreadBadge />
-          </Suspense>
-        }
-      />
+      <div className="print:hidden">
+        <DashboardMobileNav
+          portal="doctor"
+          showActivityStatement={showActivityStatement}
+          messagesBadge={
+            <Suspense fallback={null}>
+              <UnreadBadge />
+            </Suspense>
+          }
+        />
+      </div>
     </div>
   );
 }

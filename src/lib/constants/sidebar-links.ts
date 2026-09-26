@@ -49,6 +49,26 @@ export interface SidebarGroup {
 
 // ─── Doctor Portal (17 items) ────────────────────────────────────────────────
 
+export const activityStatementSidebarLink: SidebarLink = {
+  href: "/doctor-dashboard/activity-statement",
+  icon: ScrollText,
+  label: "Activity statement",
+};
+
+/** Insert the tester-only statement link after Payments. Does not mutate the default nav. */
+export function withActivityStatementLink(links: SidebarLink[]): SidebarLink[] {
+  if (links.some((link) => link.href === activityStatementSidebarLink.href)) {
+    return links;
+  }
+  const index = links.findIndex((link) => link.href === "/doctor-dashboard/payments");
+  if (index === -1) return [...links, activityStatementSidebarLink];
+  return [
+    ...links.slice(0, index + 1),
+    activityStatementSidebarLink,
+    ...links.slice(index + 1),
+  ];
+}
+
 export const doctorSidebarLinks: SidebarLink[] = [
   { href: "/doctor-dashboard", icon: LayoutDashboard, label: "Overview" },
   { href: "/doctor-dashboard/calendar", icon: Calendar, label: "Calendar" },
