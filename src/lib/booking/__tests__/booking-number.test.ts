@@ -133,7 +133,7 @@ describe("daily room names", () => {
 
 describe("generate_booking_number migration", () => {
   const migration = read(
-    "supabase/migrations/00114_short_booking_numbers.sql"
+    "supabase/migrations/00115_short_booking_numbers.sql"
   );
   const combined = read("supabase/combined-migration.sql");
 
