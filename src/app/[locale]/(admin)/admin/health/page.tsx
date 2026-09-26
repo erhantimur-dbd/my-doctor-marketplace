@@ -46,6 +46,11 @@ const CRON_JOBS = [
     schedule: "0 4 * * *",
     description: "Weekly GMC / credential re-checks",
   },
+  {
+    path: "/api/cron/wallet-credit-transfers",
+    schedule: "*/15 * * * *",
+    description: "Reconcile pending doctor credit transfers",
+  },
 ];
 
 function envStatus(name: string): { ok: boolean; label: string } {
