@@ -411,6 +411,8 @@
     "cancel_policy_strict_detail": "Cancelamento rigoroso: reembolso total se cancelado com mais de 72 horas de antecedência.",
     "deposit_secures_info": "Um {deposit} garante a consulta. O restante {remainder} é pago ao médico no dia. Depósitos reembolsáveis no período de cancelamento.",
     "payment_deposit_paying": "Está a pagar um {deposit} para garantir a consulta. O restante {remainder} é pago ao médico no dia.",
+    "confirmation_payment_pending_title": "Pagamento ainda necessário",
+    "payment_complete_note": "Pagamento recebido. Receberá um e-mail de confirmação com todos os detalhes.",
     "payment_confirm_note": "A consulta será confirmada após o pagamento. Receberá um e-mail de confirmação.",
     "doctors_nav": "Médicos",
     "book_nav": "Marcar consulta",

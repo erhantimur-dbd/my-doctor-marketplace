@@ -417,6 +417,8 @@
     "cancel_policy_strict_detail": "严格取消：预约前超过72小时取消可全额退款。",
     "deposit_secures_info": "{deposit} 用于锁定预约。剩余 {remainder} 在就诊当日支付给医生。取消期限内定金可全额退还。",
     "payment_deposit_paying": "您正在支付 {deposit} 以锁定预约。剩余 {remainder} 在就诊当日支付给医生。",
+    "confirmation_payment_pending_title": "仍需完成付款",
+    "payment_complete_note": "已收到付款。您将收到包含全部详情的确认邮件。",
     "payment_confirm_note": "付款完成后预约将确认。您将收到包含全部详情的确认邮件。",
     "doctors_nav": "医生",
     "book_nav": "预约",

@@ -411,6 +411,8 @@
     "cancel_policy_strict_detail": "Cancelación estricta: reembolso completo si se cancela más de 72 horas antes.",
     "deposit_secures_info": "Un {deposit} asegura su cita. El resto {remainder} se paga al médico el mismo día. Los depósitos son reembolsables dentro del periodo de cancelación.",
     "payment_deposit_paying": "Está pagando un {deposit} para asegurar la cita. El resto {remainder} se paga al médico el mismo día.",
+    "confirmation_payment_pending_title": "Pago aún pendiente",
+    "payment_complete_note": "Pago recibido. Recibirá un correo de confirmación con todos los detalles.",
     "payment_confirm_note": "Su cita se confirmará cuando se complete el pago. Recibirá un correo de confirmación.",
     "doctors_nav": "Médicos",
     "book_nav": "Reservar cita",

@@ -27,6 +27,7 @@ import { patientDashboardSteps } from "@/components/shared/onboarding-steps";
 import {
   BOOKING_CURRENT_DOCTOR_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
+  patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
 
 function getCountdownBadge(startTime: string) {
@@ -211,11 +212,7 @@ export default async function PatientDashboard() {
                 const doctor: any = Array.isArray(booking.doctor)
                   ? booking.doctor[0]
                   : booking.doctor;
-                const doctorProfile: any = doctor
-                  ? Array.isArray(doctor.profile)
-                    ? doctor.profile[0]
-                    : doctor.profile
-                  : null;
+                const doctorName = patientBookingDoctorName(doctor);
 
                 return (
                   <Link
@@ -225,11 +222,7 @@ export default async function PatientDashboard() {
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">
-                          {doctor?.title}{" "}
-                          {doctorProfile?.first_name}{" "}
-                          {doctorProfile?.last_name}
-                        </p>
+                        <p className="font-medium">{doctorName}</p>
                         {booking.consultation_type === "video" ? (
                           <Badge
                             variant="secondary"

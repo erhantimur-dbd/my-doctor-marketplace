@@ -27,6 +27,7 @@ import {
   MapPin,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { doctorBookingPatientName } from "@/lib/doctor/booking-patient";
 
 export default async function PatientDetailPage({
   params,
@@ -88,6 +89,14 @@ export default async function PatientDetailPage({
     medicalProfile = mp;
   }
 
+  const patientName = doctorBookingPatientName(patient);
+  const patientInitials = patientName
+    .split(/\s+/)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   const totalVisits = bookings.filter((b) => b.status === "completed").length;
   const totalRevenue = bookings.reduce((sum, b) => sum + (b.total_amount_cents || 0), 0);
 
@@ -109,16 +118,13 @@ export default async function PatientDetailPage({
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12">
             {patient.avatar_url && (
-              <AvatarImage src={patient.avatar_url} alt={patient.first_name} />
+              <AvatarImage src={patient.avatar_url} alt={patientName} />
             )}
-            <AvatarFallback>
-              {patient.first_name.charAt(0)}
-              {patient.last_name.charAt(0)}
-            </AvatarFallback>
+            <AvatarFallback>{patientInitials}</AvatarFallback>
           </Avatar>
           <div>
             <h1 className="text-2xl font-bold">
-              {patient.first_name} {patient.last_name}
+              {patientName}
             </h1>
             <p className="text-sm text-muted-foreground">{patient.email}</p>
           </div>

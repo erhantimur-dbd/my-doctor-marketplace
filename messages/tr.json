@@ -491,6 +491,8 @@
     "cancel_policy_strict_detail": "Katı iptal: Randevudan 72 saatten fazla önce iptalde tam iade.",
     "deposit_secures_info": "{deposit} randevunuzu güvence altına alır. Kalan {remainder} günü doktora ödenir. İptal süresi içinde depozito tam iade edilir.",
     "payment_deposit_paying": "Randevuyu güvence altına almak için {deposit} ödüyorsunuz. Kalan {remainder} günü doktora ödenir.",
+    "confirmation_payment_pending_title": "Ödeme hâlâ gerekli",
+    "payment_complete_note": "Ödeme alındı. Tüm ayrıntıları içeren bir onay e-postası alacaksınız.",
     "payment_confirm_note": "Ödeme tamamlandığında randevunuz onaylanır. Tüm detayları içeren bir e-posta alırsınız.",
     "doctors_nav": "Doktorlar",
     "book_nav": "Randevu Al",

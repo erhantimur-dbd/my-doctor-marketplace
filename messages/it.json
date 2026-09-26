@@ -411,6 +411,8 @@
     "cancel_policy_strict_detail": "Cancellazione rigorosa: rimborso completo se annullata più di 72 ore prima.",
     "deposit_secures_info": "Un {deposit} garantisce l'appuntamento. Il resto {remainder} si paga al medico il giorno stesso. I depositi sono rimborsabili nel periodo di cancellazione.",
     "payment_deposit_paying": "Stai pagando un {deposit} per garantire l'appuntamento. Il resto {remainder} si paga al medico il giorno stesso.",
+    "confirmation_payment_pending_title": "Pagamento ancora necessario",
+    "payment_complete_note": "Pagamento ricevuto. Riceverai un'email di conferma con tutti i dettagli.",
     "payment_confirm_note": "L'appuntamento sarà confermato al completamento del pagamento. Riceverai un'email di conferma.",
     "doctors_nav": "Medici",
     "book_nav": "Prenota appuntamento",

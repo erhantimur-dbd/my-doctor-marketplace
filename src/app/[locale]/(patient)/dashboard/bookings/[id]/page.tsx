@@ -31,6 +31,7 @@ import { formatSpecialtyName } from "@/lib/utils";
 import {
   BOOKING_CURRENT_DOCTOR_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
+  patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
 import { CancelBookingDialog } from "./cancel-booking-dialog";
 import { AddToCalendarButton } from "./add-to-calendar-button";
@@ -78,10 +79,10 @@ type BookingDetail = {
     consultation_fee_cents: number;
     base_currency: string;
     profile: {
-      first_name: string;
-      last_name: string;
+      first_name: string | null;
+      last_name: string | null;
       avatar_url: string | null;
-    };
+    } | null;
     location: {
       city: string;
       country_code: string;
@@ -247,25 +248,31 @@ export default async function BookingDetailPage({
   if (typedBooking.patient_id !== user.id) notFound();
 
   // Suspended / non-public doctors are hidden by doctors RLS. The booking
-  // row is still the patient's; don't crash the detail view.
-  if (!typedBooking.doctor?.profile) {
-    typedBooking.doctor = {
-      id: typedBooking.doctor_id,
-      slug: "",
-      title: null,
-      clinic_name: typedBooking.doctor?.clinic_name ?? null,
-      address: typedBooking.doctor?.address ?? null,
-      consultation_fee_cents: typedBooking.consultation_fee_cents,
-      base_currency: typedBooking.currency,
-      profile: {
-        first_name: typedBooking.doctor?.profile?.first_name || "Doctor",
-        last_name: typedBooking.doctor?.profile?.last_name || "",
-        avatar_url: typedBooking.doctor?.profile?.avatar_url ?? null,
-      },
-      location: typedBooking.doctor?.location ?? null,
-      specialties: typedBooking.doctor?.specialties ?? [],
-    };
-  }
+  // row is still the patient's. Keep a shell so the page renders, and label
+  // the doctor with patientBookingDoctorName — do not invent a first name.
+  const embeddedDoctor = (
+    Array.isArray(typedBooking.doctor)
+      ? typedBooking.doctor[0]
+      : typedBooking.doctor
+  ) as BookingDetail["doctor"] | null | undefined;
+  const embeddedProfile = Array.isArray(embeddedDoctor?.profile)
+    ? (embeddedDoctor?.profile[0] ?? null)
+    : (embeddedDoctor?.profile ?? null);
+
+  const doctor: BookingDetail["doctor"] = {
+    id: embeddedDoctor?.id || typedBooking.doctor_id,
+    slug: embeddedDoctor?.slug ?? "",
+    title: embeddedDoctor?.title ?? null,
+    clinic_name: embeddedDoctor?.clinic_name ?? null,
+    address: embeddedDoctor?.address ?? null,
+    consultation_fee_cents:
+      embeddedDoctor?.consultation_fee_cents ??
+      typedBooking.consultation_fee_cents,
+    base_currency: embeddedDoctor?.base_currency ?? typedBooking.currency,
+    profile: embeddedProfile,
+    location: embeddedDoctor?.location ?? null,
+    specialties: embeddedDoctor?.specialties ?? [],
+  };
 
   // Check if there's already a review for this booking
   const { data: existingReview } = await supabase
@@ -275,8 +282,7 @@ export default async function BookingDetailPage({
     .eq("patient_id", user.id)
     .single();
 
-  const doctor = typedBooking.doctor;
-  const doctorName = `${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
+  const doctorName = patientBookingDoctorName(doctor);
   const startDate = new Date(typedBooking.start_time);
   const endDate = new Date(typedBooking.end_time);
   const now = new Date();
@@ -381,7 +387,7 @@ export default async function BookingDetailPage({
             <CardContent>
               <div className="flex gap-4">
                 <Avatar className="h-16 w-16 shrink-0">
-                  {doctor.profile.avatar_url ? (
+                  {doctor.profile?.avatar_url ? (
                     <AvatarImage
                       src={doctor.profile.avatar_url}
                       alt={doctorName}

@@ -431,6 +431,8 @@
     "cancel_policy_strict_detail": "Strict cancellation: Full refund if cancelled more than 72 hours before the appointment.",
     "deposit_secures_info": "A {deposit} secures your appointment. The remaining {remainder} is payable directly to the doctor on the day. Deposits are fully refundable if cancelled within the cancellation period.",
     "payment_deposit_paying": "You are paying a {deposit} to secure your appointment. The remaining {remainder} is payable directly to the doctor on the day.",
+    "confirmation_payment_pending_title": "Payment still needed",
+    "payment_complete_note": "Payment received. You will receive a confirmation email with all the details.",
     "payment_confirm_note": "Your appointment will be confirmed once payment is completed. You will receive a confirmation email with all the details.",
     "doctors_nav": "Doctors",
     "book_nav": "Book Appointment",
