@@ -133,9 +133,28 @@ export function proportionalCreditTransferReversalCents(input: {
 }
 
 export type WalletCreditTransferStatus =
+  | "pending"
   | "paid"
   | "reversed"
   | "partially_reversed";
+
+/** Thrown when doctor_wallet_credit_transfers is not in the database. */
+export class WalletCreditTableMissingError extends Error {
+  readonly code: "42P01" | "PGRST205";
+
+  constructor(code: "42P01" | "PGRST205") {
+    super("doctor_wallet_credit_transfers is not available");
+    this.name = "WalletCreditTableMissingError";
+    this.code = code;
+  }
+}
+
+export function walletCreditTableMissingCode(
+  error: { code?: string } | null | undefined
+): "42P01" | "PGRST205" | null {
+  if (error?.code === "42P01" || error?.code === "PGRST205") return error.code;
+  return null;
+}
 
 export interface WalletCreditTransferRecord {
   id: string;
@@ -199,12 +218,13 @@ async function findWalletCreditTransfer(
     .eq("booking_id", bookingId)
     .maybeSingle();
   if (error) {
-    if (error.code === "42P01" || error.code === "PGRST205") {
+    const missing = walletCreditTableMissingCode(error);
+    if (missing) {
       log.error("[wallet-credit] transfer table unavailable", {
         code: error.code,
         message: error.message,
       });
-      return null;
+      throw new WalletCreditTableMissingError(missing);
     }
     throw new Error(error.message);
   }
@@ -222,6 +242,10 @@ function supabaseStore(): WalletCreditTransferStore {
         .select("*")
         .single();
       if (error) {
+        const missing = walletCreditTableMissingCode(error);
+        if (missing) {
+          throw new WalletCreditTableMissingError(missing);
+        }
         if (error.code === "23505") {
           const existing = await findWalletCreditTransfer(row.booking_id);
           if (existing) return existing;
@@ -256,9 +280,59 @@ export interface PayDoctorWalletCreditInput {
   amountCents: number;
 }
 
+function pendingTransferRow(
+  input: PayDoctorWalletCreditInput
+): Omit<WalletCreditTransferRecord, "id" | "created_at"> {
+  return {
+    booking_id: input.bookingId,
+    doctor_id: input.doctorId,
+    amount_cents: input.amountCents,
+    credit_amount_cents: input.creditAmountCents,
+    commission_cents: input.commissionCents,
+    stripe_transfer_id: null,
+    status: "pending",
+    statement_line: PAID_WITH_WALLET_CREDIT_LINE,
+    currency: input.currency.toUpperCase(),
+    reversed_cents: 0,
+    kind: WALLET_CREDIT_SHARE_KIND,
+  };
+}
+
+function transferAlreadySent(
+  row: WalletCreditTransferRecord
+): row is WalletCreditTransferRecord & { stripe_transfer_id: string } {
+  return (
+    Boolean(row.stripe_transfer_id) &&
+    (row.status === "paid" ||
+      row.status === "partially_reversed" ||
+      row.status === "reversed")
+  );
+}
+
+/**
+ * Insert the pending ledger row, or return the row already stored for
+ * this booking. Does not call Stripe. A missing table or failed insert throws.
+ */
+async function ensurePendingCreditTransfer(
+  store: WalletCreditTransferStore,
+  input: PayDoctorWalletCreditInput
+): Promise<WalletCreditTransferRecord> {
+  const existing = await store.findByBookingId(input.bookingId);
+  if (existing) return existing;
+  try {
+    return await store.insert(pendingTransferRow(input));
+  } catch (err) {
+    const again = await store.findByBookingId(input.bookingId).catch(() => null);
+    if (again) return again;
+    throw err;
+  }
+}
+
 /**
  * Transfer the doctor's share of wallet credit once per booking.
- * A second call returns the existing Stripe transfer and does not pay again.
+ * The ledger row is inserted as pending before Stripe is called. A failed
+ * transfer stays pending so a retry uses the same idempotency key.
+ * A second call that finds a paid row does not pay again.
  */
 export async function payDoctorWalletCreditShare(
   input: PayDoctorWalletCreditInput,
@@ -278,71 +352,64 @@ export async function payDoctorWalletCreditShare(
   }
 
   const store = storeOf(deps);
+  let row: WalletCreditTransferRecord;
   try {
-    const existing = await store.findByBookingId(input.bookingId);
-    if (
-      existing?.stripe_transfer_id &&
-      (existing.status === "paid" ||
-        existing.status === "partially_reversed" ||
-        existing.status === "reversed")
-    ) {
-      return {
-        ok: true,
-        transferId: existing.stripe_transfer_id,
-        alreadyPaid: true,
-      };
-    }
+    row = await ensurePendingCreditTransfer(store, input);
+  } catch (err) {
+    log.error("[wallet-credit] could not record transfer before paying", {
+      err,
+      bookingId: input.bookingId,
+    });
+    return { ok: false, error: WALLET_CREDIT_PAYOUT_FAILED_MESSAGE };
+  }
 
-    const created = await createConnectTransfer({
-      amountCents: input.amountCents,
-      currency: input.currency,
+  if (transferAlreadySent(row)) {
+    return {
+      ok: true,
+      transferId: row.stripe_transfer_id,
+      alreadyPaid: true,
+    };
+  }
+
+  let created: { transferId: string };
+  try {
+    created = await createConnectTransfer({
+      amountCents: row.amount_cents,
+      currency: row.currency,
       destinationAccountId: input.stripeAccountId,
       transferGroup: walletCreditTransferGroup(input.bookingId),
       idempotencyKey: walletCreditShareIdempotencyKey(input.bookingId),
       metadata: {
         booking_id: input.bookingId,
         booking_number: input.bookingNumber,
-        credit_amount_cents: String(input.creditAmountCents),
-        commission_cents: String(input.commissionCents),
+        credit_amount_cents: String(row.credit_amount_cents),
+        commission_cents: String(row.commission_cents),
         kind: WALLET_CREDIT_SHARE_KIND,
       },
       stripe: transferClient(deps),
     });
-
-    try {
-      await store.insert({
-        booking_id: input.bookingId,
-        doctor_id: input.doctorId,
-        amount_cents: input.amountCents,
-        credit_amount_cents: input.creditAmountCents,
-        commission_cents: input.commissionCents,
-        stripe_transfer_id: created.transferId,
-        status: "paid",
-        statement_line: PAID_WITH_WALLET_CREDIT_LINE,
-        currency: input.currency.toUpperCase(),
-        reversed_cents: 0,
-        kind: WALLET_CREDIT_SHARE_KIND,
-      });
-    } catch (insertErr) {
-      const again = await store.findByBookingId(input.bookingId);
-      if (again?.stripe_transfer_id) {
-        return {
-          ok: true,
-          transferId: again.stripe_transfer_id,
-          alreadyPaid: true,
-        };
-      }
-      throw insertErr;
-    }
-
-    return { ok: true, transferId: created.transferId, alreadyPaid: false };
   } catch (err) {
-    log.error("[wallet-credit] doctor share transfer failed", {
+    log.error("[wallet-credit] doctor share transfer failed; row left pending", {
       err,
       bookingId: input.bookingId,
     });
     return { ok: false, error: WALLET_CREDIT_PAYOUT_FAILED_MESSAGE };
   }
+
+  try {
+    await store.update(input.bookingId, {
+      status: "paid",
+      stripe_transfer_id: created.transferId,
+    });
+  } catch (err) {
+    log.error("[wallet-credit] transfer sent but row still pending", {
+      err,
+      bookingId: input.bookingId,
+      transferId: created.transferId,
+    });
+  }
+
+  return { ok: true, transferId: created.transferId, alreadyPaid: false };
 }
 
 async function bookingWalletAlreadyDebited(bookingId: string): Promise<boolean> {
@@ -358,8 +425,9 @@ async function bookingWalletAlreadyDebited(bookingId: string): Promise<boolean> 
 }
 
 /**
- * After the card payment succeeds: take the wallet credit once, then
- * transfer the doctor's share. Safe to run again for the same booking.
+ * After the card payment succeeds: reserve the ledger row, take the
+ * wallet credit once, then transfer the doctor's share. A missing table
+ * or failed insert throws before the debit. Safe to run again.
  */
 export async function settlePartCreditAfterCardPayment(
   input: {
@@ -377,6 +445,27 @@ export async function settlePartCreditAfterCardPayment(
   if (!input.stripeAccountId) {
     throw new Error(DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE);
   }
+  const share = walletCreditDoctorShare(input.creditAmountCents);
+  const credit: PayDoctorWalletCreditInput = {
+    bookingId: input.bookingId,
+    bookingNumber: input.bookingNumber,
+    doctorId: input.doctorId,
+    stripeAccountId: input.stripeAccountId,
+    currency: input.currency,
+    creditAmountCents: share.creditAmountCents,
+    commissionCents: share.commissionCents,
+    amountCents: share.amountCents,
+  };
+  try {
+    await ensurePendingCreditTransfer(storeOf(deps), credit);
+  } catch (err) {
+    log.error("[wallet-credit] part-credit ledger unavailable; wallet not debited", {
+      err,
+      bookingId: input.bookingId,
+    });
+    throw new Error(WALLET_CREDIT_PAYOUT_FAILED_MESSAGE);
+  }
+
   const already = deps?.alreadyDebited
     ? await deps.alreadyDebited(input.bookingId)
     : await bookingWalletAlreadyDebited(input.bookingId);
@@ -395,20 +484,7 @@ export async function settlePartCreditAfterCardPayment(
     }
   }
 
-  const share = walletCreditDoctorShare(input.creditAmountCents);
-  const paid = await payDoctorWalletCreditShare(
-    {
-      bookingId: input.bookingId,
-      bookingNumber: input.bookingNumber,
-      doctorId: input.doctorId,
-      stripeAccountId: input.stripeAccountId,
-      currency: input.currency,
-      creditAmountCents: share.creditAmountCents,
-      commissionCents: share.commissionCents,
-      amountCents: share.amountCents,
-    },
-    deps
-  );
+  const paid = await payDoctorWalletCreditShare(credit, deps);
   if (!paid.ok) throw new Error(paid.error);
   return { transferId: paid.transferId, alreadyPaid: paid.alreadyPaid };
 }
@@ -416,9 +492,10 @@ export async function settlePartCreditAfterCardPayment(
 type AccountsClient = Parameters<typeof doctorCanReceiveConsultCreditPayment>[0];
 
 /**
- * Full-credit confirm path. Refuses before any wallet debit when the
- * doctor cannot be paid. Transfers first; a failed debit reverses it
- * and does not confirm.
+ * Full-credit confirm path. The ledger row is reserved before any debit.
+ * The wallet is debited before the transfer. If the transfer fails, the
+ * debit is undone and the booking must not be confirmed. The row stays
+ * pending so a retry uses the same idempotency key.
  */
 export async function runFullCreditSettlement(
   input: {
@@ -426,6 +503,7 @@ export async function runFullCreditSettlement(
     accounts: AccountsClient;
     credit: Omit<PayDoctorWalletCreditInput, "stripeAccountId">;
     debit: () => Promise<void>;
+    restoreWallet: () => Promise<void>;
   },
   deps?: WalletCreditDeps
 ): Promise<
@@ -441,40 +519,52 @@ export async function runFullCreditSettlement(
   );
   if (!gate.ok) return gate;
 
-  const paid = await payDoctorWalletCreditShare(
-    { ...input.credit, stripeAccountId: input.stripeAccountId },
-    deps
-  );
-  if (!paid.ok) return paid;
+  const credit: PayDoctorWalletCreditInput = {
+    ...input.credit,
+    stripeAccountId: input.stripeAccountId,
+  };
+  const store = storeOf(deps);
+  let reserved: WalletCreditTransferRecord;
+  try {
+    reserved = await ensurePendingCreditTransfer(store, credit);
+  } catch (err) {
+    log.error("[wallet-credit] full-credit ledger unavailable; wallet not debited", {
+      err,
+      bookingId: credit.bookingId,
+    });
+    return { ok: false, error: WALLET_CREDIT_PAYOUT_FAILED_MESSAGE };
+  }
+
+  if (transferAlreadySent(reserved)) {
+    return {
+      ok: true,
+      transferId: reserved.stripe_transfer_id,
+      alreadyPaid: true,
+    };
+  }
 
   try {
     await input.debit();
   } catch (err) {
-    log.error("[wallet-credit] debit failed after doctor transfer", {
+    log.error("[wallet-credit] full-credit debit failed before transfer", {
       err,
-      bookingId: input.credit.bookingId,
-    });
-    await reverseDoctorWalletCreditShare(
-      {
-        bookingId: input.credit.bookingId,
-        refundAmountCents: input.credit.creditAmountCents,
-        paidAmountCents: input.credit.creditAmountCents,
-      },
-      deps
-    ).catch((reverseErr) => {
-      log.error("[wallet-credit] could not reverse transfer after debit failure", {
-        err: reverseErr,
-        bookingId: input.credit.bookingId,
-      });
+      bookingId: credit.bookingId,
     });
     return { ok: false, error: CREDIT_DEBIT_FAILED_MESSAGE };
   }
 
-  return {
-    ok: true,
-    transferId: paid.transferId,
-    alreadyPaid: paid.alreadyPaid,
-  };
+  const paid = await payDoctorWalletCreditShare(credit, deps);
+  if (!paid.ok) {
+    await input.restoreWallet().catch((restoreErr) => {
+      log.error("[wallet-credit] could not return wallet credit after transfer failure", {
+        err: restoreErr,
+        bookingId: credit.bookingId,
+      });
+    });
+    return paid;
+  }
+
+  return paid;
 }
 
 /**

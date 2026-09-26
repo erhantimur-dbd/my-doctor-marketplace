@@ -563,6 +563,16 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
             description: `Payment for booking ${booking.booking_number} (wallet only)`,
           });
         },
+        restoreWallet: async () => {
+          await creditWallet({
+            patientId,
+            currency: doctor.base_currency,
+            amountCents: walletCreditToApply,
+            sourceType: "refund",
+            sourceBookingId: booking.id,
+            description: `Wallet credit returned for booking ${booking.booking_number}`,
+          });
+        },
       });
       if (!fullCredit.ok) {
         await adminSupabase

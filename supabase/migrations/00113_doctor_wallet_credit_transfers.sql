@@ -21,8 +21,11 @@ CREATE TABLE public.doctor_wallet_credit_transfers (
   credit_amount_cents INT NOT NULL CHECK (credit_amount_cents > 0),
   commission_cents INT NOT NULL CHECK (commission_cents >= 0),
   stripe_transfer_id TEXT,
+  -- pending: claimed before any Stripe transfer. A failed transfer stays
+  -- pending so wallet-credit-share-{bookingId} can be retried. We do not
+  -- use a separate failed status.
   status TEXT NOT NULL CHECK (
-    status IN ('paid', 'reversed', 'partially_reversed')
+    status IN ('pending', 'paid', 'reversed', 'partially_reversed')
   ),
   statement_line TEXT NOT NULL DEFAULT 'Paid with MyDoctors360 credit',
   currency TEXT NOT NULL,
@@ -46,6 +49,8 @@ COMMENT ON COLUMN public.doctor_wallet_credit_transfers.commission_cents IS
   'Platform commission on the credit portion only, not the card portion.';
 COMMENT ON COLUMN public.doctor_wallet_credit_transfers.statement_line IS
   'Paid with MyDoctors360 credit';
+COMMENT ON COLUMN public.doctor_wallet_credit_transfers.status IS
+  'pending until Stripe accepts the transfer, then paid. A failed create leaves pending for a same-key retry. reversed and partially_reversed are refunds.';
 
 CREATE INDEX doctor_wallet_credit_transfers_doctor_created
   ON public.doctor_wallet_credit_transfers (doctor_id, created_at DESC);

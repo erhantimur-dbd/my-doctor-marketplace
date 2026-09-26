@@ -5,6 +5,7 @@ import { DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE } from "@/lib/stripe/consult-m
 import {
   PAID_WITH_WALLET_CREDIT_LINE,
   WALLET_CREDIT_SHARE_KIND,
+  WalletCreditTableMissingError,
   consultCheckoutMoney,
   payDoctorWalletCreditShare,
   proportionalCreditTransferReversalCents,
@@ -12,6 +13,7 @@ import {
   runFullCreditSettlement,
   settlePartCreditAfterCardPayment,
   walletCreditShareIdempotencyKey,
+  walletCreditTableMissingCode,
   walletCreditTransferGroup,
   type WalletCreditTransferRecord,
   type WalletCreditTransferStore,
@@ -172,6 +174,15 @@ describe("full-credit booking pays the doctor once", () => {
   it("transfers 85% with an idempotency key and stores commission", async () => {
     const store = memoryStore();
     const { stripe, creates } = stripeDouble();
+    const events: string[] = [];
+    const originalCreate = stripe.transfers.create.bind(stripe.transfers);
+    stripe.transfers.create = async (params, options) => {
+      const row = await store.findByBookingId(BOOKING_ID);
+      expect(row?.status).toBe("pending");
+      expect(row?.stripe_transfer_id).toBeNull();
+      events.push("transfer");
+      return originalCreate(params, options);
+    };
     let debited = false;
     const result = await runFullCreditSettlement(
       {
@@ -180,6 +191,10 @@ describe("full-credit booking pays the doctor once", () => {
         credit,
         debit: async () => {
           debited = true;
+          events.push("debit");
+        },
+        restoreWallet: async () => {
+          events.push("restore");
         },
       },
       { stripe, store }
@@ -191,6 +206,7 @@ describe("full-credit booking pays the doctor once", () => {
       alreadyPaid: false,
     });
     expect(debited).toBe(true);
+    expect(events).toEqual(["debit", "transfer"]);
     expect(creates).toHaveLength(1);
     expect(creates[0]?.params).toMatchObject({
       amount: 8500,
@@ -241,6 +257,183 @@ describe("full-credit booking pays the doctor once", () => {
       alreadyPaid: true,
     });
     expect(creates).toHaveLength(1);
+  });
+});
+
+describe("a transfer is never sent without a ledger row", () => {
+  const credit = {
+    bookingId: BOOKING_ID,
+    bookingNumber: "MD-100",
+    doctorId: DOCTOR_ID,
+    stripeAccountId: "acct_doc",
+    currency: "GBP",
+    creditAmountCents: 10000,
+    commissionCents: 1500,
+    amountCents: 8500,
+  };
+
+  function settlementCredit() {
+    const { stripeAccountId: _account, ...rest } = credit;
+    return rest;
+  }
+
+  it("recognises a missing transfer table", () => {
+    expect(walletCreditTableMissingCode({ code: "42P01" })).toBe("42P01");
+    expect(walletCreditTableMissingCode({ code: "PGRST205" })).toBe("PGRST205");
+    expect(walletCreditTableMissingCode({ code: "23505" })).toBeNull();
+  });
+
+  it("table missing means no transfer is created and the wallet is not debited", async () => {
+    const { stripe, creates } = stripeDouble();
+    let debited = false;
+    const store: WalletCreditTransferStore = {
+      async findByBookingId() {
+        throw new WalletCreditTableMissingError("42P01");
+      },
+      async insert() {
+        throw new WalletCreditTableMissingError("PGRST205");
+      },
+      async update() {
+        throw new Error("update should not run");
+      },
+    };
+    const paid = await payDoctorWalletCreditShare(credit, { stripe, store });
+    await expect(
+      settlePartCreditAfterCardPayment(
+        {
+          patientId: "pat-1",
+          currency: "GBP",
+          bookingId: BOOKING_ID,
+          bookingNumber: "MD-100",
+          doctorId: DOCTOR_ID,
+          stripeAccountId: "acct_doc",
+          creditAmountCents: 4000,
+          description: "Wallet credit applied to booking MD-100",
+        },
+        {
+          stripe,
+          store,
+          debit: async () => {
+            debited = true;
+          },
+        }
+      )
+    ).rejects.toThrow();
+    const settled = await runFullCreditSettlement(
+      {
+        stripeAccountId: "acct_doc",
+        accounts: accounts({ card_payments: "active", transfers: "active" }),
+        credit: settlementCredit(),
+        debit: async () => {
+          debited = true;
+        },
+        restoreWallet: async () => {
+          throw new Error("nothing to restore");
+        },
+      },
+      { stripe, store }
+    );
+    expect(paid.ok).toBe(false);
+    expect(settled.ok).toBe(false);
+    expect(debited).toBe(false);
+    expect(creates).toHaveLength(0);
+  });
+
+  it("insert fails before transfer", async () => {
+    const { stripe, creates } = stripeDouble();
+    let debited = false;
+    const store: WalletCreditTransferStore = {
+      async findByBookingId() {
+        return null;
+      },
+      async insert() {
+        throw new Error("insert failed");
+      },
+      async update() {
+        throw new Error("update should not run");
+      },
+    };
+    const paid = await payDoctorWalletCreditShare(credit, { stripe, store });
+    const settled = await runFullCreditSettlement(
+      {
+        stripeAccountId: "acct_doc",
+        accounts: accounts({ card_payments: "active", transfers: "active" }),
+        credit: settlementCredit(),
+        debit: async () => {
+          debited = true;
+        },
+        restoreWallet: async () => {},
+      },
+      { stripe, store }
+    );
+    expect(paid.ok).toBe(false);
+    expect(settled.ok).toBe(false);
+    expect(debited).toBe(false);
+    expect(creates).toHaveLength(0);
+  });
+
+  it("leaves the row pending when the transfer fails, returns the wallet credit, and does not confirm", async () => {
+    const store = memoryStore();
+    const { stripe, creates } = stripeDouble();
+    stripe.transfers.create = async () => {
+      creates.push({ params: {}, options: {} });
+      throw new Error("stripe down");
+    };
+    let restored = false;
+    const settled = await runFullCreditSettlement(
+      {
+        stripeAccountId: "acct_doc",
+        accounts: accounts({ card_payments: "active", transfers: "active" }),
+        credit: settlementCredit(),
+        debit: async () => {},
+        restoreWallet: async () => {
+          restored = true;
+        },
+      },
+      { stripe, store }
+    );
+    expect(settled.ok).toBe(false);
+    expect(restored).toBe(true);
+    expect(creates).toHaveLength(1);
+    expect(await store.findByBookingId(BOOKING_ID)).toMatchObject({
+      status: "pending",
+      stripe_transfer_id: null,
+      amount_cents: 8500,
+    });
+  });
+
+  it("resumes a pending row with the same idempotency key", async () => {
+    const store = memoryStore();
+    const { stripe, creates } = stripeDouble();
+    let fail = true;
+    stripe.transfers.create = async (params, options) => {
+      creates.push({ params, options });
+      if (fail) {
+        fail = false;
+        throw new Error("stripe down");
+      }
+      return { id: "tr_resumed" };
+    };
+    const first = await payDoctorWalletCreditShare(credit, { stripe, store });
+    expect(first.ok).toBe(false);
+    expect(await store.findByBookingId(BOOKING_ID)).toMatchObject({
+      status: "pending",
+    });
+    const second = await payDoctorWalletCreditShare(credit, { stripe, store });
+    expect(second).toEqual({
+      ok: true,
+      transferId: "tr_resumed",
+      alreadyPaid: false,
+    });
+    expect(creates).toHaveLength(2);
+    expect(creates[0]?.options).toEqual(creates[1]?.options);
+    expect(creates[0]?.options).toEqual({
+      idempotencyKey: walletCreditShareIdempotencyKey(BOOKING_ID),
+    });
+    expect(await store.findByBookingId(BOOKING_ID)).toMatchObject({
+      status: "paid",
+      stripe_transfer_id: "tr_resumed",
+    });
   });
 });
 
@@ -462,6 +655,7 @@ describe("a doctor who cannot take payments is not paid and the wallet is not de
         debit: async () => {
           debited = true;
         },
+        restoreWallet: async () => {},
       },
       { stripe, store: memoryStore() }
     );
@@ -482,6 +676,7 @@ describe("a doctor who cannot take payments is not paid and the wallet is not de
       debit: async () => {
         debited = true;
       },
+      restoreWallet: async () => {},
     });
     expect(result.ok).toBe(false);
     expect(debited).toBe(false);
@@ -489,7 +684,7 @@ describe("a doctor who cannot take payments is not paid and the wallet is not de
 });
 
 describe("credit payout is wired into consult checkout, not the other products", () => {
-  it("full-credit confirm pays before debit and does not confirm when that fails", () => {
+  it("full-credit confirm returns the wallet credit and does not confirm when settlement fails", () => {
     const booking = read("src/actions/booking.ts");
     const fn = booking.slice(
       booking.indexOf("export async function createBookingAndCheckout")
@@ -499,12 +694,15 @@ describe("credit payout is wired into consult checkout, not the other products",
       fn.indexOf("walletOnly: true")
     );
     expect(branch.indexOf("runFullCreditSettlement")).toBeGreaterThan(-1);
-    expect(branch.indexOf("runFullCreditSettlement")).toBeLessThan(
-      branch.indexOf("await debitWallet(")
-    );
-    expect(branch.indexOf("if (!fullCredit.ok)")).toBeLessThan(
+    expect(branch).toContain("await debitWallet(");
+    expect(branch).toContain("restoreWallet:");
+    expect(branch).toContain("await creditWallet(");
+    const refused = branch.slice(
+      branch.indexOf("if (!fullCredit.ok)"),
       branch.indexOf("BOOKING_STATUSES.CONFIRMED")
     );
+    expect(refused).toContain("return { error: fullCredit.error }");
+    expect(refused).not.toContain("BOOKING_STATUSES.CONFIRMED");
     expect(branch).toContain("commission_cents: checkoutMoney.commissionCents");
   });
 
