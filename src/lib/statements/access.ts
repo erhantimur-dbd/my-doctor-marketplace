@@ -14,11 +14,24 @@ import {
 
 const STATEMENT_ROW_LIMIT = 1000;
 
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
+type DoctorGate =
+  | { allowed: false; reason: "unauthenticated" | "not_doctor" | "hidden" }
+  | {
+      allowed: true;
+      supabase: SupabaseServerClient;
+      userId: string;
+      doctorId: string;
+      doctorName: string;
+      currency: string;
+    };
+
 type Viewer =
   | { allowed: false; reason: "unauthenticated" | "not_doctor" | "hidden" }
   | {
       allowed: true;
-      supabase: Awaited<ReturnType<typeof createClient>>;
+      supabase: SupabaseServerClient;
       doctorId: string;
       doctorName: string;
       currency: string;
@@ -38,7 +51,8 @@ function displayName(row: NameRow | null, fallback: string): string {
   return name || fallback;
 }
 
-export async function getActivityStatementViewer(): Promise<Viewer> {
+/** Allowlist and doctor row only. Used by the dashboard nav on every page. */
+async function getActivityStatementDoctor(): Promise<DoctorGate> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -66,12 +80,39 @@ export async function getActivityStatementViewer(): Promise<Viewer> {
   });
   if (!allowed) return { allowed: false, reason: "hidden" };
 
+  const person = displayName(profile, "");
+  return {
+    allowed: true,
+    supabase,
+    userId: user.id,
+    doctorId: doctor.id,
+    doctorName: person ? `Dr ${person}` : "Doctor",
+    currency: (doctor.base_currency || "GBP").toUpperCase(),
+  };
+}
+
+/** Nav gate. Does not look up organization membership. */
+export async function canShowActivityStatementNav(): Promise<boolean> {
+  try {
+    const doctor = await getActivityStatementDoctor();
+    return doctor.allowed;
+  } catch (err) {
+    log.error("Activity statement nav gate failed", { err });
+    return false;
+  }
+}
+
+export async function getActivityStatementViewer(): Promise<Viewer> {
+  const doctor = await getActivityStatementDoctor();
+  if (!doctor.allowed) return doctor;
+
+  const { supabase, userId } = doctor;
   let organization: { id: string; name: string } | null = null;
   let canViewOrganization = false;
   const { data: membership, error: membershipError } = await supabase
     .from("organization_members")
     .select("role, organization:organizations(id, name)")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .eq("status", "active")
     .maybeSingle();
 
@@ -87,26 +128,15 @@ export async function getActivityStatementViewer(): Promise<Viewer> {
     }
   }
 
-  const person = displayName(profile, "");
   return {
     allowed: true,
     supabase,
-    doctorId: doctor.id,
-    doctorName: person ? `Dr ${person}` : "Doctor",
-    currency: (doctor.base_currency || "GBP").toUpperCase(),
+    doctorId: doctor.doctorId,
+    doctorName: doctor.doctorName,
+    currency: doctor.currency,
     organization,
     canViewOrganization,
   };
-}
-
-export async function canViewActivityStatement(): Promise<boolean> {
-  try {
-    const viewer = await getActivityStatementViewer();
-    return viewer.allowed;
-  } catch (err) {
-    log.error("Activity statement gate failed", { err });
-    return false;
-  }
 }
 
 type BookingRow = {
@@ -128,9 +158,11 @@ type BookingRow = {
   refund_amount_cents?: number | null;
   paid_at?: string | null;
   refunded_at?: string | null;
+  doctor_id?: string | null;
   stripe_payment_intent_id?: string | null;
   reschedule_price_diff_cents?: number | null;
   reschedule_payment_status?: string | null;
+  rescheduled_from_booking_id?: string | null;
   patient?: NameRow | NameRow[] | null;
   doctor?:
     | { profile?: NameRow | NameRow[] | null }
@@ -143,6 +175,8 @@ function toSource(row: BookingRow): StatementBookingSource {
   const doctor = unwrap(row.doctor);
   const clinician = unwrap(doctor?.profile ?? null);
   return {
+    id: row.id,
+    doctorId: row.doctor_id,
     bookingNumber: row.booking_number ?? "",
     appointmentDate: row.appointment_date,
     startTime: row.start_time,
@@ -163,6 +197,7 @@ function toSource(row: BookingRow): StatementBookingSource {
     stripePaymentIntentId: row.stripe_payment_intent_id,
     reschedulePriceDiffCents: row.reschedule_price_diff_cents,
     reschedulePaymentStatus: row.reschedule_payment_status,
+    rescheduledFromBookingId: row.rescheduled_from_booking_id,
     patientFirstName: patient?.first_name,
     patientLastName: patient?.last_name,
     clinicianName: clinician ? displayName(clinician, "") : null,
@@ -256,6 +291,7 @@ export async function loadActivityStatement(input: {
     truncated,
     fallbackCurrency: viewer.currency,
     showClinician: includeClinician,
+    viewerDoctorId: viewer.doctorId,
   });
 
   return {

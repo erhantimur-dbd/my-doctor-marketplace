@@ -29,13 +29,31 @@
  * - No `stripe_payment_intent_id` (Softsmoke Connect skip, or wallet
  *   covering the whole charge) means nothing was transferred. Stored
  *   commission is not treated as money the platform took.
- * - A paid reschedule balance (`reschedule_payment_status = paid` with a
- *   positive `reschedule_price_diff_cents`) is a platform PaymentIntent
- *   without `transfer_data`. It is not a Connected Account settlement.
+ * - A dearer clinic reschedule (clinic-booking.ts Case 2) inserts a new
+ *   row with `rescheduled_from_booking_id` set and
+ *   `reschedule_payment_status = paid`. Its PaymentIntent is only the
+ *   balance and has no `transfer_data`. That row is not a Connected
+ *   Account booking: gross, platform fee, and net are 0, it is not
+ *   included in the booking count, and it is labelled "Reschedule
+ *   balance paid to MyDoctors360". The original row keeps its
+ *   destination charge. When both rows are in the statement, the
+ *   original is labelled "Rescheduled to <new ref>".
  * - Follow-up and per-visit treatment checkouts do charge 15% via
  *   `application_fee_amount` but leave `commission_cents` at the default
  *   0. When a PaymentIntent exists and both stored fee columns are 0,
  *   the statement uses that same 15% of the amount charged.
+ *
+ * Known limits:
+ *
+ * - A same-or-cheaper clinic reschedule (clinic-booking.ts Case 1) issues
+ *   a partial Stripe refund but does not write `refund_amount_cents` or
+ *   `refunded_at`. It also lowers `total_amount_cents` and moves the row
+ *   to the new doctor, so a doctor-scoped statement can misattribute
+ *   that money.
+ * - When a destination PaymentIntent exists and both `platform_fee_cents`
+ *   and `commission_cents` are 0, the platform fee is inferred as 15% of
+ *   the amount charged. Checkout is unchanged in this slice, so the
+ *   stored columns stay 0 for those payments.
  * - Refunds that reverse a destination charge use Stripe's proportional
  *   `refund_application_fee` + `reverse_transfer`: the platform fee is
  *   returned in proportion to the refund, and the rest of the refund
@@ -83,9 +101,11 @@ export const ACTIVITY_STATEMENT_BOOKING_COLUMNS = [
   "refund_amount_cents",
   "paid_at",
   "refunded_at",
+  "doctor_id",
   "stripe_payment_intent_id",
   "reschedule_price_diff_cents",
   "reschedule_payment_status",
+  "rescheduled_from_booking_id",
 ] as const;
 
 const FORBIDDEN_STATEMENT_FIELDS = [
@@ -120,7 +140,23 @@ export type StatementSettlement =
   | "no_destination_charge"
   | "reschedule_platform_charge";
 
+export const RESCHEDULE_BALANCE_LABEL = "Reschedule balance paid to MyDoctors360";
+
+export function rescheduledToLabel(newBookingNumber: string): string {
+  return `Rescheduled to ${newBookingNumber}`;
+}
+
+/** Dearer-slot clinic reschedule row. The balance was paid to MyDoctors360. */
+export function isPaidRescheduleSuccessor(booking: StatementBookingSource): boolean {
+  return (
+    Boolean((booking.rescheduledFromBookingId ?? "").trim()) &&
+    booking.reschedulePaymentStatus === "paid"
+  );
+}
+
 export interface StatementBookingSource {
+  id?: string | null;
+  doctorId?: string | null;
   bookingNumber: string;
   appointmentDate?: string | null;
   startTime?: string | null;
@@ -141,6 +177,7 @@ export interface StatementBookingSource {
   stripePaymentIntentId?: string | null;
   reschedulePriceDiffCents?: number | null;
   reschedulePaymentStatus?: string | null;
+  rescheduledFromBookingId?: string | null;
   patientFirstName?: string | null;
   patientLastName?: string | null;
   clinicianName?: string | null;
@@ -389,13 +426,9 @@ export function settleBookingFees(booking: StatementBookingSource): FeeSettlemen
   const gross = grossConsultCents(booking);
   const hasPaymentIntent = Boolean((booking.stripePaymentIntentId ?? "").trim());
 
-  if (
-    hasPaymentIntent &&
-    booking.reschedulePaymentStatus === "paid" &&
-    nonNeg(booking.reschedulePriceDiffCents) > 0
-  ) {
+  if (isPaidRescheduleSuccessor(booking)) {
     return {
-      grossConsultCents: gross,
+      grossConsultCents: 0,
       stripeChargeCents: 0,
       platformFeeCents: 0,
       connectedAccountCents: 0,
@@ -469,9 +502,6 @@ export function allocateRefund(
 
 function settlementLabel(settlement: StatementSettlement): string | null {
   if (settlement === "no_destination_charge") return "No Stripe transfer";
-  if (settlement === "reschedule_platform_charge") {
-    return "Reschedule balance was not transferred to the Connected Account";
-  }
   return null;
 }
 
@@ -514,19 +544,42 @@ export function buildActivityStatement(input: {
   truncated?: boolean;
   fallbackCurrency?: string;
   showClinician?: boolean;
+  /** When set, patient names are shown only on this doctor's own rows. */
+  viewerDoctorId?: string | null;
 }): ActivityStatement {
   const { start, end } = londonMonthBounds(input.year, input.month);
   const lines: ActivityStatementLine[] = [];
+  const viewerDoctorId = (input.viewerDoctorId ?? "").trim();
+  const successorRefByOriginalId = new Map<string, string>();
+  for (const booking of input.bookings) {
+    if (!isPaidRescheduleSuccessor(booking)) continue;
+    const originalId = (booking.rescheduledFromBookingId ?? "").trim();
+    const ref = (booking.bookingNumber ?? "").trim();
+    if (originalId && ref && !successorRefByOriginalId.has(originalId)) {
+      successorRefByOriginalId.set(originalId, ref);
+    }
+  }
 
   for (const booking of input.bookings) {
     const bookingNumber = (booking.bookingNumber ?? "").trim() || "Booking";
     const currency = (booking.currency ?? input.fallbackCurrency ?? "GBP").toUpperCase();
+    const balancePaidToPlatform = isPaidRescheduleSuccessor(booking);
     const settlement = settleBookingFees(booking);
-    const patientLabel = statementPatientLabel(
-      booking.patientFirstName,
-      booking.patientLastName,
-      bookingNumber
-    );
+    const rowDoctorId = (booking.doctorId ?? "").trim();
+    const patientLabel =
+      viewerDoctorId && rowDoctorId !== viewerDoctorId
+        ? bookingNumber
+        : statementPatientLabel(
+            booking.patientFirstName,
+            booking.patientLastName,
+            bookingNumber
+          );
+    const successorRef = successorRefByOriginalId.get((booking.id ?? "").trim());
+    const bookingStatusLabel = balancePaidToPlatform
+      ? RESCHEDULE_BALANCE_LABEL
+      : successorRef
+        ? rescheduledToLabel(successorRef)
+        : statementStatusLabel(booking.status);
     let service = statementServiceLabel(booking.serviceName, booking.consultationType);
     const clinician = (booking.clinicianName ?? "").trim();
     if (input.showClinician && clinician) {
@@ -548,8 +601,10 @@ export function buildActivityStatement(input: {
         patientLabel,
         serviceLabel: service,
         appointmentLabel: appointment,
-        statusLabel: statementStatusLabel(booking.status),
-        settlementLabel: settlementLabel(settlement.settlement),
+        statusLabel: bookingStatusLabel,
+        settlementLabel: balancePaidToPlatform
+          ? null
+          : settlementLabel(settlement.settlement),
         currency,
         grossConsultCents: settlement.grossConsultCents,
         connectedAccountCents: settlement.connectedAccountCents,
@@ -592,7 +647,7 @@ export function buildActivityStatement(input: {
   const totalsByCurrency = new Map<string, ActivityStatementTotals>();
   for (const line of lines) {
     const totals = totalsByCurrency.get(line.currency) ?? emptyTotals(line.currency);
-    if (line.kind === "booking") {
+    if (line.kind === "booking" && line.statusLabel !== RESCHEDULE_BALANCE_LABEL) {
       totals.bookingsCount += 1;
       totals.grossConsultCents += line.grossConsultCents;
     }

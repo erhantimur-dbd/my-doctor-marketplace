@@ -79,7 +79,7 @@ export function renderActivityStatementBody(statement: ActivityStatement): strin
   const table =
     statement.lines.length === 0
       ? "<p>No bookings or refunds in this month.</p>"
-      : `<table style="width:100%;border-collapse:collapse;font-size:14px">
+      : `<div style="max-width:100%;overflow-x:auto"><table style="width:max-content;min-width:100%;border-collapse:collapse;font-size:14px">
           <thead><tr>${HEADINGS.map((heading) => {
             const align =
               heading === "Connected Account" ||
@@ -90,7 +90,7 @@ export function renderActivityStatementBody(statement: ActivityStatement): strin
             return `<th scope="col" style="text-align:${align};padding:8px;border-bottom:2px solid #1c1917;font-weight:650;vertical-align:bottom">${heading}</th>`;
           }).join("")}</tr></thead>
           <tbody>${statement.lines.map(lineRow).join("")}</tbody>
-        </table>`;
+        </table></div>`;
   const clinicNote =
     statement.scopeLabel === "This clinic"
       ? "<p>Patient names are shown for your own bookings. Bookings with other clinicians in the clinic are listed by booking reference.</p>"

@@ -10,14 +10,14 @@ import {
   doctorSidebarLinks,
   withActivityStatementLink,
 } from "@/lib/constants/sidebar-links";
-import { canViewActivityStatement } from "@/lib/statements/access";
+import { canShowActivityStatementNav } from "@/lib/statements/access";
 
 export default async function DoctorLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const showActivityStatement = await canViewActivityStatement();
+  const showActivityStatement = await canShowActivityStatementNav();
   const links = showActivityStatement
     ? withActivityStatementLink(doctorSidebarLinks)
     : doctorSidebarLinks;

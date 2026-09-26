@@ -13,6 +13,7 @@ import {
   ACTIVITY_STATEMENT_FOOTER,
   ACTIVITY_STATEMENT_HREF,
   ACTIVITY_STATEMENT_TITLE,
+  RESCHEDULE_BALANCE_LABEL,
   activityStatementSelect,
   allocateRefund,
   assertActivityStatementSelectIsSafe,
@@ -203,9 +204,10 @@ describe("fee settlement", () => {
     expect(settled.grossConsultCents).toBe(4000);
   });
 
-  it("does not treat a reschedule balance as a Connected Account transfer", () => {
+  it("zeroes a paid dearer-slot reschedule successor", () => {
     const settled = settleBookingFees(
       booking({
+        rescheduledFromBookingId: "booking-original",
         reschedulePaymentStatus: "paid",
         reschedulePriceDiffCents: 1500,
         totalAmountCents: 5500,
@@ -214,8 +216,22 @@ describe("fee settlement", () => {
       })
     );
     expect(settled.settlement).toBe("reschedule_platform_charge");
+    expect(settled.grossConsultCents).toBe(0);
     expect(settled.connectedAccountCents).toBe(0);
     expect(settled.platformFeeCents).toBe(0);
+  });
+
+  it("keeps the destination charge on a same-or-cheaper reschedule", () => {
+    const settled = settleBookingFees(
+      booking({
+        rescheduledFromBookingId: "booking-original",
+        reschedulePaymentStatus: "not_required",
+        reschedulePriceDiffCents: -500,
+      })
+    );
+    expect(settled.settlement).toBe("destination_charge");
+    expect(settled.connectedAccountCents).toBe(3400);
+    expect(settled.grossConsultCents).toBe(4000);
   });
 });
 
@@ -384,6 +400,93 @@ describe("buildActivityStatement", () => {
     });
   });
 
+  it("counts the original destination charge once when a dearer slot is rescheduled", () => {
+    const original = booking({
+      id: "booking-original",
+      bookingNumber: "BK-100",
+      status: "cancelled_doctor",
+      paidAt: "2026-09-10T09:00:00.000Z",
+      stripePaymentIntentId: "pi_original",
+    });
+    const successor = booking({
+      id: "booking-successor",
+      bookingNumber: "BK-100-R",
+      status: "confirmed",
+      paidAt: "2026-09-12T09:00:00.000Z",
+      consultationFeeCents: 5500,
+      totalAmountCents: 5500,
+      commissionCents: 0,
+      platformFeeCents: 0,
+      reschedulePriceDiffCents: 1500,
+      reschedulePaymentStatus: "paid",
+      rescheduledFromBookingId: "booking-original",
+      stripePaymentIntentId: "pi_balance",
+    });
+    const statement = buildActivityStatement({
+      year: 2026,
+      month: 9,
+      bookings: [successor, original],
+      payeeName: "Dr Vera Softsmoke",
+      scopeLabel: "This doctor",
+      now,
+    });
+
+    expect(statement.lines).toHaveLength(2);
+    expect(statement.lines.find((line) => line.bookingNumber === "BK-100")).toMatchObject({
+      statusLabel: "Rescheduled to BK-100-R",
+      grossConsultCents: 4000,
+      platformFeeCents: 600,
+      connectedAccountCents: 3400,
+    });
+    expect(statement.lines.find((line) => line.bookingNumber === "BK-100-R")).toMatchObject({
+      statusLabel: RESCHEDULE_BALANCE_LABEL,
+      grossConsultCents: 0,
+      platformFeeCents: 0,
+      connectedAccountCents: 0,
+      refundAmountCents: 0,
+    });
+    expect(statement.totals[0]).toMatchObject({
+      bookingsCount: 1,
+      grossConsultCents: 4000,
+      refundsCents: 0,
+      platformFeeCents: 600,
+      netConnectedAccountCents: 3400,
+    });
+  });
+
+  it("shows a patient name only for the viewing doctor's own bookings", () => {
+    const statement = buildActivityStatement({
+      year: 2026,
+      month: 9,
+      viewerDoctorId: "doctor-viewer",
+      bookings: [
+        booking({
+          doctorId: "doctor-viewer",
+          bookingNumber: "BK-MINE",
+          patientFirstName: "Amelia",
+          patientLastName: "Chen",
+        }),
+        booking({
+          doctorId: "doctor-colleague",
+          bookingNumber: "BK-OTHER",
+          patientFirstName: "Amelia",
+          patientLastName: "Chen",
+        }),
+      ],
+      payeeName: "Softsmoke Clinic",
+      scopeLabel: "This clinic",
+      now,
+    });
+
+    expect(statement.lines.find((line) => line.bookingNumber === "BK-MINE")?.patientLabel).toBe(
+      "Amelia C."
+    );
+    const other = statement.lines.find((line) => line.bookingNumber === "BK-OTHER");
+    expect(other?.patientLabel).toBe("BK-OTHER");
+    expect(other?.patientLabel).not.toContain("Chen");
+    expect(other?.patientLabel).not.toContain("Amelia");
+  });
+
   it("uses the booking reference when the patient name is missing", () => {
     expect(statementPatientLabel(null, null, "BK-1")).toBe("BK-1");
     expect(statementPatientLabel("Amelia", null, "BK-1")).toBe("Amelia");
@@ -405,6 +508,9 @@ describe("buildActivityStatement", () => {
       expect(select.toLowerCase()).not.toContain(field);
     }
     expect(select).toContain("first_name, last_name");
+    expect(select).toContain("doctor_id");
+    expect(select).toContain("rescheduled_from_booking_id");
+    expect(select).toContain("reschedule_payment_status");
     expect(select).not.toContain("email");
   });
 });
@@ -454,6 +560,7 @@ describe("rendered statement", () => {
     expect(html).not.toContain("Chen");
     expect(html.toLowerCase()).not.toMatch(/\binvoice\b|\breceipt\b/);
     expect(html).not.toMatch(/patient_notes|doctor_notes|visit_summary/);
+    expect(html).toContain("overflow-x:auto");
   });
 });
 
@@ -480,6 +587,23 @@ describe("data access", () => {
     }
     expect(access).toContain("isSoftLaunchSoftsmokeDoctor");
     expect(access).toContain('.eq("doctor_id"');
+    expect(access).toContain("viewerDoctorId: viewer.doctorId");
+
+    const layout = readFileSync(
+      join(process.cwd(), "src/app/[locale]/(doctor)/layout.tsx"),
+      "utf8"
+    );
+    expect(layout).toContain("canShowActivityStatementNav");
+    expect(layout).not.toContain("canViewActivityStatement");
+    const navGate = access.slice(
+      access.indexOf("export async function canShowActivityStatementNav"),
+      access.indexOf("export async function getActivityStatementViewer")
+    );
+    expect(navGate).toContain("getActivityStatementDoctor");
+    expect(navGate).not.toContain("organization_members");
+    expect(access.slice(access.indexOf("export async function getActivityStatementViewer"))).toContain(
+      "organization_members"
+    );
   });
 });
 
