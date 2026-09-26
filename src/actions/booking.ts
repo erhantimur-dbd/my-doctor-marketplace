@@ -607,6 +607,20 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       cancel_url: `${origin}/${locale}/doctors/${doctor.slug}`,
     });
 
+    // Webhook still confirms via metadata.booking_id. Store the session id
+    // before returning the URL. Admin client: patient RLS cannot UPDATE bookings.
+    const { error: sessionPersistError } = await adminSupabase
+      .from("bookings")
+      .update({ stripe_checkout_session_id: session.id })
+      .eq("id", booking.id);
+
+    if (sessionPersistError) {
+      log.error("Failed to persist stripe_checkout_session_id", {
+        err: sessionPersistError,
+        bookingId: booking.id,
+      });
+    }
+
     return { url: session.url };
   } catch (err) {
     log.error("createBookingAndCheckout error:", { err: err });

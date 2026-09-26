@@ -28,7 +28,9 @@ export const COMING_SOON_ALLOWED_PREFIXES = [
   // Authenticated Soft Launch Soft CTA patient surfaces (bookings, video-room).
   // Marketplace chrome stays dark — do not add /doctors, /specialties, /find.
   // Book deep-link `/doctors/:slug/book` is a path matcher, not a prefix.
+  // Checkout success and wallet/booking_id confirmation (not a marketplace listing).
   "/dashboard",
+  "/booking-confirmation",
   "/verify-email",
   "/verify-mfa",
   "/forgot-password",
