@@ -9,6 +9,9 @@ import {
 /**
  * Softsmoke activity-statement sheet. Screen and download share this CSS
  * and markup. No web fonts. The action cell stays empty.
+ *
+ * The band and the closing note are divs. The app print stylesheet hides
+ * every header and footer element, which removed both of these blocks.
  */
 const ACTIVITY_STATEMENT_CSS = `
 :root {
@@ -160,6 +163,21 @@ html { -webkit-text-size-adjust: 100%; }
 @page { size: A4; margin: 12mm; }
 @media print {
   html, body, .md360-statement-page { background: #fff !important; }
+  .md360-statement-page, .md360-statement-page * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .brand, .foot { display: block !important; }
+  .brand {
+    background-color: #0B6BCB !important;
+    background-image: linear-gradient(90deg, #0B6BCB 0%, #14B8A6 100%) !important;
+    color: #fff !important;
+  }
+  .brand__wordmark, .brand__tagline { color: #fff !important; }
+  .brand__tagline { color: rgba(255,255,255,0.90) !important; }
+  .totals__grid { background-color: #f3f4f6 !important; }
+  .lines__table th { background-color: #f9fafb !important; }
+  .foot { background-color: #f9fafb !important; }
   body, .md360-statement-page { padding: 0; font-size: 10px; line-height: 1.3; }
   .sheet { max-width: none; border: 0; border-radius: 0; overflow: visible; }
   .brand { padding: 12px 16px 11px; border-radius: 6px; }
@@ -309,11 +327,11 @@ function statementArticle(statement: ActivityStatement): string {
       : "";
 
   return `<article class="sheet" data-testid="activity-statement">
-  <header class="brand">
+  <div class="brand">
     <p class="brand__wordmark">MyDoctors360</p>
     <p class="brand__tagline">Where Patients Meet the Right Doctor</p>
     <div class="brand__hairline" aria-hidden="true"></div>
-  </header>
+  </div>
   <div class="content">
     <section class="title-block" aria-labelledby="st-title">
       <div class="title-block__main">
@@ -333,11 +351,11 @@ function statementArticle(statement: ActivityStatement): string {
       ${table}
     </section>
   </div>
-  <footer class="foot">
+  <div class="foot">
     <p class="foot__note">${esc(statement.figuresNote)}</p>
     ${clinicNote}
     <p class="foot__legal">${esc(statement.footer)}</p>
-  </footer>
+  </div>
 </article>`;
 }
 

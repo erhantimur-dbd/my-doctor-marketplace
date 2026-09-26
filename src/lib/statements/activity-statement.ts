@@ -234,6 +234,17 @@ export interface ActivityStatementLine {
   connectedAccountCents: number;
   platformFeeCents: number;
   refundAmountCents: number;
+  /**
+   * Drop this line from every total. Set for an older platform reschedule
+   * balance, whose money already sits on the original row. Display labels
+   * are never read.
+   */
+  excludeFromTotals: boolean;
+  /**
+   * A destination-charge reschedule balance adds its price difference to
+   * the money totals and is not a second booking.
+   */
+  countsAsBooking: boolean;
 }
 
 export interface ActivityStatementTotals {
@@ -573,6 +584,34 @@ function emptyTotals(currency: string): ActivityStatementTotals {
   };
 }
 
+/**
+ * Totals never read a display label. `excludeFromTotals` drops the line.
+ * `countsAsBooking` decides the booking count only.
+ */
+export function accumulateActivityStatementTotals(
+  lines: ActivityStatementLine[],
+  fallbackCurrency = "GBP"
+): ActivityStatementTotals[] {
+  const totalsByCurrency = new Map<string, ActivityStatementTotals>();
+  for (const line of lines) {
+    if (line.excludeFromTotals) continue;
+    const totals = totalsByCurrency.get(line.currency) ?? emptyTotals(line.currency);
+    if (line.kind === "booking") {
+      if (line.countsAsBooking) totals.bookingsCount += 1;
+      totals.grossConsultCents += line.grossConsultCents;
+    }
+    totals.refundsCents += line.refundAmountCents;
+    totals.platformFeeCents += line.platformFeeCents;
+    totals.netConnectedAccountCents += line.connectedAccountCents;
+    totalsByCurrency.set(line.currency, totals);
+  }
+  if (totalsByCurrency.size === 0) {
+    const currency = fallbackCurrency.toUpperCase() || "GBP";
+    totalsByCurrency.set(currency, emptyTotals(currency));
+  }
+  return [...totalsByCurrency.values()];
+}
+
 export function buildActivityStatement(input: {
   year: number;
   month: number;
@@ -652,6 +691,8 @@ export function buildActivityStatement(input: {
         connectedAccountCents: settlement.connectedAccountCents,
         platformFeeCents: settlement.platformFeeCents,
         refundAmountCents: 0,
+        excludeFromTotals: legacyBalance,
+        countsAsBooking: !doctorBalance,
       });
     }
 
@@ -674,6 +715,8 @@ export function buildActivityStatement(input: {
         connectedAccountCents: -refund.transferReversedCents,
         platformFeeCents: -refund.platformFeeReturnedCents,
         refundAmountCents: refund.refundCents,
+        excludeFromTotals: legacyBalance,
+        countsAsBooking: false,
       });
     }
   }
@@ -686,26 +729,6 @@ export function buildActivityStatement(input: {
     return a.kind === b.kind ? 0 : a.kind === "booking" ? -1 : 1;
   });
 
-  const totalsByCurrency = new Map<string, ActivityStatementTotals>();
-  for (const line of lines) {
-    const totals = totalsByCurrency.get(line.currency) ?? emptyTotals(line.currency);
-    if (line.kind === "booking" && line.statusLabel !== RESCHEDULE_BALANCE_LABEL) {
-      if (line.statusLabel !== RESCHEDULE_BALANCE_DOCTOR_LABEL) {
-        totals.bookingsCount += 1;
-      }
-      totals.grossConsultCents += line.grossConsultCents;
-    }
-    totals.refundsCents += line.refundAmountCents;
-    totals.platformFeeCents += line.platformFeeCents;
-    totals.netConnectedAccountCents += line.connectedAccountCents;
-    totalsByCurrency.set(line.currency, totals);
-  }
-
-  if (totalsByCurrency.size === 0) {
-    const currency = (input.fallbackCurrency ?? "GBP").toUpperCase();
-    totalsByCurrency.set(currency, emptyTotals(currency));
-  }
-
   const now = input.now ?? new Date();
   return {
     title: ACTIVITY_STATEMENT_TITLE,
@@ -715,7 +738,7 @@ export function buildActivityStatement(input: {
     scopeLabel: input.scopeLabel,
     generatedLabel: formatEmailDateTime(now.toISOString(), STATEMENT_TIME_ZONE),
     lines,
-    totals: [...totalsByCurrency.values()],
+    totals: accumulateActivityStatementTotals(lines, input.fallbackCurrency ?? "GBP"),
     truncated: Boolean(input.truncated),
     footer: ACTIVITY_STATEMENT_FOOTER,
     figuresNote: ACTIVITY_STATEMENT_FIGURES_NOTE,

@@ -15,6 +15,7 @@ import {
   ACTIVITY_STATEMENT_TITLE,
   RESCHEDULE_BALANCE_DOCTOR_LABEL,
   RESCHEDULE_BALANCE_LABEL,
+  accumulateActivityStatementTotals,
   activityStatementSelect,
   allocateRefund,
   assertActivityStatementSelectIsSafe,
@@ -475,6 +476,85 @@ describe("buildActivityStatement", () => {
     });
   });
 
+  it("excludes a paid reschedule successor from totals by flag, not by label", () => {
+    const statement = buildActivityStatement({
+      year: 2026,
+      month: 9,
+      bookings: [
+        booking({ bookingNumber: "BK-ORD", paidAt: "2026-09-10T09:00:00.000Z" }),
+        booking({
+          id: "booking-successor",
+          bookingNumber: "BK-100-R",
+          paidAt: "2026-09-12T09:00:00.000Z",
+          consultationFeeCents: 5500,
+          totalAmountCents: 5500,
+          commissionCents: 0,
+          platformFeeCents: 0,
+          reschedulePaymentStatus: "paid",
+          rescheduledFromBookingId: "booking-original",
+          stripePaymentIntentId: "pi_balance",
+        }),
+      ],
+      payeeName: "Dr Vera Softsmoke",
+      scopeLabel: "This doctor",
+      now,
+    });
+
+    const ordinary = statement.lines.find((line) => line.bookingNumber === "BK-ORD");
+    const successor = statement.lines.find((line) => line.bookingNumber === "BK-100-R");
+    expect(ordinary?.excludeFromTotals).toBe(false);
+    expect(successor?.excludeFromTotals).toBe(true);
+
+    const source = readFileSync(
+      join(process.cwd(), "src/lib/statements/activity-statement.ts"),
+      "utf8"
+    );
+    const totalsFn = source.slice(
+      source.indexOf("export function accumulateActivityStatementTotals"),
+      source.indexOf("export function buildActivityStatement")
+    );
+    expect(totalsFn).toContain("line.excludeFromTotals");
+    expect(totalsFn).toContain("line.countsAsBooking");
+    expect(totalsFn).not.toContain("statusLabel");
+    expect(totalsFn).not.toContain("RESCHEDULE_BALANCE");
+    expect(statement.totals[0]).toMatchObject({
+      bookingsCount: 1,
+      grossConsultCents: 4000,
+      refundsCents: 0,
+      platformFeeCents: 600,
+      netConnectedAccountCents: 3400,
+    });
+
+    const relabeled = statement.lines.map((line) => ({
+      ...line,
+      statusLabel: "Balance received",
+    }));
+    expect(accumulateActivityStatementTotals(relabeled)).toEqual(statement.totals);
+
+    const successorWithMoney = {
+      ...successor!,
+      statusLabel: "Balance received",
+      grossConsultCents: 5500,
+      platformFeeCents: 825,
+      connectedAccountCents: 4675,
+      refundAmountCents: 100,
+    };
+    expect(
+      accumulateActivityStatementTotals([ordinary!, successorWithMoney])
+    ).toEqual(statement.totals);
+    expect(
+      accumulateActivityStatementTotals([
+        { ...successorWithMoney, excludeFromTotals: false },
+      ])[0]
+    ).toMatchObject({
+      bookingsCount: 1,
+      grossConsultCents: 5500,
+      platformFeeCents: 825,
+      netConnectedAccountCents: 4675,
+      refundsCents: 100,
+    });
+  });
+
   it("shows a destination reschedule balance as the doctor's line without counting the original twice", () => {
     const original = booking({
       id: "booking-original",
@@ -507,18 +587,24 @@ describe("buildActivityStatement", () => {
     });
 
     expect(statement.lines).toHaveLength(2);
-    expect(statement.lines.find((line) => line.bookingNumber === "BK-100")).toMatchObject({
+    const originalLine = statement.lines.find((line) => line.bookingNumber === "BK-100");
+    const balanceLine = statement.lines.find((line) => line.bookingNumber === "BK-100-R");
+    expect(originalLine).toMatchObject({
       statusLabel: "Rescheduled to BK-100-R",
       grossConsultCents: 4000,
       platformFeeCents: 600,
       connectedAccountCents: 3400,
+      excludeFromTotals: false,
+      countsAsBooking: true,
     });
-    expect(statement.lines.find((line) => line.bookingNumber === "BK-100-R")).toMatchObject({
+    expect(balanceLine).toMatchObject({
       statusLabel: RESCHEDULE_BALANCE_DOCTOR_LABEL,
       grossConsultCents: 1500,
       platformFeeCents: 225,
       connectedAccountCents: 1275,
       refundAmountCents: 0,
+      excludeFromTotals: false,
+      countsAsBooking: false,
     });
     expect(RESCHEDULE_BALANCE_DOCTOR_LABEL).toBe("Reschedule balance");
     expect(statement.lines.map((line) => line.statusLabel).join(" ")).not.toMatch(
@@ -530,6 +616,24 @@ describe("buildActivityStatement", () => {
       refundsCents: 0,
       platformFeeCents: 825,
       netConnectedAccountCents: 4675,
+    });
+
+    const relabeled = statement.lines.map((line) => ({
+      ...line,
+      statusLabel: RESCHEDULE_BALANCE_LABEL,
+    }));
+    expect(accumulateActivityStatementTotals(relabeled)).toEqual(statement.totals);
+
+    const hidden = statement.lines.map((line) =>
+      line.bookingNumber === "BK-100-R"
+        ? { ...line, excludeFromTotals: true }
+        : line
+    );
+    expect(accumulateActivityStatementTotals(hidden)[0]).toMatchObject({
+      bookingsCount: 1,
+      grossConsultCents: 4000,
+      platformFeeCents: 600,
+      netConnectedAccountCents: 3400,
     });
   });
 
@@ -642,6 +746,15 @@ describe("rendered statement", () => {
     expect(html).toContain('<span class="d">Saturday 26 September 2026</span><span class="t">9:00am BST</span>');
     expect(html).toContain("max-width: 860px");
     expect(html).toContain('<table class="lines__table">');
+    expect(html).toContain('<div class="brand">');
+    expect(html).toContain('<div class="foot">');
+    expect(html).not.toMatch(/<header[\s>]/);
+    expect(html).not.toMatch(/<footer[\s>]/);
+    expect(html).toContain("print-color-adjust: exact !important");
+    expect(html).toContain("background-color: #0B6BCB !important");
+    expect(html).toContain("background-color: #f3f4f6 !important");
+    expect(html).toContain("background-color: #f9fafb !important");
+    expect(html).toContain(".col-action { display: none !important");
     expect(html).not.toMatch(/<button/i);
     expect(html.toLowerCase()).not.toMatch(/\bbill\b/);
   });
