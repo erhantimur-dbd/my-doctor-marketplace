@@ -7,6 +7,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectAndNotifyConflicts } from "@/lib/calendar-sync-utils";
 import {
+  buildBusyOverride,
+  getDoctorLocationTimezone,
+  replaceCalendarSyncOverrides,
+  wallClockInTimeZone,
+  type CalendarSyncOverride,
+} from "@/lib/calendar/import-overrides";
+import {
   getValidAccessToken,
   listEvents,
   createEvent,
@@ -15,8 +22,13 @@ import {
   type GoogleTokens,
 } from "./calendar";
 import { log } from "@/lib/utils/logger";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 
 const SYNC_DAYS_AHEAD = 30;
+const SYNC_REASON = "google_calendar_sync";
 
 interface CalendarConnection {
   id: string;
@@ -94,58 +106,39 @@ export async function importGoogleCalendarEvents(
       timeMax
     );
 
-    // Remove old google_calendar_sync overrides for this doctor (for upcoming dates only)
-    const todayStr = now.toISOString().split("T")[0];
-    await supabase
-      .from("availability_overrides")
-      .delete()
-      .eq("doctor_id", doctorId)
-      .eq("reason", "google_calendar_sync")
-      .gte("override_date", todayStr);
+    const timeZone = await getDoctorLocationTimezone(supabase, doctorId);
+    const todayStr = wallClockInTimeZone(now, timeZone).date;
 
-    // Group events by date and create overrides for each busy period
-    const overrides: {
-      doctor_id: string;
-      override_date: string;
-      is_available: boolean;
-      start_time: string;
-      end_time: string;
-      reason: string;
-    }[] = [];
-
+    const overrides: CalendarSyncOverride[] = [];
     for (const event of events) {
       if (!event.start.dateTime || !event.end.dateTime) continue; // Skip all-day events
 
-      const startDt = new Date(event.start.dateTime);
-      const endDt = new Date(event.end.dateTime);
-      const dateStr = startDt.toISOString().split("T")[0];
-      const startTime = startDt.toTimeString().substring(0, 5); // "HH:MM"
-      const endTime = endDt.toTimeString().substring(0, 5);
-
-      overrides.push({
-        doctor_id: doctorId,
-        override_date: dateStr,
-        is_available: false,
-        start_time: startTime,
-        end_time: endTime,
-        reason: "google_calendar_sync",
-      });
+      overrides.push(
+        buildBusyOverride({
+          doctorId,
+          start: event.start.dateTime,
+          end: event.end.dateTime,
+          timeZone,
+          reason: SYNC_REASON,
+        })
+      );
     }
 
-    // Batch insert overrides
-    if (overrides.length > 0) {
-      const { error: insertError } = await supabase
-        .from("availability_overrides")
-        .insert(overrides);
+    const replaced = await replaceCalendarSyncOverrides({
+      supabase,
+      doctorId,
+      reason: SYNC_REASON,
+      overrides,
+      fromDate: todayStr,
+    });
 
-      if (insertError) {
-        log.error("Failed to insert overrides:", { err: insertError });
-        return {
-          success: false,
-          eventsProcessed: 0,
-          error: `Failed to create availability overrides: ${insertError.message}`,
-        };
-      }
+    if (replaced.error) {
+      log.error("Failed to replace Google overrides:", { err: replaced.error });
+      return {
+        success: false,
+        eventsProcessed: 0,
+        error: `Failed to create availability overrides: ${replaced.error}`,
+      };
     }
 
     // Check for conflicts with existing bookings
@@ -195,9 +188,9 @@ export async function exportBookingToGoogleCalendar(
       google_event_id,
       doctor_id,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name),
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name),
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name),
         location:locations(timezone)
       )
     `

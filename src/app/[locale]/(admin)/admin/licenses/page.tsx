@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,18 +14,7 @@ import { Link } from "@/i18n/navigation";
 import { LICENSE_TIERS, EXTRA_SEAT_PRICE_PENCE, formatPrice } from "@/lib/constants/license-tiers";
 
 export default async function AdminLicensesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/en/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") redirect("/en");
+  const { supabase } = await requireAdminPage();
 
   const { data: licenses } = await supabase
     .from("licenses")

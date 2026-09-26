@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { getTicketDetail } from "@/actions/support";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +37,7 @@ export default async function AdminTicketDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireAdminPage();
   const { id: ticketId } = await params;
   const result = await getTicketDetail(ticketId);
 

@@ -1,3 +1,4 @@
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { getAdminTickets, getAdminTicketStats } from "@/actions/support";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +52,7 @@ export default async function AdminSupportPage({
     priority?: string;
   }>;
 }) {
+  await requireAdminPage();
   const { q, status, category, priority } = await searchParams;
 
   const [{ tickets }, stats] = await Promise.all([

@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import {
   Card,
   CardContent,
@@ -51,18 +50,7 @@ export default async function AdminBookingsPage({
   const tab: TabKey =
     rawTab === "past" || rawTab === "all" ? rawTab : "upcoming";
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/en/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") redirect("/en");
+  const { supabase } = await requireAdminPage();
 
   const today = new Date().toISOString().split("T")[0];
 

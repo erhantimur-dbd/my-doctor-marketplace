@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -43,18 +43,7 @@ export default async function AdminBookingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/en/login");
-
-  const { data: adminProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (adminProfile?.role !== "admin") redirect("/en");
+  const { supabase } = await requireAdminPage();
 
   const { data: bookingData } = await supabase
     .from("bookings")

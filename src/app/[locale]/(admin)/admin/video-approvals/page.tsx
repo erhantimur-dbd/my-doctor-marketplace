@@ -1,21 +1,9 @@
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { VideoApprovalsClient } from "./video-approvals-client";
 
 export default async function AdminVideoApprovalsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") redirect("/");
+  await requireAdminPage();
 
   const admin = createAdminClient();
   const { data: pending } = await admin
