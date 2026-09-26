@@ -31,7 +31,7 @@ export type SystemActor = {
 };
 
 export function configuredAuditSystemActorId(
-  env: NodeJS.ProcessEnv = process.env
+  env: Record<string, string | undefined> = process.env
 ): string | null {
   const raw = env[AUDIT_SYSTEM_ACTOR_ENV]?.trim() ?? "";
   if (!ACTOR_ID_RE.test(raw)) return null;
