@@ -7,6 +7,10 @@ import { requireOrgMember } from "./organization";
 import { getStripe } from "@/lib/stripe/client";
 import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
 import {
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
+import {
   CLINIC_CANCEL_STATUS,
   clinicCancelMakeWhole,
   createDestinationRefunds,
@@ -348,11 +352,13 @@ export async function adminRescheduleBooking(formData: FormData) {
 
   const destinationAccountId = (newDoctor.stripe_account_id as string | null) ?? "";
   if (!destinationAccountId) {
-    return {
-      error:
-        "This doctor has not completed their payment setup. Please try again later.",
-    };
+    return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
   }
+  const merchant = await doctorCanAcceptConsultCardPayment(
+    stripe,
+    destinationAccountId
+  );
+  if (!merchant.ok) return { error: merchant.error };
 
   const balanceCommissionCents = rescheduleBalanceApplicationFeeCents({
     priceDiffCents,
@@ -402,9 +408,6 @@ export async function adminRescheduleBooking(formData: FormData) {
   let paymentLinkUrl: string | null = null;
 
   try {
-    // TODO(#56): Keep doctorCanAcceptConsultCardPayment in front of this
-    // create once that PR lands. on_behalf_of is added inside
-    // consultDestinationChargeParams, not on a platform charge.
     const intent = await stripe.paymentIntents.create({
       amount: priceDiffCents,
       currency: booking.currency.toLowerCase(),

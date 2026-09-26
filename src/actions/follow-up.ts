@@ -15,6 +15,10 @@ import {
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
 import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
+import {
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
 import { sendEmail } from "@/lib/email/client";
 import { followUpInvitationEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
@@ -402,6 +406,27 @@ export async function createInvitationCheckout(
     if (bookingError || !booking) {
       log.error("Invitation booking insert error:", { err: bookingError });
       return { error: "Failed to create booking. Please try again." };
+    }
+
+    if (!doctor.stripe_account_id) {
+      const adminSupabase = createAdminClient();
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+    }
+    const merchant = await doctorCanAcceptConsultCardPayment(
+      getStripe(),
+      doctor.stripe_account_id
+    );
+    if (!merchant.ok) {
+      const adminSupabase = createAdminClient();
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: merchant.error };
     }
 
     // Create Stripe Checkout Session

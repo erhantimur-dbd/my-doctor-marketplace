@@ -55,20 +55,20 @@ describe("reschedule balance destination charge", () => {
     ).toBe(100);
   });
 
-  it("builds a destination charge with an application fee and no on_behalf_of", () => {
+  it("sets on_behalf_of to the doctor's account on the destination charge", () => {
     const params = consultDestinationChargeParams({
       destinationAccountId: "acct_doctor",
       applicationFeeCents: 225,
     });
     expect(params).toEqual({
       application_fee_amount: 225,
+      on_behalf_of: "acct_doctor",
       transfer_data: { destination: "acct_doctor" },
     });
-    expect(params).not.toHaveProperty("on_behalf_of");
 
     const source = read("src/lib/stripe/consult-charge.ts");
-    expect(source).toContain("TODO(#56)");
-    expect(source).not.toMatch(/on_behalf_of\s*:/);
+    expect(source).not.toContain("TODO(#56)");
+    expect(source).toContain("on_behalf_of: input.destinationAccountId");
   });
 
   it("writes commission_cents and charges the balance through the consult path", () => {
@@ -78,12 +78,21 @@ describe("reschedule balance destination charge", () => {
     expect(fn).toContain("consultDestinationChargeParams");
     expect(fn).toContain("applicationFeeCents: balanceCommissionCents");
     expect(fn).toContain("destinationAccountId");
-    expect(fn).not.toMatch(/on_behalf_of\s*:/);
+    expect(fn).not.toContain("TODO(#56)");
+
+    const gateAt = fn.indexOf("await doctorCanAcceptConsultCardPayment");
+    const createAt = fn.indexOf("paymentIntents.create");
+    expect(gateAt).toBeGreaterThan(-1);
+    expect(createAt).toBeGreaterThan(gateAt);
+    expect(fn.slice(gateAt, createAt)).toContain(
+      "if (!merchant.ok) return { error: merchant.error }"
+    );
+    expect(fn.slice(gateAt, createAt)).not.toContain("paymentIntents.create");
+    expect(fn.slice(createAt)).toContain("...consultDestinationChargeParams");
 
     const blockAt = fn.indexOf("rescheduleDoctorChangeError");
     const slotUpdateAt = fn.indexOf("doctor_id: parsed.data.new_doctor_id");
     const refundAt = fn.indexOf("refunds.create");
-    const createAt = fn.indexOf("paymentIntents.create");
     expect(blockAt).toBeGreaterThan(-1);
     expect(refundAt).toBeGreaterThan(blockAt);
     expect(slotUpdateAt).toBeGreaterThan(blockAt);
@@ -100,7 +109,7 @@ describe("reschedule balance destination charge", () => {
       "src/actions/admin.ts",
     ]) {
       expect(read(rel), rel).toContain("consultDestinationChargeParams");
-      expect(read(rel), rel).not.toMatch(/on_behalf_of\s*:/);
+      expect(read(rel), rel).toContain("destinationAccountId: doctor.stripe_account_id");
     }
     const treatment = read("src/actions/treatment-plan.ts");
     const invoices = read("src/actions/invoices.ts");

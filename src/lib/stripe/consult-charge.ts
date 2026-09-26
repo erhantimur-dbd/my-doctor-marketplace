@@ -1,28 +1,28 @@
 /**
  * Destination-charge parameters for a patient consult.
  *
- * Normal consult checkout (booking, follow-up, admin payment links) and the
- * clinic reschedule balance all go through this function. Keeping one object
- * means a later change to consult charge parameters lands on the balance
- * charge as well.
+ * Booking checkout, follow-up checkout, admin payment links, and the
+ * clinic reschedule balance all go through this function. on_behalf_of is
+ * the doctor's Express account, the same account as transfer_data.destination,
+ * so the doctor is the merchant of record.
  *
- * TODO(#56): Once "Make the doctor the merchant of record on consult
- * payments" lands, set on_behalf_of to destinationAccountId in the object
- * returned here (the same Express account as transfer_data.destination),
- * and keep that PR's card_payments check in front of every caller. Do not
- * set on_behalf_of on a platform charge (subscriptions, licences, wallet,
- * coupons, or any charge that has no connected-account destination).
+ * Callers must run doctorCanAcceptConsultCardPayment first and refuse the
+ * charge when card_payments is not active. Do not use this for a platform
+ * charge (subscriptions, licences, wallet, coupons, invoices, or any charge
+ * with no connected-account destination).
  */
 export function consultDestinationChargeParams(input: {
   destinationAccountId: string;
   applicationFeeCents: number;
 }): {
   application_fee_amount: number;
+  on_behalf_of: string;
   transfer_data: { destination: string };
 } {
   const applicationFeeCents = Math.max(0, Math.round(input.applicationFeeCents));
   return {
     application_fee_amount: applicationFeeCents,
+    on_behalf_of: input.destinationAccountId,
     transfer_data: {
       destination: input.destinationAccountId,
     },

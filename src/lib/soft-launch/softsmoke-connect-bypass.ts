@@ -58,6 +58,30 @@ export function allowsSoftLaunchSoftsmokeConnectBypass(doctor: {
 }
 
 /**
+ * Nightly credentials cron kill switch for the Softsmoke test doctor.
+ *
+ * Matched by doctor id only. Slug and email are ignored so a renamed
+ * listing cannot widen or shrink the skip.
+ *
+ * `SOFT_LAUNCH_SOFTSMOKE_CREDENTIALS_SKIP` must be exactly `1` (after trim).
+ * Unset, `0`, `true`, and every other value do not skip. This default is
+ * the opposite of `SOFT_LAUNCH_SOFTSMOKE_CONNECT_BYPASS`, which stays on
+ * unless forced off.
+ */
+export const SOFTSMOKE_CREDENTIALS_SKIP_ENV =
+  "SOFT_LAUNCH_SOFTSMOKE_CREDENTIALS_SKIP";
+
+export const SOFTSMOKE_CREDENTIALS_SKIP_REASON =
+  "SOFT_LAUNCH_SOFTSMOKE_CREDENTIALS_SKIP=1; Softsmoke test doctor matched by doctor id";
+
+export function isSoftLaunchSoftsmokeCredentialsSkip(
+  doctorId: string | null | undefined
+): boolean {
+  if (process.env[SOFTSMOKE_CREDENTIALS_SKIP_ENV]?.trim() !== "1") return false;
+  return doctorId === SOFT_LAUNCH_SOFTSMOKE_DOCTOR.id;
+}
+
+/**
  * Skip the Connect destination charge only when the smoke doctor is
  * allowlisted and Connect is incomplete.
  */
