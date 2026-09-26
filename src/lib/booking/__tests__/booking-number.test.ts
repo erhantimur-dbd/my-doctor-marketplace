@@ -7,6 +7,7 @@ import {
   BOOKING_NUMBER_EXAMPLE,
   bookingNumberMatchesQuery,
   isBookingNumber,
+  normalizeBookingNumber,
   rescheduleSuccessorBookingNumber,
 } from "@/lib/booking/booking-number";
 
@@ -83,6 +84,56 @@ describe("isBookingNumber", () => {
   it("does not treat the legacy date segment as a calendar date", () => {
     expect(isBookingNumber("BK-20260231-2FB5")).toBe(true);
     expect(isBookingNumber("BK-20260231-2FB5-R")).toBe(true);
+  });
+});
+
+describe("normalizeBookingNumber", () => {
+  it("canonicalises BK-, MD-, and -R, including a missing dash", () => {
+    expect(normalizeBookingNumber("  bk-20260926-2fb5 ")).toBe(
+      "BK-20260926-2FB5"
+    );
+    expect(normalizeBookingNumber("BK202609262FB5")).toBe("BK-20260926-2FB5");
+    expect(normalizeBookingNumber("BK-202609262FB5")).toBe("BK-20260926-2FB5");
+    expect(normalizeBookingNumber("BK20260926-2FB5")).toBe("BK-20260926-2FB5");
+    expect(normalizeBookingNumber("bk202609262fb5r")).toBe(
+      "BK-20260926-2FB5-R"
+    );
+    expect(normalizeBookingNumber("BK-20260926-2FB5-R")).toBe(
+      "BK-20260926-2FB5-R"
+    );
+    expect(normalizeBookingNumber("BK-20260926-2FB5-R-R")).toBe(
+      "BK-20260926-2FB5-R-R"
+    );
+
+    expect(normalizeBookingNumber(" md-7k3q9x ")).toBe("MD-7K3Q9X");
+    expect(normalizeBookingNumber("MD7K3Q9X")).toBe("MD-7K3Q9X");
+    expect(normalizeBookingNumber("MD-7K3Q9XR")).toBe("MD-7K3Q9X-R");
+    expect(normalizeBookingNumber("md7k3q9xr")).toBe("MD-7K3Q9X-R");
+    expect(normalizeBookingNumber("MD-7K3Q9X-R")).toBe("MD-7K3Q9X-R");
+    expect(normalizeBookingNumber("MD7K3Q9XRR")).toBe("MD-7K3Q9X-R-R");
+    expect(normalizeBookingNumber("MD-RRRRRR")).toBe("MD-RRRRRR");
+    expect(normalizeBookingNumber("MDRRRRRRR")).toBe("MD-RRRRRR-R");
+  });
+
+  it("rejects values that are not booking numbers", () => {
+    expect(normalizeBookingNumber("")).toBeNull();
+    expect(normalizeBookingNumber("MD-0K3Q9X")).toBeNull();
+    expect(normalizeBookingNumber("MD0K3Q9X")).toBeNull();
+    expect(normalizeBookingNumber("BK-TEST-001")).toBeNull();
+    expect(normalizeBookingNumber("hello")).toBeNull();
+  });
+
+  it("returns a value isBookingNumber accepts", () => {
+    for (const value of [
+      "bk202609262fb5",
+      "MD7K3Q9X",
+      "md-7k3q9x-r",
+      "BK-20260926-2FB5-R-R",
+    ]) {
+      const normalized = normalizeBookingNumber(value);
+      expect(normalized).toBeTruthy();
+      expect(isBookingNumber(normalized!)).toBe(true);
+    }
   });
 });
 

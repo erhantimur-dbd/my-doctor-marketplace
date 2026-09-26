@@ -69,6 +69,11 @@ export function Footer() {
                       {t("help_center")}
                     </Link>
                   </li>
+                  <li>
+                    <Link href="/find-booking" className="hover:text-foreground">
+                      Find my booking
+                    </Link>
+                  </li>
                 </>
               ) : (
                 <>
@@ -95,6 +100,11 @@ export function Footer() {
                   <li>
                     <Link href="/help-center" className="hover:text-foreground">
                       {t("help_center")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/find-booking" className="hover:text-foreground">
+                      Find my booking
                     </Link>
                   </li>
                   <li>
@@ -134,6 +144,11 @@ export function Footer() {
               <li>
                 <Link href="/help-center" className="hover:text-foreground">
                   {t("help_center")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/find-booking" className="hover:text-foreground">
+                  Find my booking
                 </Link>
               </li>
             </ul>

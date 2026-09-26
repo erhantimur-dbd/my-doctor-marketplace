@@ -11,6 +11,7 @@ import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
 } from "@/lib/patient/booking-doctor-embed";
+import { publicFindBookingUrl } from "@/lib/booking/find-booking";
 import {
   doctorDiaryUrl,
   firstNameOnly,
@@ -58,6 +59,7 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
     appointmentType: params.consultationType,
     joinUrl: params.videoRoomUrl,
     manageUrl: params.manageUrl || manageBookingUrl(params.bookingId),
+    findBookingUrl: params.findBookingUrl,
   });
 }
 
@@ -73,6 +75,7 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
       id,
       booking_number,
       doctor_id,
+      is_guest,
       appointment_date,
       start_time,
       consultation_type,
@@ -99,6 +102,7 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     id: string;
     booking_number: string;
     doctor_id: string;
+    is_guest?: boolean | null;
     appointment_date: string;
     start_time: string;
     consultation_type: string;
@@ -152,6 +156,7 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     appointmentType: row.consultation_type,
     joinUrl: videoRoomUrl,
     manageUrl: manageBookingUrl(row.id),
+    findBookingUrl: row.is_guest ? publicFindBookingUrl() : undefined,
   });
 
   await sendEmail({ to: patient.email, subject, html }).catch((err) =>

@@ -137,6 +137,9 @@ export function Header() {
         {/* Right side */}
         <div className="flex items-center gap-3">
           {showCurrency && <CurrencySelector />}
+          <Button variant="ghost" size="sm" className="hidden md:inline-flex" asChild>
+            <Link href="/find-booking">Find my booking</Link>
+          </Button>
           <LocaleSwitcher />
 
           {!user && (
@@ -395,6 +398,20 @@ export function Header() {
                 )}
 
                 {/* Unauthenticated auth buttons */}
+                <div className="my-3 px-3">
+                  <div className="h-px bg-border" />
+                </div>
+                <Link
+                  href="/find-booking"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50">
+                    <HelpCircle className="h-[18px] w-[18px] text-sky-600" />
+                  </div>
+                  <span>Find my booking</span>
+                </Link>
+
                 {!user && (
                   <>
                     <div className="my-3 px-3">

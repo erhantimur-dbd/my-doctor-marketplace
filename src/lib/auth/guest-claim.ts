@@ -152,6 +152,7 @@ export async function sendGuestAccountClaimEmail(
       bookingNumber: params.bookingNumber,
       setPasswordUrl,
       magicSession: usedType === "magiclink",
+      findBookingUrl: `${origin}/${locale}/find-booking`,
     });
 
     await sendEmail({ to: email, subject, html });
