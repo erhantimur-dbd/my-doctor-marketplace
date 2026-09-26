@@ -1,6 +1,24 @@
 // Email templates as pure functions returning { subject, html }
 // No external React Email dependency needed - uses inline CSS for compatibility
 
+import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
+
+function consultWindow(
+  date: string,
+  time: string,
+  end?: string | null,
+  durationMinutes?: number | null
+): string | null {
+  const start = time?.trim() || date?.trim();
+  if (!start) return null;
+  const label = formatAppointmentWindow(start, end, {
+    durationMinutes,
+    appointmentDate: date,
+  });
+  if (label.startsWith("Date to be confirmed")) return null;
+  return label;
+}
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
 const BRAND_COLOR = "#0284c7";
 const BRAND_COLOR_END = "#0d9488"; // teal-600 — gradient end
@@ -129,6 +147,8 @@ interface BookingConfirmationParams {
   remainderDue?: number;
   depositType?: string; // 'percentage' | 'flat'
   depositValue?: number; // the percentage or flat value used
+  end?: string | null;
+  durationMinutes?: number | null;
 }
 
 export function bookingConfirmationEmail({
@@ -148,8 +168,11 @@ export function bookingConfirmationEmail({
   remainderDue,
   depositType,
   depositValue,
+  end,
+  durationMinutes,
 }: BookingConfirmationParams): { subject: string; html: string } {
   const subject = `Booking Confirmed - ${bookingNumber}`;
+  const when = consultWindow(date, time, end, durationMinutes);
 
   const videoBlock = videoRoomUrl
     ? `
@@ -209,8 +232,7 @@ export function bookingConfirmationEmail({
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             ${infoRow("Booking Number", bookingNumber)}
             ${infoRow("Doctor", `Dr. ${doctorName}`)}
-            ${infoRow("Date", date)}
-            ${infoRow("Time", time)}
+            ${when ? infoRow("Appointment", when) : `${infoRow("Date", date)}${infoRow("Time", time)}`}
             ${infoRow("Consultation", consultationType)}
             ${!videoRoomUrl && clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
             ${infoRow(paymentLabel, paymentAmount)}
@@ -248,6 +270,8 @@ interface DoctorNewBookingParams {
   dashboardUrl?: string;
   clinicName?: string | null;
   address?: string | null;
+  end?: string | null;
+  durationMinutes?: number | null;
 }
 
 export function doctorNewBookingEmail({
@@ -264,7 +288,10 @@ export function doctorNewBookingEmail({
   dashboardUrl,
   clinicName,
   address,
+  end,
+  durationMinutes,
 }: DoctorNewBookingParams): { subject: string; html: string } {
+  const when = consultWindow(date, time, end, durationMinutes);
   const timeLabel = time?.slice(0, 5) || time;
   const subject = isUrgent
     ? `URGENT: New booking in ${minutesUntil != null && minutesUntil <= 60 ? `${Math.max(1, Math.round(minutesUntil))} min` : "under an hour"} — ${bookingNumber}`
@@ -306,8 +333,7 @@ export function doctorNewBookingEmail({
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
             ${infoRow("Booking Number", bookingNumber)}
             ${infoRow("Patient", patientName)}
-            ${infoRow("Date", date)}
-            ${infoRow("Time", timeLabel)}
+            ${when ? infoRow("Appointment", when) : `${infoRow("Date", date)}${infoRow("Time", timeLabel)}`}
             ${infoRow("Consultation", consultationType)}
             ${clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
             ${infoRow("Amount", `${currency} ${amount.toFixed(2)}`)}

@@ -25,6 +25,7 @@ import {
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
 import { formatCurrency } from "@/lib/utils/currency";
+import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
 import { creditWallet, debitWallet } from "@/lib/wallet";
@@ -309,6 +310,7 @@ export async function POST(request: NextRequest) {
                 doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
                 date: booking.appointment_date,
                 time: booking.start_time,
+                end: booking.end_time,
                 consultationType: consultationLabel,
                 bookingNumber: booking.booking_number,
                 amount: booking.total_amount_cents / 100,
@@ -492,6 +494,7 @@ export async function POST(request: NextRequest) {
               doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
               date: booking.appointment_date,
               time: booking.start_time,
+              end: booking.end_time,
               consultationType: consultationLabel,
               bookingNumber: booking.booking_number,
               amount: booking.total_amount_cents / 100,
@@ -567,18 +570,14 @@ export async function POST(request: NextRequest) {
 
             // Send SMS booking confirmation if opted in
             if (patient.notification_sms && patient.phone) {
-              const dateFormatted2 = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "short",
-              });
-
               sendSmsMessage({
                 to: patient.phone,
                 body: bookingConfirmationSmsTemplate({
                   patientName: patient.first_name || "there",
                   doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
-                  date: dateFormatted2,
-                  time: booking.start_time?.slice(0, 5),
+                  date: booking.appointment_date,
+                  time: booking.start_time,
+                  end: booking.end_time,
                   bookingNumber: booking.booking_number,
                 }),
               }).catch((err) =>
@@ -590,16 +589,18 @@ export async function POST(request: NextRequest) {
           // Patient in-app notification. Doctor notify already ran in finalizeConfirmedBooking.
           if (patient && doctorProfile) {
             const doctorName = `${doctorProfile.first_name} ${doctorProfile.last_name}`;
-            const dateStr = new Date(booking.appointment_date).toLocaleDateString("en-GB", {
-              day: "numeric", month: "short",
-            });
+            const when = formatAppointmentWindow(
+              booking.start_time,
+              booking.end_time,
+              { appointmentDate: booking.appointment_date }
+            );
 
             // Notify patient (in-app)
             createNotification({
               userId: booking.patient_id,
               type: "booking_confirmed",
               title: "Booking Confirmed",
-              message: `Your appointment with Dr. ${doctorName} on ${dateStr} at ${booking.start_time?.slice(0, 5)} is confirmed.`,
+              message: `Your appointment with Dr. ${doctorName} on ${when} is confirmed.`,
               channels: ["in_app"],
               metadata: { booking_id: bookingId },
             }).catch((err) => console.error("Booking confirmed notification (patient):", err));
@@ -1210,6 +1211,7 @@ export async function POST(request: NextRequest) {
             doctorName: `${rDoctorProfile.first_name} ${rDoctorProfile.last_name}`,
             date: rescheduleBooking.appointment_date,
             time: rescheduleBooking.start_time,
+            end: rescheduleBooking.end_time,
             consultationType: consultationLabel,
             bookingNumber: rescheduleBooking.booking_number,
             amount: rescheduleBooking.total_amount_cents / 100,

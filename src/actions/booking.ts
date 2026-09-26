@@ -42,6 +42,7 @@ import {
   getCommissionCents,
   formatCurrency,
 } from "@/lib/utils/currency";
+import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 import { createNotification } from "@/lib/notifications";
 import { log } from "@/lib/utils/logger";
 import { rateLimit } from "@/lib/rate-limit";
@@ -641,9 +642,18 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
               name: isDeposit
                 ? `Deposit: ${consultationLabel} with Dr. ${doctorName}`
                 : `${consultationLabel} with Dr. ${doctorName}`,
-              description: isDeposit
-                ? `${parsed.data.appointment_date} at ${parsed.data.start_time} (${resolvedDepositType === "percentage" ? `${resolvedDepositValue}% deposit` : "deposit"} — remainder due on the day)`
-                : `${parsed.data.appointment_date} at ${parsed.data.start_time}`,
+              description: `${formatAppointmentWindow(
+                parsed.data.start_time,
+                parsed.data.end_time,
+                {
+                  durationMinutes: parsed.data.duration_minutes,
+                  appointmentDate: parsed.data.appointment_date,
+                }
+              )}${
+                isDeposit
+                  ? ` (${resolvedDepositType === "percentage" ? `${resolvedDepositValue}% deposit` : "deposit"} — remainder due on the day)`
+                  : ""
+              }`,
             },
             unit_amount: remainingCharge,
           },

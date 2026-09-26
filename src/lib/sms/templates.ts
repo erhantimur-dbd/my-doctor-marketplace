@@ -5,7 +5,29 @@
  * but each segment costs 1 SMS credit. Aim for 1 segment where possible.
  */
 
+import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
+
 const BRAND = "MyDoctors360";
+
+function consultWindow(
+  date: string,
+  time: string,
+  end?: string | null,
+  durationMinutes?: number | null
+): string {
+  const start = time?.trim() || date?.trim();
+  if (!start) return date || "your appointment";
+  const label = formatAppointmentWindow(start, end, {
+    durationMinutes,
+    appointmentDate: date,
+  });
+  if (label.startsWith("Date to be confirmed")) {
+    const clock = /^\d{1,2}:\d{2}/.test(time) ? time.slice(0, 5) : "";
+    if (date && clock && !/^\d{4}-/.test(time)) return `${date} at ${clock}`;
+    return date || "your appointment";
+  }
+  return label;
+}
 
 // ---------------------------------------------------------------------------
 // Appointment Reminder
@@ -45,6 +67,8 @@ interface ConfirmationParams {
   doctorName: string;
   date: string;
   time: string;
+  end?: string | null;
+  durationMinutes?: number | null;
   bookingNumber: string;
 }
 
@@ -53,9 +77,12 @@ export function bookingConfirmationSms({
   doctorName,
   date,
   time,
+  end,
+  durationMinutes,
   bookingNumber,
 }: ConfirmationParams): string {
-  return `${BRAND}: Hi ${patientName}, your appointment with Dr. ${doctorName} on ${date} at ${time} is confirmed. Ref: ${bookingNumber}`;
+  const when = consultWindow(date, time, end, durationMinutes);
+  return `${BRAND}: Hi ${patientName}, your appointment with Dr. ${doctorName} on ${when} is confirmed. Ref: ${bookingNumber}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -110,8 +137,10 @@ export function paymentLinkSms({
 interface DoctorNewBookingSmsParams {
   doctorName: string;
   patientName: string;
-  date: string; // "15 Apr"
-  time: string; // "10:00"
+  date: string; // YYYY-MM-DD or a preformatted date
+  time: string; // ISO timestamp or HH:mm
+  end?: string | null;
+  durationMinutes?: number | null;
   bookingNumber: string;
   isUrgent?: boolean;
   minutesUntil?: number | null;
@@ -126,17 +155,19 @@ export function doctorNewBookingSms({
   patientName,
   date,
   time,
+  end,
+  durationMinutes,
   bookingNumber,
   isUrgent = false,
   minutesUntil = null,
 }: DoctorNewBookingSmsParams): string {
-  const timeLabel = time?.slice(0, 5) || time;
+  const window = consultWindow(date, time, end, durationMinutes);
   if (isUrgent) {
-    const when =
+    const soon =
       minutesUntil != null && minutesUntil > 0
         ? `in ~${Math.max(1, Math.round(minutesUntil))} min`
         : "soon";
-    return `${BRAND}: Dr. ${doctorName}, URGENT new booking ${when}: ${patientName} at ${timeLabel} (${date}). Ref: ${bookingNumber}`;
+    return `${BRAND}: Dr. ${doctorName}, URGENT new booking ${soon}: ${patientName} — ${window}. Ref: ${bookingNumber}`;
   }
-  return `${BRAND}: Dr. ${doctorName}, new booking: ${patientName} on ${date} at ${timeLabel}. Ref: ${bookingNumber}`;
+  return `${BRAND}: Dr. ${doctorName}, new booking: ${patientName} on ${window}. Ref: ${bookingNumber}`;
 }

@@ -20,6 +20,7 @@ import { sendSms } from "@/lib/sms/client";
 import { doctorNewBookingSms } from "@/lib/sms/templates";
 import { createNotification } from "@/lib/notifications";
 import { log } from "@/lib/utils/logger";
+import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 
 const URGENT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
@@ -31,7 +32,9 @@ export interface DoctorBookingNotifyInput {
   patientFirstName: string | null;
   patientLastName: string | null;
   appointmentDate: string; // YYYY-MM-DD
-  startTime: string; // HH:MM:SS or HH:MM
+  startTime: string; // HH:MM:SS, HH:MM, or an absolute timestamp
+  endTime?: string | null;
+  durationMinutes?: number | null;
   consultationType: string;
   bookingNumber: string;
   totalAmountCents: number;
@@ -153,12 +156,10 @@ export async function notifyDoctorOfNewBooking(
     [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim() ||
     "Doctor";
 
-  const dateStr = new Date(input.appointmentDate).toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
+  const when = formatAppointmentWindow(input.startTime, input.endTime, {
+    durationMinutes: input.durationMinutes,
+    appointmentDate: input.appointmentDate,
   });
-  const timeStr = input.startTime?.slice(0, 5) || input.startTime;
   const isUrgent = isBookingWithinNextHour(
     input.appointmentDate,
     input.startTime
@@ -171,8 +172,8 @@ export async function notifyDoctorOfNewBooking(
   // In-app always
   const inAppTitle = isUrgent ? "Urgent: New Booking" : "New Booking";
   const inAppMessage = isUrgent
-    ? `${patientName} booked an appointment starting soon (${dateStr} at ${timeStr}).`
-    : `${patientName} booked an appointment on ${dateStr} at ${timeStr}.`;
+    ? `${patientName} booked an appointment starting soon (${when}).`
+    : `${patientName} booked an appointment on ${when}.`;
 
   await createNotification({
     userId: doctorRow.profile_id,
@@ -210,8 +211,10 @@ export async function notifyDoctorOfNewBooking(
       : doctorNewBookingEmail({
           doctorName: profile.first_name || doctorName,
           patientName,
-          date: dateStr,
-          time: timeStr,
+          date: input.appointmentDate,
+          time: input.startTime,
+          end: input.endTime,
+          durationMinutes: input.durationMinutes,
           consultationType: consultationLabel(input.consultationType),
           bookingNumber: input.bookingNumber,
           amount: input.totalAmountCents / 100,
@@ -232,17 +235,15 @@ export async function notifyDoctorOfNewBooking(
   // null/undefined treated as enabled for doctors so new accounts get SMS
   const smsEnabled = profile.notification_sms !== false;
   if (smsEnabled && profile.phone) {
-    const shortDate = new Date(input.appointmentDate).toLocaleDateString(
-      "en-GB",
-      { day: "numeric", month: "short" }
-    );
     await sendSms({
       to: profile.phone,
       body: doctorNewBookingSms({
         doctorName: profile.first_name || doctorName,
         patientName,
-        date: shortDate,
-        time: timeStr,
+        date: input.appointmentDate,
+        time: input.startTime,
+        end: input.endTime,
+        durationMinutes: input.durationMinutes,
         bookingNumber: input.bookingNumber,
         isUrgent,
         minutesUntil,

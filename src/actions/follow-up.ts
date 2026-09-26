@@ -14,6 +14,7 @@ import {
 } from "@/lib/validators/booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
+import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 import {
   CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
@@ -450,7 +451,11 @@ export async function createInvitationCheckout(
             currency: invitation.currency.toLowerCase(),
             product_data: {
               name: sessionLabel,
-              description: `First session: ${appointmentDate} at ${startTime}`,
+              description: `First session: ${formatAppointmentWindow(
+                startTime,
+                endTime,
+                { appointmentDate }
+              )}`,
             },
             unit_amount: totalChargeCents,
           },
@@ -619,6 +624,7 @@ export async function bookFollowUpSession(
         doctorName: `${docProfile.first_name} ${docProfile.last_name}`,
         date: booking.appointment_date,
         time: booking.start_time,
+        end: booking.end_time,
         consultationType:
           booking.consultation_type === "video"
             ? "Video Consultation"
