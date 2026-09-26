@@ -31,44 +31,37 @@ export function isBookingNumber(value: string): boolean {
 }
 
 /**
- * Trim, drop spaces, uppercase, and insert a missing dash.
- * Returns the canonical `BK-` / `MD-` form including any `-R` suffixes,
- * or null when the value is not a booking number.
+ * Canonical form: trim, drop spaces, uppercase, and insert a missing dash.
+ * Keeps one or more `-R` suffixes. Validity is `isBookingNumber` only —
+ * null when that rejects the result.
  */
-export function normalizeBookingNumber(value: string): string | null {
-  const trimmed = value.trim().toUpperCase().replace(/\s+/g, "");
+export function normalizeBookingNumber(input: string): string | null {
+  const trimmed = input.trim().toUpperCase().replace(/\s+/g, "");
   if (!trimmed) return null;
   if (isBookingNumber(trimmed)) return trimmed;
 
-  const compact = trimmed.replace(/-/g, "");
-  const rebuilt = rebuildMd(compact) ?? rebuildBk(compact);
+  const rebuilt = insertBookingDashes(trimmed.replace(/-/g, ""));
   if (rebuilt && isBookingNumber(rebuilt)) return rebuilt;
   return null;
 }
 
-function rebuildMd(compact: string): string | null {
-  if (!compact.startsWith("MD")) return null;
-  const rest = compact.slice(2);
-  if (rest.length < 6) return null;
-  const body = rest.slice(0, 6);
-  const suffix = rest.slice(6);
-  if (![...body].every((ch) => BOOKING_NUMBER_ALPHABET.includes(ch))) {
-    return null;
+/** Place the dashes. `isBookingNumber` decides whether the result is real. */
+function insertBookingDashes(compact: string): string | null {
+  if (compact.startsWith("MD")) {
+    const rest = compact.slice(2);
+    if (rest.length < 6) return null;
+    const suffix = rest.slice(6);
+    if (![...suffix].every((ch) => ch === "R")) return null;
+    return `MD-${rest.slice(0, 6)}${"-R".repeat(suffix.length)}`;
   }
-  if (![...suffix].every((ch) => ch === "R")) return null;
-  return `MD-${body}${"-R".repeat(suffix.length)}`;
-}
-
-function rebuildBk(compact: string): string | null {
-  if (!compact.startsWith("BK")) return null;
-  const rest = compact.slice(2);
-  if (rest.length < 12) return null;
-  const date = rest.slice(0, 8);
-  const code = rest.slice(8, 12);
-  const suffix = rest.slice(12);
-  if (!/^\d{8}$/.test(date) || !/^[A-Z0-9]{4}$/.test(code)) return null;
-  if (![...suffix].every((ch) => ch === "R")) return null;
-  return `BK-${date}-${code}${"-R".repeat(suffix.length)}`;
+  if (compact.startsWith("BK")) {
+    const rest = compact.slice(2);
+    if (rest.length < 12) return null;
+    const suffix = rest.slice(12);
+    if (![...suffix].every((ch) => ch === "R")) return null;
+    return `BK-${rest.slice(0, 8)}-${rest.slice(8, 12)}${"-R".repeat(suffix.length)}`;
+  }
+  return null;
 }
 
 export function rescheduleSuccessorBookingNumber(bookingNumber: string): string {
