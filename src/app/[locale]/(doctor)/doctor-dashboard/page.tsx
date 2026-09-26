@@ -14,6 +14,9 @@ import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
 import { Link } from "@/i18n/navigation";
 import { DoctorPrivatePlatformFeedback } from "@/components/feedback/doctor-private-platform-feedback";
 import { isSoftLaunchSoftsmokeDoctor } from "@/lib/soft-launch/softsmoke-connect-bypass";
+import { getStripe } from "@/lib/stripe/client";
+import { requestCardPaymentsIfNeeded } from "@/lib/stripe/consult-merchant";
+import { log } from "@/lib/utils/logger";
 
 export default async function DoctorDashboard() {
   const supabase = await createClient();
@@ -30,6 +33,25 @@ export default async function DoctorDashboard() {
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
+
+  // Idempotent card_payments request for accounts connected before that
+  // capability was required. Do not block the dashboard on a slow Stripe call.
+  if (doctor.stripe_account_id) {
+    const accountId = doctor.stripe_account_id;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        requestCardPaymentsIfNeeded(getStripe(), accountId).finally(() => {
+          if (timer) clearTimeout(timer);
+        }),
+        new Promise((resolve) => {
+          timer = setTimeout(resolve, 4000);
+        }),
+      ]);
+    } catch (err) {
+      log.error("[Connect] card_payments request failed", { err, accountId });
+    }
+  }
 
   // Check license status (org-based)
   const license = await getDoctorLicense(supabase, doctor.id);

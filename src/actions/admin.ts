@@ -7,6 +7,10 @@ import { safeError } from "@/lib/utils/safe-error";
 import { subscriptionUpgradeInviteEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
+import {
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { sendEmail } from "@/lib/email/client";
@@ -1851,6 +1855,25 @@ export async function adminCreateBookingOnBehalf(input: {
     return { error: "Failed to create booking. Please try again." };
   }
 
+  if (!doctor.stripe_account_id) {
+    await adminSupabase
+      .from("bookings")
+      .update({ status: BOOKING_STATUSES.EXPIRED })
+      .eq("id", booking.id);
+    return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+  const merchant = await doctorCanAcceptConsultCardPayment(
+    getStripe(),
+    doctor.stripe_account_id
+  );
+  if (!merchant.ok) {
+    await adminSupabase
+      .from("bookings")
+      .update({ status: BOOKING_STATUSES.EXPIRED })
+      .eq("id", booking.id);
+    return { error: merchant.error };
+  }
+
   // Create Stripe Checkout Session
   const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
   const doctorName = `${profile.first_name} ${profile.last_name}`;
@@ -1883,6 +1906,7 @@ export async function adminCreateBookingOnBehalf(input: {
     ],
     payment_intent_data: {
       application_fee_amount: getCommissionCents(totalAmountCents),
+      on_behalf_of: doctor.stripe_account_id,
       transfer_data: {
         destination: doctor.stripe_account_id,
       },
@@ -1978,6 +2002,22 @@ export async function adminResendPaymentLink(bookingId: string) {
     return { error: "Maximum resend limit (5) reached." };
   }
 
+  const resendDoctor: { stripe_account_id?: string | null } | null = Array.isArray(
+    booking.doctor
+  )
+    ? booking.doctor[0]
+    : booking.doctor;
+  if (!resendDoctor?.stripe_account_id) {
+    return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+  const resendMerchant = await doctorCanAcceptConsultCardPayment(
+    getStripe(),
+    resendDoctor.stripe_account_id
+  );
+  if (!resendMerchant.ok) {
+    return { error: resendMerchant.error };
+  }
+
   // Expire old Stripe checkout session
   if (booking.stripe_checkout_session_id) {
     try {
@@ -2025,6 +2065,7 @@ export async function adminResendPaymentLink(bookingId: string) {
     ],
     payment_intent_data: {
       application_fee_amount: getCommissionCents(booking.total_amount_cents),
+      on_behalf_of: doctor.stripe_account_id,
       transfer_data: {
         destination: doctor.stripe_account_id,
       },

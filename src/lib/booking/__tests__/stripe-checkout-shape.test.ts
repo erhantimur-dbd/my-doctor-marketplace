@@ -22,6 +22,7 @@ describe("patient booking Stripe Checkout shape (source contract)", () => {
     expect(source).toContain("application_fee_amount");
     expect(source).toContain("transfer_data");
     expect(source).toContain("destination: doctor.stripe_account_id");
+    expect(source).toContain("on_behalf_of: doctor.stripe_account_id");
   });
 
   it("returns Softsmoke charge-skip confirm URL the confirmation page accepts", () => {

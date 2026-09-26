@@ -50,6 +50,10 @@ import {
   readJoinedProfileEmail,
 } from "@/lib/soft-launch/softsmoke-connect-bypass";
 import {
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
+import {
   confirmBookingWithoutStripeCheckout,
   finalizeConfirmedBookingById,
 } from "@/lib/booking/finalize-confirmed-booking";
@@ -586,6 +590,28 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
+    // Charged consults only. Softsmoke charge-skip and wallet-only returns
+    // above never reach this. Refuse rather than charge as the platform.
+    // Partial wallet credit is stored only after this check succeeds.
+    if (!doctor.stripe_account_id) {
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+    }
+    const merchant = await doctorCanAcceptConsultCardPayment(
+      getStripe(),
+      doctor.stripe_account_id
+    );
+    if (!merchant.ok) {
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: merchant.error };
+    }
+
     // Store wallet credit on booking for later debit on payment completion
     if (walletCreditToApply > 0) {
       await writeClient
@@ -624,6 +650,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       ],
       payment_intent_data: {
         application_fee_amount: adjustedApplicationFee,
+        on_behalf_of: doctor.stripe_account_id,
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
