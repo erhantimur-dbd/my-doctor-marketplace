@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,18 +13,7 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { DollarSign, TrendingUp, CreditCard } from "lucide-react";
 
 export default async function AdminPaymentsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/en/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") redirect("/en");
+  const { supabase } = await requireAdminPage();
 
   // Platform fees
   const { data: fees } = await supabase

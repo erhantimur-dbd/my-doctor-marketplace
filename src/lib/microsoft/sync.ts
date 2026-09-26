@@ -8,6 +8,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectAndNotifyConflicts } from "@/lib/calendar-sync-utils";
 import {
+  buildBusyOverride,
+  getDoctorLocationTimezone,
+  replaceCalendarSyncOverrides,
+  wallClockInTimeZone,
+  type CalendarSyncOverride,
+} from "@/lib/calendar/import-overrides";
+import {
   getValidAccessToken,
   listEvents,
   createEvent,
@@ -16,8 +23,13 @@ import {
   type MicrosoftTokens,
 } from "./calendar";
 import { log } from "@/lib/utils/logger";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 
 const SYNC_DAYS_AHEAD = 30;
+const SYNC_REASON = "microsoft_calendar_sync";
 
 interface CalendarConnection {
   id: string;
@@ -85,55 +97,46 @@ export async function importMicrosoftCalendarEvents(
 
     const events = await listEvents(access_token, conn.calendar_id, timeMin, timeMax);
 
-    // Remove old microsoft_calendar_sync overrides
-    const todayStr = now.toISOString().split("T")[0];
-    await supabase
-      .from("availability_overrides")
-      .delete()
-      .eq("doctor_id", doctorId)
-      .eq("reason", "microsoft_calendar_sync")
-      .gte("override_date", todayStr);
+    const timeZone = await getDoctorLocationTimezone(supabase, doctorId);
+    const todayStr = wallClockInTimeZone(now, timeZone).date;
 
-    const overrides: {
-      doctor_id: string;
-      override_date: string;
-      is_available: boolean;
-      start_time: string;
-      end_time: string;
-      reason: string;
-    }[] = [];
-
+    const overrides: CalendarSyncOverride[] = [];
     for (const event of events) {
       if (!event.start.dateTime || !event.end.dateTime) continue;
 
-      const startDt = new Date(event.start.dateTime + "Z"); // MS Graph returns UTC when we request it
-      const endDt = new Date(event.end.dateTime + "Z");
-      const dateStr = startDt.toISOString().split("T")[0];
-      const startTime = startDt.toTimeString().substring(0, 5);
-      const endTime = endDt.toTimeString().substring(0, 5);
+      // MS Graph returns UTC when we request it; append Z if offset missing.
+      const startIso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(event.start.dateTime)
+        ? event.start.dateTime
+        : `${event.start.dateTime}Z`;
+      const endIso = /[zZ]|[+-]\d{2}:?\d{2}$/.test(event.end.dateTime)
+        ? event.end.dateTime
+        : `${event.end.dateTime}Z`;
 
-      overrides.push({
-        doctor_id: doctorId,
-        override_date: dateStr,
-        is_available: false,
-        start_time: startTime,
-        end_time: endTime,
-        reason: "microsoft_calendar_sync",
-      });
+      overrides.push(
+        buildBusyOverride({
+          doctorId,
+          start: startIso,
+          end: endIso,
+          timeZone,
+          reason: SYNC_REASON,
+        })
+      );
     }
 
-    if (overrides.length > 0) {
-      const { error: insertError } = await supabase
-        .from("availability_overrides")
-        .insert(overrides);
+    const replaced = await replaceCalendarSyncOverrides({
+      supabase,
+      doctorId,
+      reason: SYNC_REASON,
+      overrides,
+      fromDate: todayStr,
+    });
 
-      if (insertError) {
-        return {
-          success: false,
-          eventsProcessed: 0,
-          error: `Failed to create availability overrides: ${insertError.message}`,
-        };
-      }
+    if (replaced.error) {
+      return {
+        success: false,
+        eventsProcessed: 0,
+        error: `Failed to create availability overrides: ${replaced.error}`,
+      };
     }
 
     // Check for conflicts with existing bookings
@@ -181,9 +184,9 @@ export async function exportBookingToMicrosoftCalendar(
       microsoft_event_id,
       doctor_id,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name),
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name),
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name),
         location:locations(timezone)
       )
     `

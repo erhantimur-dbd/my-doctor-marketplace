@@ -1,20 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { EmailTestPanel } from "./email-test-panel";
 
 export default async function AdminEmailTestsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/en/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") redirect("/en");
+  const { user } = await requireAdminPage();
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "@/i18n/navigation";
 import { Clock, CheckCircle } from "lucide-react";
@@ -15,18 +14,7 @@ export default async function AdminReviewsPage({
   const { tab: rawTab } = await searchParams;
   const tab: TabKey = rawTab === "approved" ? "approved" : "pending";
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/en/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") redirect("/en");
+  const { supabase } = await requireAdminPage();
 
   // Counts for tab badges
   const [{ count: pendingCount }, { count: approvedCount }] =

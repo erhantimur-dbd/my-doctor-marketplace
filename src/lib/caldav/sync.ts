@@ -7,6 +7,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { detectAndNotifyConflicts } from "@/lib/calendar-sync-utils";
 import {
+  buildBusyOverride,
+  getDoctorLocationTimezone,
+  replaceCalendarSyncOverrides,
+  wallClockInTimeZone,
+  type CalendarSyncOverride,
+} from "@/lib/calendar/import-overrides";
+import {
   listEvents,
   createEvent,
   deleteEvent,
@@ -15,6 +22,7 @@ import {
 import { log } from "@/lib/utils/logger";
 
 const SYNC_DAYS_AHEAD = 30;
+const SYNC_REASON = "caldav_calendar_sync";
 
 interface CalDAVConnection {
   id: string;
@@ -92,57 +100,43 @@ export async function importCalDAVEvents(
 
     const events = await listEvents(credentials, conn.calendar_id, timeMin, timeMax);
 
-    // Remove old caldav_sync overrides
-    const todayStr = now.toISOString().split("T")[0];
-    await supabase
-      .from("availability_overrides")
-      .delete()
-      .eq("doctor_id", doctorId)
-      .eq("reason", "caldav_calendar_sync")
-      .gte("override_date", todayStr);
+    const timeZone = await getDoctorLocationTimezone(supabase, doctorId);
+    const todayStr = wallClockInTimeZone(now, timeZone).date;
 
-    const overrides: {
-      doctor_id: string;
-      override_date: string;
-      is_available: boolean;
-      start_time: string;
-      end_time: string;
-      reason: string;
-    }[] = [];
+    const overrides: CalendarSyncOverride[] = [];
 
     for (const event of events) {
-      const startDt = parseCalDAVDate(event.dtstart);
-      const endDt = parseCalDAVDate(event.dtend);
-
       // Skip all-day events (date-only format: 8 chars without T)
       if (event.dtstart.length <= 8) continue;
 
-      const dateStr = startDt.toISOString().split("T")[0];
-      const startTime = startDt.toTimeString().substring(0, 5);
-      const endTime = endDt.toTimeString().substring(0, 5);
+      const startDt = parseCalDAVDate(event.dtstart);
+      const endDt = parseCalDAVDate(event.dtend);
 
-      overrides.push({
-        doctor_id: doctorId,
-        override_date: dateStr,
-        is_available: false,
-        start_time: startTime,
-        end_time: endTime,
-        reason: "caldav_calendar_sync",
-      });
+      overrides.push(
+        buildBusyOverride({
+          doctorId,
+          start: startDt,
+          end: endDt,
+          timeZone,
+          reason: SYNC_REASON,
+        })
+      );
     }
 
-    if (overrides.length > 0) {
-      const { error: insertError } = await supabase
-        .from("availability_overrides")
-        .insert(overrides);
+    const replaced = await replaceCalendarSyncOverrides({
+      supabase,
+      doctorId,
+      reason: SYNC_REASON,
+      overrides,
+      fromDate: todayStr,
+    });
 
-      if (insertError) {
-        return {
-          success: false,
-          eventsProcessed: 0,
-          error: `Failed to create overrides: ${insertError.message}`,
-        };
-      }
+    if (replaced.error) {
+      return {
+        success: false,
+        eventsProcessed: 0,
+        error: `Failed to create overrides: ${replaced.error}`,
+      };
     }
 
     // Check for conflicts with existing bookings

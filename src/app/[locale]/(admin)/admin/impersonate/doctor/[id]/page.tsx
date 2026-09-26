@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,16 +17,7 @@ export default async function ImpersonateDoctorPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/en/login");
-
-  const { data: adminProfile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (adminProfile?.role !== "admin") redirect("/en");
+  const { supabase, user } = await requireAdminPage();
 
   const adminClient = createAdminClient();
 

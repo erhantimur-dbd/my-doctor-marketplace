@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
+import { requireAdminPage } from "@/lib/admin/require-admin-page";
 import {
   Card,
   CardContent,
@@ -24,20 +23,8 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { Link } from "@/i18n/navigation";
 
 export default async function AdminDashboard() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/en/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, first_name")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") redirect("/en");
+  const locale = "en";
+  const { supabase, profile } = await requireAdminPage(locale);
 
   // --- KPI Queries (run in parallel) ---
   const [

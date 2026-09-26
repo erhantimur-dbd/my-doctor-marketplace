@@ -29,6 +29,18 @@ import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
 import { sendSms } from "@/lib/sms/client";
 import { bookingCancellationSms } from "@/lib/sms/templates";
 import { creditWallet, debitWallet, getWalletBalance } from "@/lib/wallet";
+import { reverseDestinationTransferToPlatform } from "@/lib/stripe/reverse-destination-transfer";
+import {
+  bookingHasRefundableCharge,
+  hoursUntilAppointment,
+  refundAmountCents,
+  refundPercentForPolicy,
+  stripeChargedAmountCents,
+} from "@/lib/booking/cancellation-refund";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 
 import {
   calculateDepositCents,
@@ -679,12 +691,12 @@ export async function cancelBooking(input: CancelBookingInput) {
         `
         *,
         patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
-        doctor:doctors!inner(
+        doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
           slug,
           cancellation_policy,
           cancellation_hours,
           stripe_account_id,
-          profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+          profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
         )
       `
       )
@@ -705,65 +717,47 @@ export async function cancelBooking(input: CancelBookingInput) {
       return { error: "This booking cannot be cancelled in its current state." };
     }
 
-    // Calculate hours until appointment
-    const appointmentDateTime = new Date(
-      `${booking.appointment_date}T${booking.start_time}`
+    const hoursUntil = hoursUntilAppointment(
+      booking.appointment_date,
+      booking.start_time
     );
-    const now = new Date();
-    const hoursUntilAppointment =
-      (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-    // Determine refund amount based on cancellation policy
-    let refundPercent = 0;
-    const policy = booking.doctor.cancellation_policy;
-
-    if (policy === "flexible") {
-      // Full refund if more than 24 hours before appointment
-      refundPercent = hoursUntilAppointment > 24 ? 100 : 0;
-    } else if (policy === "moderate") {
-      // 50% refund if more than 48 hours before
-      if (hoursUntilAppointment > 48) {
-        refundPercent = 100;
-      } else if (hoursUntilAppointment > 24) {
-        refundPercent = 50;
-      } else {
-        refundPercent = 0;
-      }
-    } else if (policy === "strict") {
-      // No refund if less than 72 hours before
-      refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
-    }
+    const doctorRow = Array.isArray(booking.doctor)
+      ? booking.doctor[0]
+      : booking.doctor;
+    const refundPercent = refundPercentForPolicy(
+      doctorRow?.cancellation_policy,
+      hoursUntil
+    );
 
     // Process refund — either to wallet (instant) or bank (3-5 days via Stripe)
     // For deposit bookings, refund is based on what was actually charged (deposit only)
-    const stripeChargedAmount =
-      booking.payment_mode === "deposit" && booking.deposit_amount_cents != null
-        ? booking.deposit_amount_cents
-        : booking.total_amount_cents;
+    const stripeChargedAmount = stripeChargedAmountCents(booking);
+    const hasCharge = bookingHasRefundableCharge(booking);
 
     let walletCreditCents = 0;
     const refundDestination = parsed.data.refund_destination || "bank";
+    const refundAmount = refundAmountCents(stripeChargedAmount, refundPercent);
 
-    if (refundPercent > 0 && stripeChargedAmount > 0) {
-      const refundAmount = Math.round(
-        (stripeChargedAmount * refundPercent) / 100
-      );
-
+    if (refundPercent > 0 && refundAmount > 0 && hasCharge) {
       if (refundDestination === "wallet") {
-        // Instant: credit patient wallet, still refund doctor via Stripe
-        walletCreditCents = refundAmount;
-
-        // Refund Stripe to reverse the doctor's transfer + platform fee
-        if (booking.stripe_payment_intent_id) {
-          await getStripe().refunds.create({
-            payment_intent: booking.stripe_payment_intent_id,
-            amount: refundAmount,
-            reverse_transfer: true,
-            refund_application_fee: true,
-          });
+        // Keep funds on platform (reverse Connect transfer) and credit wallet.
+        // Do NOT Stripe-refund the card — that would double-pay with creditWallet.
+        const reversed = await reverseDestinationTransferToPlatform({
+          paymentIntentId: booking.stripe_payment_intent_id!,
+          connectedAccountId: doctorRow?.stripe_account_id,
+          amountCents: refundAmount,
+          bookingId: booking.id,
+          reason: "patient_cancel_wallet",
+        });
+        if (!reversed.ok) {
+          return {
+            error:
+              reversed.error ||
+              "Could not reverse the doctor payout for a wallet refund. Try bank refund or contact support.",
+          };
         }
 
-        // Credit the patient's wallet balance
+        walletCreditCents = refundAmount;
         await creditWallet({
           patientId: user.id,
           currency: booking.currency,
@@ -774,14 +768,12 @@ export async function cancelBooking(input: CancelBookingInput) {
         });
       } else {
         // Bank refund: standard Stripe refund back to patient's payment method
-        if (booking.stripe_payment_intent_id) {
-          await getStripe().refunds.create({
-            payment_intent: booking.stripe_payment_intent_id,
-            amount: refundAmount,
-            reverse_transfer: true,
-            refund_application_fee: true,
-          });
-        }
+        await getStripe().refunds.create({
+          payment_intent: booking.stripe_payment_intent_id!,
+          amount: refundAmount,
+          reverse_transfer: true,
+          refund_application_fee: true,
+        });
       }
     }
 
@@ -820,14 +812,14 @@ export async function cancelBooking(input: CancelBookingInput) {
 
     // Send cancellation email to patient (non-blocking)
     const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
-    const doctor: any = booking.doctor;
+    const doctor: any = doctorRow;
     const doctorProfile: any = doctor?.profile
       ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
       : null;
 
     if (patient?.email && doctorProfile) {
-      const refundAmount = refundPercent > 0
-        ? (stripeChargedAmount * refundPercent) / 100 / 100
+      const refundDisplay = refundPercent > 0 && hasCharge
+        ? refundAmount / 100
         : 0;
 
       const { subject, html } = bookingCancellationEmail({
@@ -836,7 +828,7 @@ export async function cancelBooking(input: CancelBookingInput) {
         date: booking.appointment_date,
         time: booking.start_time,
         bookingNumber: booking.booking_number,
-        refundAmount,
+        refundAmount: refundDisplay,
         currency: booking.currency.toUpperCase(),
       });
 
@@ -968,9 +960,9 @@ export async function cancelAndRebook(input: {
     const { data: oldBooking } = await supabase
       .from("bookings")
       .select(
-        `*, doctor:doctors!inner(
+        `*, doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
           cancellation_policy, stripe_account_id,
-          profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+          profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
         )`
       )
       .eq("id", input.old_booking_id)
@@ -983,42 +975,41 @@ export async function cancelAndRebook(input: {
     }
 
     // 2. Calculate refund from old booking
-    const appointmentDateTime = new Date(
-      `${oldBooking.appointment_date}T${oldBooking.start_time}`
+    const hoursUntil = hoursUntilAppointment(
+      oldBooking.appointment_date,
+      oldBooking.start_time
     );
-    const now = new Date();
-    const hoursUntil = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    const doctor: any = oldBooking.doctor;
-    const policy = doctor.cancellation_policy;
-    let refundPercent = 0;
+    const doctor: any = Array.isArray(oldBooking.doctor)
+      ? oldBooking.doctor[0]
+      : oldBooking.doctor;
+    const refundPercent = refundPercentForPolicy(
+      doctor?.cancellation_policy,
+      hoursUntil
+    );
 
-    if (policy === "flexible") {
-      refundPercent = hoursUntil > 24 ? 100 : 0;
-    } else if (policy === "moderate") {
-      if (hoursUntil > 48) refundPercent = 100;
-      else if (hoursUntil > 24) refundPercent = 50;
-    } else if (policy === "strict") {
-      refundPercent = hoursUntil > 72 ? 100 : 0;
-    }
+    const stripeCharged = stripeChargedAmountCents(oldBooking);
+    const refundAmount = refundAmountCents(stripeCharged, refundPercent);
+    const hasCharge = bookingHasRefundableCharge(oldBooking);
 
-    const stripeCharged = oldBooking.payment_mode === "deposit" && oldBooking.deposit_amount_cents != null
-      ? oldBooking.deposit_amount_cents
-      : oldBooking.total_amount_cents;
-    const refundAmount = Math.round((stripeCharged * refundPercent) / 100);
-
-    // 3. Refund old booking via Stripe (to reverse doctor transfer)
-    if (oldBooking.stripe_payment_intent_id && refundAmount > 0) {
-      await getStripe().refunds.create({
-        payment_intent: oldBooking.stripe_payment_intent_id,
-        amount: refundAmount,
-        reverse_transfer: true,
-        refund_application_fee: true,
+    // 3. Reverse doctor transfer (keep funds on platform) — do NOT refund card
+    //    then credit wallet for the new booking. Card refund + wallet = double pay.
+    if (hasCharge && refundAmount > 0) {
+      const reversed = await reverseDestinationTransferToPlatform({
+        paymentIntentId: oldBooking.stripe_payment_intent_id!,
+        connectedAccountId: doctor?.stripe_account_id,
+        amountCents: refundAmount,
+        bookingId: oldBooking.id,
+        reason: "cancel_rebook_wallet",
       });
-    }
+      if (!reversed.ok) {
+        return {
+          error:
+            reversed.error ||
+            "Could not reverse the previous payout. Please cancel separately.",
+        };
+      }
 
-    // 4. Credit wallet with refund
-    if (refundAmount > 0) {
       await creditWallet({
         patientId: user.id,
         currency: oldBooking.currency,
