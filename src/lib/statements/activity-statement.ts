@@ -2,7 +2,7 @@
  * MyDoctors360 activity statement — pure month aggregation.
  *
  * This is a record of consult fees that settled on a doctor's Stripe
- * Connected Account. It is not an invoice and not a receipt.
+ * Connected Account, kept for their records.
  *
  * Fee model (verified against checkout, not assumed):
  *
@@ -70,7 +70,7 @@ import { getCommissionCents } from "@/lib/utils/currency";
 export const ACTIVITY_STATEMENT_TITLE = "MyDoctors360 activity statement";
 
 export const ACTIVITY_STATEMENT_FOOTER =
-  "Consult fees are paid to your Stripe Connected Account. MyDoctors360 charges a platform fee. This activity statement is for your records only.";
+  "Consultation fees are paid directly to your Stripe Connected Account. MyDoctors360 charges a platform fee for bookings made through the marketplace. This activity statement is for your records only.";
 
 export const ACTIVITY_STATEMENT_FIGURES_NOTE =
   "Gross consult is the consultation fee on the booking, or the packaged total when that is what was charged. Connected Account is the amount Stripe transferred after the platform fee. A negative Connected Account amount is a refund reversing that transfer. A deposit remainder paid in person, and any wallet credit, are not transfers to the Connected Account.";
@@ -362,14 +362,13 @@ export function inLondonRange(iso: string | null | undefined, start: Date, end: 
 export function formatStatementMoney(cents: number, currency: string): string {
   const rounded = Number.isFinite(cents) ? Math.round(cents) : 0;
   const cur = (currency || "GBP").toUpperCase();
+  const sign = rounded < 0 ? "\u2212" : "";
   if (cur === "GBP") {
-    const sign = rounded < 0 ? "-" : "";
     const abs = Math.abs(rounded);
     const pounds = Math.floor(abs / 100).toLocaleString("en-GB");
     const pence = String(abs % 100).padStart(2, "0");
     return `${sign}£${pounds}.${pence}`;
   }
-  const sign = rounded < 0 ? "-" : "";
   const abs = Math.abs(rounded);
   const major = Math.floor(abs / 100).toLocaleString("en-GB");
   const minor = String(abs % 100).padStart(2, "0");

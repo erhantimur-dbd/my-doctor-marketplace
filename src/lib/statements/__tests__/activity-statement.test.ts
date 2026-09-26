@@ -293,7 +293,7 @@ describe("buildActivityStatement", () => {
     ]);
     expect(formatStatementMoney(4000, "GBP")).toBe("£40.00");
     expect(formatStatementMoney(3400, "GBP")).toBe("£34.00");
-    expect(formatStatementMoney(-600, "GBP")).toBe("-£6.00");
+    expect(formatStatementMoney(-600, "GBP")).toBe("\u2212£6.00");
   });
 
   it("places a payment just after London midnight in September, not August", () => {
@@ -560,7 +560,11 @@ describe("rendered statement", () => {
     expect(html).not.toContain("Chen");
     expect(html.toLowerCase()).not.toMatch(/\binvoice\b|\breceipt\b/);
     expect(html).not.toMatch(/patient_notes|doctor_notes|visit_summary/);
-    expect(html).toContain("overflow-x:auto");
+    expect(html).toContain('<span class="d">Saturday 26 September 2026</span><span class="t">9:00am BST</span>');
+    expect(html).toContain("max-width: 860px");
+    expect(html).toContain('<table class="lines__table">');
+    expect(html).not.toMatch(/<button/i);
+    expect(html.toLowerCase()).not.toMatch(/\bbill\b/);
   });
 });
 
@@ -607,9 +611,21 @@ describe("data access", () => {
   });
 });
 
+describe("money formatting", () => {
+  it("uses a minus sign for negative amounts", () => {
+    expect(formatStatementMoney(-3400, "GBP")).toBe("\u2212£34.00");
+    expect(formatStatementMoney(-3400, "GBP").includes("-")).toBe(false);
+    expect(formatStatementMoney(0, "GBP")).toBe("£0.00");
+    expect(formatStatementMoney(-100, "EUR")).toBe("\u2212EUR 1.00");
+  });
+});
+
 describe("copy lock", () => {
   it("names the document an activity statement and keeps the records-only footer", () => {
     expect(ACTIVITY_STATEMENT_TITLE).toBe("MyDoctors360 activity statement");
+    expect(ACTIVITY_STATEMENT_FOOTER).toBe(
+      "Consultation fees are paid directly to your Stripe Connected Account. MyDoctors360 charges a platform fee for bookings made through the marketplace. This activity statement is for your records only."
+    );
     expect(ACTIVITY_STATEMENT_FOOTER).toContain("Stripe Connected Account");
     expect(ACTIVITY_STATEMENT_FOOTER).toContain("platform fee");
     expect(ACTIVITY_STATEMENT_FOOTER).toContain("for your records only");

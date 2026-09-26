@@ -36,7 +36,7 @@ export default async function ActivityStatementPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:space-y-0">
       <StatementControls
         monthKey={loaded.monthKey}
         scope={loaded.scope}
