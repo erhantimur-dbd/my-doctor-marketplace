@@ -4,6 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Star, MessageSquare, Clock } from "lucide-react";
 import { WriteReviewDialog } from "./write-review-dialog";
+import {
+  BOOKING_DOCTOR_PROFILE_EMBED,
+  PATIENT_PENDING_REVIEW_BOOKINGS_SELECT,
+  patientBookingDoctorName,
+} from "@/lib/patient/booking-doctor-embed";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -55,7 +60,7 @@ export default async function ReviewsPage() {
       booking_id,
       doctor:doctors(
         id, title, slug,
-        profile:profiles(first_name, last_name),
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name),
         doctor_specialties(specialty:specialties(slug))
       ),
       review_endorsements(skill_slug)
@@ -71,20 +76,7 @@ export default async function ReviewsPage() {
 
   const { data: completedBookings } = await supabase
     .from("bookings")
-    .select(
-      `
-      id,
-      booking_number,
-      start_time,
-      consultation_type,
-      doctor_id,
-      doctor:doctors(
-        id, title, slug,
-        profile:profiles(first_name, last_name),
-        doctor_specialties(specialty:specialties(slug))
-      )
-    `
-    )
+    .select(PATIENT_PENDING_REVIEW_BOOKINGS_SELECT)
     .eq("patient_id", user.id)
     .eq("status", "completed")
     .order("start_time", { ascending: false });
@@ -117,7 +109,10 @@ export default async function ReviewsPage() {
             </p>
             <div className="space-y-3">
               {pendingReviewBookings.map((booking) => {
-                const doctorName = `${booking.doctor.title || ""} ${booking.doctor.profile.first_name} ${booking.doctor.profile.last_name}`.trim();
+                const doctor = Array.isArray(booking.doctor)
+                  ? booking.doctor[0]
+                  : booking.doctor;
+                const doctorName = patientBookingDoctorName(doctor);
                 const bookingDate = new Date(
                   booking.start_time
                 ).toLocaleDateString("en-GB", {
@@ -143,10 +138,10 @@ export default async function ReviewsPage() {
                     </div>
                     <WriteReviewDialog
                       bookingId={booking.id}
-                      doctorId={booking.doctor.id}
+                      doctorId={booking.doctor_id ?? doctor?.id}
                       doctorName={doctorName}
                       doctorSpecialtySlugs={
-                        (booking.doctor.doctor_specialties ?? [])
+                        (doctor?.doctor_specialties ?? [])
                           .map((ds: { specialty: { slug: string } | { slug: string }[] }) => {
                             const s = Array.isArray(ds.specialty) ? ds.specialty[0] : ds.specialty;
                             return s?.slug;
@@ -183,7 +178,10 @@ export default async function ReviewsPage() {
           ) : (
             <div className="space-y-4">
               {typedReviews.map((review, index) => {
-                const doctorName = `${review.doctor.title || ""} ${review.doctor.profile.first_name} ${review.doctor.profile.last_name}`.trim();
+                const doctor = Array.isArray(review.doctor)
+                  ? review.doctor[0]
+                  : review.doctor;
+                const doctorName = patientBookingDoctorName(doctor);
                 const reviewDate = new Date(
                   review.created_at
                 ).toLocaleDateString("en-GB", {

@@ -49,13 +49,25 @@ describe("doctor bookings page patient access", () => {
   const page = read(
     "src/app/[locale]/(doctor)/doctor-dashboard/bookings/bookings-client.tsx"
   );
+  const home = read("src/app/[locale]/(doctor)/doctor-dashboard/page.tsx");
+  const payments = read(
+    "src/app/[locale]/(doctor)/doctor-dashboard/payments/page.tsx"
+  );
+  const patients = read(
+    "src/app/[locale]/(doctor)/doctor-dashboard/patients/page.tsx"
+  );
+  const reviews = read(
+    "src/app/[locale]/(doctor)/doctor-dashboard/reviews/page.tsx"
+  );
 
   it("does not read booking.patient.first_name unprotected", () => {
-    expect(page).not.toMatch(/booking\.patient\.first_name/);
-    expect(page).not.toMatch(/booking\.patient\.last_name/);
-    expect(page).not.toMatch(/booking\.patient\.email/);
-    expect(page).not.toMatch(/patient\?\.first_name/);
-    expect(page).not.toMatch(/patient\?\.email/);
+    for (const source of [page, home, payments, patients, reviews]) {
+      expect(source).not.toMatch(/booking\.patient\.first_name/);
+      expect(source).not.toMatch(/booking\.patient\.last_name/);
+      expect(source).not.toMatch(/booking\.patient\.email/);
+      expect(source).not.toMatch(/review\.patient\.first_name/);
+      expect(source).not.toMatch(/review\.patient\.last_name/);
+    }
   });
 
   it("labels the booking row and the nested reschedule patient", () => {
@@ -67,6 +79,14 @@ describe("doctor bookings page patient access", () => {
     expect(page.match(/doctorBookingPatientEmail\(/g)?.length).toBeGreaterThanOrEqual(
       2
     );
+  });
+
+  it("doctor home, payments, patients, and reviews use null-safe patient helpers", () => {
+    expect(home).toContain("doctorBookingPatientName");
+    expect(payments).toContain("doctorBookingPatientName");
+    expect(patients).toContain("unwrapBookingPatient");
+    expect(reviews).toContain("unwrapBookingPatient");
+    expect(reviews).toContain("doctorBookingPatientName");
   });
 });
 

@@ -49,6 +49,7 @@ type Op = {
 let bookingRow: Record<string, unknown>;
 let existingNotification: { id: string } | null;
 let failStatusUpdate: boolean;
+let emptyStatusUpdateReturn: boolean;
 
 function baseBooking(overrides: Record<string, unknown> = {}) {
   return {
@@ -105,6 +106,18 @@ function installClient() {
               data: null,
               error: { message: "confirm failed" },
             });
+          } else if (
+            snapshot.action === "update" &&
+            snapshot.table === "bookings" &&
+            snapshot.payload &&
+            typeof snapshot.payload === "object" &&
+            "status" in snapshot.payload
+          ) {
+            // Returning update (.update().select().maybeSingle())
+            settled = Promise.resolve({
+              data: emptyStatusUpdateReturn ? null : { id: BOOKING_ID },
+              error: null,
+            });
           } else {
             settled = Promise.resolve({ data: null, error: null });
           }
@@ -129,7 +142,10 @@ function installClient() {
               op.action = "update";
               op.payload = args[0];
             } else if (prop === "select") {
-              op.action = "select";
+              // Returning mutations keep action=update|insert; bare selects stay select.
+              if (op.action !== "update" && op.action !== "insert") {
+                op.action = "select";
+              }
             } else if (prop === "eq" || prop === "contains") {
               op.filters[`${String(prop)}:${String(args[0])}`] = args[1];
             } else if (prop === "maybeSingle" || prop === "single") {
@@ -190,6 +206,7 @@ beforeEach(() => {
   bookingRow = baseBooking();
   existingNotification = null;
   failStatusUpdate = false;
+  emptyStatusUpdateReturn = false;
   installClient();
   vi.mocked(createRoom).mockReset();
   vi.mocked(getRoom).mockReset();
@@ -297,8 +314,14 @@ describe("charge-skip confirm", () => {
       expect.objectContaining({
         table: "bookings",
         action: "update",
-        payload: { status: "confirmed" },
-        filters: { "eq:id": BOOKING_ID },
+        payload: expect.objectContaining({
+          status: "confirmed",
+          paid_at: expect.any(String),
+        }),
+        filters: {
+          "eq:id": BOOKING_ID,
+          "eq:status": "pending_payment",
+        },
       })
     );
 
@@ -383,6 +406,14 @@ describe("charge-skip confirm", () => {
 
   it("returns an error and skips Daily when the confirm update fails", async () => {
     failStatusUpdate = true;
+    const result = await confirmBookingWithoutStripeCheckout(BOOKING_ID);
+    expect(result.error).toMatch(/Failed to create booking/);
+    expect(createRoom).not.toHaveBeenCalled();
+    expect(notificationInserts(clientRef.current?.ops ?? [])).toHaveLength(0);
+  });
+
+  it("returns an error when the booking is not pending_payment", async () => {
+    emptyStatusUpdateReturn = true;
     const result = await confirmBookingWithoutStripeCheckout(BOOKING_ID);
     expect(result.error).toMatch(/Failed to create booking/);
     expect(createRoom).not.toHaveBeenCalled();

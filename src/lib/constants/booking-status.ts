@@ -9,6 +9,7 @@ export const BOOKING_STATUSES = {
   CANCELLED_DOCTOR: "cancelled_doctor",
   NO_SHOW: "no_show",
   REFUNDED: "refunded",
+  EXPIRED: "expired",
 } as const;
 
 export type BookingStatus = (typeof BOOKING_STATUSES)[keyof typeof BOOKING_STATUSES];

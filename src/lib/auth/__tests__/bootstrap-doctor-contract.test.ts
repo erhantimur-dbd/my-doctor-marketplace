@@ -19,17 +19,20 @@ describe("OAuth doctor bootstrap contracts", () => {
     expect(cb).toContain("DOCTOR_OAUTH_INTENT_COOKIE");
   });
 
-  it("register-doctor uses email/password (OAuth intent lives on auth helpers)", () => {
+  it("register-doctor uses email/password; public OAuth doctorIntent is disabled", () => {
     // Product choice: full doctor wizard is email/password only so we always
-    // collect GMC/practice fields. OAuth doctorIntent remains available for
-    // future entry points via signInWithGoogle({ doctorIntent: true }).
+    // collect GMC/practice fields. Public OAuth must not set the doctor intent
+    // cookie (privilege escalation).
     const page = read("src/app/[locale]/(public)/register-doctor/page.tsx");
     expect(page).toContain("registerDoctor");
     expect(page).toContain("registerDoctorWithCheckout");
     expect(page).not.toMatch(/signInWithGoogle/);
     const auth = read("src/actions/auth.ts");
     expect(auth).toMatch(/doctorIntent\?: boolean/);
+    expect(auth).toMatch(/Intentionally a no-op/);
     expect(auth).toMatch(/export async function signInWithGoogle/);
+    const boot = read("src/lib/auth/bootstrap-doctor.ts");
+    expect(boot).toContain("role_escalation_blocked");
   });
 });
 

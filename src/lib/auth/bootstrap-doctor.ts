@@ -26,6 +26,20 @@ export async function bootstrapDoctorShell(params: {
   const email = params.email.trim().toLowerCase();
 
   try {
+    const { data: existingProfile } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("id", params.userId)
+      .maybeSingle();
+
+    // Never escalate an existing patient/admin into a doctor shell.
+    if (
+      existingProfile?.role === "patient" ||
+      existingProfile?.role === "admin"
+    ) {
+      return { ok: false, error: "role_escalation_blocked" };
+    }
+
     // Role
     await admin
       .from("profiles")

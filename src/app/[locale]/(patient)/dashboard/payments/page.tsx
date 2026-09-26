@@ -18,6 +18,7 @@ import {
 import { CreditCard, TrendingUp, Receipt } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { PaymentFilters } from "./payment-filters";
+import { PATIENT_PAYMENTS_LIST_SELECT } from "@/lib/patient/booking-doctor-embed";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Payment History" };
@@ -52,16 +53,7 @@ export default async function PaymentsPage({
   // Build query for paid bookings with doctor info
   let query = supabase
     .from("bookings")
-    .select(
-      `
-      id, booking_number, appointment_date, start_time, consultation_type,
-      total_amount_cents, currency, status, paid_at, created_at,
-      doctor:doctors(
-        title, clinic_name,
-        profile:profiles(first_name, last_name)
-      )
-    `
-    )
+    .select(PATIENT_PAYMENTS_LIST_SELECT)
     .eq("patient_id", user.id)
     .in("status", ["confirmed", "approved", "completed"])
     .gt("total_amount_cents", 0)

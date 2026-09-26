@@ -40,4 +40,24 @@ describe("resolveConfirmationLookup", () => {
       expect(r.bookingId).toBe("bk_only");
     }
   });
+
+  it("resolves Softsmoke charge-skip confirm=1 as direct_confirm", () => {
+    const r = resolveConfirmationLookup({
+      booking_id: "bk_softsmoke",
+      confirm: "1",
+    });
+    expect(r).toEqual({
+      mode: "direct_confirm",
+      bookingId: "bk_softsmoke",
+    });
+  });
+
+  it("prefers Stripe session over confirm=1", () => {
+    const r = resolveConfirmationLookup({
+      session_id: "cs_test",
+      booking_id: "bk",
+      confirm: "1",
+    });
+    expect(r).toEqual({ mode: "stripe_session", sessionId: "cs_test" });
+  });
 });

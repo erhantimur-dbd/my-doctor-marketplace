@@ -11,6 +11,7 @@ import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { resolveBookPageAccess } from "@/lib/booking/book-page-access";
 import { readJoinedProfileEmail } from "@/lib/soft-launch/softsmoke-connect-bypass";
+import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
 import type { LicenseLike } from "@/lib/license/tier-lifecycle";
 
 interface BookPageProps {
@@ -89,7 +90,12 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
     .single();
 
   if (!doctorData2) {
-    redirect(`/${locale}/doctors`);
+    // Soft Launch gates /doctors directory — land on an allowlisted surface.
+    redirect(
+      SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+        ? `/${locale}/contact`
+        : `/${locale}/doctors`
+    );
   }
 
   const doctor: any = doctorData2;
@@ -126,11 +132,23 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
             This doctor is not currently accepting online bookings.
           </p>
           <div className="flex flex-col gap-2 pt-2">
-            <Button variant="outline" asChild className="w-full">
-              <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
-            </Button>
+            {!SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME && (
+              <Button variant="outline" asChild className="w-full">
+                <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
+              </Button>
+            )}
             <Button asChild className="w-full">
-              <Link href="/doctors">{t("browse_doctors")}</Link>
+              <Link
+                href={
+                  SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                    ? "/pricing"
+                    : "/doctors"
+                }
+              >
+                {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                  ? "View pricing"
+                  : t("browse_doctors")}
+              </Link>
             </Button>
           </div>
         </div>
@@ -149,11 +167,23 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
           </p>
           <div className="flex flex-col gap-2 pt-2">
             <NotifyMeButton doctorId={doctor.id} />
-            <Button variant="outline" asChild className="w-full">
-              <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
-            </Button>
+            {!SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME && (
+              <Button variant="outline" asChild className="w-full">
+                <Link href={`/doctors/${doctor.slug}`}>{t("view_profile")}</Link>
+              </Button>
+            )}
             <Button asChild className="w-full">
-              <Link href="/doctors">{t("browse_doctors")}</Link>
+              <Link
+                href={
+                  SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                    ? "/contact"
+                    : "/doctors"
+                }
+              >
+                {SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME
+                  ? "Contact us"
+                  : t("browse_doctors")}
+              </Link>
             </Button>
           </div>
         </div>

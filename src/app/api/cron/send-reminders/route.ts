@@ -11,6 +11,11 @@ import {
 import { sendSms } from "@/lib/sms/client";
 import { appointmentReminderSms } from "@/lib/sms/templates";
 import { authorizeCronRequest } from "@/lib/cron/authorize";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
+import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
 
 // Default reminders used when a doctor hasn't configured their own
 const DEFAULT_REMINDERS = [
@@ -45,11 +50,11 @@ export async function GET(request: NextRequest) {
       consultation_type,
       video_room_url,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         clinic_name,
         address,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
       )
     `)
     .in("status", ["confirmed", "approved"])
@@ -101,11 +106,14 @@ export async function GET(request: NextRequest) {
   let smsSent = 0;
 
   for (const booking of bookings) {
-    // Calculate minutes until appointment
-    const appointmentTime = new Date(
-      `${booking.appointment_date}T${booking.start_time}`
+    // Calculate minutes until appointment (start_time is TIMESTAMPTZ / ISO)
+    const appointmentTime = resolveBookingInstant(
+      booking.appointment_date,
+      booking.start_time
     );
-    const minutesUntil = (appointmentTime.getTime() - now.getTime()) / 60000;
+    const minutesUntil =
+      (appointmentTime.getTime() - now.getTime()) / 60000;
+    if (!Number.isFinite(minutesUntil)) continue;
 
     // Skip if appointment already passed
     if (minutesUntil < -30) continue;
@@ -138,6 +146,8 @@ export async function GET(request: NextRequest) {
       const key = `${booking.id}:${pref.minutes_before}:${pref.channel}`;
       if (sentSet.has(key)) continue;
 
+      let delivered = false;
+
       if (pref.channel === "email" && patient?.email && doctorProfile) {
         const consultationLabel =
           booking.consultation_type === "video"
@@ -159,8 +169,15 @@ export async function GET(request: NextRequest) {
           address: doctor.address,
         });
 
-        await sendEmail({ to: patient.email, subject, html });
-        emailsSent++;
+        const emailResult = await sendEmail({
+          to: patient.email,
+          subject,
+          html,
+        });
+        if (emailResult.success) {
+          emailsSent++;
+          delivered = true;
+        }
       } else if (pref.channel === "in_app") {
         // Create in-app notification
         let timeLabel = "tomorrow";
@@ -169,7 +186,7 @@ export async function GET(request: NextRequest) {
         else if (pref.minutes_before < 1440)
           timeLabel = `in ${Math.round(pref.minutes_before / 60)} hours`;
 
-        await supabase.from("notifications").insert({
+        const { error: notifError } = await supabase.from("notifications").insert({
           user_id: booking.patient_id,
           type: "booking_reminder",
           title: `Appointment ${timeLabel}`,
@@ -180,7 +197,10 @@ export async function GET(request: NextRequest) {
             video_room_url: booking.video_room_url,
           },
         });
-        inAppSent++;
+        if (!notifError) {
+          inAppSent++;
+          delivered = true;
+        }
       } else if (pref.channel === "whatsapp" && patient?.phone && doctorProfile) {
         // Only send if patient has opted in to WhatsApp notifications
         if (!patient.notification_whatsapp) continue;
@@ -210,7 +230,10 @@ export async function GET(request: NextRequest) {
           }),
         });
 
-        if (result.success) whatsappSent++;
+        if (result.success) {
+          whatsappSent++;
+          delivered = true;
+        }
       } else if (pref.channel === "sms" && patient?.phone && doctorProfile) {
         // Only send if patient has opted in to SMS notifications
         if (!patient.notification_sms) continue;
@@ -229,8 +252,16 @@ export async function GET(request: NextRequest) {
         });
 
         const result = await sendSms({ to: patient.phone, body });
-        if (result.success) smsSent++;
+        if (result.success) {
+          smsSent++;
+          delivered = true;
+        }
+      } else {
+        // Channel prerequisites missing (no email/phone) — do not mark sent.
+        continue;
       }
+
+      if (!delivered) continue;
 
       // Record that this reminder was sent
       await supabase.from("booking_reminders_sent").insert({

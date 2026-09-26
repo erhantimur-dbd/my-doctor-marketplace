@@ -24,6 +24,21 @@ describe("patient booking Stripe Checkout shape (source contract)", () => {
     expect(source).toContain("destination: doctor.stripe_account_id");
   });
 
+  it("returns Softsmoke charge-skip confirm URL the confirmation page accepts", () => {
+    expect(source).toContain(
+      "booking-confirmation?booking_id=${booking.id}&confirm=1"
+    );
+    const lookup = resolveConfirmationLookup({
+      booking_id: "example-id",
+      confirm: "1",
+    });
+    expect(lookup.mode).toBe("direct_confirm");
+  });
+
+  it("persists Checkout session id for cleanup soft-expire", () => {
+    expect(source).toContain("stripe_checkout_session_id: session.id");
+  });
+
   it("returns wallet-only success URL the confirmation page accepts", () => {
     expect(source).toContain(
       "booking-confirmation?booking_id=${booking.id}&wallet=true"

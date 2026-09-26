@@ -4,17 +4,20 @@
  *
  * Stripe Checkout returns ?session_id=cs_…
  * Wallet-only pay returns ?booking_id=…&wallet=true (no Stripe session).
+ * Softsmoke charge-skip returns ?booking_id=…&confirm=1 (no Stripe / no session).
  */
 
 export type ConfirmationQuery = {
   session_id?: string | null;
   booking_id?: string | null;
   wallet?: string | null;
+  confirm?: string | null;
 };
 
 export type ConfirmationLookup =
   | { mode: "stripe_session"; sessionId: string }
   | { mode: "wallet_booking"; bookingId: string }
+  | { mode: "direct_confirm"; bookingId: string }
   | { mode: "invalid" };
 
 function nonEmpty(v: string | null | undefined): string | null {
@@ -23,8 +26,14 @@ function nonEmpty(v: string | null | undefined): string | null {
   return t.length > 0 ? t : null;
 }
 
+function isTruthyFlag(v: string | null | undefined): boolean {
+  const t = (v ?? "").trim().toLowerCase();
+  return t === "1" || t === "true" || t === "yes";
+}
+
 /**
  * Prefer Stripe session when both params present (payment just completed).
+ * Softsmoke / unpaid confirm uses confirm=1 with booking_id.
  * Wallet path requires booking_id; wallet=true is preferred but booking_id alone
  * is accepted when session_id is absent (matches createBookingAndCheckout return).
  */
@@ -41,6 +50,10 @@ export function resolveConfirmationLookup(
     return { mode: "invalid" };
   }
 
+  if (isTruthyFlag(query.confirm)) {
+    return { mode: "direct_confirm", bookingId };
+  }
+
   const wallet = (query.wallet ?? "").toLowerCase();
   if (wallet === "true" || wallet === "1" || wallet === "") {
     // Empty wallet still allowed if only booking_id was passed (wallet-only URL shape)
@@ -55,4 +68,9 @@ export function resolveConfirmationLookup(
 /** True when confirmation can proceed without a Stripe session id. */
 export function isWalletOnlyConfirmation(query: ConfirmationQuery): boolean {
   return resolveConfirmationLookup(query).mode === "wallet_booking";
+}
+
+/** Softsmoke / charge-skip confirmation (no Checkout session, may be guest). */
+export function isDirectConfirmConfirmation(query: ConfirmationQuery): boolean {
+  return resolveConfirmationLookup(query).mode === "direct_confirm";
 }

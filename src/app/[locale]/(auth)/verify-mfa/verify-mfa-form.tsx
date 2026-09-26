@@ -183,18 +183,20 @@ export function VerifyMfaForm({
         verifyData.refresh_token
       );
 
-      // Navigate regardless — even if cookie-setting had issues,
-      // the middleware will handle re-auth
+      if (!success) {
+        console.warn("MFA: setSession returned error");
+        setError(t("error_invalid_code"));
+        setCode("");
+        setVerifying(false);
+        return;
+      }
+
       const target =
         userRole === "doctor"
           ? `/${locale}/doctor-dashboard`
           : userRole === "admin"
             ? `/${locale}/admin`
             : `/${locale}/dashboard`;
-
-      if (!success) {
-        console.warn("MFA: setSession returned error, navigating anyway");
-      }
 
       // Use window.location for a full page load (ensures fresh cookies)
       window.location.href = target;

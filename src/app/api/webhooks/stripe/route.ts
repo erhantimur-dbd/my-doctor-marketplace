@@ -8,6 +8,10 @@ import {
   ensureDailyVideoRoom,
   finalizeConfirmedBooking,
 } from "@/lib/booking/finalize-confirmed-booking";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
 import { sendGuestAccountClaimEmail } from "@/lib/auth/guest-claim";
@@ -205,7 +209,7 @@ export async function POST(request: NextRequest) {
               paid_at: new Date().toISOString(),
             })
             .eq("id", firstBookingId)
-            .neq("status", "confirmed");
+            .eq("status", "pending_payment");
 
           // Fetch full booking for email, video room, calendar export
           const { data: booking } = await supabase
@@ -225,11 +229,11 @@ export async function POST(request: NextRequest) {
               video_room_url,
               daily_room_name,
               patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
-              doctor:doctors!inner(
+              doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
                 id,
                 clinic_name,
                 address,
-                profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+                profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
               )
             `)
             .eq("id", firstBookingId)
@@ -265,9 +269,10 @@ export async function POST(request: NextRequest) {
             );
 
             // Create video room if video consultation
+            let followUpVideoRoomUrl: string | null = booking.video_room_url;
             if (booking.consultation_type === "video") {
               try {
-                await ensureDailyVideoRoom(
+                followUpVideoRoomUrl = await ensureDailyVideoRoom(
                   {
                     id: firstBookingId,
                     bookingNumber: booking.booking_number,
@@ -305,7 +310,10 @@ export async function POST(request: NextRequest) {
                 bookingNumber: booking.booking_number,
                 amount: booking.total_amount_cents / 100,
                 currency: booking.currency.toUpperCase(),
-                videoRoomUrl: booking.consultation_type === "video" ? null : undefined,
+                videoRoomUrl:
+                  booking.consultation_type === "video"
+                    ? followUpVideoRoomUrl
+                    : undefined,
                 clinicName: doctor.clinic_name,
                 address: doctor.address,
               });
@@ -350,7 +358,7 @@ export async function POST(request: NextRequest) {
             paid_at: new Date().toISOString(),
           })
           .eq("id", bookingId)
-          .neq("status", "confirmed");
+          .eq("status", "pending_payment");
 
         // Fetch full booking with patient + doctor details for email & video room
         const { data: booking } = await supabase
@@ -378,11 +386,11 @@ export async function POST(request: NextRequest) {
             deposit_value,
             is_guest,
             patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
-            doctor:doctors!inner(
+            doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
               id,
               clinic_name,
               address,
-              profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+              profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
             )
           `)
           .eq("id", bookingId)
@@ -1129,11 +1137,11 @@ export async function POST(request: NextRequest) {
           reschedule_price_diff_cents,
           currency,
           patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_whatsapp, preferred_locale),
-          doctor:doctors!inner(
+          doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
             id,
             clinic_name,
             address,
-            profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+            profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
           )
         `)
         .eq("id", newBookingId)

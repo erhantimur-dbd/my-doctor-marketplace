@@ -471,8 +471,34 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       }
 
       const { origin, locale } = await getOriginAndLocale();
+
+      if (isGuest) {
+        const { sendGuestAccountClaimEmail } = await import(
+          "@/lib/auth/guest-claim"
+        );
+        const guestEmail =
+          parsed.data.guest?.email ||
+          (await writeClient
+            .from("profiles")
+            .select("email, first_name")
+            .eq("id", patientId)
+            .maybeSingle()
+            .then((r) => r.data?.email));
+        if (guestEmail) {
+          sendGuestAccountClaimEmail({
+            email: guestEmail,
+            patientName: parsed.data.guest?.first_name || "there",
+            bookingNumber: booking.booking_number,
+            locale,
+            origin,
+          }).catch((err) =>
+            log.error("Softsmoke guest claim email failed", { err })
+          );
+        }
+      }
+
       return {
-        url: `${origin}/${locale}/booking-confirmation?booking_id=${booking.id}`,
+        url: `${origin}/${locale}/booking-confirmation?booking_id=${booking.id}&confirm=1`,
         bookingId: booking.id,
       };
     }
@@ -604,11 +630,13 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         ...(walletCreditToApply > 0 ? { wallet_credit_cents: String(walletCreditToApply) } : {}),
       },
       success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/${locale}/doctors/${doctor.slug}`,
+      // Soft Launch gates /doctors — cancel must land on an allowlisted surface.
+      cancel_url: `${origin}/${locale}/doctors/${doctor.slug}/book`,
     });
 
     // Webhook still confirms via metadata.booking_id. Store the session id
-    // before returning the URL. Admin client: patient RLS cannot UPDATE bookings.
+    // before returning the URL so cleanup-expired can expire Checkout before
+    // soft-expiring the row. Admin client: patient RLS cannot UPDATE bookings.
     const { error: sessionPersistError } = await adminSupabase
       .from("bookings")
       .update({ stripe_checkout_session_id: session.id })

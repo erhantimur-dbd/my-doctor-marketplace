@@ -15,6 +15,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { createRoom, getRoom } from "@/lib/daily/client";
 import { notifyDoctorOfNewBooking } from "@/lib/notifications/doctor-new-booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 import { log } from "@/lib/utils/logger";
 
 export interface ConfirmedBookingFinalizeInput {
@@ -99,10 +103,10 @@ const BOOKING_FINALIZE_SELECT = `
   video_room_url,
   daily_room_name,
   patient:profiles!bookings_patient_id_fkey(first_name, last_name),
-  doctor:doctors!inner(
+  doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
     clinic_name,
     address,
-    profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+    profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
   )
 `;
 
@@ -370,13 +374,30 @@ export async function confirmBookingWithoutStripeCheckout(
   bookingId: string
 ): Promise<{ error?: string }> {
   const supabase = createAdminClient();
-  const { error } = await supabase
+  // Only promote pending_payment rows. A bare update by id could revive a
+  // cancelled/expired booking if called twice or against a stale id.
+  const { data: updated, error } = await supabase
     .from("bookings")
-    .update({ status: BOOKING_STATUSES.CONFIRMED })
-    .eq("id", bookingId);
+    .update({
+      status: BOOKING_STATUSES.CONFIRMED,
+      // Softsmoke charge-skip has no Stripe PI; still stamp paid_at so doctor
+      // payment UIs that key off paid_at do not show the booking as unpaid.
+      paid_at: new Date().toISOString(),
+    })
+    .eq("id", bookingId)
+    .eq("status", BOOKING_STATUSES.PENDING_PAYMENT)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     log.error("Softsmoke connect bypass confirm failed", { err: error });
+    return { error: "Failed to create booking. Please try again." };
+  }
+
+  if (!updated) {
+    log.error("Softsmoke connect bypass confirm skipped — not pending_payment", {
+      bookingId,
+    });
     return { error: "Failed to create booking. Please try again." };
   }
 

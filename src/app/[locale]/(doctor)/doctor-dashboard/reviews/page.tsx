@@ -15,6 +15,11 @@ import {
   Send,
   TrendingUp,
 } from "lucide-react";
+import {
+  DOCTOR_BOOKING_PATIENT_FALLBACK,
+  doctorBookingPatientName,
+  unwrapBookingPatient,
+} from "@/lib/doctor/booking-patient";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ReviewRow = any;
@@ -200,13 +205,26 @@ export default function ReviewsPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {reviews.map((review) => (
+              {reviews.map((review) => {
+                const patient = unwrapBookingPatient(review.patient);
+                const displayName = doctorBookingPatientName(review.patient);
+                const initials = patient
+                  ? `${(patient.first_name ?? "").charAt(0)}${(patient.last_name ?? "").charAt(0)}`.toUpperCase() ||
+                    "P"
+                  : "P";
+                const shortLabel =
+                  patient?.first_name && patient?.last_name
+                    ? `${patient.first_name} ${patient.last_name.charAt(0)}.`
+                    : displayName === DOCTOR_BOOKING_PATIENT_FALLBACK
+                      ? displayName
+                      : displayName;
+
+                return (
                 <div key={review.id}>
                   <div className="flex items-start gap-4">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback>
-                        {review.patient.first_name.charAt(0)}
-                        {review.patient.last_name.charAt(0)}
+                        {initials}
                       </AvatarFallback>
                     </Avatar>
 
@@ -214,8 +232,7 @@ export default function ReviewsPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium">
-                            {review.patient.first_name}{" "}
-                            {review.patient.last_name.charAt(0)}.
+                            {shortLabel}
                           </p>
                           <div className="mt-0.5 flex items-center gap-2">
                             <div className="flex">
@@ -329,7 +346,8 @@ export default function ReviewsPage() {
                   </div>
                   <Separator className="mt-6" />
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

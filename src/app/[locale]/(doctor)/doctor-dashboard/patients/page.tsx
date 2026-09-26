@@ -19,6 +19,11 @@ import { hasActiveLicense } from "@/lib/license/check";
 import { FollowUpInvitationDialog } from "@/components/doctor/follow-up-invitation-dialog";
 import { CreateInvoiceDialog } from "@/components/doctor/create-invoice-dialog";
 import { isCarePlansEnabled } from "@/lib/launch/soft-launch";
+import {
+  DOCTOR_BOOKING_PATIENT_EMAIL_FALLBACK,
+  DOCTOR_BOOKING_PATIENT_FALLBACK,
+  unwrapBookingPatient,
+} from "@/lib/doctor/booking-patient";
 
 interface PatientRow {
   patient_id: string;
@@ -85,6 +90,7 @@ export default async function PatientsPage({
   const patientMap = new Map<string, PatientRow>();
 
   (bookings || []).forEach((booking: any) => {
+    const patient = unwrapBookingPatient(booking.patient);
     const existing = patientMap.get(booking.patient_id);
     if (existing) {
       existing.total_visits += 1;
@@ -95,10 +101,10 @@ export default async function PatientsPage({
     } else {
       patientMap.set(booking.patient_id, {
         patient_id: booking.patient_id,
-        first_name: booking.patient.first_name,
-        last_name: booking.patient.last_name,
-        email: booking.patient.email,
-        avatar_url: booking.patient.avatar_url,
+        first_name: patient?.first_name?.trim() || DOCTOR_BOOKING_PATIENT_FALLBACK,
+        last_name: patient?.last_name?.trim() || "",
+        email: (patient?.email ?? "").trim() || DOCTOR_BOOKING_PATIENT_EMAIL_FALLBACK,
+        avatar_url: (patient as { avatar_url?: string | null } | null)?.avatar_url ?? null,
         total_visits: 1,
         last_visit: booking.appointment_date,
         total_revenue: booking.total_amount_cents,

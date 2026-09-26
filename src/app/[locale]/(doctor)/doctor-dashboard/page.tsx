@@ -9,6 +9,8 @@ import { ProfileCompletionCard } from "@/components/doctor/profile-completion-ca
 import { getDoctorLicense } from "@/lib/license/check";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { doctorDashboardSteps } from "@/components/shared/onboarding-steps";
+import { doctorBookingPatientName } from "@/lib/doctor/booking-patient";
+import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
 import { Link } from "@/i18n/navigation";
 
 export default async function DoctorDashboard() {
@@ -336,8 +338,13 @@ export default async function DoctorDashboard() {
             <div className="space-y-3">
               {todayBookings.map(
                 (booking: any) => {
-                  const startDt = new Date(`${booking.appointment_date}T${booking.start_time}`);
-                  const minsBefore = (startDt.getTime() - now.getTime()) / 60000;
+                  const startDt = resolveBookingInstant(
+                    booking.appointment_date,
+                    booking.start_time
+                  );
+                  const minsBefore = Number.isFinite(startDt.getTime())
+                    ? (startDt.getTime() - now.getTime()) / 60000
+                    : Number.POSITIVE_INFINITY;
                   const joinEnabled = booking.consultation_type === "video" &&
                     booking.video_room_url &&
                     minsBefore <= 10 && minsBefore >= -60;
@@ -349,8 +356,7 @@ export default async function DoctorDashboard() {
                     >
                       <div>
                         <p className="font-medium">
-                          {booking.patient.first_name}{" "}
-                          {booking.patient.last_name}
+                          {doctorBookingPatientName(booking.patient)}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {booking.start_time.slice(0, 5)} - {booking.end_time.slice(0, 5)}
