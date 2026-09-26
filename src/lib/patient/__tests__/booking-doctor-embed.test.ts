@@ -72,13 +72,19 @@ describe("patient bookings doctor embed", () => {
     }
   });
 
-  it("exports an inner-join current-doctor embed for finalize/webhook selects", () => {
+  it("checkout confirmation, webhook re-fetch, and finalize name the current-doctor FK", () => {
     expect(BOOKING_CURRENT_DOCTOR_INNER_EMBED).toBe(
       "doctors!bookings_doctor_id_fkey!inner"
     );
-    const finalize = read("src/lib/booking/finalize-confirmed-booking.ts");
-    expect(finalize).toContain("BOOKING_CURRENT_DOCTOR_INNER_EMBED");
-    expect(finalize).not.toMatch(/doctor:doctors!inner\(/);
+    const sources = [
+      read("src/lib/booking/finalize-confirmed-booking.ts"),
+      read("src/app/[locale]/(public)/booking-confirmation/page.tsx"),
+      read("src/app/api/webhooks/stripe/route.ts"),
+    ];
+    for (const source of sources) {
+      expect(source).toContain("doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(");
+      expect(source).not.toMatch(/doctor:doctors!inner\(/);
+    }
   });
 
   it("still shows a booking when the doctor row is hidden", () => {
