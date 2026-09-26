@@ -105,9 +105,13 @@ describe("reschedule balance destination charge", () => {
 
     const blockAt = fn.indexOf("rescheduleDoctorChangeError");
     const slotUpdateAt = fn.indexOf("doctor_id: parsed.data.new_doctor_id");
-    expect(blockAt).toBeGreaterThan(slotUpdateAt);
+    expect(blockAt).toBeGreaterThan(-1);
+    expect(slotUpdateAt).toBeGreaterThan(blockAt);
     expect(createAt).toBeGreaterThan(blockAt);
-    expect(fn.slice(0, slotUpdateAt)).not.toContain("rescheduleDoctorChangeError");
+    expect(fn.slice(blockAt, slotUpdateAt)).toContain(
+      "if (doctorChangeError) return { error: doctorChangeError }"
+    );
+    expect(fn.slice(0, blockAt)).not.toContain("refundCardCharge");
     expect(fn).toContain("dearerChainRescheduleError");
     expect(fn).toContain("balanceCommissionForReschedule");
     expect(fn).toContain("idempotencyKey: rescheduleBalanceIdempotencyKey");
@@ -132,19 +136,57 @@ describe("reschedule balance destination charge", () => {
 });
 
 describe("doctor change is refused before any charge", () => {
-  it("uses the exact message and allows the same doctor", () => {
-    expect(rescheduleDoctorChangeError("doctor-a", "doctor-b")).toBe(
-      DOCTOR_CHANGE_RESCHEDULE_MESSAGE
-    );
+  it("blocks a different clinician at a dearer, same, and cheaper price", () => {
     expect(DOCTOR_CHANGE_RESCHEDULE_MESSAGE).toBe(
       "Please cancel and rebook with the other clinician"
     );
-    expect(rescheduleDoctorChangeError("doctor-a", "doctor-a")).toBeNull();
+    for (const priceDiffCents of [2000, 0, -800]) {
+      expect(
+        rescheduleDoctorChangeError("doctor-a", "doctor-b", priceDiffCents)
+      ).toBe(DOCTOR_CHANGE_RESCHEDULE_MESSAGE);
+      expect(
+        rescheduleDoctorChangeError("doctor-a", "doctor-a", priceDiffCents)
+      ).toBeNull();
+    }
     expect(rescheduleDoctorChangeError("", "doctor-a")).toBe(
       DOCTOR_CHANGE_RESCHEDULE_MESSAGE
     );
-    expect(rescheduleDoctorChangeError("doctor-a", "doctor-b", 0)).toBeNull();
-    expect(rescheduleDoctorChangeError("doctor-a", "doctor-b", -500)).toBeNull();
+  });
+
+  it("follows a blocked doctor change with a full clinic-initiated refund", () => {
+    const clinic = read("src/actions/clinic-booking.ts");
+    const reschedule = clinic.slice(
+      clinic.indexOf("export async function adminRescheduleBooking")
+    );
+    const blockAt = reschedule.indexOf("rescheduleDoctorChangeError");
+    const slotAt = reschedule.indexOf("doctor_id: parsed.data.new_doctor_id");
+    expect(blockAt).toBeGreaterThan(-1);
+    expect(slotAt).toBeGreaterThan(blockAt);
+
+    const plan = clinicCancelMakeWhole({
+      cancellationPolicy: "strict",
+      hoursUntilAppointment: 1,
+      originalPaymentIntentId: "pi_original",
+      originalChargedCents: 4000,
+      originalWalletCreditCents: 1000,
+      balancePaymentIntentId: "pi_balance",
+      balanceChargedCents: 1500,
+    });
+    expect(plan.status).toBe("cancelled_doctor");
+    expect(plan.refundPercent).toBe(100);
+    expect(plan.walletCreditCents).toBe(1000);
+    expect(plan.legs).toEqual([
+      { paymentIntentId: "pi_original", amountCents: 3000 },
+      { paymentIntentId: "pi_balance", amountCents: 1500 },
+    ]);
+
+    const cancel = clinic.slice(
+      clinic.indexOf("export async function adminCancelBooking"),
+      clinic.indexOf("export async function adminRescheduleBooking")
+    );
+    expect(cancel).toContain("status: CLINIC_CANCEL_STATUS");
+    expect(cancel).toContain("netOfWallet: true");
+    expect(cancel).not.toContain("cancellation_policy");
   });
 });
 
@@ -450,7 +492,8 @@ describe("paid reschedule refunds both destination charges", () => {
     const helper = read("src/lib/booking/reschedule-balance.ts");
     expect(helper).toContain("params.reverse_transfer = true");
     expect(helper).toContain("params.refund_application_fee = true");
-    expect(booking).toContain("walletCreditOnCancel");
+    expect(booking).toContain("pairRefund.originalCardCents");
+    expect(booking).not.toContain("balanceCardCents");
     expect(booking).toContain("refund_amount_cents: addedRefundCents");
     expect(admin).toContain('status: "refunded"');
   });

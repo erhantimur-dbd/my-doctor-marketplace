@@ -10,18 +10,17 @@ import {
 export { CLINIC_CANCEL_STATUS, DOCTOR_CHANGE_RESCHEDULE_MESSAGE };
 
 /**
- * Same-doctor reschedules continue. A different clinician is refused
- * before any charge or slot change: the original transfer is not moved.
+ * Any move to a different clinician is refused before a refund, slot
+ * update, or charge, whatever the price. The original transfer is not
+ * moved. Same-doctor reschedules continue. Price is ignored.
  * Returns null when the doctor is unchanged.
  */
 export function rescheduleDoctorChangeError(
   originalDoctorId: string | null | undefined,
   newDoctorId: string | null | undefined,
-  priceDiffCents = 1
+  _priceDiffCents?: number
 ): string | null {
-  // Same price and cheaper moves can change clinician. Only a dearer
-  // slot would need a new transfer, and that transfer is not moved.
-  if (priceDiffCents <= 0) return null;
+  void _priceDiffCents;
   if (
     originalDoctorId &&
     newDoctorId &&

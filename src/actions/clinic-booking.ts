@@ -281,6 +281,14 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: "This booking cannot be rescheduled in its current state." };
   }
 
+  // Before any refund, slot update, or balance charge. Dearer, same-price,
+  // and cheaper moves are all refused when the clinician changes.
+  const doctorChangeError = rescheduleDoctorChangeError(
+    booking.doctor_id,
+    parsed.data.new_doctor_id
+  );
+  if (doctorChangeError) return { error: doctorChangeError };
+
   const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
   const originalDoctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
   const originalDoctorProfile: any = Array.isArray(originalDoctor?.profile)
@@ -366,15 +374,7 @@ export async function adminRescheduleBooking(formData: FormData) {
   }
 
   // Case 2: New slot is more expensive → destination charge for the diff.
-  // Changing clinician is refused only here: same-price and cheaper moves
-  // still update the doctor. A paid -R is not moved onto a third charge.
-  const doctorChangeError = rescheduleDoctorChangeError(
-    booking.doctor_id,
-    parsed.data.new_doctor_id,
-    priceDiffCents
-  );
-  if (doctorChangeError) return { error: doctorChangeError };
-
+  // A paid -R is not moved onto a third charge.
   const chainError = dearerChainRescheduleError(booking);
   if (chainError) return { error: chainError };
 
