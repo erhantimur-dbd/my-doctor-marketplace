@@ -10,8 +10,13 @@ import {
   type RespondRescheduleInput,
 } from "@/lib/validators/reschedule";
 import { createNotification } from "@/lib/notifications";
-import { sendEmail } from "@/lib/email/client";
 import { rescheduleRequestEmail, rescheduleResponseEmail } from "@/lib/email/templates";
+import {
+  isSoftsmokeTransactionalDoctor,
+  manageBookingUrl,
+  softsmokePatientRescheduleEmail,
+} from "@/lib/email/softsmoke-templates";
+import { sendSoftsmokeDoctorDiaryChange } from "@/lib/email/softsmoke-send";
 import { log } from "@/lib/utils/logger";
 
 // ── Patient requests a reschedule ───────────────────────────────────
@@ -165,7 +170,7 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
     .from("reschedule_requests")
     .select(
       `*, booking:bookings!inner(
-        id, patient_id, doctor_id, appointment_date, start_time, end_time
+        id, booking_number, patient_id, doctor_id, appointment_date, start_time, end_time, consultation_type
       )`
     )
     .eq("id", parsed.data.reschedule_id)
@@ -183,7 +188,7 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
   // Verify the user is the doctor for this booking
   const { data: doctorRecord } = await supabase
     .from("doctors")
-    .select("id")
+    .select("id, slug")
     .eq("profile_id", user.id)
     .eq("id", bookingData.doctor_id)
     .single();
@@ -201,13 +206,10 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
 
   const { data: doctorProfile } = await admin
     .from("profiles")
-    .select("first_name, last_name")
+    .select("first_name, last_name, email")
     .eq("id", user.id)
     .single();
 
-  const patientName = patientProfile
-    ? `${patientProfile.first_name} ${patientProfile.last_name}`
-    : "Patient";
   const doctorName = doctorProfile
     ? `${doctorProfile.first_name} ${doctorProfile.last_name}`
     : "your doctor";
@@ -235,17 +237,55 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
       .update({ status: "approved", responded_at: new Date().toISOString() })
       .eq("id", request.id);
 
-    // Build approval email
-    const { subject: emailSubject, html: emailHtml } = rescheduleResponseEmail({
-      patientName: patientProfile?.first_name || "there",
-      doctorName,
-      approved: true,
-      newDate: request.new_date,
-      newTime: request.new_start_time,
-      originalDate: request.original_date,
-      originalTime: request.original_start_time,
-      dashboardUrl: `${appUrl}/en/dashboard/bookings`,
+    const softsmokeDoctor = isSoftsmokeTransactionalDoctor({
+      id: doctorRecord.id,
+      slug: doctorRecord.slug,
+      email: doctorProfile?.email || user.email,
     });
+
+    // Build approval email. Tester path uses the dedicated reschedule body.
+    const { subject: emailSubject, html: emailHtml } = softsmokeDoctor
+      ? softsmokePatientRescheduleEmail({
+          patientFirstName: patientProfile?.first_name || "there",
+          doctorDisplayName: doctorName,
+          bookingRef: bookingData.booking_number,
+          oldDate: request.original_date,
+          oldTime: request.original_start_time,
+          newDate: request.new_date,
+          newTime: request.new_start_time,
+          appointmentType: bookingData.consultation_type,
+          manageUrl: manageBookingUrl(bookingData.id),
+        })
+      : rescheduleResponseEmail({
+          patientName: patientProfile?.first_name || "there",
+          doctorName,
+          approved: true,
+          newDate: request.new_date,
+          newTime: request.new_start_time,
+          originalDate: request.original_date,
+          originalTime: request.original_start_time,
+          dashboardUrl: `${appUrl}/en/dashboard/bookings`,
+        });
+
+    if (softsmokeDoctor) {
+      await sendSoftsmokeDoctorDiaryChange({
+        doctor: {
+          id: doctorRecord.id,
+          slug: doctorRecord.slug,
+          email: doctorProfile?.email || user.email,
+        },
+        doctorEmail: doctorProfile?.email || user.email,
+        kind: "reschedule",
+        doctorFirstName: doctorProfile?.first_name,
+        patientFirstName: patientProfile?.first_name,
+        bookingRef: bookingData.booking_number,
+        oldDate: request.original_date,
+        oldTime: request.original_start_time,
+        newDate: request.new_date,
+        newTime: request.new_start_time,
+        appointmentType: bookingData.consultation_type,
+      });
+    }
 
     // Notify patient
     try {

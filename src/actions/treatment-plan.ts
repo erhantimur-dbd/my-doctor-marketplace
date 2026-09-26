@@ -16,7 +16,7 @@ import { exportBookingToMicrosoftCalendar } from "@/lib/microsoft/sync";
 import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
 import { dailyRoomExpiresAtUnix } from "@/lib/booking/finalize-confirmed-booking";
-import { bookingConfirmationEmail } from "@/lib/email/templates";
+import { resolvePatientConfirmationEmail } from "@/lib/email/softsmoke-send";
 import { log } from "@/lib/utils/logger";
 import {
   CARE_PLANS_DISABLED_MESSAGE,
@@ -708,7 +708,7 @@ export async function bookTreatmentPlanSession(
           ? doctorData.profile[0]
           : doctorData.profile;
 
-        const { subject, html } = bookingConfirmationEmail({
+        const { subject, html } = resolvePatientConfirmationEmail({
           patientName: patient.first_name || "Patient",
           doctorName: `${docProfile.first_name} ${docProfile.last_name}`,
           date: booking.appointment_date,
@@ -723,6 +723,8 @@ export async function bookTreatmentPlanSession(
           videoRoomUrl: null,
           clinicName: (doctorData as any).clinic_name,
           address: (doctorData as any).address,
+          bookingId: booking.id,
+          doctor: { id: plan.doctor_id },
         });
 
         sendEmail({ to: patient.email, subject, html }).catch((err) =>

@@ -14,6 +14,11 @@ import {
   adminBookingPaymentLinkEmail,
   bookingCancellationEmail,
 } from "@/lib/email/templates";
+import { isSoftsmokeTransactionalDoctor } from "@/lib/email/softsmoke-templates";
+import {
+  sendSoftsmokeDoctorDiaryChange,
+  softsmokeRefundNotice,
+} from "@/lib/email/softsmoke-send";
 import { removeBookingFromGoogleCalendar } from "@/lib/google/sync";
 import { removeBookingFromMicrosoftCalendar } from "@/lib/microsoft/sync";
 import { removeBookingFromCalDAV } from "@/lib/caldav/sync";
@@ -721,14 +726,16 @@ export async function adminRefundBooking(
     return { error: "Invalid refund amount" };
   }
 
+  let refundRef = `refund-${bookingId}`;
   try {
     const { getStripe } = await import("@/lib/stripe/client");
-    await getStripe().refunds.create({
+    const stripeRefund = await getStripe().refunds.create({
       payment_intent: booking.stripe_payment_intent_id,
       amount: refundAmount,
       reverse_transfer: true,
       refund_application_fee: true,
     } as any);
+    if (stripeRefund?.id) refundRef = stripeRefund.id;
   } catch (err: any) {
     return { error: safeError(err) };
   }
@@ -748,6 +755,83 @@ export async function adminRefundBooking(
     amount_cents: refundAmount,
     reason,
   });
+
+  const { data: refundDetail } = await supabase
+    .from("bookings")
+    .select(
+      `
+      id, booking_number, doctor_id, paid_at, currency,
+      patient:profiles!bookings_patient_id_fkey(first_name, email),
+      doctor:doctors!bookings_doctor_id_fkey(
+        id, slug,
+        profile:profiles!doctors_profile_id_fkey(email)
+      )
+    `
+    )
+    .eq("id", bookingId)
+    .maybeSingle();
+
+  const detail = refundDetail as unknown as {
+    booking_number?: string;
+    doctor_id?: string;
+    paid_at?: string | null;
+    currency?: string | null;
+    patient?:
+      | { first_name?: string | null; email?: string | null }
+      | { first_name?: string | null; email?: string | null }[]
+      | null;
+    doctor?:
+      | {
+          id?: string | null;
+          slug?: string | null;
+          profile?:
+            | { email?: string | null }
+            | { email?: string | null }[]
+            | null;
+        }
+      | {
+          id?: string | null;
+          slug?: string | null;
+          profile?:
+            | { email?: string | null }
+            | { email?: string | null }[]
+            | null;
+        }[]
+      | null;
+  } | null;
+  const refundPatient = Array.isArray(detail?.patient)
+    ? detail?.patient[0]
+    : detail?.patient;
+  const refundDoctor = Array.isArray(detail?.doctor)
+    ? detail?.doctor[0]
+    : detail?.doctor;
+  const refundDoctorProfile = Array.isArray(refundDoctor?.profile)
+    ? refundDoctor?.profile[0]
+    : refundDoctor?.profile;
+  if (
+    detail?.booking_number &&
+    refundPatient?.email &&
+    isSoftsmokeTransactionalDoctor({
+      id: refundDoctor?.id || detail.doctor_id,
+      slug: refundDoctor?.slug,
+      email: refundDoctorProfile?.email,
+    })
+  ) {
+    const notice = softsmokeRefundNotice({
+      patientFirstName: refundPatient.first_name || "there",
+      bookingRef: detail.booking_number,
+      refundRef,
+      refundAmount: refundAmount / 100,
+      currency: (detail.currency || "gbp").toUpperCase(),
+      originalPaidAt: detail.paid_at,
+      bookingId,
+    });
+    sendEmail({
+      to: refundPatient.email,
+      subject: notice.subject,
+      html: notice.html,
+    }).catch((err) => log.error("Softsmoke refund email error:", { err }));
+  }
 
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/admin/bookings");
@@ -2008,8 +2092,8 @@ export async function adminCancelBooking(
          first_name, last_name, email, phone, notification_whatsapp, preferred_locale
        ),
        doctor:doctors!inner(
-         slug, cancellation_policy, cancellation_hours, stripe_account_id,
-         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
+         id, slug, cancellation_policy, cancellation_hours, stripe_account_id,
+         profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
        )`
     )
     .eq("id", bookingId)
@@ -2082,6 +2166,7 @@ export async function adminCancelBooking(
 
   // Process Stripe refund
   let refundAmountCents = 0;
+  let refundRef: string | null = null;
   if (
     booking.stripe_payment_intent_id &&
     refundPercent > 0 &&
@@ -2092,12 +2177,13 @@ export async function adminCancelBooking(
     );
 
     try {
-      await getStripe().refunds.create({
+      const stripeRefund = await getStripe().refunds.create({
         payment_intent: booking.stripe_payment_intent_id,
         amount: refundAmountCents,
         reverse_transfer: true,
         refund_application_fee: true,
       } as any);
+      refundRef = stripeRefund.id;
     } catch (err: any) {
       log.error("Admin cancel refund error:", { err: err });
       return { error: safeError(err) };
@@ -2148,19 +2234,55 @@ export async function adminCancelBooking(
 
   if (patient?.email && doctorProfile) {
     const refundAmount = refundAmountCents / 100;
-    const { subject, html } = bookingCancellationEmail({
-      patientName: patient.first_name || "Patient",
-      doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
-      date: booking.appointment_date,
-      time: booking.start_time,
-      bookingNumber: booking.booking_number,
-      refundAmount,
-      currency: booking.currency.toUpperCase(),
+    const softsmoke = isSoftsmokeTransactionalDoctor({
+      id: doctor?.id || booking.doctor_id,
+      slug: doctor?.slug,
+      email: doctorProfile.email,
     });
+    const { subject, html } =
+      softsmoke && refundAmount > 0
+        ? softsmokeRefundNotice({
+            patientFirstName: patient.first_name || "there",
+            bookingRef: booking.booking_number,
+            refundRef: refundRef || `refund-${booking.booking_number}`,
+            refundAmount,
+            currency: booking.currency.toUpperCase(),
+            originalPaidAt: booking.paid_at,
+            bookingId: booking.id,
+          })
+        : bookingCancellationEmail({
+            patientName: patient.first_name || "Patient",
+            doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+            date: booking.appointment_date,
+            time: booking.start_time,
+            bookingNumber: booking.booking_number,
+            refundAmount,
+            currency: booking.currency.toUpperCase(),
+          });
 
     sendEmail({ to: patient.email, subject, html }).catch((err) =>
       log.error("Admin cancellation email error:", { err: err })
     );
+
+    if (softsmoke) {
+      sendSoftsmokeDoctorDiaryChange({
+        doctor: {
+          id: doctor?.id || booking.doctor_id,
+          slug: doctor?.slug,
+          email: doctorProfile.email,
+        },
+        doctorEmail: doctorProfile.email,
+        kind: "cancel",
+        doctorFirstName: doctorProfile.first_name,
+        patientFirstName: patient.first_name,
+        bookingRef: booking.booking_number,
+        oldDate: booking.appointment_date,
+        oldTime: booking.start_time,
+        appointmentType: booking.consultation_type,
+      }).catch((err) =>
+        log.error("Softsmoke doctor cancel email error:", { err })
+      );
+    }
 
     // WhatsApp notification
     if (patient.notification_whatsapp && patient.phone) {

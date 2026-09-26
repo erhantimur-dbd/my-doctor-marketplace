@@ -65,7 +65,11 @@ function baseBooking(overrides: Record<string, unknown> = {}) {
     currency: "gbp",
     video_room_url: null,
     daily_room_name: null,
-    patient: { first_name: "Darren", last_name: "Been" },
+    patient: {
+      first_name: "Darren",
+      last_name: "Been",
+      email: "darren.been@example.com",
+    },
     doctor: {
       clinic_name: "Softsmoke Clinic",
       address: "1 Smoke Street",
@@ -353,7 +357,31 @@ describe("charge-skip confirm", () => {
     );
 
     expect(sendEmail).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "dbd.demo.email@gmail.com" })
+      expect.objectContaining({
+        to: "dbd.demo.email@gmail.com",
+        subject: expect.stringContaining("New booking on your diary"),
+        html: expect.stringContaining(
+          "Softsmoke transactional — tester path only. Soft CTA founding email HOLD."
+        ),
+      })
+    );
+    const doctorCall = vi.mocked(sendEmail).mock.calls.find(
+      (call) => call[0]?.to === "dbd.demo.email@gmail.com"
+    );
+    const doctorHtml = String(doctorCall?.[0]?.html ?? "");
+    expect(doctorHtml).toContain("rgba(255,255,255,0.40)");
+    expect(doctorHtml).toContain("Saturday 26 September 2026");
+    expect(doctorHtml).toContain("10:00am");
+    expect(doctorHtml).not.toContain("Been");
+    expect(doctorHtml).not.toContain("2026-09-26");
+    expect(doctorHtml).not.toContain("🩺");
+
+    expect(sendEmail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "darren.been@example.com",
+        subject: expect.stringContaining("Booking confirmed"),
+        html: expect.stringContaining("Your booking is confirmed"),
+      })
     );
   });
 

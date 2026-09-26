@@ -13,7 +13,10 @@ import {
   BOOKING_DOCTOR_PROFILE_EMBED,
 } from "@/lib/patient/booking-doctor-embed";
 import { sendEmail } from "@/lib/email/client";
-import { bookingConfirmationEmail } from "@/lib/email/templates";
+import {
+  resolvePatientConfirmationEmail,
+  sendSoftsmokeTransferNotice,
+} from "@/lib/email/softsmoke-send";
 import { sendGuestAccountClaimEmail } from "@/lib/auth/guest-claim";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
 import {
@@ -301,7 +304,7 @@ export async function POST(request: NextRequest) {
                 ? "Video Consultation"
                 : "In-Person Consultation";
 
-              const { subject, html } = bookingConfirmationEmail({
+              const { subject, html } = resolvePatientConfirmationEmail({
                 patientName: patient.first_name || "Patient",
                 doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
                 date: booking.appointment_date,
@@ -316,6 +319,12 @@ export async function POST(request: NextRequest) {
                     : undefined,
                 clinicName: doctor.clinic_name,
                 address: doctor.address,
+                bookingId: booking.id,
+                doctor: {
+                  id: booking.doctor_id,
+                  slug: doctor.slug,
+                  email: doctorProfile.email,
+                },
               });
 
               sendEmail({ to: patient.email, subject, html }).catch((err) =>
@@ -478,7 +487,7 @@ export async function POST(request: NextRequest) {
                 : "In-Person Consultation";
 
             const isDeposit = booking.payment_mode === "deposit";
-            const { subject, html } = bookingConfirmationEmail({
+            const { subject, html } = resolvePatientConfirmationEmail({
               patientName: patient.first_name || "Patient",
               doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
               date: booking.appointment_date,
@@ -499,6 +508,12 @@ export async function POST(request: NextRequest) {
                 : undefined,
               depositType: isDeposit ? (booking as any).deposit_type : undefined,
               depositValue: isDeposit ? (booking as any).deposit_value : undefined,
+              bookingId: booking.id,
+              doctor: {
+                id: booking.doctor_id,
+                slug: doctor.slug,
+                email: doctorProfile.email,
+              },
             });
 
             sendEmail({ to: patient.email, subject, html }).catch((err) =>
@@ -1190,7 +1205,7 @@ export async function POST(request: NextRequest) {
               ? "Phone Consultation"
               : "In-Person Consultation";
 
-          const { subject, html } = bookingConfirmationEmail({
+          const { subject, html } = resolvePatientConfirmationEmail({
             patientName: rPatient.first_name || "Patient",
             doctorName: `${rDoctorProfile.first_name} ${rDoctorProfile.last_name}`,
             date: rescheduleBooking.appointment_date,
@@ -1201,6 +1216,12 @@ export async function POST(request: NextRequest) {
             currency: rescheduleBooking.currency.toUpperCase(),
             clinicName: rDoctor.clinic_name,
             address: rDoctor.address,
+            bookingId: rescheduleBooking.id,
+            doctor: {
+              id: rescheduleBooking.doctor_id,
+              slug: rDoctor.slug,
+              email: rDoctorProfile.email,
+            },
           });
 
           sendEmail({ to: rPatient.email, subject, html }).catch((err) =>
@@ -1267,6 +1288,23 @@ export async function POST(request: NextRequest) {
       console.warn(
         `[Stripe] Reschedule balance payment ${event.type === "payment_intent.canceled" ? "expired" : "failed"} ` +
         `for new booking ${newBookingId}. Original booking ${originalBookingId} remains active.`
+      );
+      break;
+    }
+
+    // Tester-path consult-fee settlement. Other Connect accounts no-op inside
+    // sendSoftsmokeTransferNotice before any email is built.
+    case "transfer.created": {
+      const transfer = event.data.object as Stripe.Transfer;
+      await sendSoftsmokeTransferNotice(supabase, transfer, {
+        retrieveChargePaymentIntent: async (chargeId) => {
+          const charge = await getStripe().charges.retrieve(chargeId);
+          const pi = charge.payment_intent;
+          if (!pi) return null;
+          return typeof pi === "string" ? pi : pi.id;
+        },
+      }).catch((err) =>
+        console.error("[Stripe] Softsmoke payout notice failed:", err)
       );
       break;
     }

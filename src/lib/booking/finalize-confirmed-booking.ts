@@ -14,6 +14,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createRoom, getRoom } from "@/lib/daily/client";
 import { notifyDoctorOfNewBooking } from "@/lib/notifications/doctor-new-booking";
+import { sendSoftsmokeChargeSkipPatientConfirmation } from "@/lib/email/softsmoke-send";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
@@ -401,6 +402,18 @@ export async function confirmBookingWithoutStripeCheckout(
     return { error: "Failed to create booking. Please try again." };
   }
 
-  await finalizeConfirmedBookingById(bookingId, { supabase });
+  const finalized = await finalizeConfirmedBookingById(bookingId, { supabase });
+  try {
+    await sendSoftsmokeChargeSkipPatientConfirmation(
+      supabase,
+      bookingId,
+      finalized.videoRoomUrl
+    );
+  } catch (err) {
+    log.error("[FinalizeBooking] Softsmoke patient confirm email failed", {
+      err,
+      bookingId,
+    });
+  }
   return {};
 }
