@@ -413,9 +413,37 @@ export async function runStripeRescheduleScenarios(): Promise<ScenarioRunResult>
       pair.onBehalfOf === destinationAccountId &&
       (pair.balanceCommission ?? 0) > 0;
 
+    // Refund the throwaway pair so a passed dearer check does not leave
+    // live Softsmoke test charges outstanding.
+    const { data: balanceRow } = await admin
+      .from("bookings")
+      .select(
+        "id, payment_mode, deposit_amount_cents, total_amount_cents, wallet_credit_applied_cents, stripe_payment_intent_id, reschedule_payment_intent_id, reschedule_price_diff_cents, reschedule_payment_status, rescheduled_from_booking_id, commission_cents, refund_amount_cents, refunded_at, status"
+      )
+      .eq("id", pair.balanceId)
+      .single();
+    let refundIds: string[] = [];
+    if (balanceRow) {
+      const pairRefund = await refundReschedulePairIfPaid(balanceRow, {
+        refundPercent: 100,
+        netOfWallet: true,
+      });
+      if (pairRefund.applied && !("error" in pairRefund)) {
+        refundIds = pairRefund.refundIds;
+        await admin
+          .from("bookings")
+          .update({
+            status: "refunded",
+            refund_amount_cents: pairRefund.rowRefundCents,
+            refunded_at: new Date().toISOString(),
+          })
+          .eq("id", pair.balanceId);
+      }
+    }
+
     steps.push({
       name: "same_doctor_dearer_reschedule",
-      ok: destinationOk,
+      ok: destinationOk && refundIds.length > 0,
       detail: {
         originalBookingId: pair.originalId,
         balanceBookingId: pair.balanceId,
@@ -426,10 +454,13 @@ export async function runStripeRescheduleScenarios(): Promise<ScenarioRunResult>
         transfer_data_destination: pair.transferDataDestination,
         on_behalf_of: pair.onBehalfOf,
         expectedDestination: destinationAccountId,
+        cleanupRefundIds: refundIds,
       },
-      error: destinationOk
-        ? undefined
-        : "Balance PaymentIntent was not a destination charge to Softsmoke",
+      error: !destinationOk
+        ? "Balance PaymentIntent was not a destination charge to Softsmoke"
+        : refundIds.length === 0
+          ? "Dearer destination charge succeeded but cleanup refund failed"
+          : undefined,
     });
   } catch (err) {
     steps.push({
