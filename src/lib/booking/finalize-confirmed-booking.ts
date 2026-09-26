@@ -110,13 +110,46 @@ export function dailyRoomNameForBooking(bookingNumber: string): string {
   return `md-${bookingNumber.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
 }
 
+const TIME_ONLY_END = /^(\d{1,2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?$/;
+
+/**
+ * Appointment end as an absolute instant.
+ * bookings.end_time is timestamptz, so Supabase may return a full timestamp
+ * (ISO `2026-09-26T09:30:00.000Z` or Postgres `2026-09-26 09:30:00+00`).
+ * Time-only values (`HH:mm` / `HH:mm:ss`) are combined with appointmentDate.
+ */
+function appointmentEndDate(appointmentDate: string, endTime: string): Date {
+  const value = endTime.trim();
+  const timeOnly = TIME_ONLY_END.exec(value);
+  if (timeOnly) {
+    const hours = timeOnly[1].padStart(2, "0");
+    const minutes = timeOnly[2];
+    const seconds = timeOnly[3] ?? "00";
+    return new Date(`${appointmentDate}T${hours}:${minutes}:${seconds}`);
+  }
+
+  let timestamp = value;
+  if (/^\d{4}-\d{2}-\d{2} /.test(timestamp)) {
+    timestamp = `${timestamp.slice(0, 10)}T${timestamp.slice(11)}`;
+  }
+  // `+00` is rejected once a `T` separator is present; `+0000` needs a colon.
+  timestamp = timestamp.replace(/([+-]\d{2})$/, "$1:00");
+  timestamp = timestamp.replace(/([+-])(\d{2})(\d{2})$/, "$1$2:$3");
+  return new Date(timestamp);
+}
+
 /** Room expires one hour after the appointment end, matching Checkout. */
 export function dailyRoomExpiresAtUnix(
   appointmentDate: string,
   endTime: string
 ): number {
-  const end = new Date(`${appointmentDate}T${endTime}`);
-  return Math.floor(end.getTime() / 1000) + 3600;
+  const endMs = appointmentEndDate(appointmentDate, endTime).getTime();
+  if (!Number.isFinite(endMs)) {
+    throw new Error(
+      `Invalid Daily room expiry (appointmentDate=${appointmentDate}, endTime=${endTime})`
+    );
+  }
+  return Math.floor(endMs / 1000) + 3600;
 }
 
 function unwrapJoin<T>(value: T | T[] | null | undefined): T | null {

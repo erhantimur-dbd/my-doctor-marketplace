@@ -203,12 +203,87 @@ beforeEach(() => {
   });
 });
 
+function expectExpiryOneHourAfter(endTime: string, endInstantIso: string) {
+  const exp = dailyRoomExpiresAtUnix("2026-09-26", endTime);
+  const endMs = new Date(endInstantIso).getTime();
+  expect(Number.isFinite(exp)).toBe(true);
+  expect(Number.isNaN(exp)).toBe(false);
+  expect(exp).toBe(Math.floor(endMs / 1000) + 3600);
+}
+
 describe("daily room name", () => {
   it("matches the Checkout room slug for BK-20260925-A856", () => {
     expect(dailyRoomNameForBooking("BK-20260925-A856")).toBe(ROOM_NAME);
-    expect(dailyRoomExpiresAtUnix("2026-09-26", "10:30:00")).toBe(
-      Math.floor(new Date("2026-09-26T10:30:00").getTime() / 1000) + 3600
+    expectExpiryOneHourAfter("10:30:00", "2026-09-26T10:30:00");
+  });
+});
+
+describe("daily room expiry", () => {
+  it("combines a time-only HH:mm:ss end with the appointment date", () => {
+    expectExpiryOneHourAfter("10:30:00", "2026-09-26T10:30:00");
+  });
+
+  it("combines a time-only HH:mm end with the appointment date", () => {
+    expectExpiryOneHourAfter("09:30", "2026-09-26T09:30:00");
+  });
+
+  it("uses an ISO timestamptz end without concatenating the appointment date", () => {
+    expectExpiryOneHourAfter(
+      "2026-09-26T09:30:00.000Z",
+      "2026-09-26T09:30:00.000Z"
     );
+  });
+
+  it("uses a Postgres timestamptz end (space and short offset)", () => {
+    expectExpiryOneHourAfter(
+      "2026-09-26 09:30:00+00",
+      "2026-09-26T09:30:00.000Z"
+    );
+  });
+
+  it("uses an ISO offset timestamptz end", () => {
+    expectExpiryOneHourAfter(
+      "2026-09-26T09:30:00+00:00",
+      "2026-09-26T09:30:00.000Z"
+    );
+  });
+
+  it("creates the Daily room when Checkout returns a production end_time", async () => {
+    bookingRow = baseBooking({
+      booking_number: "BK-20260926-47E2",
+      end_time: "2026-09-26T09:30:00.000Z",
+    });
+
+    const result = await finalizeConfirmedBookingById(BOOKING_ID);
+
+    const expiresAt = dailyRoomExpiresAtUnix(
+      "2026-09-26",
+      "2026-09-26T09:30:00.000Z"
+    );
+    expect(createRoom).toHaveBeenCalledWith({
+      name: dailyRoomNameForBooking("BK-20260926-47E2"),
+      expiresAt,
+      maxParticipants: 2,
+    });
+    expect(result.videoRoomUrl).toBe(ROOM_URL);
+  });
+
+  it("creates the Daily room when end_time is Postgres timestamptz text", async () => {
+    bookingRow = baseBooking({
+      booking_number: "BK-20260926-47E2",
+      end_time: "2026-09-26 09:30:00+00",
+    });
+
+    await finalizeConfirmedBookingById(BOOKING_ID);
+
+    expect(createRoom).toHaveBeenCalledWith({
+      name: dailyRoomNameForBooking("BK-20260926-47E2"),
+      expiresAt: dailyRoomExpiresAtUnix(
+        "2026-09-26",
+        "2026-09-26 09:30:00+00"
+      ),
+      maxParticipants: 2,
+    });
   });
 });
 

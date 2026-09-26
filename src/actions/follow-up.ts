@@ -21,6 +21,7 @@ import { exportBookingToGoogleCalendar } from "@/lib/google/sync";
 import { exportBookingToMicrosoftCalendar } from "@/lib/microsoft/sync";
 import { exportBookingToCalDAV } from "@/lib/caldav/sync";
 import { createRoom } from "@/lib/daily/client";
+import { dailyRoomExpiresAtUnix } from "@/lib/booking/finalize-confirmed-booking";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
 import {
@@ -534,8 +535,10 @@ export async function bookFollowUpSession(
     if (booking.consultation_type === "video") {
       try {
         const roomName = `md-${booking.booking_number.toLowerCase().replace(/[^a-z0-9]/g, "-")}`;
-        const endTime = new Date(`${booking.appointment_date}T${booking.end_time}`);
-        const expiresAt = Math.floor(endTime.getTime() / 1000) + 3600;
+        const expiresAt = dailyRoomExpiresAtUnix(
+          booking.appointment_date,
+          booking.end_time
+        );
 
         const room = await createRoom({
           name: roomName,
