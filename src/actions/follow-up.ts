@@ -14,7 +14,10 @@ import {
 } from "@/lib/validators/booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
-import { doctorCanAcceptConsultCardPayment } from "@/lib/stripe/consult-merchant";
+import {
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
 import { sendEmail } from "@/lib/email/client";
 import { followUpInvitationEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
@@ -405,7 +408,12 @@ export async function createInvitationCheckout(
     }
 
     if (!doctor.stripe_account_id) {
-      return { error: "Doctor payment setup is incomplete." };
+      const adminSupabase = createAdminClient();
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
     }
     const merchant = await doctorCanAcceptConsultCardPayment(
       getStripe(),

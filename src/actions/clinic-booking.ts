@@ -333,9 +333,6 @@ export async function adminRescheduleBooking(formData: FormData) {
       customer: undefined, // We'll use email receipt
       receipt_email: patient.email,
       description: `Reschedule balance for booking ${booking.booking_number}`,
-      // Statement descriptor follows the new doctor. Funds stay on the platform;
-      // this balance was never a destination charge.
-      on_behalf_of: newDoctor.stripe_account_id,
       metadata: {
         original_booking_id: booking.id,
         new_booking_id: newBooking.id,

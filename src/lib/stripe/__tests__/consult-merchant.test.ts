@@ -154,6 +154,19 @@ describe("consult charges set on_behalf_of", () => {
     expect(fn).toContain("destination: doctor.stripe_account_id");
   });
 
+  it("expires a follow-up booking with the patient message when the doctor has no Stripe account", () => {
+    const src = read("src/actions/follow-up.ts");
+    const fn = src.slice(src.indexOf("export async function createInvitationCheckout"));
+    const missingAt = fn.indexOf("if (!doctor.stripe_account_id)");
+    const gateAt = fn.indexOf("await doctorCanAcceptConsultCardPayment");
+    expect(missingAt).toBeGreaterThan(-1);
+    expect(gateAt).toBeGreaterThan(missingAt);
+    const branch = fn.slice(missingAt, gateAt);
+    expect(branch).toContain("BOOKING_STATUSES.EXPIRED");
+    expect(branch).toContain("DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE");
+    expect(branch).not.toContain("Doctor payment setup is incomplete.");
+  });
+
   it("sets on_behalf_of on admin consult payment links and checks capability before resend expiry", () => {
     const src = read("src/actions/admin.ts");
     expect(src.match(/on_behalf_of: doctor\.stripe_account_id/g)?.length).toBe(2);
@@ -168,13 +181,59 @@ describe("consult charges set on_behalf_of", () => {
     expect(behalfAt).toBeGreaterThan(expireAt);
   });
 
-  it("sets on_behalf_of on the clinic reschedule balance PaymentIntent", () => {
+  it("blocks the clinic reschedule balance when card_payments is inactive and does not set on_behalf_of", () => {
+    // Platform charge with no transfer. Miles is converting this to a
+    // destination charge separately; until then the doctor's name must not
+    // appear on the statement. The capability check stays in front of it.
     const src = read("src/actions/clinic-booking.ts");
-    const gateAt = src.indexOf("await doctorCanAcceptConsultCardPayment");
-    const createAt = src.indexOf("paymentIntents.create");
+    const fn = src.slice(src.indexOf("export async function adminRescheduleBooking"));
+    expect(fn).not.toContain("on_behalf_of");
+    expect(fn).not.toContain("transfer_data");
+    const gateAt = fn.indexOf("await doctorCanAcceptConsultCardPayment");
+    const createAt = fn.indexOf("paymentIntents.create");
     expect(gateAt).toBeGreaterThan(-1);
     expect(createAt).toBeGreaterThan(gateAt);
-    expect(src).toContain("on_behalf_of: newDoctor.stripe_account_id");
+    expect(fn.slice(gateAt, createAt)).toContain(
+      "if (!merchant.ok) return { error: merchant.error }"
+    );
+  });
+
+  it("does not debit or reserve a partial wallet when the capability check refuses the charge", () => {
+    const booking = read("src/actions/booking.ts");
+    const fn = booking.slice(
+      booking.indexOf("export async function createBookingAndCheckout")
+    );
+    const gateAt = fn.indexOf("await doctorCanAcceptConsultCardPayment");
+    const refusalEnd = fn.indexOf("return { error: merchant.error }");
+    const partialReserve = fn.indexOf(
+      ".update({ wallet_credit_applied_cents: walletCreditToApply })"
+    );
+    const debitAt = fn.indexOf("await debitWallet(");
+    const walletOnlyAt = fn.indexOf("walletOnly: true");
+
+    expect(debitAt).toBeGreaterThan(-1);
+    expect(debitAt).toBeLessThan(walletOnlyAt);
+    expect(walletOnlyAt).toBeLessThan(gateAt);
+    expect(refusalEnd).toBeGreaterThan(gateAt);
+    expect(partialReserve).toBeGreaterThan(refusalEnd);
+
+    const refused = fn.slice(gateAt, refusalEnd);
+    expect(refused).not.toContain("debitWallet");
+    expect(refused).not.toContain("wallet_credit_applied_cents");
+
+    for (const rel of [
+      "src/actions/follow-up.ts",
+      "src/actions/admin.ts",
+      "src/actions/clinic-booking.ts",
+      "src/actions/invoices.ts",
+      "src/actions/treatment-plan.ts",
+    ]) {
+      const src = read(rel);
+      const combinesWalletAndGate =
+        src.includes("doctorCanAcceptConsultCardPayment") &&
+        (src.includes("debitWallet") || src.includes("wallet_credit_applied_cents"));
+      expect(combinesWalletAndGate, rel).toBe(false);
+    }
   });
 });
 

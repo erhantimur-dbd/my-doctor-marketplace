@@ -590,16 +590,9 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
-    // Store wallet credit on booking for later debit on payment completion
-    if (walletCreditToApply > 0) {
-      await writeClient
-        .from("bookings")
-        .update({ wallet_credit_applied_cents: walletCreditToApply })
-        .eq("id", booking.id);
-    }
-
     // Charged consults only. Softsmoke charge-skip and wallet-only returns
     // above never reach this. Refuse rather than charge as the platform.
+    // Partial wallet credit is stored only after this check succeeds.
     if (!doctor.stripe_account_id) {
       await adminSupabase
         .from("bookings")
@@ -617,6 +610,14 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         .update({ status: BOOKING_STATUSES.EXPIRED })
         .eq("id", booking.id);
       return { error: merchant.error };
+    }
+
+    // Store wallet credit on booking for later debit on payment completion
+    if (walletCreditToApply > 0) {
+      await writeClient
+        .from("bookings")
+        .update({ wallet_credit_applied_cents: walletCreditToApply })
+        .eq("id", booking.id);
     }
 
     // Create Stripe Checkout Session for the remaining amount
