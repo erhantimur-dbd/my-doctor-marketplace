@@ -1,7 +1,7 @@
 /**
  * Phase B structural checks against the real booking Checkout call site.
- * Ensures GTM payment path still uses Connect destination charges and does not
- * hardcode payment_method_types (Stripe dynamic methods best practice).
+ * Ensures GTM payment path still uses Connect destination charges and
+ * restricts consult Checkout to cards so pay-later stays off.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -13,15 +13,23 @@ const bookingActionPath = join(process.cwd(), "src/actions/booking.ts");
 describe("patient booking Stripe Checkout shape (source contract)", () => {
   const source = readFileSync(bookingActionPath, "utf8");
 
-  it("creates Checkout sessions without payment_method_types", () => {
+  it("restricts consult Checkout to cards", () => {
     expect(source).toContain("checkout.sessions.create");
-    expect(source).not.toMatch(/payment_method_types\s*:/);
+    expect(source).toContain("payment_method_types: CONSULT_PAYMENT_METHOD_TYPES");
+    expect(source).not.toContain("automatic_payment_methods");
   });
 
   it("uses Connect destination charges for doctor payouts", () => {
-    expect(source).toContain("application_fee_amount");
-    expect(source).toContain("transfer_data");
-    expect(source).toContain("destination: doctor.stripe_account_id");
+    expect(source).toContain("consultDestinationChargeParams");
+    expect(source).toContain("destinationAccountId: doctor.stripe_account_id");
+    const helper = readFileSync(
+      join(process.cwd(), "src/lib/stripe/consult-charge.ts"),
+      "utf8"
+    );
+    expect(helper).toContain("application_fee_amount");
+    expect(helper).toContain("transfer_data");
+    expect(helper).toContain("destination: input.destinationAccountId");
+    expect(helper).toContain("on_behalf_of: input.destinationAccountId");
   });
 
   it("returns Softsmoke charge-skip confirm URL the confirmation page accepts", () => {

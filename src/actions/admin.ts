@@ -7,6 +7,22 @@ import { safeError } from "@/lib/utils/safe-error";
 import { subscriptionUpgradeInviteEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
+import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
+import {
+  addedRefundCents,
+  cancelOpenRescheduleBalance,
+  cardChargeNetOfWallet,
+  refundCardCharge,
+  refundReschedulePairIfPaid,
+  refundReversesTransfer,
+  stripeChargedCents,
+  walletCreditOnCancel,
+} from "@/lib/booking/reschedule-balance";
+import {
+  CONSULT_PAYMENT_METHOD_TYPES,
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { sendEmail } from "@/lib/email/client";
@@ -712,7 +728,9 @@ export async function adminRefundBooking(
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, status, total_amount_cents, stripe_payment_intent_id, paid_at, refunded_at, currency")
+    .select(
+      "id, status, total_amount_cents, stripe_payment_intent_id, paid_at, refunded_at, refund_amount_cents, currency, payment_mode, deposit_amount_cents, wallet_credit_applied_cents, commission_cents, rescheduled_from_booking_id, reschedule_payment_status, patient_id"
+    )
     .eq("id", bookingId)
     .single();
 
@@ -727,15 +745,53 @@ export async function adminRefundBooking(
   }
 
   let refundRef = `refund-${bookingId}`;
+  let storedRefundCents = refundAmount;
   try {
-    const { getStripe } = await import("@/lib/stripe/client");
-    const stripeRefund = await getStripe().refunds.create({
-      payment_intent: booking.stripe_payment_intent_id,
-      amount: refundAmount,
-      reverse_transfer: true,
-      refund_application_fee: true,
-    } as any);
-    if (stripeRefund?.id) refundRef = stripeRefund.id;
+    const pairRefund = await refundReschedulePairIfPaid(booking, {
+      requestedCents: refundAmount,
+    });
+    if (pairRefund.applied && "error" in pairRefund) {
+      return { error: pairRefund.error };
+    }
+    if (pairRefund.applied) {
+      storedRefundCents = addedRefundCents(
+        booking.refund_amount_cents,
+        pairRefund.rowRefundCents
+      );
+      if (pairRefund.refundIds[0]) refundRef = pairRefund.refundIds[0];
+      if (
+        pairRefund.successorId &&
+        pairRefund.successorId !== bookingId
+      ) {
+        const { error: successorError } = await supabase
+          .from("bookings")
+          .update({
+            status: "refunded",
+            refunded_at: new Date().toISOString(),
+          })
+          .eq("id", pairRefund.successorId);
+        if (successorError) return { error: safeError(successorError) };
+      }
+    } else {
+      const { getStripe } = await import("@/lib/stripe/client");
+      const cardCap = cardChargeNetOfWallet(
+        stripeChargedCents(booking),
+        booking.wallet_credit_applied_cents
+      );
+      const stripeAmount = Math.min(refundAmount, cardCap);
+      if (stripeAmount <= 0) {
+        return { error: "Nothing left to refund on the card" };
+      }
+      const stripeRefund = await refundCardCharge(getStripe(), {
+        paymentIntentId: booking.stripe_payment_intent_id,
+        amountCents: stripeAmount,
+        bookingId,
+        reason: "admin_refund",
+        reverseTransfer: refundReversesTransfer(booking),
+      });
+      storedRefundCents = stripeAmount;
+      if (stripeRefund) refundRef = stripeRefund;
+    }
   } catch (err: any) {
     return { error: safeError(err) };
   }
@@ -745,7 +801,7 @@ export async function adminRefundBooking(
     .update({
       status: "refunded",
       refunded_at: new Date().toISOString(),
-      refund_amount_cents: refundAmount,
+      refund_amount_cents: storedRefundCents,
     })
     .eq("id", bookingId);
 
@@ -1851,6 +1907,25 @@ export async function adminCreateBookingOnBehalf(input: {
     return { error: "Failed to create booking. Please try again." };
   }
 
+  if (!doctor.stripe_account_id) {
+    await adminSupabase
+      .from("bookings")
+      .update({ status: BOOKING_STATUSES.EXPIRED })
+      .eq("id", booking.id);
+    return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+  const merchant = await doctorCanAcceptConsultCardPayment(
+    getStripe(),
+    doctor.stripe_account_id
+  );
+  if (!merchant.ok) {
+    await adminSupabase
+      .from("bookings")
+      .update({ status: BOOKING_STATUSES.EXPIRED })
+      .eq("id", booking.id);
+    return { error: merchant.error };
+  }
+
   // Create Stripe Checkout Session
   const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
   const doctorName = `${profile.first_name} ${profile.last_name}`;
@@ -1867,6 +1942,7 @@ export async function adminCreateBookingOnBehalf(input: {
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
     customer_email: patient.email,
     line_items: [
       {
@@ -1881,12 +1957,10 @@ export async function adminCreateBookingOnBehalf(input: {
         quantity: 1,
       },
     ],
-    payment_intent_data: {
-      application_fee_amount: getCommissionCents(totalAmountCents),
-      transfer_data: {
-        destination: doctor.stripe_account_id,
-      },
-    },
+    payment_intent_data: consultDestinationChargeParams({
+      destinationAccountId: doctor.stripe_account_id,
+      applicationFeeCents: getCommissionCents(totalAmountCents),
+    }),
     metadata: {
       booking_id: booking.id,
       booking_number: booking.booking_number,
@@ -1978,6 +2052,22 @@ export async function adminResendPaymentLink(bookingId: string) {
     return { error: "Maximum resend limit (5) reached." };
   }
 
+  const resendDoctor: { stripe_account_id?: string | null } | null = Array.isArray(
+    booking.doctor
+  )
+    ? booking.doctor[0]
+    : booking.doctor;
+  if (!resendDoctor?.stripe_account_id) {
+    return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+  const resendMerchant = await doctorCanAcceptConsultCardPayment(
+    getStripe(),
+    resendDoctor.stripe_account_id
+  );
+  if (!resendMerchant.ok) {
+    return { error: resendMerchant.error };
+  }
+
   // Expire old Stripe checkout session
   if (booking.stripe_checkout_session_id) {
     try {
@@ -2009,6 +2099,7 @@ export async function adminResendPaymentLink(bookingId: string) {
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
     customer_email: patient.email,
     line_items: [
       {
@@ -2023,12 +2114,10 @@ export async function adminResendPaymentLink(bookingId: string) {
         quantity: 1,
       },
     ],
-    payment_intent_data: {
-      application_fee_amount: getCommissionCents(booking.total_amount_cents),
-      transfer_data: {
-        destination: doctor.stripe_account_id,
-      },
-    },
+    payment_intent_data: consultDestinationChargeParams({
+      destinationAccountId: doctor.stripe_account_id,
+      applicationFeeCents: getCommissionCents(booking.total_amount_cents),
+    }),
     metadata: {
       booking_id: booking.id,
       booking_number: booking.booking_number,
@@ -2138,6 +2227,8 @@ export async function adminCancelBooking(
     return { error: `Cannot cancel a booking with status "${booking.status}".` };
   }
 
+  await cancelOpenRescheduleBalance(booking);
+
   // Calculate refund based on cancellation policy
   const appointmentDateTime = new Date(
     `${booking.appointment_date}T${booking.start_time}`
@@ -2164,26 +2255,81 @@ export async function adminCancelBooking(
     refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
   }
 
-  // Process Stripe refund
+  // Process Stripe refund. A paid reschedule reverses both destination
+  // charges; the amount stored on this row is only this row's portion.
   let refundAmountCents = 0;
+  let refundReportedCents = 0;
   let refundRef: string | null = null;
+  let pairHandled = false;
+  if (refundPercent > 0) {
+    const pairRefund = await refundReschedulePairIfPaid(booking, {
+      refundPercent,
+    });
+    if (pairRefund.applied && "error" in pairRefund) {
+      log.error("Admin cancel refund error:", { err: pairRefund.error });
+      return { error: pairRefund.error };
+    }
+    if (pairRefund.applied) {
+      pairHandled = true;
+      refundAmountCents = pairRefund.rowRefundCents;
+      refundReportedCents = pairRefund.totalCents;
+      refundRef = pairRefund.refundIds[0] ?? null;
+      const walletBack = walletCreditOnCancel({
+        destination: "bank",
+        appliedWalletCents: pairRefund.walletCreditCents,
+        originalCardCents: pairRefund.originalCardCents,
+        balanceCardCents: pairRefund.balanceCardCents,
+      });
+      if (walletBack > 0 && booking.patient_id) {
+        await creditWallet({
+          patientId: booking.patient_id,
+          currency: booking.currency,
+          amountCents: walletBack,
+          sourceType: "refund",
+          sourceBookingId: booking.id,
+          description: `Wallet credit returned for admin cancellation of ${booking.booking_number}`,
+        });
+      }
+    }
+  }
   if (
+    !pairHandled &&
     booking.stripe_payment_intent_id &&
     refundPercent > 0 &&
     booking.total_amount_cents > 0
   ) {
-    refundAmountCents = Math.round(
-      (booking.total_amount_cents * refundPercent) / 100
+    const cardBasis = cardChargeNetOfWallet(
+      stripeChargedCents(booking),
+      booking.wallet_credit_applied_cents
+    );
+    refundAmountCents = Math.round((cardBasis * refundPercent) / 100);
+    refundReportedCents = refundAmountCents;
+    const appliedWallet = Math.round(
+      (Math.max(0, booking.wallet_credit_applied_cents ?? 0) * refundPercent) /
+        100
     );
 
     try {
-      const stripeRefund = await getStripe().refunds.create({
-        payment_intent: booking.stripe_payment_intent_id,
-        amount: refundAmountCents,
-        reverse_transfer: true,
-        refund_application_fee: true,
-      } as any);
-      refundRef = stripeRefund.id;
+      if (refundAmountCents > 0) {
+        const stripeRefund = await refundCardCharge(getStripe(), {
+          paymentIntentId: booking.stripe_payment_intent_id,
+          amountCents: refundAmountCents,
+          bookingId: booking.id,
+          reason: "admin_cancel",
+          reverseTransfer: refundReversesTransfer(booking),
+        });
+        refundRef = stripeRefund;
+      }
+      if (appliedWallet > 0 && booking.patient_id) {
+        await creditWallet({
+          patientId: booking.patient_id,
+          currency: booking.currency,
+          amountCents: appliedWallet,
+          sourceType: "refund",
+          sourceBookingId: booking.id,
+          description: `Wallet credit returned for admin cancellation of ${booking.booking_number}`,
+        });
+      }
     } catch (err: any) {
       log.error("Admin cancel refund error:", { err: err });
       return { error: safeError(err) };
@@ -2233,7 +2379,7 @@ export async function adminCancelBooking(
     : null;
 
   if (patient?.email && doctorProfile) {
-    const refundAmount = refundAmountCents / 100;
+    const refundAmount = (refundReportedCents || refundAmountCents) / 100;
     const softsmoke = isSoftsmokeTransactionalDoctor({
       id: doctor?.id || booking.doctor_id,
       slug: doctor?.slug,
@@ -2320,19 +2466,20 @@ export async function adminCancelBooking(
     booking_number: booking.booking_number,
     policy,
     refund_percent: refundPercent,
-    refund_amount_cents: refundAmountCents,
+    refund_amount_cents: refundReportedCents || refundAmountCents,
     reason,
   });
 
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/admin/bookings");
+  const reportedCents = refundReportedCents || refundAmountCents;
   return {
     success: true,
     refundPercent,
-    refundAmountCents,
+    refundAmountCents: reportedCents,
     message:
       refundPercent > 0
-        ? `Booking cancelled. A ${refundPercent}% refund (${booking.currency.toUpperCase()} ${(refundAmountCents / 100).toFixed(2)}) has been processed.`
+        ? `Booking cancelled. A ${refundPercent}% refund (${booking.currency.toUpperCase()} ${(reportedCents / 100).toFixed(2)}) has been processed.`
         : "Booking cancelled. No refund applicable based on the cancellation policy.",
   };
 }

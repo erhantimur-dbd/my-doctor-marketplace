@@ -14,6 +14,12 @@ import {
 } from "@/lib/validators/booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
+import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
+import {
+  CONSULT_PAYMENT_METHOD_TYPES,
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
 import { sendEmail } from "@/lib/email/client";
 import { followUpInvitationEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
@@ -403,6 +409,27 @@ export async function createInvitationCheckout(
       return { error: "Failed to create booking. Please try again." };
     }
 
+    if (!doctor.stripe_account_id) {
+      const adminSupabase = createAdminClient();
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+    }
+    const merchant = await doctorCanAcceptConsultCardPayment(
+      getStripe(),
+      doctor.stripe_account_id
+    );
+    if (!merchant.ok) {
+      const adminSupabase = createAdminClient();
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: merchant.error };
+    }
+
     // Create Stripe Checkout Session
     const { origin, locale } = await getOriginAndLocale();
     const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
@@ -417,6 +444,7 @@ export async function createInvitationCheckout(
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
+      payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
       line_items: [
         {
           price_data: {
@@ -430,12 +458,10 @@ export async function createInvitationCheckout(
           quantity: 1,
         },
       ],
-      payment_intent_data: {
-        application_fee_amount: getCommissionCents(invitation.discounted_total_cents),
-        transfer_data: {
-          destination: doctor.stripe_account_id,
-        },
-      },
+      payment_intent_data: consultDestinationChargeParams({
+        destinationAccountId: doctor.stripe_account_id,
+        applicationFeeCents: getCommissionCents(invitation.discounted_total_cents),
+      }),
       metadata: {
         invitation_id: invitation.id,
         first_booking_id: booking.id,

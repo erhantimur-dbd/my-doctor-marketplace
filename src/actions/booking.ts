@@ -3,6 +3,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
+import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
+import {
+  addedRefundCents,
+  cancelOpenRescheduleBalance,
+  cardChargeNetOfWallet,
+  refundCardCharge,
+  refundReschedulePairIfPaid,
+  refundReversesTransfer,
+} from "@/lib/booking/reschedule-balance";
 import { revalidatePath } from "next/cache";
 import {
   createBookingSchema,
@@ -49,6 +58,11 @@ import {
   isSoftsmokeConnectChargeSkipped,
   readJoinedProfileEmail,
 } from "@/lib/soft-launch/softsmoke-connect-bypass";
+import {
+  CONSULT_PAYMENT_METHOD_TYPES,
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
 import {
   confirmBookingWithoutStripeCheckout,
   finalizeConfirmedBookingById,
@@ -586,6 +600,28 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       };
     }
 
+    // Charged consults only. Softsmoke charge-skip and wallet-only returns
+    // above never reach this. Refuse rather than charge as the platform.
+    // Partial wallet credit is stored only after this check succeeds.
+    if (!doctor.stripe_account_id) {
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+    }
+    const merchant = await doctorCanAcceptConsultCardPayment(
+      getStripe(),
+      doctor.stripe_account_id
+    );
+    if (!merchant.ok) {
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: merchant.error };
+    }
+
     // Store wallet credit on booking for later debit on payment completion
     if (walletCreditToApply > 0) {
       await writeClient
@@ -604,6 +640,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
+      payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
       customer_email: guestEmail || undefined,
       line_items: [
         {
@@ -622,12 +659,10 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
           quantity: 1,
         },
       ],
-      payment_intent_data: {
-        application_fee_amount: adjustedApplicationFee,
-        transfer_data: {
-          destination: doctor.stripe_account_id,
-        },
-      },
+      payment_intent_data: consultDestinationChargeParams({
+        destinationAccountId: doctor.stripe_account_id,
+        applicationFeeCents: adjustedApplicationFee,
+      }),
       metadata: {
         booking_id: booking.id,
         booking_number: booking.booking_number,
@@ -751,29 +786,75 @@ export async function cancelBooking(input: CancelBookingInput) {
 
     let walletCreditCents = 0;
     let refundRef: string | null = null;
+    let pairRefundedCents = 0;
+    let pairRowRefundCents = 0;
+    let pairHandled = false;
     const refundDestination = parsed.data.refund_destination || "bank";
 
-    if (refundPercent > 0 && stripeChargedAmount > 0) {
+    await cancelOpenRescheduleBalance(booking);
+
+    if (refundPercent > 0) {
+      const pairRefund = await refundReschedulePairIfPaid(booking, {
+        refundPercent,
+      });
+      if (pairRefund.applied && "error" in pairRefund) {
+        return {
+          error: "Failed to process refund. Please try again or contact support.",
+        };
+      }
+      if (pairRefund.applied) {
+        pairHandled = true;
+        pairRefundedCents = pairRefund.totalCents;
+        pairRowRefundCents = pairRefund.rowRefundCents;
+        refundRef = pairRefund.refundIds[0] ?? null;
+        // Existing wallet double pay covers the original card only.
+        // The balance charge is refunded to the card and is not credited here.
+        if (
+          refundDestination === "wallet" &&
+          pairRefund.originalCardCents > 0
+        ) {
+          walletCreditCents = pairRefund.originalCardCents;
+          await creditWallet({
+            patientId: user.id,
+            currency: booking.currency,
+            amountCents: pairRefund.originalCardCents,
+            sourceType: "refund",
+            sourceBookingId: booking.id,
+            description: `Refund from cancelled booking ${booking.booking_number}`,
+          });
+        }
+      }
+    }
+
+    if (!pairHandled && refundPercent > 0 && stripeChargedAmount > 0) {
       const refundAmount = Math.round(
         (stripeChargedAmount * refundPercent) / 100
       );
+      const cardRefund = Math.round(
+        (cardChargeNetOfWallet(
+          stripeChargedAmount,
+          booking.wallet_credit_applied_cents
+        ) *
+          refundPercent) /
+          100
+      );
 
       if (refundDestination === "wallet") {
-        // Instant: credit patient wallet, still refund doctor via Stripe
+        // Instant: credit patient wallet, still refund doctor via Stripe.
+        // This credits the original card amount as well as refunding it.
         walletCreditCents = refundAmount;
 
-        // Refund Stripe to reverse the doctor's transfer + platform fee
-        if (booking.stripe_payment_intent_id) {
-          const stripeRefund = await getStripe().refunds.create({
-            payment_intent: booking.stripe_payment_intent_id,
-            amount: refundAmount,
-            reverse_transfer: true,
-            refund_application_fee: true,
+        if (booking.stripe_payment_intent_id && cardRefund > 0) {
+          const stripeRefund = await refundCardCharge(getStripe(), {
+            paymentIntentId: booking.stripe_payment_intent_id,
+            amountCents: cardRefund,
+            bookingId: booking.id,
+            reason: "patient_cancel_wallet",
+            reverseTransfer: refundReversesTransfer(booking),
           });
-          refundRef = stripeRefund.id;
+          refundRef = stripeRefund;
         }
 
-        // Credit the patient's wallet balance
         await creditWallet({
           patientId: user.id,
           currency: booking.currency,
@@ -782,18 +863,17 @@ export async function cancelBooking(input: CancelBookingInput) {
           sourceBookingId: booking.id,
           description: `Refund from cancelled booking ${booking.booking_number}`,
         });
-      } else {
-        // Bank refund: standard Stripe refund back to patient's payment method
-        if (booking.stripe_payment_intent_id) {
-          const stripeRefund = await getStripe().refunds.create({
-            payment_intent: booking.stripe_payment_intent_id,
-            amount: refundAmount,
-            reverse_transfer: true,
-            refund_application_fee: true,
-          });
-          refundRef = stripeRefund.id;
-        }
+      } else if (booking.stripe_payment_intent_id && cardRefund > 0) {
+        const stripeRefund = await refundCardCharge(getStripe(), {
+          paymentIntentId: booking.stripe_payment_intent_id,
+          amountCents: cardRefund,
+          bookingId: booking.id,
+          reason: "patient_cancel",
+          reverseTransfer: refundReversesTransfer(booking),
+        });
+        refundRef = stripeRefund;
       }
+      pairRowRefundCents = cardRefund;
     }
 
     // Update booking status
@@ -803,6 +883,15 @@ export async function cancelBooking(input: CancelBookingInput) {
         status: BOOKING_STATUSES.CANCELLED_PATIENT,
         cancelled_at: new Date().toISOString(),
         cancellation_reason: parsed.data.reason || null,
+        ...(pairRowRefundCents > 0
+          ? {
+              refund_amount_cents: addedRefundCents(
+                booking.refund_amount_cents,
+                pairRowRefundCents
+              ),
+              refunded_at: new Date().toISOString(),
+            }
+          : {}),
       })
       .eq("id", booking.id);
 
@@ -837,9 +926,11 @@ export async function cancelBooking(input: CancelBookingInput) {
       : null;
 
     if (patient?.email && doctorProfile) {
-      const refundAmount = refundPercent > 0
-        ? (stripeChargedAmount * refundPercent) / 100 / 100
-        : 0;
+      const refundAmount = pairRefundedCents > 0
+        ? pairRefundedCents / 100
+        : refundPercent > 0
+          ? (stripeChargedAmount * refundPercent) / 100 / 100
+          : 0;
 
       const softsmoke = isSoftsmokeTransactionalDoctor({
         id: doctor?.id || booking.doctor_id,
@@ -1053,24 +1144,53 @@ export async function cancelAndRebook(input: {
     const stripeCharged = oldBooking.payment_mode === "deposit" && oldBooking.deposit_amount_cents != null
       ? oldBooking.deposit_amount_cents
       : oldBooking.total_amount_cents;
-    const refundAmount = Math.round((stripeCharged * refundPercent) / 100);
 
-    // 3. Refund old booking via Stripe (to reverse doctor transfer)
-    if (oldBooking.stripe_payment_intent_id && refundAmount > 0) {
-      await getStripe().refunds.create({
-        payment_intent: oldBooking.stripe_payment_intent_id,
-        amount: refundAmount,
-        reverse_transfer: true,
-        refund_application_fee: true,
-      });
+    await cancelOpenRescheduleBalance(oldBooking);
+
+    // 3. Refund old booking via Stripe (to reverse doctor transfer).
+    // A paid reschedule balance is refunded to the card. The wallet credit
+    // below is the existing original-charge double pay and does not include
+    // that balance.
+    const refundAmount = Math.round((stripeCharged * refundPercent) / 100);
+    let rebookRefundCents = refundAmount;
+    let rowRefundCents = 0;
+    const pairRefund =
+      refundPercent > 0
+        ? await refundReschedulePairIfPaid(oldBooking, { refundPercent })
+        : { applied: false as const };
+    if (pairRefund.applied && "error" in pairRefund) {
+      return { error: pairRefund.error };
+    }
+    if (pairRefund.applied) {
+      rowRefundCents = pairRefund.rowRefundCents;
+      rebookRefundCents = pairRefund.originalCardCents;
+    } else if (refundPercent > 0) {
+      const cardRefund = Math.round(
+        (cardChargeNetOfWallet(
+          stripeCharged,
+          oldBooking.wallet_credit_applied_cents
+        ) *
+          refundPercent) /
+          100
+      );
+      rowRefundCents = cardRefund;
+      if (oldBooking.stripe_payment_intent_id && cardRefund > 0) {
+        await refundCardCharge(getStripe(), {
+          paymentIntentId: oldBooking.stripe_payment_intent_id,
+          amountCents: cardRefund,
+          bookingId: oldBooking.id,
+          reason: "cancel_rebook",
+          reverseTransfer: refundReversesTransfer(oldBooking),
+        });
+      }
     }
 
     // 4. Credit wallet with refund
-    if (refundAmount > 0) {
+    if (rebookRefundCents > 0) {
       await creditWallet({
         patientId: user.id,
         currency: oldBooking.currency,
-        amountCents: refundAmount,
+        amountCents: rebookRefundCents,
         sourceType: "cancel_rebook",
         sourceBookingId: oldBooking.id,
         description: `Cancel & rebook: credit from ${oldBooking.booking_number}`,
@@ -1084,6 +1204,15 @@ export async function cancelAndRebook(input: {
         status: BOOKING_STATUSES.CANCELLED_PATIENT,
         cancelled_at: new Date().toISOString(),
         cancellation_reason: "Cancelled and rebooked by patient",
+        ...(rowRefundCents > 0
+          ? {
+              refund_amount_cents: addedRefundCents(
+                oldBooking.refund_amount_cents,
+                rowRefundCents
+              ),
+              refunded_at: new Date().toISOString(),
+            }
+          : {}),
       })
       .eq("id", oldBooking.id);
 
@@ -1109,7 +1238,7 @@ export async function cancelAndRebook(input: {
     return {
       ...result,
       cancelledBookingId: oldBooking.id,
-      walletCreditCents: refundAmount,
+      walletCreditCents: rebookRefundCents,
       refundPercent,
     };
   } catch (err) {

@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
 import { log } from "@/lib/utils/logger";
+import {
+  EXPRESS_CONNECT_CAPABILITIES,
+  requestCardPaymentsIfNeeded,
+} from "@/lib/stripe/consult-merchant";
 
 async function requireDoctor() {
   const supabase = await createClient();
@@ -319,6 +323,7 @@ export async function connectStripeAccount() {
     const account = await stripe.accounts.create({
       type: "express",
       metadata: { doctor_id: doctor.id },
+      capabilities: EXPRESS_CONNECT_CAPABILITIES,
     });
     accountId = account.id;
 
@@ -326,6 +331,14 @@ export async function connectStripeAccount() {
       .from("doctors")
       .update({ stripe_account_id: accountId })
       .eq("id", doctor.id);
+  } else {
+    // Already connected: ask for card_payments before the Account Link so
+    // any new requirements are part of this onboarding pass. Idempotent.
+    try {
+      await requestCardPaymentsIfNeeded(stripe, accountId);
+    } catch (err) {
+      log.error("[Connect] card_payments request failed", { err, accountId });
+    }
   }
 
   const { getRequestOrigin } = await import("@/lib/http/origin");

@@ -41,15 +41,46 @@ export type CqcLocationRecord = {
   raw: unknown;
 };
 
+/**
+ * `not_found` is only a real HTTP 404 from the register for that id.
+ * A locally invalid id, a timeout, a 429, a 5xx, or an unreadable body
+ * must not use this kind — the credentials cron suspends on `not_found`.
+ */
 export type CqcFetchError =
-  | { kind: "not_found" }
-  | { kind: "rate_limited"; retryAfterSeconds: number | null }
+  | { kind: "not_found"; status: 404 }
+  | { kind: "invalid_id" }
+  | { kind: "rate_limited"; status: 429; retryAfterSeconds: number | null }
   | { kind: "network"; message: string }
+  | { kind: "malformed"; status: number; message: string }
   | { kind: "unexpected_status"; status: number; body: string };
 
 export type CqcResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: CqcFetchError };
+
+const CQC_ID_RE = /^[0-9]+-[0-9]+$/;
+
+/**
+ * True only when the register answered HTTP 404 for that provider or
+ * location id. Invalid ids and transport failures are not definitive.
+ */
+export function isDefinitiveCqcNotFound(error: CqcFetchError): boolean {
+  return error.kind === "not_found" && error.status === 404;
+}
+
+/** HTTP status when the register responded; null for local or transport failures. */
+export function cqcErrorHttpStatus(error: CqcFetchError): number | null {
+  switch (error.kind) {
+    case "not_found":
+    case "rate_limited":
+    case "unexpected_status":
+    case "malformed":
+      return error.status;
+    case "invalid_id":
+    case "network":
+      return null;
+  }
+}
 
 /**
  * Fetch a provider by CQC provider ID (format: `1-xxxxxxxxxx`).
@@ -59,35 +90,26 @@ export async function fetchCqcProvider(
   providerId: string,
   opts?: { signal?: AbortSignal }
 ): Promise<CqcResult<CqcProviderRecord>> {
-  if (!/^[0-9]+-[0-9]+$/.test(providerId)) {
-    return {
-      ok: false,
-      error: { kind: "not_found" },
-    };
+  if (!CQC_ID_RE.test(providerId)) {
+    return { ok: false, error: { kind: "invalid_id" } };
   }
 
   const url = `${CQC_API_BASE}/providers/${encodeURIComponent(providerId)}`;
-  const res = await safeFetch(url, opts);
+  const res = await safeFetch<CqcProviderApiResponse>(url, opts);
   if (!res.ok) return res;
 
-  const json = res.data as CqcProviderApiResponse;
-  return {
-    ok: true,
-    data: {
-      providerId: json.providerId ?? providerId,
-      name: json.name ?? "",
-      registrationStatus: normaliseStatus(json.registrationStatus),
-      registrationDate: json.registrationDate ?? null,
-      deregistrationDate: json.deregistrationDate ?? null,
-      type: json.type ?? null,
-      brandId: json.brandId ?? null,
-      locationIds:
-        (json.locationIds ?? []).map((l) =>
-          typeof l === "string" ? l : l.locationId
-        ) ?? [],
-      raw: json,
-    },
-  };
+  try {
+    return { ok: true, data: mapProvider(res.data, providerId) };
+  } catch (err) {
+    return {
+      ok: false,
+      error: {
+        kind: "malformed",
+        status: 200,
+        message: err instanceof Error ? err.message : String(err),
+      },
+    };
+  }
 }
 
 /**
@@ -98,31 +120,26 @@ export async function fetchCqcLocation(
   locationId: string,
   opts?: { signal?: AbortSignal }
 ): Promise<CqcResult<CqcLocationRecord>> {
-  if (!/^[0-9]+-[0-9]+$/.test(locationId)) {
-    return { ok: false, error: { kind: "not_found" } };
+  if (!CQC_ID_RE.test(locationId)) {
+    return { ok: false, error: { kind: "invalid_id" } };
   }
 
   const url = `${CQC_API_BASE}/locations/${encodeURIComponent(locationId)}`;
-  const res = await safeFetch(url, opts);
+  const res = await safeFetch<CqcLocationApiResponse>(url, opts);
   if (!res.ok) return res;
 
-  const json = res.data as CqcLocationApiResponse;
-  return {
-    ok: true,
-    data: {
-      locationId: json.locationId ?? locationId,
-      providerId: json.providerId ?? "",
-      name: json.name ?? "",
-      registrationStatus: normaliseStatus(json.registrationStatus),
-      registrationDate: json.registrationDate ?? null,
-      deregistrationDate: json.deregistrationDate ?? null,
-      regulatedActivities:
-        (json.regulatedActivities ?? [])
-          .map((ra) => (typeof ra === "string" ? ra : ra.name))
-          .filter((s): s is string => typeof s === "string" && s.length > 0),
-      raw: json,
-    },
-  };
+  try {
+    return { ok: true, data: mapLocation(res.data, locationId) };
+  } catch (err) {
+    return {
+      ok: false,
+      error: {
+        kind: "malformed",
+        status: 200,
+        message: err instanceof Error ? err.message : String(err),
+      },
+    };
+  }
 }
 
 /**
@@ -158,62 +175,145 @@ type CqcLocationApiResponse = {
   regulatedActivities?: Array<string | { name?: string }>;
 };
 
-function normaliseStatus(s: string | undefined | null): CqcRegistrationStatus {
-  if (!s) return "Unknown";
+function normaliseStatus(s: unknown): CqcRegistrationStatus {
+  if (typeof s !== "string" || !s) return "Unknown";
   const lower = s.toLowerCase();
   if (lower === "registered") return "Registered";
   if (lower === "deregistered") return "Deregistered";
   return "Unknown";
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function readString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function mapProvider(
+  json: CqcProviderApiResponse,
+  providerId: string
+): CqcProviderRecord {
+  const locationIds = Array.isArray(json.locationIds)
+    ? json.locationIds
+        .map((l) => {
+          if (typeof l === "string") return l;
+          const row = asRecord(l);
+          return row ? readString(row.locationId) : null;
+        })
+        .filter((id): id is string => !!id)
+    : [];
+
+  return {
+    providerId: readString(json.providerId) ?? providerId,
+    name: readString(json.name) ?? "",
+    registrationStatus: normaliseStatus(json.registrationStatus),
+    registrationDate: readString(json.registrationDate),
+    deregistrationDate: readString(json.deregistrationDate),
+    type: readString(json.type),
+    brandId: readString(json.brandId),
+    locationIds,
+    raw: json,
+  };
+}
+
+function mapLocation(
+  json: CqcLocationApiResponse,
+  locationId: string
+): CqcLocationRecord {
+  const regulatedActivities = Array.isArray(json.regulatedActivities)
+    ? json.regulatedActivities
+        .map((ra) => {
+          if (typeof ra === "string") return ra;
+          const row = asRecord(ra);
+          return row ? readString(row.name) : null;
+        })
+        .filter((name): name is string => !!name && name.length > 0)
+    : [];
+
+  return {
+    locationId: readString(json.locationId) ?? locationId,
+    providerId: readString(json.providerId) ?? "",
+    name: readString(json.name) ?? "",
+    registrationStatus: normaliseStatus(json.registrationStatus),
+    registrationDate: readString(json.registrationDate),
+    deregistrationDate: readString(json.deregistrationDate),
+    regulatedActivities,
+    raw: json,
+  };
+}
+
 async function safeFetch<T = unknown>(
   url: string,
   opts?: { signal?: AbortSignal }
 ): Promise<CqcResult<T>> {
+  let res: Response;
   try {
-    const res = await fetch(url, {
+    res = await fetch(url, {
       headers: {
         Accept: "application/json",
         "User-Agent": "MyDoctors360-compliance-bot/1.0",
       },
       signal: opts?.signal,
       // Cache the public CQC register for up to 6 hours on the edge.
-      // The weekly cron is the authoritative refresher; individual admin
-      // checks should be happy to hit the cache.
+      // The nightly credentials cron is the authoritative refresher;
+      // individual admin checks should be happy to hit the cache.
       next: { revalidate: 6 * 60 * 60 },
     });
-
-    if (res.status === 404) {
-      return { ok: false, error: { kind: "not_found" } };
-    }
-    if (res.status === 429) {
-      const ra = res.headers.get("retry-after");
-      const retryAfterSeconds = ra ? Number.parseInt(ra, 10) : null;
-      return {
-        ok: false,
-        error: {
-          kind: "rate_limited",
-          retryAfterSeconds: Number.isFinite(retryAfterSeconds as number)
-            ? (retryAfterSeconds as number)
-            : null,
-        },
-      };
-    }
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      return {
-        ok: false,
-        error: { kind: "unexpected_status", status: res.status, body },
-      };
-    }
-
-    const json = (await res.json()) as T;
-    return { ok: true, data: json };
   } catch (err) {
     return {
       ok: false,
       error: {
         kind: "network",
+        message: err instanceof Error ? err.message : String(err),
+      },
+    };
+  }
+
+  if (res.status === 404) {
+    return { ok: false, error: { kind: "not_found", status: 404 } };
+  }
+  if (res.status === 429) {
+    const ra = res.headers.get("retry-after");
+    const parsed = ra ? Number.parseInt(ra, 10) : null;
+    return {
+      ok: false,
+      error: {
+        kind: "rate_limited",
+        status: 429,
+        retryAfterSeconds: Number.isFinite(parsed as number) ? parsed : null,
+      },
+    };
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    return {
+      ok: false,
+      error: { kind: "unexpected_status", status: res.status, body },
+    };
+  }
+
+  try {
+    const json = (await res.json()) as T;
+    if (!json || typeof json !== "object" || Array.isArray(json)) {
+      return {
+        ok: false,
+        error: {
+          kind: "malformed",
+          status: res.status,
+          message: "CQC response was not a JSON object",
+        },
+      };
+    }
+    return { ok: true, data: json };
+  } catch (err) {
+    return {
+      ok: false,
+      error: {
+        kind: "malformed",
+        status: res.status,
         message: err instanceof Error ? err.message : String(err),
       },
     };

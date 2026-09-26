@@ -25,6 +25,12 @@ import { UpgradePrompt } from "@/components/shared/upgrade-prompt";
 import { hasActiveLicense } from "@/lib/license/check";
 import { connectStripeAccount } from "@/actions/doctor";
 import { doctorBookingPatientName } from "@/lib/doctor/booking-patient";
+import { getStripe } from "@/lib/stripe/client";
+import {
+  requestCardPaymentsIfNeeded,
+  type CardPaymentsCapabilityStatus,
+} from "@/lib/stripe/consult-merchant";
+import { log } from "@/lib/utils/logger";
 
 export default async function PaymentsPage() {
   const supabase = await createClient();
@@ -43,6 +49,25 @@ export default async function PaymentsPage() {
     .single();
 
   if (!doctor) redirect("/en/register-doctor");
+
+  // Idempotent request for accounts created before card_payments was required.
+  // Active and pending capabilities are not updated again.
+  let cardPaymentsStatus: CardPaymentsCapabilityStatus | "error" | "skipped" =
+    "skipped";
+  if (doctor.stripe_account_id) {
+    try {
+      cardPaymentsStatus = await requestCardPaymentsIfNeeded(
+        getStripe(),
+        doctor.stripe_account_id
+      );
+    } catch (err) {
+      log.error("[Connect] card_payments request failed", {
+        err,
+        accountId: doctor.stripe_account_id,
+      });
+      cardPaymentsStatus = "error";
+    }
+  }
 
   if (!(await hasActiveLicense(supabase, doctor.id))) {
     return <UpgradePrompt feature="Payments" />;
@@ -217,6 +242,30 @@ export default async function PaymentsPage() {
               </Button>
             </div>
           )}
+          {doctor.stripe_onboarding_complete &&
+          doctor.stripe_account_id &&
+          cardPaymentsStatus !== "active" &&
+          cardPaymentsStatus !== "skipped" &&
+          cardPaymentsStatus !== "error" ? (
+            <div className="mt-4 flex items-start gap-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <div className="flex-1">
+                <p className="font-medium text-amber-900">
+                  Card payments aren&apos;t active yet
+                </p>
+                <p className="mt-1 text-sm text-amber-800">
+                  Patients can&apos;t pay for consultations online until Stripe
+                  activates card payments on your account. Finish setup so your
+                  name appears on their card statement.
+                </p>
+                <form action={connectStripeAccount} className="mt-3">
+                  <Button type="submit" size="sm" variant="outline">
+                    Finish card payment setup
+                  </Button>
+                </form>
+              </div>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 

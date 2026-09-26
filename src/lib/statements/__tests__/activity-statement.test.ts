@@ -13,6 +13,7 @@ import {
   ACTIVITY_STATEMENT_FOOTER,
   ACTIVITY_STATEMENT_HREF,
   ACTIVITY_STATEMENT_TITLE,
+  RESCHEDULE_BALANCE_DOCTOR_LABEL,
   RESCHEDULE_BALANCE_LABEL,
   accumulateActivityStatementTotals,
   activityStatementSelect,
@@ -203,6 +204,26 @@ describe("fee settlement", () => {
     expect(settled.platformFeeCents).toBe(0);
     expect(settled.connectedAccountCents).toBe(0);
     expect(settled.grossConsultCents).toBe(4000);
+  });
+
+  it("settles a destination reschedule balance from the stored fee", () => {
+    const settled = settleBookingFees(
+      booking({
+        rescheduledFromBookingId: "booking-original",
+        reschedulePaymentStatus: "paid",
+        reschedulePriceDiffCents: 1500,
+        totalAmountCents: 5500,
+        consultationFeeCents: 5500,
+        commissionCents: 100,
+        platformFeeCents: 0,
+        stripePaymentIntentId: "pi_balance",
+      })
+    );
+    expect(settled.settlement).toBe("destination_charge");
+    expect(settled.grossConsultCents).toBe(1500);
+    expect(settled.platformFeeCents).toBe(100);
+    expect(settled.connectedAccountCents).toBe(1400);
+    expect(settled.platformFeeCents).not.toBe(getCommissionCents(1500));
   });
 
   it("zeroes a paid dearer-slot reschedule successor", () => {
@@ -483,6 +504,19 @@ describe("buildActivityStatement", () => {
     const successor = statement.lines.find((line) => line.bookingNumber === "BK-100-R");
     expect(ordinary?.excludeFromTotals).toBe(false);
     expect(successor?.excludeFromTotals).toBe(true);
+
+    const source = readFileSync(
+      join(process.cwd(), "src/lib/statements/activity-statement.ts"),
+      "utf8"
+    );
+    const totalsFn = source.slice(
+      source.indexOf("export function accumulateActivityStatementTotals"),
+      source.indexOf("export function buildActivityStatement")
+    );
+    expect(totalsFn).toContain("line.excludeFromTotals");
+    expect(totalsFn).toContain("line.countsAsBooking");
+    expect(totalsFn).not.toContain("statusLabel");
+    expect(totalsFn).not.toContain("RESCHEDULE_BALANCE");
     expect(statement.totals[0]).toMatchObject({
       bookingsCount: 1,
       grossConsultCents: 4000,
@@ -518,6 +552,88 @@ describe("buildActivityStatement", () => {
       platformFeeCents: 825,
       netConnectedAccountCents: 4675,
       refundsCents: 100,
+    });
+  });
+
+  it("shows a destination reschedule balance as the doctor's line without counting the original twice", () => {
+    const original = booking({
+      id: "booking-original",
+      bookingNumber: "BK-100",
+      status: "cancelled_doctor",
+      paidAt: "2026-09-10T09:00:00.000Z",
+      stripePaymentIntentId: "pi_original",
+    });
+    const successor = booking({
+      id: "booking-successor",
+      bookingNumber: "BK-100-R",
+      status: "confirmed",
+      paidAt: "2026-09-12T09:00:00.000Z",
+      consultationFeeCents: 5500,
+      totalAmountCents: 5500,
+      commissionCents: 225,
+      platformFeeCents: 0,
+      reschedulePriceDiffCents: 1500,
+      reschedulePaymentStatus: "paid",
+      rescheduledFromBookingId: "booking-original",
+      stripePaymentIntentId: "pi_balance",
+    });
+    const statement = buildActivityStatement({
+      year: 2026,
+      month: 9,
+      bookings: [successor, original],
+      payeeName: "Dr Vera Softsmoke",
+      scopeLabel: "This doctor",
+      now,
+    });
+
+    expect(statement.lines).toHaveLength(2);
+    const originalLine = statement.lines.find((line) => line.bookingNumber === "BK-100");
+    const balanceLine = statement.lines.find((line) => line.bookingNumber === "BK-100-R");
+    expect(originalLine).toMatchObject({
+      statusLabel: "Rescheduled to BK-100-R",
+      grossConsultCents: 4000,
+      platformFeeCents: 600,
+      connectedAccountCents: 3400,
+      excludeFromTotals: false,
+      countsAsBooking: true,
+    });
+    expect(balanceLine).toMatchObject({
+      statusLabel: RESCHEDULE_BALANCE_DOCTOR_LABEL,
+      grossConsultCents: 1500,
+      platformFeeCents: 225,
+      connectedAccountCents: 1275,
+      refundAmountCents: 0,
+      excludeFromTotals: false,
+      countsAsBooking: false,
+    });
+    expect(RESCHEDULE_BALANCE_DOCTOR_LABEL).toBe("Reschedule balance");
+    expect(statement.lines.map((line) => line.statusLabel).join(" ")).not.toMatch(
+      /invoice|receipt|\bbill\b/i
+    );
+    expect(statement.totals[0]).toMatchObject({
+      bookingsCount: 1,
+      grossConsultCents: 5500,
+      refundsCents: 0,
+      platformFeeCents: 825,
+      netConnectedAccountCents: 4675,
+    });
+
+    const relabeled = statement.lines.map((line) => ({
+      ...line,
+      statusLabel: RESCHEDULE_BALANCE_LABEL,
+    }));
+    expect(accumulateActivityStatementTotals(relabeled)).toEqual(statement.totals);
+
+    const hidden = statement.lines.map((line) =>
+      line.bookingNumber === "BK-100-R"
+        ? { ...line, excludeFromTotals: true }
+        : line
+    );
+    expect(accumulateActivityStatementTotals(hidden)[0]).toMatchObject({
+      bookingsCount: 1,
+      grossConsultCents: 4000,
+      platformFeeCents: 600,
+      netConnectedAccountCents: 3400,
     });
   });
 

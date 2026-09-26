@@ -3,7 +3,10 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   SOFT_LAUNCH_SOFTSMOKE_DOCTOR,
+  SOFTSMOKE_CREDENTIALS_SKIP_ENV,
+  SOFTSMOKE_CREDENTIALS_SKIP_REASON,
   allowsSoftLaunchSoftsmokeConnectBypass,
+  isSoftLaunchSoftsmokeCredentialsSkip,
   isSoftsmokeConnectChargeSkipped,
   readJoinedProfileEmail,
 } from "@/lib/soft-launch/softsmoke-connect-bypass";
@@ -103,6 +106,41 @@ describe("readJoinedProfileEmail", () => {
   });
 });
 
+describe("isSoftLaunchSoftsmokeCredentialsSkip", () => {
+  const originalSkip = process.env[SOFTSMOKE_CREDENTIALS_SKIP_ENV];
+
+  afterEach(() => {
+    if (originalSkip === undefined) delete process.env[SOFTSMOKE_CREDENTIALS_SKIP_ENV];
+    else process.env[SOFTSMOKE_CREDENTIALS_SKIP_ENV] = originalSkip;
+  });
+
+  it("skips only the allowlisted doctor id when the switch is exactly 1", () => {
+    delete process.env[SOFTSMOKE_CREDENTIALS_SKIP_ENV];
+    expect(
+      isSoftLaunchSoftsmokeCredentialsSkip(SOFT_LAUNCH_SOFTSMOKE_DOCTOR.id)
+    ).toBe(false);
+
+    process.env[SOFTSMOKE_CREDENTIALS_SKIP_ENV] = "1";
+    expect(
+      isSoftLaunchSoftsmokeCredentialsSkip(SOFT_LAUNCH_SOFTSMOKE_DOCTOR.id)
+    ).toBe(true);
+    expect(isSoftLaunchSoftsmokeCredentialsSkip("other-doctor-id")).toBe(false);
+    expect(SOFTSMOKE_CREDENTIALS_SKIP_REASON).toContain("doctor id");
+    expect(SOFT_LAUNCH_SOFTSMOKE_DOCTOR.id).toBe(
+      "8a9b6ac9-f6f1-4b6a-b108-837a704444dc"
+    );
+
+    process.env[SOFTSMOKE_CREDENTIALS_SKIP_ENV] = "true";
+    expect(
+      isSoftLaunchSoftsmokeCredentialsSkip(SOFT_LAUNCH_SOFTSMOKE_DOCTOR.id)
+    ).toBe(false);
+    process.env[SOFTSMOKE_CREDENTIALS_SKIP_ENV] = "0";
+    expect(
+      isSoftLaunchSoftsmokeCredentialsSkip(SOFT_LAUNCH_SOFTSMOKE_DOCTOR.id)
+    ).toBe(false);
+  });
+});
+
 describe("checkout gate stays Connect-required except the smoke allowlist", () => {
   const booking = readFileSync(
     join(process.cwd(), "src/actions/booking.ts"),
@@ -111,7 +149,8 @@ describe("checkout gate stays Connect-required except the smoke allowlist", () =
 
   it("keeps the destination charge and the payment-setup error", () => {
     expect(booking).toContain("isSoftsmokeConnectChargeSkipped");
-    expect(booking).toContain("destination: doctor.stripe_account_id");
+    expect(booking).toContain("consultDestinationChargeParams");
+    expect(booking).toContain("destinationAccountId: doctor.stripe_account_id");
     expect(booking).toContain(
       "This doctor has not completed their payment setup. Please try again later."
     );

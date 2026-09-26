@@ -5,6 +5,29 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { requireOrgMember } from "./organization";
 import { getStripe } from "@/lib/stripe/client";
+import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
+import {
+  CONSULT_PAYMENT_METHOD_TYPES,
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
+import {
+  CLINIC_CANCEL_STATUS,
+  balanceCommissionForReschedule,
+  cancelOpenRescheduleBalance,
+  loadCommissionChain,
+  clinicCancelMakeWhole,
+  createDestinationRefunds,
+  refundCardCharge,
+  refundReschedulePairIfPaid,
+  refundReversesTransfer,
+  rescheduleBalanceIdempotencyKey,
+  rescheduleDoctorChangeError,
+  dearerChainRescheduleError,
+  stripeChargedCents,
+  cardChargeNetOfWallet,
+} from "@/lib/booking/reschedule-balance";
+import { creditWallet } from "@/lib/wallet";
 import { sendEmail } from "@/lib/email/client";
 import { reschedulePaymentEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
@@ -84,8 +107,6 @@ export async function adminCancelBooking(formData: FormData) {
       *,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone),
       doctor:doctors!inner(
-        cancellation_policy,
-        cancellation_hours,
         stripe_account_id,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
       )
@@ -99,40 +120,98 @@ export async function adminCancelBooking(formData: FormData) {
     return { error: "This booking cannot be cancelled in its current state." };
   }
 
-  // Process Stripe refund if booking was paid
-  let refundAmountCents = 0;
-  if (booking.stripe_payment_intent_id && booking.paid_at) {
-    // Admin cancellations: always full refund (clinic takes responsibility)
-    refundAmountCents = booking.payment_mode === "deposit"
-      ? (booking.deposit_amount_cents ?? 0)
-      : booking.total_amount_cents;
+  await cancelOpenRescheduleBalance(booking);
 
-    if (refundAmountCents > 0) {
+  // Clinic cancellations make the patient whole. A paid dearer-slot
+  // reschedule has two destination charges; both come back with the
+  // doctor's transfer and our fee reversed. Wallet credit is returned
+  // to the wallet. Late-cancellation fees apply only on the patient
+  // cancel path.
+  let rowCardRefundCents = 0;
+  let patientCardRefundCents = 0;
+  let walletCreditCents = 0;
+  const pairRefund = await refundReschedulePairIfPaid(booking, {
+    refundPercent: 100,
+    netOfWallet: true,
+  });
+  if (pairRefund.applied && "error" in pairRefund) {
+    log.error("Stripe refund failed during admin cancellation:", {
+      err: pairRefund.error,
+      bookingId: booking.id,
+    });
+    return { error: "Failed to process refund. Please try again or contact support." };
+  }
+  if (pairRefund.applied) {
+    rowCardRefundCents = pairRefund.rowRefundCents;
+    patientCardRefundCents = pairRefund.totalCents;
+    walletCreditCents = pairRefund.walletCreditCents;
+  } else if (booking.paid_at) {
+    const plan = clinicCancelMakeWhole({
+      originalPaymentIntentId: booking.stripe_payment_intent_id ?? null,
+      originalChargedCents: stripeChargedCents(booking),
+      originalWalletCreditCents: booking.wallet_credit_applied_cents,
+    });
+    walletCreditCents = plan.walletCreditCents;
+    if (plan.legs.length > 0) {
       try {
-        const stripe = getStripe();
-        await stripe.refunds.create({
-          payment_intent: booking.stripe_payment_intent_id,
-          amount: refundAmountCents,
-          reverse_transfer: true,
-          refund_application_fee: true,
-        });
+        await createDestinationRefunds(
+          getStripe(),
+          plan.legs.map((leg) => ({
+            ...leg,
+            bookingId: booking.id,
+            reason: "clinic_cancel",
+            reverseTransfer: refundReversesTransfer(booking),
+          }))
+        );
+        rowCardRefundCents = plan.legs.reduce(
+          (sum, leg) => sum + leg.amountCents,
+          0
+        );
+        patientCardRefundCents = rowCardRefundCents;
       } catch (err) {
-        log.error("Stripe refund failed during admin cancellation:", { err, bookingId: booking.id });
+        log.error("Stripe refund failed during admin cancellation:", {
+          err,
+          bookingId: booking.id,
+        });
         return { error: "Failed to process refund. Please try again or contact support." };
       }
     }
   }
 
-  // Update booking status
+  let walletReturned = walletCreditCents === 0;
+  if (walletCreditCents > 0) {
+    try {
+      await creditWallet({
+        patientId: booking.patient_id,
+        currency: booking.currency,
+        amountCents: walletCreditCents,
+        sourceType: "refund",
+        sourceBookingId: booking.id,
+        description: `Wallet credit returned for clinic cancellation of ${booking.booking_number}`,
+      });
+      walletReturned = true;
+    } catch (err) {
+      log.error("Wallet credit return failed during admin cancellation:", {
+        err,
+        bookingId: booking.id,
+      });
+    }
+  }
+
+  const returnedToPatientCents =
+    patientCardRefundCents + (walletReturned ? walletCreditCents : 0);
+
+  // Status is the clinic/doctor cancel, so patient late-cancellation
+  // rules cannot apply to this row.
   await adminSupabase
     .from("bookings")
     .update({
-      status: "cancelled_doctor",
+      status: CLINIC_CANCEL_STATUS,
       cancelled_at: new Date().toISOString(),
       cancellation_reason: parsed.data.reason || "Cancelled by clinic administrator",
       rescheduled_by: membership.user_id,
-      refund_amount_cents: refundAmountCents,
-      refunded_at: refundAmountCents > 0 ? new Date().toISOString() : null,
+      refund_amount_cents: rowCardRefundCents,
+      refunded_at: rowCardRefundCents > 0 ? new Date().toISOString() : null,
     })
     .eq("id", booking.id);
 
@@ -145,12 +224,20 @@ export async function adminCancelBooking(formData: FormData) {
     sendEmail({
       to: patient.email,
       subject: `Appointment Cancelled — ${booking.booking_number}`,
-      html: `<p>Hi ${patient.first_name}, your appointment with Dr. ${doctorProfile?.last_name} on ${booking.appointment_date} has been cancelled by the clinic. ${refundAmountCents > 0 ? "A full refund has been issued and should appear within 5-10 business days." : ""}</p>`,
+      html: `<p>Hi ${patient.first_name}, your appointment with Dr. ${doctorProfile?.last_name} on ${booking.appointment_date} has been cancelled by the clinic. ${returnedToPatientCents > 0 ? "A full refund has been issued and should appear within 5-10 business days." : ""}</p>`,
     }).catch((err) => log.error("Cancel notification email failed:", { err }));
   }
 
   revalidatePath("/doctor-dashboard/organization/bookings");
-  return { error: null, refundAmountCents };
+  if (!walletReturned) {
+    return {
+      error:
+        patientCardRefundCents > 0
+          ? "The appointment was cancelled and the card refund was issued, but returning wallet credit failed. Please contact support."
+          : "The appointment was cancelled, but returning wallet credit failed. Please contact support.",
+    };
+  }
+  return { error: null, refundAmountCents: returnedToPatientCents };
 }
 
 // ─── Admin: Reschedule any clinic booking ────────────────────
@@ -194,6 +281,14 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: "This booking cannot be rescheduled in its current state." };
   }
 
+  // Before any refund, slot update, or balance charge. Dearer, same-price,
+  // and cheaper moves are all refused when the clinician changes.
+  const doctorChangeError = rescheduleDoctorChangeError(
+    booking.doctor_id,
+    parsed.data.new_doctor_id
+  );
+  if (doctorChangeError) return { error: doctorChangeError };
+
   const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
   const originalDoctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
   const originalDoctorProfile: any = Array.isArray(originalDoctor?.profile)
@@ -224,13 +319,21 @@ export async function adminRescheduleBooking(formData: FormData) {
   if (priceDiffCents <= 0) {
     const refundCents = Math.abs(priceDiffCents);
 
-    if (refundCents > 0 && booking.stripe_payment_intent_id && booking.paid_at) {
+    const cardRefundCents = Math.min(
+      refundCents,
+      cardChargeNetOfWallet(
+        stripeChargedCents(booking),
+        booking.wallet_credit_applied_cents
+      )
+    );
+    if (cardRefundCents > 0 && booking.stripe_payment_intent_id && booking.paid_at) {
       try {
-        await stripe.refunds.create({
-          payment_intent: booking.stripe_payment_intent_id,
-          amount: refundCents,
-          reverse_transfer: true,
-          refund_application_fee: true,
+        await refundCardCharge(stripe, {
+          paymentIntentId: booking.stripe_payment_intent_id,
+          amountCents: cardRefundCents,
+          bookingId: booking.id,
+          reason: "reschedule_cheaper",
+          reverseTransfer: refundReversesTransfer(booking),
         });
       } catch (err) {
         log.error("Partial refund failed during reschedule:", { err });
@@ -270,8 +373,49 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: null, requiresPayment: false };
   }
 
-  // Case 2: New slot is more expensive → create Stripe Payment Intent for the diff
+  // Case 2: New slot is more expensive → destination charge for the diff.
+  // A paid -R is not moved onto a third charge.
+  const chainError = dearerChainRescheduleError(booking);
+  if (chainError) return { error: chainError };
+
+  const { data: pendingSuccessor } = await adminSupabase
+    .from("bookings")
+    .select("id")
+    .eq("rescheduled_from_booking_id", booking.id)
+    .eq("status", "pending_reschedule_payment")
+    .limit(1);
+  if (pendingSuccessor && pendingSuccessor.length > 0) {
+    return {
+      error: "A reschedule balance is already waiting for payment.",
+    };
+  }
+
   if (!patient?.email) return { error: "Cannot send payment request: patient email not found" };
+
+  const destinationAccountId = (newDoctor.stripe_account_id as string | null) ?? "";
+  if (!destinationAccountId) {
+    return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+  const merchant = await doctorCanAcceptConsultCardPayment(
+    stripe,
+    destinationAccountId
+  );
+  if (!merchant.ok) return { error: merchant.error };
+
+  const chain = await loadCommissionChain(booking, async (parentId) => {
+    const { data } = await adminSupabase
+      .from("bookings")
+      .select(
+        "id, commission_cents, consultation_fee_cents, rescheduled_from_booking_id"
+      )
+      .eq("id", parentId)
+      .maybeSingle();
+    return data;
+  });
+  const balanceCommissionCents = balanceCommissionForReschedule({
+    chainNewestFirst: chain,
+    priceDiffCents,
+  });
 
   // Create a new booking record for the new slot in pending_reschedule_payment status
   // The original booking remains confirmed until payment is received.
@@ -290,6 +434,7 @@ export async function adminRescheduleBooking(formData: FormData) {
       currency: booking.currency,
       consultation_fee_cents: newFee,
       platform_fee_cents: 0,
+      commission_cents: balanceCommissionCents,
       total_amount_cents: newFee,
       organization_id: org.id,
       clinic_location_id: parsed.data.new_clinic_location_id ?? booking.clinic_location_id,
@@ -309,24 +454,55 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: "Failed to create rescheduled booking record" };
   }
 
+  const { data: pendingRows } = await adminSupabase
+    .from("bookings")
+    .select("id, created_at")
+    .eq("rescheduled_from_booking_id", booking.id)
+    .eq("status", "pending_reschedule_payment")
+    .order("created_at", { ascending: true });
+  if (
+    pendingRows &&
+    pendingRows.length > 1 &&
+    pendingRows[0]?.id !== newBooking.id
+  ) {
+    await adminSupabase.from("bookings").delete().eq("id", newBooking.id);
+    return {
+      error: "A reschedule balance is already waiting for payment.",
+    };
+  }
+
   // Create Stripe Payment Intent for the price difference only
   let paymentIntentClientSecret: string | null = null;
   let paymentLinkUrl: string | null = null;
 
   try {
-    const intent = await stripe.paymentIntents.create({
-      amount: priceDiffCents,
-      currency: booking.currency.toLowerCase(),
-      customer: undefined, // We'll use email receipt
-      receipt_email: patient.email,
-      description: `Reschedule balance for booking ${booking.booking_number}`,
-      metadata: {
-        original_booking_id: booking.id,
-        new_booking_id: newBooking.id,
-        organization_id: org.id,
-        type: "reschedule_balance",
+    const intent = await stripe.paymentIntents.create(
+      {
+        amount: priceDiffCents,
+        currency: booking.currency.toLowerCase(),
+        payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
+        customer: undefined, // We'll use email receipt
+        receipt_email: patient.email,
+        description: `Reschedule balance for booking ${booking.booking_number}`,
+        ...consultDestinationChargeParams({
+          destinationAccountId,
+          applicationFeeCents: balanceCommissionCents,
+        }),
+        metadata: {
+          original_booking_id: booking.id,
+          new_booking_id: newBooking.id,
+          organization_id: org.id,
+          type: "reschedule_balance",
+        },
       },
-    });
+      {
+        idempotencyKey: rescheduleBalanceIdempotencyKey({
+          bookingId: booking.id,
+          priceDiffCents,
+          startTime: parsed.data.new_start_time,
+        }),
+      }
+    );
 
     await adminSupabase
       .from("bookings")

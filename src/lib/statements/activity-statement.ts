@@ -30,14 +30,19 @@
  *   covering the whole charge) means nothing was transferred. Stored
  *   commission is not treated as money the platform took.
  * - A dearer clinic reschedule (clinic-booking.ts Case 2) inserts a new
- *   row with `rescheduled_from_booking_id` set and
- *   `reschedule_payment_status = paid`. Its PaymentIntent is only the
- *   balance and has no `transfer_data`. That row is not a Connected
- *   Account booking: gross, platform fee, and net are 0, it is not
- *   included in the booking count, and it is labelled "Reschedule
- *   balance paid to MyDoctors360". The original row keeps its
- *   destination charge. When both rows are in the statement, the
- *   original is labelled "Rescheduled to <new ref>".
+ *   `-R` row with `rescheduled_from_booking_id` set. When
+ *   `reschedule_payment_status = paid` and `commission_cents` is the fee
+ *   written at creation, the balance was a destination charge. Gross is
+ *   the price difference, the platform fee is that stored
+ *   `commission_cents` (not a fresh 15% calculation), and net is gross
+ *   minus the fee. The line is labelled "Reschedule balance". It is not
+ *   a second booking. The original row keeps its own destination charge
+ *   and, when both rows are in the statement, is labelled
+ *   "Rescheduled to <new ref>".
+ * - Older paid balances were platform charges with no transfer and left
+ *   `commission_cents` at 0. Those rows stay at £0 and keep the label
+ *   "Reschedule balance paid to MyDoctors360", so history is not rewritten
+ *   as if the doctor received the money.
  * - Follow-up and per-visit treatment checkouts do charge 15% via
  *   `application_fee_amount` but leave `commission_cents` at the default
  *   0. When a PaymentIntent exists and both stored fee columns are 0,
@@ -47,9 +52,12 @@
  *
  * - A same-or-cheaper clinic reschedule (clinic-booking.ts Case 1) issues
  *   a partial Stripe refund but does not write `refund_amount_cents` or
- *   `refunded_at`. It also lowers `total_amount_cents` and moves the row
- *   to the new doctor, so a doctor-scoped statement can misattribute
- *   that money.
+ *   `refunded_at`. It also lowers `total_amount_cents`. New reschedules
+ *   cannot change the doctor. A historical row that already moved to
+ *   another doctor can still be misattributed on a doctor-scoped statement.
+ * - A destination reschedule balance whose stored commission rounds to 0
+ *   cannot be told apart from an older platform charge, and is shown as
+ *   the older £0 line.
  * - When a destination PaymentIntent exists and both `platform_fee_cents`
  *   and `commission_cents` are 0, the platform fee is inferred as 15% of
  *   the amount charged. Checkout is unchanged in this slice, so the
@@ -73,7 +81,7 @@ export const ACTIVITY_STATEMENT_FOOTER =
   "Consultation fees are paid directly to your Stripe Connected Account. MyDoctors360 charges a platform fee for bookings made through the marketplace. This activity statement is for your records only.";
 
 export const ACTIVITY_STATEMENT_FIGURES_NOTE =
-  "Gross consult is the consultation fee on the booking, or the packaged total when that is what was charged. Connected Account is the amount Stripe transferred after the platform fee. A negative Connected Account amount is a refund reversing that transfer. A deposit remainder paid in person, and any wallet credit, are not transfers to the Connected Account.";
+  "Gross consult is the consultation fee on the booking, or the packaged total when that is what was charged. Connected Account is the amount Stripe transferred after the platform fee. A negative Connected Account amount is a refund reversing that transfer. A deposit remainder paid in person, and any wallet credit, are not transfers to the Connected Account. A reschedule balance paid to the Connected Account is its own line for the price difference only. A balance previously paid to MyDoctors360 stays labelled that way and is left out of these totals.";
 
 export const STATEMENT_TIME_ZONE = "Europe/London";
 
@@ -142,16 +150,36 @@ export type StatementSettlement =
 
 export const RESCHEDULE_BALANCE_LABEL = "Reschedule balance paid to MyDoctors360";
 
+/** Paid balance that was a destination charge to the doctor. */
+export const RESCHEDULE_BALANCE_DOCTOR_LABEL = "Reschedule balance";
+
 export function rescheduledToLabel(newBookingNumber: string): string {
   return `Rescheduled to ${newBookingNumber}`;
 }
 
-/** Dearer-slot clinic reschedule row. The balance was paid to MyDoctors360. */
+/** Dearer-slot clinic reschedule row whose balance has been paid. */
 export function isPaidRescheduleSuccessor(booking: StatementBookingSource): boolean {
   return (
     Boolean((booking.rescheduledFromBookingId ?? "").trim()) &&
     booking.reschedulePaymentStatus === "paid"
   );
+}
+
+/**
+ * Older platform charges did not write `commission_cents`. A stored fee
+ * means the balance was a destination charge and the statement must use
+ * that fee rather than infer 15%.
+ */
+export function isLegacyPlatformRescheduleBalance(
+  booking: StatementBookingSource
+): boolean {
+  return isPaidRescheduleSuccessor(booking) && nonNeg(booking.commissionCents) <= 0;
+}
+
+export function isDestinationRescheduleBalance(
+  booking: StatementBookingSource
+): boolean {
+  return isPaidRescheduleSuccessor(booking) && nonNeg(booking.commissionCents) > 0;
 }
 
 export interface StatementBookingSource {
@@ -206,8 +234,17 @@ export interface ActivityStatementLine {
   connectedAccountCents: number;
   platformFeeCents: number;
   refundAmountCents: number;
-  /** Paid reschedule-balance rows stay on the statement and out of the totals. */
+  /**
+   * Drop this line from every total. Set for an older platform reschedule
+   * balance, whose money already sits on the original row. Display labels
+   * are never read.
+   */
   excludeFromTotals: boolean;
+  /**
+   * A destination-charge reschedule balance adds its price difference to
+   * the money totals and is not a second booking.
+   */
+  countsAsBooking: boolean;
 }
 
 export interface ActivityStatementTotals {
@@ -427,13 +464,25 @@ export function settleBookingFees(booking: StatementBookingSource): FeeSettlemen
   const gross = grossConsultCents(booking);
   const hasPaymentIntent = Boolean((booking.stripePaymentIntentId ?? "").trim());
 
-  if (isPaidRescheduleSuccessor(booking)) {
+  if (isLegacyPlatformRescheduleBalance(booking)) {
     return {
       grossConsultCents: 0,
       stripeChargeCents: 0,
       platformFeeCents: 0,
       connectedAccountCents: 0,
       settlement: "reschedule_platform_charge",
+    };
+  }
+
+  if (isDestinationRescheduleBalance(booking)) {
+    const gross = nonNeg(booking.reschedulePriceDiffCents);
+    const platformFeeCents = Math.min(nonNeg(booking.commissionCents), gross);
+    return {
+      grossConsultCents: gross,
+      stripeChargeCents: gross,
+      platformFeeCents,
+      connectedAccountCents: Math.max(0, gross - platformFeeCents),
+      settlement: "destination_charge",
     };
   }
 
@@ -535,7 +584,10 @@ function emptyTotals(currency: string): ActivityStatementTotals {
   };
 }
 
-/** Totals use `excludeFromTotals` only. Display labels are not consulted. */
+/**
+ * Totals never read a display label. `excludeFromTotals` drops the line.
+ * `countsAsBooking` decides the booking count only.
+ */
 export function accumulateActivityStatementTotals(
   lines: ActivityStatementLine[],
   fallbackCurrency = "GBP"
@@ -545,7 +597,7 @@ export function accumulateActivityStatementTotals(
     if (line.excludeFromTotals) continue;
     const totals = totalsByCurrency.get(line.currency) ?? emptyTotals(line.currency);
     if (line.kind === "booking") {
-      totals.bookingsCount += 1;
+      if (line.countsAsBooking) totals.bookingsCount += 1;
       totals.grossConsultCents += line.grossConsultCents;
     }
     totals.refundsCents += line.refundAmountCents;
@@ -589,7 +641,8 @@ export function buildActivityStatement(input: {
   for (const booking of input.bookings) {
     const bookingNumber = (booking.bookingNumber ?? "").trim() || "Booking";
     const currency = (booking.currency ?? input.fallbackCurrency ?? "GBP").toUpperCase();
-    const balancePaidToPlatform = isPaidRescheduleSuccessor(booking);
+    const legacyBalance = isLegacyPlatformRescheduleBalance(booking);
+    const doctorBalance = isDestinationRescheduleBalance(booking);
     const settlement = settleBookingFees(booking);
     const rowDoctorId = (booking.doctorId ?? "").trim();
     const patientLabel =
@@ -601,11 +654,13 @@ export function buildActivityStatement(input: {
             bookingNumber
           );
     const successorRef = successorRefByOriginalId.get((booking.id ?? "").trim());
-    const bookingStatusLabel = balancePaidToPlatform
+    const bookingStatusLabel = legacyBalance
       ? RESCHEDULE_BALANCE_LABEL
-      : successorRef
-        ? rescheduledToLabel(successorRef)
-        : statementStatusLabel(booking.status);
+      : doctorBalance
+        ? RESCHEDULE_BALANCE_DOCTOR_LABEL
+        : successorRef
+          ? rescheduledToLabel(successorRef)
+          : statementStatusLabel(booking.status);
     let service = statementServiceLabel(booking.serviceName, booking.consultationType);
     const clinician = (booking.clinicianName ?? "").trim();
     if (input.showClinician && clinician) {
@@ -628,7 +683,7 @@ export function buildActivityStatement(input: {
         serviceLabel: service,
         appointmentLabel: appointment,
         statusLabel: bookingStatusLabel,
-        settlementLabel: balancePaidToPlatform
+        settlementLabel: legacyBalance
           ? null
           : settlementLabel(settlement.settlement),
         currency,
@@ -636,7 +691,8 @@ export function buildActivityStatement(input: {
         connectedAccountCents: settlement.connectedAccountCents,
         platformFeeCents: settlement.platformFeeCents,
         refundAmountCents: 0,
-        excludeFromTotals: balancePaidToPlatform,
+        excludeFromTotals: legacyBalance,
+        countsAsBooking: !doctorBalance,
       });
     }
 
@@ -659,7 +715,8 @@ export function buildActivityStatement(input: {
         connectedAccountCents: -refund.transferReversedCents,
         platformFeeCents: -refund.platformFeeReturnedCents,
         refundAmountCents: refund.refundCents,
-        excludeFromTotals: balancePaidToPlatform,
+        excludeFromTotals: legacyBalance,
+        countsAsBooking: false,
       });
     }
   }

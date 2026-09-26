@@ -14,6 +14,15 @@ import {
   handoffConnectTransfer,
 } from "@/lib/stripe/transfer-handoff";
 import { getStripe } from "@/lib/stripe/client";
+import {
+  cardChargeNetOfWallet,
+  refundCardCharge,
+  refundReschedulePairIfPaid,
+  refundReversesTransfer,
+  stripeChargedCents,
+  walletCreditOnCancel,
+} from "@/lib/booking/reschedule-balance";
+import { creditWallet } from "@/lib/wallet";
 import { sendEmail } from "@/lib/email/client";
 import { sendSms } from "@/lib/sms/client";
 import {
@@ -41,24 +50,74 @@ async function fullRefundBooking(booking: {
   deposit_amount_cents?: number | null;
   total_amount_cents: number;
   paid_at?: string | null;
-}): Promise<{ refunded: boolean; amount: number; error?: string }> {
-  const amount =
-    booking.payment_mode === "deposit" && booking.deposit_amount_cents != null
-      ? booking.deposit_amount_cents
-      : booking.total_amount_cents;
+  wallet_credit_applied_cents?: number | null;
+  commission_cents?: number | null;
+  patient_id?: string | null;
+  currency?: string | null;
+  rescheduled_from_booking_id?: string | null;
+  reschedule_payment_status?: string | null;
+}): Promise<{ refunded: boolean; amount: number; ledgerCents?: number; error?: string }> {
+  const pairRefund = await refundReschedulePairIfPaid(booking, {
+    refundPercent: 100,
+  });
+  if (pairRefund.applied && "error" in pairRefund) {
+    return { refunded: false, amount: 0, error: pairRefund.error };
+  }
+  if (pairRefund.applied) {
+    const walletBack = walletCreditOnCancel({
+      destination: "bank",
+      appliedWalletCents: pairRefund.walletCreditCents,
+      originalCardCents: pairRefund.originalCardCents,
+      balanceCardCents: pairRefund.balanceCardCents,
+    });
+    if (walletBack > 0 && booking.patient_id && booking.currency) {
+      await creditWallet({
+        patientId: booking.patient_id,
+        currency: booking.currency,
+        amountCents: walletBack,
+        sourceType: "refund",
+        sourceBookingId: booking.id,
+        description: "Wallet credit returned with GP refund",
+      });
+    }
+    return {
+      refunded: true,
+      amount: pairRefund.totalCents + walletBack,
+      ledgerCents: pairRefund.rowRefundCents,
+    };
+  }
 
-  if (!booking.stripe_payment_intent_id || !booking.paid_at || amount <= 0) {
+  const cardAmount = cardChargeNetOfWallet(
+    stripeChargedCents(booking),
+    booking.wallet_credit_applied_cents
+  );
+  const walletBack = Math.max(0, booking.wallet_credit_applied_cents ?? 0);
+
+  if (!booking.paid_at || (cardAmount <= 0 && walletBack <= 0)) {
     return { refunded: false, amount: 0 };
   }
 
   try {
-    await getStripe().refunds.create({
-      payment_intent: booking.stripe_payment_intent_id,
-      amount,
-      reverse_transfer: true,
-      refund_application_fee: true,
-    });
-    return { refunded: true, amount };
+    if (booking.stripe_payment_intent_id && cardAmount > 0) {
+      await refundCardCharge(getStripe(), {
+        paymentIntentId: booking.stripe_payment_intent_id,
+        amountCents: cardAmount,
+        bookingId: booking.id,
+        reason: "gp_refund",
+        reverseTransfer: refundReversesTransfer(booking),
+      });
+    }
+    if (walletBack > 0 && booking.patient_id && booking.currency) {
+      await creditWallet({
+        patientId: booking.patient_id,
+        currency: booking.currency,
+        amountCents: walletBack,
+        sourceType: "refund",
+        sourceBookingId: booking.id,
+        description: "Wallet credit returned with GP refund",
+      });
+    }
+    return { refunded: true, amount: cardAmount + walletBack, ledgerCents: cardAmount };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Refund failed";
     log.error("[GP] fullRefundBooking failed", { err, bookingId: booking.id });
@@ -378,7 +437,7 @@ export async function executeGpReassignmentRequest(params: {
         params.reason || "Doctor unavailable — no GP replacement found",
       gp_reassignment_status: "refunded",
       refunded_at: refund.refunded ? new Date().toISOString() : null,
-      refund_amount_cents: refund.refunded ? refund.amount : null,
+      refund_amount_cents: refund.refunded ? (refund.ledgerCents ?? refund.amount) : null,
     })
     .eq("id", booking.id);
 
@@ -555,7 +614,7 @@ export async function declineAllGpOffers(
       cancelled_at: new Date().toISOString(),
       gp_reassignment_status: "patient_declined",
       refunded_at: refund.refunded ? new Date().toISOString() : null,
-      refund_amount_cents: refund.refunded ? refund.amount : null,
+      refund_amount_cents: refund.refunded ? (refund.ledgerCents ?? refund.amount) : null,
       cancellation_reason: "Patient declined alternate GP slots",
     })
     .eq("id", booking.id);
@@ -629,7 +688,7 @@ export async function expireGpOffersAndRefund(): Promise<{
         cancelled_at: new Date().toISOString(),
         gp_reassignment_status: "refunded",
         refunded_at: refund.refunded ? new Date().toISOString() : null,
-        refund_amount_cents: refund.refunded ? refund.amount : null,
+        refund_amount_cents: refund.refunded ? (refund.ledgerCents ?? refund.amount) : null,
         cancellation_reason: "Alternate GP offers expired without response",
       })
       .eq("id", bookingId);
