@@ -45,6 +45,14 @@ describe("patient booking Stripe Checkout shape (source contract)", () => {
     expect(lookup.mode).toBe("stripe_session");
   });
 
+  it("persists stripe_checkout_session_id after Checkout session create", () => {
+    const createAt = source.indexOf("checkout.sessions.create");
+    const persistAt = source.indexOf("stripe_checkout_session_id: session.id");
+    expect(createAt).toBeGreaterThan(-1);
+    expect(persistAt).toBeGreaterThan(createAt);
+    expect(source.slice(createAt, persistAt)).toContain("adminSupabase");
+  });
+
   it("webhook guest claim uses sendGuestAccountClaimEmail (magic path)", () => {
     const webhook = readFileSync(
       join(process.cwd(), "src/app/api/webhooks/stripe/route.ts"),
