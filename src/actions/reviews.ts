@@ -10,6 +10,10 @@ import { log } from "@/lib/utils/logger";
 import { createNotification } from "@/lib/notifications";
 import { shouldAutoApprove } from "@/lib/reviews/auto-approve";
 import {
+  isSoftsmokePublicReviewBlocked,
+  PUBLIC_REVIEW_BLOCKED_MESSAGE,
+} from "@/lib/feedback/post-visit";
+import {
   MAX_ENDORSEMENTS_PER_REVIEW,
   isValidSkillSlug,
   getSkill,
@@ -153,6 +157,10 @@ export async function submitReview(formData: FormData) {
   if (!booking) return { error: "Booking not found" };
   if (booking.status !== "completed") {
     return { error: "Can only review completed appointments" };
+  }
+
+  if (isSoftsmokePublicReviewBlocked(booking.doctor_id)) {
+    return { error: PUBLIC_REVIEW_BLOCKED_MESSAGE };
   }
 
   // Check if already reviewed

@@ -1,14 +1,22 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Star, MessageSquare, Clock } from "lucide-react";
+import { Link } from "@/i18n/navigation";
 import { WriteReviewDialog } from "./write-review-dialog";
 import {
   BOOKING_DOCTOR_PROFILE_EMBED,
   PATIENT_PENDING_REVIEW_BOOKINGS_SELECT,
   patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
+import {
+  isSoftsmokePublicReviewBlocked,
+  PLATFORM_FEEDBACK_DISCLAIMER,
+  shouldPromptSoftsmokePlatformFeedback,
+  toPlatformFeedbackPrompt,
+} from "@/lib/feedback/post-visit";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -74,25 +82,97 @@ export default async function ReviewsPage() {
     (r: { booking_id: string }) => r.booking_id
   );
 
-  const { data: completedBookings } = await supabase
-    .from("bookings")
-    .select(PATIENT_PENDING_REVIEW_BOOKINGS_SELECT)
-    .eq("patient_id", user.id)
-    .eq("status", "completed")
-    .order("start_time", { ascending: false });
+  const [{ data: completedBookings }, { data: platformFeedbackRows }] =
+    await Promise.all([
+      supabase
+        .from("bookings")
+        .select(PATIENT_PENDING_REVIEW_BOOKINGS_SELECT)
+        .eq("patient_id", user.id)
+        .eq("status", "completed")
+        .order("start_time", { ascending: false }),
+      supabase
+        .from("post_visit_feedback")
+        .select("booking_id")
+        .eq("patient_id", user.id),
+    ]);
 
   const typedReviews = (reviews || []) as unknown as ReviewRow[];
   const typedBookings = (completedBookings ||
     []) as unknown as PendingReviewBooking[];
+  const submittedPlatformFeedbackIds = new Set(
+    (platformFeedbackRows ?? []).map(
+      (row: { booking_id: string }) => row.booking_id
+    )
+  );
 
-  // Filter out bookings that already have reviews
+  const softsmokeVideoBookings = typedBookings.filter((booking) =>
+    shouldPromptSoftsmokePlatformFeedback(
+      toPlatformFeedbackPrompt({
+        id: booking.id,
+        status: "completed",
+        consultation_type: booking.consultation_type,
+        doctor_id: booking.doctor_id,
+        doctor: booking.doctor,
+      })
+    )
+  );
+  const softsmokeVideoIds = new Set(
+    softsmokeVideoBookings.map((booking) => booking.id)
+  );
+
+  // Public reviews stay off the Softsmoke video visit.
   const pendingReviewBookings = typedBookings.filter(
-    (b) => !reviewedBookingIds.includes(b.id)
+    (b) => !reviewedBookingIds.includes(b.id) && !softsmokeVideoIds.has(b.id)
+  );
+  const pendingPlatformFeedback = softsmokeVideoBookings.filter(
+    (booking) => !submittedPlatformFeedbackIds.has(booking.id)
   );
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">My Reviews</h1>
+
+      {pendingPlatformFeedback.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4" />
+              Private platform feedback ({pendingPlatformFeedback.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {PLATFORM_FEEDBACK_DISCLAIMER}
+            </p>
+            <div className="space-y-3">
+              {pendingPlatformFeedback.map((booking) => {
+                const bookingDate = new Date(booking.start_time).toLocaleDateString(
+                  "en-GB",
+                  { day: "numeric", month: "short", year: "numeric" }
+                );
+                return (
+                  <div
+                    key={booking.id}
+                    className="flex items-center justify-between rounded-lg border p-4"
+                  >
+                    <div>
+                      <p className="font-medium">Completed video visit</p>
+                      <p className="text-sm text-muted-foreground">
+                        {bookingDate} &middot; #{booking.booking_number}
+                      </p>
+                    </div>
+                    <Button variant="outline" asChild>
+                      <Link href={`/dashboard/bookings/${booking.id}`}>
+                        Share platform feedback
+                      </Link>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pending reviews section */}
       {pendingReviewBookings.length > 0 && (
@@ -210,7 +290,9 @@ export default async function ReviewsPage() {
                             </span>
                           </div>
                         </div>
-                        {canEdit && doctor?.id && (
+                        {canEdit &&
+                          doctor?.id &&
+                          !isSoftsmokePublicReviewBlocked(doctor.id) && (
                           <WriteReviewDialog
                             bookingId={review.booking_id}
                             doctorId={doctor.id}

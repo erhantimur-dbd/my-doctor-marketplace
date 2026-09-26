@@ -4,6 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { shouldAutoApprove } from "@/lib/reviews/auto-approve";
 import {
+  isSoftsmokePublicReviewBlocked,
+  PUBLIC_REVIEW_BLOCKED_MESSAGE,
+} from "@/lib/feedback/post-visit";
+import {
   MAX_ENDORSEMENTS_PER_REVIEW,
   isValidSkillSlug,
 } from "@/lib/constants/skills";
@@ -58,6 +62,10 @@ export async function submitReview(
 
   if (booking.status !== "completed") {
     return { error: "You can only review completed bookings." };
+  }
+
+  if (isSoftsmokePublicReviewBlocked(booking.doctor_id)) {
+    return { error: PUBLIC_REVIEW_BLOCKED_MESSAGE };
   }
 
   // Check if review already exists
@@ -153,6 +161,10 @@ export async function updatePatientReview(
 
   if (review.patient_id !== user.id) {
     return { error: "You are not authorized to edit this review." };
+  }
+
+  if (isSoftsmokePublicReviewBlocked(review.doctor_id)) {
+    return { error: PUBLIC_REVIEW_BLOCKED_MESSAGE };
   }
 
   // Check 30-day edit window
