@@ -20,6 +20,7 @@ import { Calendar, Clock, CheckCircle, Eye, Plus } from "lucide-react";
 import { BookingFilters } from "./booking-filters";
 import { ExportCSVButton } from "../components/export-csv-button";
 import { exportBookingsCSV } from "@/actions/admin";
+import { bookingNumberMatchesQuery } from "@/lib/booking/booking-number";
 
 const statusColors: Record<string, string> = {
   pending_payment: "bg-gray-100 text-gray-700",
@@ -135,11 +136,10 @@ export default async function AdminBookingsPage({
   if (q) {
     const lowerQ = q.toLowerCase();
     bookings = bookings.filter((b: any) => {
-      const bookingNum = (b.booking_number || "").toLowerCase();
       const patientName = `${b.patient?.first_name || ""} ${b.patient?.last_name || ""}`.toLowerCase();
       const doctorName = `${b.doctor?.profile?.first_name || ""} ${b.doctor?.profile?.last_name || ""}`.toLowerCase();
       return (
-        bookingNum.includes(lowerQ) ||
+        bookingNumberMatchesQuery(b.booking_number || "", lowerQ) ||
         patientName.includes(lowerQ) ||
         doctorName.includes(lowerQ)
       );

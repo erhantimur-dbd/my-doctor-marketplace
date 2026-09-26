@@ -10,6 +10,7 @@ import {
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
 import { sendEmail } from "@/lib/email/client";
+import { rescheduleSuccessorBookingNumber } from "@/lib/booking/booking-number";
 import { reschedulePaymentEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
 import { z } from "zod/v4";
@@ -291,7 +292,7 @@ export async function adminRescheduleBooking(formData: FormData) {
   const { data: newBooking, error: newBookingError } = await adminSupabase
     .from("bookings")
     .insert({
-      booking_number: `${booking.booking_number}-R`,
+      booking_number: rescheduleSuccessorBookingNumber(booking.booking_number),
       patient_id: booking.patient_id,
       doctor_id: parsed.data.new_doctor_id,
       appointment_date: parsed.data.new_appointment_date,

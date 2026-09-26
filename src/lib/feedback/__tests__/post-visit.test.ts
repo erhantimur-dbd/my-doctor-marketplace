@@ -24,7 +24,7 @@ function read(rel: string): string {
 
 const completedVideo = {
   id: BOOKING_ID,
-  booking_number: "MD-100",
+  booking_number: "MD-7K3Q9X",
   start_time: "2026-09-20T10:00:00.000Z",
   status: "completed",
   consultation_type: "video",
