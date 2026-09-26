@@ -6,17 +6,27 @@
 -- timing stays explicit.
 --
 -- Set booking_number only when NEW.booking_number IS NULL. The clinic
--- reschedule successor insert passes `${booking_number}-R`. No insert
--- relies on the trigger overwriting a supplied value: every other insert
--- omits the column, so it arrives as NULL and is allocated here.
--- GP reassignment updates the existing row and does not mint a number.
+-- reschedule successor insert passes an explicit -R, -R2, ... value.
+-- No insert relies on the trigger overwriting a supplied value: every
+-- other insert omits the column, so it arrives as NULL and is allocated
+-- here. GP reassignment updates the existing row and does not mint a number.
 --
--- pgcrypto: 00075 already calls gen_random_bytes (Supabase installs
--- pgcrypto in the extensions schema; this migration enables it if missing).
--- If that function is unavailable, bytes are taken from gen_random_uuid.
+-- pgcrypto is required. gen_random_bytes is resolved from extensions
+-- (Supabase) then public. There is no gen_random_uuid fallback: the
+-- version and variant nibbles would bias the mapped characters.
 --
--- Retry up to 10 times when the candidate is already in bookings.
--- bookings_booking_number_key still rejects a concurrent race.
+-- search_path lists pg_catalog before public so a same-named object in
+-- public cannot shadow hashtext, substr, or get_byte.
+--
+-- Before the existence check, take pg_advisory_xact_lock on
+-- hashtext(candidate). Two concurrent inserts that draw the same
+-- candidate cannot both pass NOT EXISTS: the second waits until the
+-- first transaction ends, then regenerates when that row committed.
+-- A hashtext collision between two different strings only serializes
+-- them; the existence check is still on the string. The unique index
+-- remains a backstop for an insert that does not take this lock.
+--
+-- Retry up to 10 times, then raise.
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -24,7 +34,7 @@ CREATE OR REPLACE FUNCTION public.generate_booking_number()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_catalog
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
   alphabet CONSTANT TEXT := '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -33,7 +43,6 @@ DECLARE
   buf BYTEA;
   buf_pos INT;
   b INT;
-  hex TEXT;
   safety INT;
 BEGIN
   IF NEW.booking_number IS NOT NULL THEN
@@ -41,31 +50,9 @@ BEGIN
   END IF;
 
   FOR attempt IN 1..10 LOOP
-    buf := NULL;
-    BEGIN
-      buf := extensions.gen_random_bytes(32);
-    EXCEPTION
-      WHEN undefined_function OR invalid_schema_name THEN
-        buf := NULL;
-    END;
-
-    IF buf IS NULL THEN
-      BEGIN
-        buf := public.gen_random_bytes(32);
-      EXCEPTION
-        WHEN undefined_function THEN
-          buf := NULL;
-      END;
-    END IF;
-
-    IF buf IS NULL THEN
-      hex := replace(gen_random_uuid()::text, '-', '')
-          || replace(gen_random_uuid()::text, '-', '');
-      buf := decode(substr(hex, 1, 32), 'hex');
-    END IF;
-
     candidate := 'MD-';
     filled := 0;
+    buf := NULL;
     buf_pos := 0;
     safety := 0;
 
@@ -76,10 +63,29 @@ BEGIN
           'generate_booking_number: random source could not fill a booking number';
       END IF;
 
-      IF buf_pos >= octet_length(buf) THEN
-        hex := replace(gen_random_uuid()::text, '-', '')
-            || replace(gen_random_uuid()::text, '-', '');
-        buf := decode(substr(hex, 1, 32), 'hex');
+      IF buf IS NULL OR buf_pos >= COALESCE(octet_length(buf), 0) THEN
+        buf := NULL;
+        BEGIN
+          buf := extensions.gen_random_bytes(32);
+        EXCEPTION
+          WHEN undefined_function OR invalid_schema_name THEN
+            buf := NULL;
+        END;
+
+        IF buf IS NULL THEN
+          BEGIN
+            buf := public.gen_random_bytes(32);
+          EXCEPTION
+            WHEN undefined_function THEN
+              buf := NULL;
+          END;
+        END IF;
+
+        IF buf IS NULL THEN
+          RAISE EXCEPTION
+            'generate_booking_number: pgcrypto gen_random_bytes is required';
+        END IF;
+
         buf_pos := 0;
       END IF;
 
@@ -92,6 +98,10 @@ BEGIN
         filled := filled + 1;
       END IF;
     END LOOP;
+
+    -- Held until this insert transaction ends, so the NOT EXISTS check
+    -- and the following INSERT observe the same candidate exclusively.
+    PERFORM pg_advisory_xact_lock(hashtext(candidate)::bigint);
 
     IF NOT EXISTS (
       SELECT 1

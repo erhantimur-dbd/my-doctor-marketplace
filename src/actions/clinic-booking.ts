@@ -10,7 +10,10 @@ import {
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
 import { sendEmail } from "@/lib/email/client";
-import { rescheduleSuccessorBookingNumber } from "@/lib/booking/booking-number";
+import {
+  bookingNumberRoot,
+  rescheduleSuccessorBookingNumber,
+} from "@/lib/booking/booking-number";
 import { reschedulePaymentEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
 import { z } from "zod/v4";
@@ -289,10 +292,35 @@ export async function adminRescheduleBooking(formData: FormData) {
 
   // Create a new booking record for the new slot in pending_reschedule_payment status
   // The original booking remains confirmed until payment is received.
+  // A later reschedule of the same root takes -R2, -R3, ... rather than
+  // inserting the occupied -R value again.
+  const root = bookingNumberRoot(booking.booking_number);
+  if (!root) return { error: "This booking number cannot be rescheduled." };
+
+  const { data: successors, error: successorError } = await adminSupabase
+    .from("bookings")
+    .select("booking_number")
+    .like("booking_number", `${root}-R%`);
+
+  if (successorError) {
+    return { error: "Failed to allocate a reschedule booking number" };
+  }
+
+  const taken = (successors ?? [])
+    .map((row) => row.booking_number)
+    .filter((value): value is string => typeof value === "string");
+
+  let successorNumber: string;
+  try {
+    successorNumber = rescheduleSuccessorBookingNumber(booking.booking_number, taken);
+  } catch {
+    return { error: "Failed to allocate a reschedule booking number" };
+  }
+
   const { data: newBooking, error: newBookingError } = await adminSupabase
     .from("bookings")
     .insert({
-      booking_number: rescheduleSuccessorBookingNumber(booking.booking_number),
+      booking_number: successorNumber,
       patient_id: booking.patient_id,
       doctor_id: parsed.data.new_doctor_id,
       appointment_date: parsed.data.new_appointment_date,

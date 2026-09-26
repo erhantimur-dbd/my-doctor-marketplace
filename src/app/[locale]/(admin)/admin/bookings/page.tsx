@@ -20,7 +20,7 @@ import { Calendar, Clock, CheckCircle, Eye, Plus } from "lucide-react";
 import { BookingFilters } from "./booking-filters";
 import { ExportCSVButton } from "../components/export-csv-button";
 import { exportBookingsCSV } from "@/actions/admin";
-import { bookingNumberMatchesQuery } from "@/lib/booking/booking-number";
+import { bookingListMatchesQuery } from "@/lib/booking/booking-number";
 
 const statusColors: Record<string, string> = {
   pending_payment: "bg-gray-100 text-gray-700",
@@ -131,17 +131,20 @@ export default async function AdminBookingsPage({
 
   const { data: allBookings } = await query;
 
-  // Client-side text search
+  // Client-side text search. Trim once so a whitespace query does not
+  // match every row, and so patient and doctor names use the same needle
+  // as the booking number.
   let bookings = (allBookings as any[]) || [];
-  if (q) {
-    const lowerQ = q.toLowerCase();
+  const searchQuery = (q ?? "").trim();
+  if (searchQuery) {
     bookings = bookings.filter((b: any) => {
-      const patientName = `${b.patient?.first_name || ""} ${b.patient?.last_name || ""}`.toLowerCase();
-      const doctorName = `${b.doctor?.profile?.first_name || ""} ${b.doctor?.profile?.last_name || ""}`.toLowerCase();
-      return (
-        bookingNumberMatchesQuery(b.booking_number || "", lowerQ) ||
-        patientName.includes(lowerQ) ||
-        doctorName.includes(lowerQ)
+      const patientName = `${b.patient?.first_name || ""} ${b.patient?.last_name || ""}`;
+      const doctorName = `${b.doctor?.profile?.first_name || ""} ${b.doctor?.profile?.last_name || ""}`;
+      return bookingListMatchesQuery(
+        b.booking_number || "",
+        patientName,
+        doctorName,
+        searchQuery
       );
     });
   }

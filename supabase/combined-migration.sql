@@ -225,7 +225,7 @@ CREATE OR REPLACE FUNCTION public.generate_booking_number()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_catalog
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
   alphabet CONSTANT TEXT := '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
@@ -234,7 +234,6 @@ DECLARE
   buf BYTEA;
   buf_pos INT;
   b INT;
-  hex TEXT;
   safety INT;
 BEGIN
   IF NEW.booking_number IS NOT NULL THEN
@@ -242,31 +241,9 @@ BEGIN
   END IF;
 
   FOR attempt IN 1..10 LOOP
-    buf := NULL;
-    BEGIN
-      buf := extensions.gen_random_bytes(32);
-    EXCEPTION
-      WHEN undefined_function OR invalid_schema_name THEN
-        buf := NULL;
-    END;
-
-    IF buf IS NULL THEN
-      BEGIN
-        buf := public.gen_random_bytes(32);
-      EXCEPTION
-        WHEN undefined_function THEN
-          buf := NULL;
-      END;
-    END IF;
-
-    IF buf IS NULL THEN
-      hex := replace(gen_random_uuid()::text, '-', '')
-          || replace(gen_random_uuid()::text, '-', '');
-      buf := decode(substr(hex, 1, 32), 'hex');
-    END IF;
-
     candidate := 'MD-';
     filled := 0;
+    buf := NULL;
     buf_pos := 0;
     safety := 0;
 
@@ -277,10 +254,29 @@ BEGIN
           'generate_booking_number: random source could not fill a booking number';
       END IF;
 
-      IF buf_pos >= octet_length(buf) THEN
-        hex := replace(gen_random_uuid()::text, '-', '')
-            || replace(gen_random_uuid()::text, '-', '');
-        buf := decode(substr(hex, 1, 32), 'hex');
+      IF buf IS NULL OR buf_pos >= COALESCE(octet_length(buf), 0) THEN
+        buf := NULL;
+        BEGIN
+          buf := extensions.gen_random_bytes(32);
+        EXCEPTION
+          WHEN undefined_function OR invalid_schema_name THEN
+            buf := NULL;
+        END;
+
+        IF buf IS NULL THEN
+          BEGIN
+            buf := public.gen_random_bytes(32);
+          EXCEPTION
+            WHEN undefined_function THEN
+              buf := NULL;
+          END;
+        END IF;
+
+        IF buf IS NULL THEN
+          RAISE EXCEPTION
+            'generate_booking_number: pgcrypto gen_random_bytes is required';
+        END IF;
+
         buf_pos := 0;
       END IF;
 
@@ -293,6 +289,10 @@ BEGIN
         filled := filled + 1;
       END IF;
     END LOOP;
+
+    -- Held until this insert transaction ends, so the NOT EXISTS check
+    -- and the following INSERT observe the same candidate exclusively.
+    PERFORM pg_advisory_xact_lock(hashtext(candidate)::bigint);
 
     IF NOT EXISTS (
       SELECT 1
