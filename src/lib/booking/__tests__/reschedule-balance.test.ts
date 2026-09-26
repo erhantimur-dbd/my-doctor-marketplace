@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
 import {
+  CLINIC_CANCEL_STATUS,
   DOCTOR_CHANGE_RESCHEDULE_MESSAGE,
   allocateRescheduleRefundCents,
+  clinicCancelMakeWhole,
   createDestinationRefunds,
   refundReschedulePairIfPaid,
   rescheduleBalanceApplicationFeeCents,
@@ -185,6 +187,7 @@ describe("paid reschedule refunds both destination charges", () => {
       totalCents: 5500,
       rowRefundCents: 1500,
       refundIds: ["re_1", "re_2"],
+      walletCreditCents: 0,
     });
     expect(creates).toEqual([
       {
@@ -258,6 +261,123 @@ describe("paid reschedule refunds both destination charges", () => {
     });
     expect(result).toEqual({ applied: false });
     expect(creates).toEqual([]);
+  });
+
+  it("refunds both card charges net of wallet when the clinic cancels", async () => {
+    const { stripe, creates } = stripeFake();
+    const persisted: Array<{ id: string; amountCents: number }> = [];
+    const result = await refundReschedulePairIfPaid(successor, {
+      refundPercent: 100,
+      netOfWallet: true,
+      stripe,
+      loadBooking: async (id) => {
+        const row = loadBooking(id);
+        if (!row || row.id !== original.id) return row;
+        return { ...row, wallet_credit_applied_cents: 1000 };
+      },
+      findPaidSuccessor: async () => null,
+      persistOtherRefund: async (id, amountCents) => {
+        persisted.push({ id, amountCents });
+      },
+    });
+
+    expect(result).toEqual({
+      applied: true,
+      totalCents: 4500,
+      rowRefundCents: 1500,
+      refundIds: ["re_1", "re_2"],
+      walletCreditCents: 1000,
+    });
+    expect(creates).toEqual([
+      {
+        payment_intent: "pi_original",
+        amount: 3000,
+        reverse_transfer: true,
+        refund_application_fee: true,
+      },
+      {
+        payment_intent: "pi_balance",
+        amount: 1500,
+        reverse_transfer: true,
+        refund_application_fee: true,
+      },
+    ]);
+    expect(persisted).toEqual([
+      { id: "booking-original", amountCents: 3000 },
+    ]);
+  });
+
+  it("returns every pound the patient paid when the clinic cancels, even under a strict late policy", () => {
+    const plan = clinicCancelMakeWhole({
+      cancellationPolicy: "strict",
+      hoursUntilAppointment: 1,
+      originalPaymentIntentId: "pi_original",
+      originalChargedCents: 4000,
+      originalWalletCreditCents: 1000,
+      balancePaymentIntentId: "pi_balance",
+      balanceChargedCents: 1500,
+    });
+
+    expect(plan.status).toBe(CLINIC_CANCEL_STATUS);
+    expect(plan.status).toBe("cancelled_doctor");
+    expect(plan.refundPercent).toBe(100);
+    expect(plan.walletCreditCents).toBe(1000);
+    expect(plan.legs).toEqual([
+      { paymentIntentId: "pi_original", amountCents: 3000 },
+      { paymentIntentId: "pi_balance", amountCents: 1500 },
+    ]);
+    expect(
+      plan.legs.every((leg) => leg.amountCents > 0)
+    ).toBe(true);
+
+    const walletOnly = clinicCancelMakeWhole({
+      cancellationPolicy: "strict",
+      hoursUntilAppointment: 0,
+      originalPaymentIntentId: null,
+      originalChargedCents: 4000,
+      originalWalletCreditCents: 4000,
+    });
+    expect(walletOnly.legs).toEqual([]);
+    expect(walletOnly.walletCreditCents).toBe(4000);
+    expect(walletOnly.refundPercent).toBe(100);
+    expect(walletOnly.status).toBe("cancelled_doctor");
+  });
+
+  it("records clinic cancel as the clinic and refunds the card and the wallet in full", () => {
+    const clinic = read("src/actions/clinic-booking.ts");
+    const start = clinic.indexOf("export async function adminCancelBooking");
+    const end = clinic.indexOf(
+      "export async function adminRescheduleBooking",
+      start
+    );
+    const body = clinic.slice(start, end);
+
+    expect(body).toContain("status: CLINIC_CANCEL_STATUS");
+    expect(body).toContain("Cancelled by clinic administrator");
+    expect(body).toContain("rescheduled_by: membership.user_id");
+    expect(body).toContain("refundPercent: 100");
+    expect(body).toContain("netOfWallet: true");
+    expect(body).toContain("clinicCancelMakeWhole");
+    expect(body).toContain("createDestinationRefunds");
+    expect(body).toContain("creditWallet");
+    expect(body).not.toContain("cancelled_patient");
+    expect(body).not.toContain("cancellation_policy");
+    expect(body).not.toContain("cancellation_hours");
+    expect(body).not.toMatch(/refundPercent\s*=/);
+  });
+
+  it("offers cancel with full refund next to the doctor-change message", () => {
+    const client = read(
+      "src/app/[locale]/(doctor)/doctor-dashboard/organization/bookings/org-bookings-client.tsx"
+    );
+    expect(client).toContain('from "@/lib/booking/reschedule-copy"');
+    expect(client).not.toContain("reschedule-balance");
+    expect(client).toContain("DOCTOR_CHANGE_RESCHEDULE_MESSAGE");
+    expect(client).toContain("Cancel with full refund");
+    expect(client).toContain("adminCancelBooking");
+    expect(client).toContain(
+      "Cancelled by the clinic to rebook with another clinician"
+    );
   });
 
   it("is used by patient, clinic, and admin refunds", () => {

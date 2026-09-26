@@ -2,9 +2,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { log } from "@/lib/utils/logger";
+import {
+  CLINIC_CANCEL_STATUS,
+  DOCTOR_CHANGE_RESCHEDULE_MESSAGE,
+} from "@/lib/booking/reschedule-copy";
 
-export const DOCTOR_CHANGE_RESCHEDULE_MESSAGE =
-  "Please cancel and rebook with the other clinician";
+export { CLINIC_CANCEL_STATUS, DOCTOR_CHANGE_RESCHEDULE_MESSAGE };
 
 /**
  * Same-doctor reschedules continue. A different clinician is refused
@@ -52,6 +55,7 @@ export type RescheduleRefundBooking = {
   payment_mode?: string | null;
   deposit_amount_cents?: number | null;
   total_amount_cents?: number | null;
+  wallet_credit_applied_cents?: number | null;
   stripe_payment_intent_id?: string | null;
   reschedule_payment_intent_id?: string | null;
   reschedule_price_diff_cents?: number | null;
@@ -72,6 +76,8 @@ export type ReschedulePairRefundResult =
       totalCents: number;
       rowRefundCents: number;
       refundIds: string[];
+      /** Wallet credit spent on these rows. Callers decide whether to return it. */
+      walletCreditCents: number;
     };
 
 type StripeRefundClient = {
@@ -86,7 +92,71 @@ type StripeRefundClient = {
 };
 
 const REFUND_BOOKING_COLUMNS =
-  "id, payment_mode, deposit_amount_cents, total_amount_cents, stripe_payment_intent_id, reschedule_payment_intent_id, reschedule_price_diff_cents, reschedule_payment_status, rescheduled_from_booking_id";
+  "id, payment_mode, deposit_amount_cents, total_amount_cents, wallet_credit_applied_cents, stripe_payment_intent_id, reschedule_payment_intent_id, reschedule_price_diff_cents, reschedule_payment_status, rescheduled_from_booking_id";
+
+function nonNegCents(value: number | null | undefined): number {
+  if (value == null || !Number.isFinite(value)) return 0;
+  return Math.max(0, Math.round(value));
+}
+
+/**
+ * Card amount actually captured. Wallet credit is not part of the
+ * PaymentIntent, so it is returned separately rather than refunded twice.
+ */
+export function cardChargeNetOfWallet(
+  chargedCents: number,
+  walletCreditCents: number | null | undefined
+): number {
+  const charged = nonNegCents(chargedCents);
+  const wallet = Math.min(charged, nonNegCents(walletCreditCents));
+  return charged - wallet;
+}
+
+/**
+ * What a clinic cancellation returns to the patient. Cancellation policy
+ * and hours until the appointment are ignored: cancel-and-rebook must not
+ * keep a late-cancellation fee. The status is the clinic/doctor cancel.
+ */
+export function clinicCancelMakeWhole(input: {
+  cancellationPolicy?: string | null;
+  hoursUntilAppointment?: number | null;
+  originalPaymentIntentId: string | null;
+  originalChargedCents: number;
+  originalWalletCreditCents?: number | null;
+  balancePaymentIntentId?: string | null;
+  balanceChargedCents?: number | null;
+  balanceWalletCreditCents?: number | null;
+}): {
+  status: typeof CLINIC_CANCEL_STATUS;
+  refundPercent: 100;
+  legs: DestinationRefundLeg[];
+  walletCreditCents: number;
+} {
+  void input.cancellationPolicy;
+  void input.hoursUntilAppointment;
+
+  const originalCard = cardChargeNetOfWallet(
+    input.originalChargedCents,
+    input.originalWalletCreditCents
+  );
+  const balanceCard = nonNegCents(input.balanceChargedCents);
+  const legs = rescheduleRefundLegs({
+    refundPercent: 100,
+    originalPaymentIntentId: input.originalPaymentIntentId,
+    originalChargedCents: originalCard,
+    balancePaymentIntentId: input.balancePaymentIntentId ?? null,
+    balanceChargedCents: balanceCard,
+  });
+
+  return {
+    status: CLINIC_CANCEL_STATUS,
+    refundPercent: 100,
+    legs,
+    walletCreditCents:
+      nonNegCents(input.originalWalletCreditCents) +
+      nonNegCents(input.balanceWalletCreditCents),
+  };
+}
 
 export function stripeChargedCents(booking: {
   payment_mode?: string | null;
@@ -263,6 +333,12 @@ export async function refundReschedulePairIfPaid(
       originalId: string
     ) => Promise<RescheduleRefundBooking | null>;
     persistOtherRefund?: (id: string, amountCents: number) => Promise<void>;
+    /**
+     * Clinic cancel only. Refund the card PaymentIntent net of wallet
+     * credit, and report the wallet credit so the caller can return it.
+     * Other refunds leave this off and keep the previous charge basis.
+     */
+    netOfWallet?: boolean;
   } = {}
 ): Promise<ReschedulePairRefundResult> {
   const load = options.loadBooking ?? defaultLoadBooking;
@@ -302,7 +378,14 @@ export async function refundReschedulePairIfPaid(
     Math.round(successor.reschedule_price_diff_cents ?? 0)
   );
   const originalIntent = (original.stripe_payment_intent_id ?? "").trim() || null;
-  const originalCharged = stripeChargedCents(original);
+  const originalBasis = stripeChargedCents(original);
+  const originalCharged = options.netOfWallet
+    ? cardChargeNetOfWallet(originalBasis, original.wallet_credit_applied_cents)
+    : originalBasis;
+  const walletCreditCents = options.netOfWallet
+    ? nonNegCents(original.wallet_credit_applied_cents) +
+      nonNegCents(successor.wallet_credit_applied_cents)
+    : 0;
 
   let balanceCents = 0;
   let originalCents = 0;
@@ -338,6 +421,15 @@ export async function refundReschedulePairIfPaid(
   });
 
   if (legs.length === 0) {
+    if (options.netOfWallet && walletCreditCents > 0) {
+      return {
+        applied: true,
+        totalCents: 0,
+        rowRefundCents: 0,
+        refundIds: [],
+        walletCreditCents,
+      };
+    }
     return { applied: false };
   }
 
@@ -360,6 +452,7 @@ export async function refundReschedulePairIfPaid(
       totalCents: balanceCents + originalCents,
       rowRefundCents,
       refundIds,
+      walletCreditCents,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Refund failed";

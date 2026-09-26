@@ -7,10 +7,15 @@ import { requireOrgMember } from "./organization";
 import { getStripe } from "@/lib/stripe/client";
 import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
 import {
+  CLINIC_CANCEL_STATUS,
+  clinicCancelMakeWhole,
+  createDestinationRefunds,
   refundReschedulePairIfPaid,
   rescheduleBalanceApplicationFeeCents,
   rescheduleDoctorChangeError,
+  stripeChargedCents,
 } from "@/lib/booking/reschedule-balance";
+import { creditWallet } from "@/lib/wallet";
 import { sendEmail } from "@/lib/email/client";
 import { reschedulePaymentEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
@@ -90,8 +95,6 @@ export async function adminCancelBooking(formData: FormData) {
       *,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone),
       doctor:doctors!inner(
-        cancellation_policy,
-        cancellation_hours,
         stripe_account_id,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
       )
@@ -105,12 +108,17 @@ export async function adminCancelBooking(formData: FormData) {
     return { error: "This booking cannot be cancelled in its current state." };
   }
 
-  // Process Stripe refund if booking was paid.
-  // A paid dearer-slot reschedule has two destination charges. Both must
-  // come back, with the doctor's transfer and our fee reversed on each.
-  let refundAmountCents = 0;
+  // Clinic cancellations make the patient whole. A paid dearer-slot
+  // reschedule has two destination charges; both come back with the
+  // doctor's transfer and our fee reversed. Wallet credit is returned
+  // to the wallet. Late-cancellation fees apply only on the patient
+  // cancel path.
+  let rowCardRefundCents = 0;
+  let patientCardRefundCents = 0;
+  let walletCreditCents = 0;
   const pairRefund = await refundReschedulePairIfPaid(booking, {
     refundPercent: 100,
+    netOfWallet: true,
   });
   if (pairRefund.applied && "error" in pairRefund) {
     log.error("Stripe refund failed during admin cancellation:", {
@@ -120,39 +128,68 @@ export async function adminCancelBooking(formData: FormData) {
     return { error: "Failed to process refund. Please try again or contact support." };
   }
   if (pairRefund.applied) {
-    refundAmountCents = pairRefund.rowRefundCents;
-  } else if (booking.stripe_payment_intent_id && booking.paid_at) {
-    // Admin cancellations: always full refund (clinic takes responsibility)
-    refundAmountCents = booking.payment_mode === "deposit"
-      ? (booking.deposit_amount_cents ?? 0)
-      : booking.total_amount_cents;
-
-    if (refundAmountCents > 0) {
+    rowCardRefundCents = pairRefund.rowRefundCents;
+    patientCardRefundCents = pairRefund.totalCents;
+    walletCreditCents = pairRefund.walletCreditCents;
+  } else if (booking.paid_at) {
+    const plan = clinicCancelMakeWhole({
+      originalPaymentIntentId: booking.stripe_payment_intent_id ?? null,
+      originalChargedCents: stripeChargedCents(booking),
+      originalWalletCreditCents: booking.wallet_credit_applied_cents,
+    });
+    walletCreditCents = plan.walletCreditCents;
+    if (plan.legs.length > 0) {
       try {
-        const stripe = getStripe();
-        await stripe.refunds.create({
-          payment_intent: booking.stripe_payment_intent_id,
-          amount: refundAmountCents,
-          reverse_transfer: true,
-          refund_application_fee: true,
-        });
+        await createDestinationRefunds(getStripe(), plan.legs);
+        rowCardRefundCents = plan.legs.reduce(
+          (sum, leg) => sum + leg.amountCents,
+          0
+        );
+        patientCardRefundCents = rowCardRefundCents;
       } catch (err) {
-        log.error("Stripe refund failed during admin cancellation:", { err, bookingId: booking.id });
+        log.error("Stripe refund failed during admin cancellation:", {
+          err,
+          bookingId: booking.id,
+        });
         return { error: "Failed to process refund. Please try again or contact support." };
       }
     }
   }
 
-  // Update booking status
+  let walletReturned = walletCreditCents === 0;
+  if (walletCreditCents > 0) {
+    try {
+      await creditWallet({
+        patientId: booking.patient_id,
+        currency: booking.currency,
+        amountCents: walletCreditCents,
+        sourceType: "refund",
+        sourceBookingId: booking.id,
+        description: `Wallet credit returned for clinic cancellation of ${booking.booking_number}`,
+      });
+      walletReturned = true;
+    } catch (err) {
+      log.error("Wallet credit return failed during admin cancellation:", {
+        err,
+        bookingId: booking.id,
+      });
+    }
+  }
+
+  const returnedToPatientCents =
+    patientCardRefundCents + (walletReturned ? walletCreditCents : 0);
+
+  // Status is the clinic/doctor cancel, so patient late-cancellation
+  // rules cannot apply to this row.
   await adminSupabase
     .from("bookings")
     .update({
-      status: "cancelled_doctor",
+      status: CLINIC_CANCEL_STATUS,
       cancelled_at: new Date().toISOString(),
       cancellation_reason: parsed.data.reason || "Cancelled by clinic administrator",
       rescheduled_by: membership.user_id,
-      refund_amount_cents: refundAmountCents,
-      refunded_at: refundAmountCents > 0 ? new Date().toISOString() : null,
+      refund_amount_cents: rowCardRefundCents,
+      refunded_at: rowCardRefundCents > 0 ? new Date().toISOString() : null,
     })
     .eq("id", booking.id);
 
@@ -165,12 +202,20 @@ export async function adminCancelBooking(formData: FormData) {
     sendEmail({
       to: patient.email,
       subject: `Appointment Cancelled — ${booking.booking_number}`,
-      html: `<p>Hi ${patient.first_name}, your appointment with Dr. ${doctorProfile?.last_name} on ${booking.appointment_date} has been cancelled by the clinic. ${refundAmountCents > 0 ? "A full refund has been issued and should appear within 5-10 business days." : ""}</p>`,
+      html: `<p>Hi ${patient.first_name}, your appointment with Dr. ${doctorProfile?.last_name} on ${booking.appointment_date} has been cancelled by the clinic. ${returnedToPatientCents > 0 ? "A full refund has been issued and should appear within 5-10 business days." : ""}</p>`,
     }).catch((err) => log.error("Cancel notification email failed:", { err }));
   }
 
   revalidatePath("/doctor-dashboard/organization/bookings");
-  return { error: null, refundAmountCents };
+  if (!walletReturned) {
+    return {
+      error:
+        patientCardRefundCents > 0
+          ? "The appointment was cancelled and the card refund was issued, but returning wallet credit failed. Please contact support."
+          : "The appointment was cancelled, but returning wallet credit failed. Please contact support.",
+    };
+  }
+  return { error: null, refundAmountCents: returnedToPatientCents };
 }
 
 // ─── Admin: Reschedule any clinic booking ────────────────────
