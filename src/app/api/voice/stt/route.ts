@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { meteredXaiFetch } from "@/lib/ai/usage-meter";
 import {
   getXaiApiKey,
   isGrokVoiceEnabled,
@@ -77,17 +78,21 @@ export async function POST(request: NextRequest) {
         : "recording.webm";
     grokForm.append("file", file, ext);
 
-    const res = await fetch(`${XAI_API_BASE}/stt`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        // Hint language via query when available (avoids unknown form fields)
+    const metered = await meteredXaiFetch({
+      feature: "stt",
+      url: `${XAI_API_BASE}/stt`,
+      init: {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: grokForm,
       },
-      body: grokForm,
+      inputBytes: file.size,
     });
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
+    if (!metered.ok) {
+      const errText = await metered.errorText();
       return NextResponse.json(
         {
           error: "Grok transcription failed",
@@ -97,7 +102,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = (await res.json()) as {
+    const data = (await metered.readJson()) as {
       text?: string;
       transcript?: string;
     };
