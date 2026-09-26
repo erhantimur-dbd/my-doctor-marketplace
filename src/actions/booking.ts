@@ -3,6 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
+import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
+import { refundReschedulePairIfPaid } from "@/lib/booking/reschedule-balance";
 import { revalidatePath } from "next/cache";
 import {
   createBookingSchema,
@@ -622,12 +624,10 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
           quantity: 1,
         },
       ],
-      payment_intent_data: {
-        application_fee_amount: adjustedApplicationFee,
-        transfer_data: {
-          destination: doctor.stripe_account_id,
-        },
-      },
+      payment_intent_data: consultDestinationChargeParams({
+        destinationAccountId: doctor.stripe_account_id,
+        applicationFeeCents: adjustedApplicationFee,
+      }),
       metadata: {
         booking_id: booking.id,
         booking_number: booking.booking_number,
@@ -751,9 +751,38 @@ export async function cancelBooking(input: CancelBookingInput) {
 
     let walletCreditCents = 0;
     let refundRef: string | null = null;
+    let pairRefundedCents = 0;
+    let pairRowRefundCents = 0;
     const refundDestination = parsed.data.refund_destination || "bank";
 
-    if (refundPercent > 0 && stripeChargedAmount > 0) {
+    if (refundPercent > 0) {
+      const pairRefund = await refundReschedulePairIfPaid(booking, {
+        refundPercent,
+      });
+      if (pairRefund.applied && "error" in pairRefund) {
+        return {
+          error: "Failed to process refund. Please try again or contact support.",
+        };
+      }
+      if (pairRefund.applied) {
+        pairRefundedCents = pairRefund.totalCents;
+        pairRowRefundCents = pairRefund.rowRefundCents;
+        refundRef = pairRefund.refundIds[0] ?? null;
+        if (refundDestination === "wallet" && pairRefund.totalCents > 0) {
+          walletCreditCents = pairRefund.totalCents;
+          await creditWallet({
+            patientId: user.id,
+            currency: booking.currency,
+            amountCents: pairRefund.totalCents,
+            sourceType: "refund",
+            sourceBookingId: booking.id,
+            description: `Refund from cancelled booking ${booking.booking_number}`,
+          });
+        }
+      }
+    }
+
+    if (!pairRefundedCents && refundPercent > 0 && stripeChargedAmount > 0) {
       const refundAmount = Math.round(
         (stripeChargedAmount * refundPercent) / 100
       );
@@ -803,6 +832,12 @@ export async function cancelBooking(input: CancelBookingInput) {
         status: BOOKING_STATUSES.CANCELLED_PATIENT,
         cancelled_at: new Date().toISOString(),
         cancellation_reason: parsed.data.reason || null,
+        ...(pairRowRefundCents > 0
+          ? {
+              refund_amount_cents: pairRowRefundCents,
+              refunded_at: new Date().toISOString(),
+            }
+          : {}),
       })
       .eq("id", booking.id);
 
@@ -837,9 +872,11 @@ export async function cancelBooking(input: CancelBookingInput) {
       : null;
 
     if (patient?.email && doctorProfile) {
-      const refundAmount = refundPercent > 0
-        ? (stripeChargedAmount * refundPercent) / 100 / 100
-        : 0;
+      const refundAmount = pairRefundedCents > 0
+        ? pairRefundedCents / 100
+        : refundPercent > 0
+          ? (stripeChargedAmount * refundPercent) / 100 / 100
+          : 0;
 
       const softsmoke = isSoftsmokeTransactionalDoctor({
         id: doctor?.id || booking.doctor_id,
@@ -1055,8 +1092,20 @@ export async function cancelAndRebook(input: {
       : oldBooking.total_amount_cents;
     const refundAmount = Math.round((stripeCharged * refundPercent) / 100);
 
-    // 3. Refund old booking via Stripe (to reverse doctor transfer)
-    if (oldBooking.stripe_payment_intent_id && refundAmount > 0) {
+    // 3. Refund old booking via Stripe (to reverse doctor transfer).
+    // A paid reschedule balance is a second destination charge and is
+    // reversed here as well.
+    let rebookRefundCents = refundAmount;
+    const pairRefund =
+      refundPercent > 0
+        ? await refundReschedulePairIfPaid(oldBooking, { refundPercent })
+        : { applied: false as const };
+    if (pairRefund.applied && "error" in pairRefund) {
+      return { error: pairRefund.error };
+    }
+    if (pairRefund.applied) {
+      rebookRefundCents = pairRefund.totalCents;
+    } else if (oldBooking.stripe_payment_intent_id && refundAmount > 0) {
       await getStripe().refunds.create({
         payment_intent: oldBooking.stripe_payment_intent_id,
         amount: refundAmount,
@@ -1066,11 +1115,11 @@ export async function cancelAndRebook(input: {
     }
 
     // 4. Credit wallet with refund
-    if (refundAmount > 0) {
+    if (rebookRefundCents > 0) {
       await creditWallet({
         patientId: user.id,
         currency: oldBooking.currency,
-        amountCents: refundAmount,
+        amountCents: rebookRefundCents,
         sourceType: "cancel_rebook",
         sourceBookingId: oldBooking.id,
         description: `Cancel & rebook: credit from ${oldBooking.booking_number}`,
@@ -1109,7 +1158,7 @@ export async function cancelAndRebook(input: {
     return {
       ...result,
       cancelledBookingId: oldBooking.id,
-      walletCreditCents: refundAmount,
+      walletCreditCents: rebookRefundCents,
       refundPercent,
     };
   } catch (err) {

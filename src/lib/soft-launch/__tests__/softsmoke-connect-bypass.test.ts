@@ -111,7 +111,8 @@ describe("checkout gate stays Connect-required except the smoke allowlist", () =
 
   it("keeps the destination charge and the payment-setup error", () => {
     expect(booking).toContain("isSoftsmokeConnectChargeSkipped");
-    expect(booking).toContain("destination: doctor.stripe_account_id");
+    expect(booking).toContain("consultDestinationChargeParams");
+    expect(booking).toContain("destinationAccountId: doctor.stripe_account_id");
     expect(booking).toContain(
       "This doctor has not completed their payment setup. Please try again later."
     );

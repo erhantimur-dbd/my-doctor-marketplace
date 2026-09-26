@@ -19,9 +19,16 @@ describe("patient booking Stripe Checkout shape (source contract)", () => {
   });
 
   it("uses Connect destination charges for doctor payouts", () => {
-    expect(source).toContain("application_fee_amount");
-    expect(source).toContain("transfer_data");
-    expect(source).toContain("destination: doctor.stripe_account_id");
+    expect(source).toContain("consultDestinationChargeParams");
+    expect(source).toContain("destinationAccountId: doctor.stripe_account_id");
+    const helper = readFileSync(
+      join(process.cwd(), "src/lib/stripe/consult-charge.ts"),
+      "utf8"
+    );
+    expect(helper).toContain("application_fee_amount");
+    expect(helper).toContain("transfer_data");
+    expect(helper).toContain("destination: input.destinationAccountId");
+    expect(helper).not.toMatch(/on_behalf_of\s*:/);
   });
 
   it("returns Softsmoke charge-skip confirm URL the confirmation page accepts", () => {

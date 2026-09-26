@@ -169,7 +169,8 @@ describe("book page source", () => {
     expect(page).toContain("readJoinedProfileEmail");
     expect(booking).toContain("isSoftsmokeConnectChargeSkipped");
     expect(booking).toContain("stripe_onboarding_complete");
-    expect(booking).toContain("destination: doctor.stripe_account_id");
+    expect(booking).toContain("consultDestinationChargeParams");
+    expect(booking).toContain("destinationAccountId: doctor.stripe_account_id");
     expect(booking).toContain(
       "This doctor has not completed their payment setup. Please try again later."
     );

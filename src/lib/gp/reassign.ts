@@ -14,6 +14,7 @@ import {
   handoffConnectTransfer,
 } from "@/lib/stripe/transfer-handoff";
 import { getStripe } from "@/lib/stripe/client";
+import { refundReschedulePairIfPaid } from "@/lib/booking/reschedule-balance";
 import { sendEmail } from "@/lib/email/client";
 import { sendSms } from "@/lib/sms/client";
 import {
@@ -41,7 +42,21 @@ async function fullRefundBooking(booking: {
   deposit_amount_cents?: number | null;
   total_amount_cents: number;
   paid_at?: string | null;
-}): Promise<{ refunded: boolean; amount: number; error?: string }> {
+}): Promise<{ refunded: boolean; amount: number; ledgerCents?: number; error?: string }> {
+  const pairRefund = await refundReschedulePairIfPaid(booking, {
+    refundPercent: 100,
+  });
+  if (pairRefund.applied && "error" in pairRefund) {
+    return { refunded: false, amount: 0, error: pairRefund.error };
+  }
+  if (pairRefund.applied) {
+    return {
+      refunded: pairRefund.totalCents > 0,
+      amount: pairRefund.totalCents,
+      ledgerCents: pairRefund.rowRefundCents,
+    };
+  }
+
   const amount =
     booking.payment_mode === "deposit" && booking.deposit_amount_cents != null
       ? booking.deposit_amount_cents
@@ -58,7 +73,7 @@ async function fullRefundBooking(booking: {
       reverse_transfer: true,
       refund_application_fee: true,
     });
-    return { refunded: true, amount };
+    return { refunded: true, amount, ledgerCents: amount };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Refund failed";
     log.error("[GP] fullRefundBooking failed", { err, bookingId: booking.id });
@@ -378,7 +393,7 @@ export async function executeGpReassignmentRequest(params: {
         params.reason || "Doctor unavailable — no GP replacement found",
       gp_reassignment_status: "refunded",
       refunded_at: refund.refunded ? new Date().toISOString() : null,
-      refund_amount_cents: refund.refunded ? refund.amount : null,
+      refund_amount_cents: refund.refunded ? (refund.ledgerCents ?? refund.amount) : null,
     })
     .eq("id", booking.id);
 
@@ -555,7 +570,7 @@ export async function declineAllGpOffers(
       cancelled_at: new Date().toISOString(),
       gp_reassignment_status: "patient_declined",
       refunded_at: refund.refunded ? new Date().toISOString() : null,
-      refund_amount_cents: refund.refunded ? refund.amount : null,
+      refund_amount_cents: refund.refunded ? (refund.ledgerCents ?? refund.amount) : null,
       cancellation_reason: "Patient declined alternate GP slots",
     })
     .eq("id", booking.id);
@@ -629,7 +644,7 @@ export async function expireGpOffersAndRefund(): Promise<{
         cancelled_at: new Date().toISOString(),
         gp_reassignment_status: "refunded",
         refunded_at: refund.refunded ? new Date().toISOString() : null,
-        refund_amount_cents: refund.refunded ? refund.amount : null,
+        refund_amount_cents: refund.refunded ? (refund.ledgerCents ?? refund.amount) : null,
         cancellation_reason: "Alternate GP offers expired without response",
       })
       .eq("id", bookingId);

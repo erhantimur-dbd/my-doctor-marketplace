@@ -7,6 +7,8 @@ import { safeError } from "@/lib/utils/safe-error";
 import { subscriptionUpgradeInviteEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
+import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
+import { refundReschedulePairIfPaid } from "@/lib/booking/reschedule-balance";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { sendEmail } from "@/lib/email/client";
@@ -727,15 +729,27 @@ export async function adminRefundBooking(
   }
 
   let refundRef = `refund-${bookingId}`;
+  let storedRefundCents = refundAmount;
   try {
-    const { getStripe } = await import("@/lib/stripe/client");
-    const stripeRefund = await getStripe().refunds.create({
-      payment_intent: booking.stripe_payment_intent_id,
-      amount: refundAmount,
-      reverse_transfer: true,
-      refund_application_fee: true,
-    } as any);
-    if (stripeRefund?.id) refundRef = stripeRefund.id;
+    const pairRefund = await refundReschedulePairIfPaid(booking, {
+      requestedCents: refundAmount,
+    });
+    if (pairRefund.applied && "error" in pairRefund) {
+      return { error: pairRefund.error };
+    }
+    if (pairRefund.applied) {
+      storedRefundCents = pairRefund.rowRefundCents;
+      if (pairRefund.refundIds[0]) refundRef = pairRefund.refundIds[0];
+    } else {
+      const { getStripe } = await import("@/lib/stripe/client");
+      const stripeRefund = await getStripe().refunds.create({
+        payment_intent: booking.stripe_payment_intent_id,
+        amount: refundAmount,
+        reverse_transfer: true,
+        refund_application_fee: true,
+      } as any);
+      if (stripeRefund?.id) refundRef = stripeRefund.id;
+    }
   } catch (err: any) {
     return { error: safeError(err) };
   }
@@ -745,7 +759,7 @@ export async function adminRefundBooking(
     .update({
       status: "refunded",
       refunded_at: new Date().toISOString(),
-      refund_amount_cents: refundAmount,
+      refund_amount_cents: storedRefundCents,
     })
     .eq("id", bookingId);
 
@@ -1881,12 +1895,10 @@ export async function adminCreateBookingOnBehalf(input: {
         quantity: 1,
       },
     ],
-    payment_intent_data: {
-      application_fee_amount: getCommissionCents(totalAmountCents),
-      transfer_data: {
-        destination: doctor.stripe_account_id,
-      },
-    },
+    payment_intent_data: consultDestinationChargeParams({
+      destinationAccountId: doctor.stripe_account_id,
+      applicationFeeCents: getCommissionCents(totalAmountCents),
+    }),
     metadata: {
       booking_id: booking.id,
       booking_number: booking.booking_number,
@@ -2023,12 +2035,10 @@ export async function adminResendPaymentLink(bookingId: string) {
         quantity: 1,
       },
     ],
-    payment_intent_data: {
-      application_fee_amount: getCommissionCents(booking.total_amount_cents),
-      transfer_data: {
-        destination: doctor.stripe_account_id,
-      },
-    },
+    payment_intent_data: consultDestinationChargeParams({
+      destinationAccountId: doctor.stripe_account_id,
+      applicationFeeCents: getCommissionCents(booking.total_amount_cents),
+    }),
     metadata: {
       booking_id: booking.id,
       booking_number: booking.booking_number,
@@ -2164,10 +2174,27 @@ export async function adminCancelBooking(
     refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
   }
 
-  // Process Stripe refund
+  // Process Stripe refund. A paid reschedule reverses both destination
+  // charges; the amount stored on this row is only this row's portion.
   let refundAmountCents = 0;
+  let refundReportedCents = 0;
   let refundRef: string | null = null;
+  if (refundPercent > 0) {
+    const pairRefund = await refundReschedulePairIfPaid(booking, {
+      refundPercent,
+    });
+    if (pairRefund.applied && "error" in pairRefund) {
+      log.error("Admin cancel refund error:", { err: pairRefund.error });
+      return { error: pairRefund.error };
+    }
+    if (pairRefund.applied) {
+      refundAmountCents = pairRefund.rowRefundCents;
+      refundReportedCents = pairRefund.totalCents;
+      refundRef = pairRefund.refundIds[0] ?? null;
+    }
+  }
   if (
+    refundReportedCents === 0 &&
     booking.stripe_payment_intent_id &&
     refundPercent > 0 &&
     booking.total_amount_cents > 0
@@ -2175,6 +2202,7 @@ export async function adminCancelBooking(
     refundAmountCents = Math.round(
       (booking.total_amount_cents * refundPercent) / 100
     );
+    refundReportedCents = refundAmountCents;
 
     try {
       const stripeRefund = await getStripe().refunds.create({
@@ -2233,7 +2261,7 @@ export async function adminCancelBooking(
     : null;
 
   if (patient?.email && doctorProfile) {
-    const refundAmount = refundAmountCents / 100;
+    const refundAmount = (refundReportedCents || refundAmountCents) / 100;
     const softsmoke = isSoftsmokeTransactionalDoctor({
       id: doctor?.id || booking.doctor_id,
       slug: doctor?.slug,
@@ -2320,19 +2348,20 @@ export async function adminCancelBooking(
     booking_number: booking.booking_number,
     policy,
     refund_percent: refundPercent,
-    refund_amount_cents: refundAmountCents,
+    refund_amount_cents: refundReportedCents || refundAmountCents,
     reason,
   });
 
   revalidatePath(`/admin/bookings/${bookingId}`);
   revalidatePath("/admin/bookings");
+  const reportedCents = refundReportedCents || refundAmountCents;
   return {
     success: true,
     refundPercent,
-    refundAmountCents,
+    refundAmountCents: reportedCents,
     message:
       refundPercent > 0
-        ? `Booking cancelled. A ${refundPercent}% refund (${booking.currency.toUpperCase()} ${(refundAmountCents / 100).toFixed(2)}) has been processed.`
+        ? `Booking cancelled. A ${refundPercent}% refund (${booking.currency.toUpperCase()} ${(reportedCents / 100).toFixed(2)}) has been processed.`
         : "Booking cancelled. No refund applicable based on the cancellation policy.",
   };
 }

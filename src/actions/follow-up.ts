@@ -14,6 +14,7 @@ import {
 } from "@/lib/validators/booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
+import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
 import { sendEmail } from "@/lib/email/client";
 import { followUpInvitationEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
@@ -430,12 +431,10 @@ export async function createInvitationCheckout(
           quantity: 1,
         },
       ],
-      payment_intent_data: {
-        application_fee_amount: getCommissionCents(invitation.discounted_total_cents),
-        transfer_data: {
-          destination: doctor.stripe_account_id,
-        },
-      },
+      payment_intent_data: consultDestinationChargeParams({
+        destinationAccountId: doctor.stripe_account_id,
+        applicationFeeCents: getCommissionCents(invitation.discounted_total_cents),
+      }),
       metadata: {
         invitation_id: invitation.id,
         first_booking_id: booking.id,

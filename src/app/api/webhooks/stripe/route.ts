@@ -1148,6 +1148,7 @@ export async function POST(request: NextRequest) {
           consultation_type,
           consultation_fee_cents,
           platform_fee_cents,
+          commission_cents,
           total_amount_cents,
           reschedule_price_diff_cents,
           currency,
@@ -1163,14 +1164,19 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (rescheduleBooking) {
-        // Record platform fee on the balance paid
-        const diffCents = (rescheduleBooking as any).reschedule_price_diff_cents || 0;
-        if (diffCents > 0) {
+        // Record the fee stored when the -R row was created. That is the
+        // application fee on the destination charge, at the original
+        // booking's commission rate. Do not recompute 15% here.
+        const balanceFeeCents = Math.max(
+          0,
+          Math.round((rescheduleBooking as { commission_cents?: number | null }).commission_cents || 0)
+        );
+        if (balanceFeeCents > 0) {
           await supabase.from("platform_fees").insert({
             booking_id: newBookingId,
             doctor_id: rescheduleBooking.doctor_id,
             fee_type: "commission",
-            amount_cents: Math.round(diffCents * 0.15),
+            amount_cents: balanceFeeCents,
             currency: rescheduleBooking.currency,
           });
         }

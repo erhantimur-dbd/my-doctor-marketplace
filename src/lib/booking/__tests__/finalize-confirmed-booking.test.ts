@@ -468,7 +468,10 @@ describe("checkout and charge-skip share finalize", () => {
       "confirmBookingWithoutStripeCheckout(booking.id)"
     );
     expect(bookingSource).toContain("finalizeConfirmedBookingById(booking.id)");
-    expect(bookingSource).toContain("destination: doctor.stripe_account_id");
+    expect(bookingSource).toContain("consultDestinationChargeParams");
+    expect(bookingSource).toContain(
+      "destinationAccountId: doctor.stripe_account_id"
+    );
   });
 
   it("uses the helper from checkout.session.completed instead of a second notify call", () => {

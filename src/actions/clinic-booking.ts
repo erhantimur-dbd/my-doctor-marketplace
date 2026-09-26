@@ -5,6 +5,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { requireOrgMember } from "./organization";
 import { getStripe } from "@/lib/stripe/client";
+import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
+import {
+  refundReschedulePairIfPaid,
+  rescheduleBalanceApplicationFeeCents,
+  rescheduleDoctorChangeError,
+} from "@/lib/booking/reschedule-balance";
 import { sendEmail } from "@/lib/email/client";
 import { reschedulePaymentEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
@@ -99,9 +105,23 @@ export async function adminCancelBooking(formData: FormData) {
     return { error: "This booking cannot be cancelled in its current state." };
   }
 
-  // Process Stripe refund if booking was paid
+  // Process Stripe refund if booking was paid.
+  // A paid dearer-slot reschedule has two destination charges. Both must
+  // come back, with the doctor's transfer and our fee reversed on each.
   let refundAmountCents = 0;
-  if (booking.stripe_payment_intent_id && booking.paid_at) {
+  const pairRefund = await refundReschedulePairIfPaid(booking, {
+    refundPercent: 100,
+  });
+  if (pairRefund.applied && "error" in pairRefund) {
+    log.error("Stripe refund failed during admin cancellation:", {
+      err: pairRefund.error,
+      bookingId: booking.id,
+    });
+    return { error: "Failed to process refund. Please try again or contact support." };
+  }
+  if (pairRefund.applied) {
+    refundAmountCents = pairRefund.rowRefundCents;
+  } else if (booking.stripe_payment_intent_id && booking.paid_at) {
     // Admin cancellations: always full refund (clinic takes responsibility)
     refundAmountCents = booking.payment_mode === "deposit"
       ? (booking.deposit_amount_cents ?? 0)
@@ -194,6 +214,14 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: "This booking cannot be rescheduled in its current state." };
   }
 
+  // Before any refund, slot update, or balance charge. The original
+  // transfer already sits with this doctor, and we do not move it.
+  const doctorChangeError = rescheduleDoctorChangeError(
+    booking.doctor_id,
+    parsed.data.new_doctor_id
+  );
+  if (doctorChangeError) return { error: doctorChangeError };
+
   const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
   const originalDoctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
   const originalDoctorProfile: any = Array.isArray(originalDoctor?.profile)
@@ -270,8 +298,22 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: null, requiresPayment: false };
   }
 
-  // Case 2: New slot is more expensive → create Stripe Payment Intent for the diff
+  // Case 2: New slot is more expensive → destination charge for the diff
   if (!patient?.email) return { error: "Cannot send payment request: patient email not found" };
+
+  const destinationAccountId = (newDoctor.stripe_account_id as string | null) ?? "";
+  if (!destinationAccountId) {
+    return {
+      error:
+        "This doctor has not completed their payment setup. Please try again later.",
+    };
+  }
+
+  const balanceCommissionCents = rescheduleBalanceApplicationFeeCents({
+    priceDiffCents,
+    originalCommissionCents: (booking.commission_cents as number | null) ?? 0,
+    originalFeeBasisCents: (booking.consultation_fee_cents as number | null) ?? 0,
+  });
 
   // Create a new booking record for the new slot in pending_reschedule_payment status
   // The original booking remains confirmed until payment is received.
@@ -290,6 +332,7 @@ export async function adminRescheduleBooking(formData: FormData) {
       currency: booking.currency,
       consultation_fee_cents: newFee,
       platform_fee_cents: 0,
+      commission_cents: balanceCommissionCents,
       total_amount_cents: newFee,
       organization_id: org.id,
       clinic_location_id: parsed.data.new_clinic_location_id ?? booking.clinic_location_id,
@@ -314,12 +357,19 @@ export async function adminRescheduleBooking(formData: FormData) {
   let paymentLinkUrl: string | null = null;
 
   try {
+    // TODO(#56): Keep doctorCanAcceptConsultCardPayment in front of this
+    // create once that PR lands. on_behalf_of is added inside
+    // consultDestinationChargeParams, not on a platform charge.
     const intent = await stripe.paymentIntents.create({
       amount: priceDiffCents,
       currency: booking.currency.toLowerCase(),
       customer: undefined, // We'll use email receipt
       receipt_email: patient.email,
       description: `Reschedule balance for booking ${booking.booking_number}`,
+      ...consultDestinationChargeParams({
+        destinationAccountId,
+        applicationFeeCents: balanceCommissionCents,
+      }),
       metadata: {
         original_booking_id: booking.id,
         new_booking_id: newBooking.id,
