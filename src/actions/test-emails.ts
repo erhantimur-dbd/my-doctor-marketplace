@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/email/client";
 import * as templates from "@/lib/email/templates";
 import * as softsmoke from "@/lib/email/softsmoke-templates";
 import { TEMPLATE_LIST, type TemplateKey } from "@/lib/email/template-list";
+import { BOOKING_NUMBER_EXAMPLE } from "@/lib/booking/booking-number";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
 
@@ -17,7 +18,7 @@ const SAMPLE_DATA = {
       date: "2026-04-01",
       time: "10:00",
       consultationType: "Video Consultation",
-      bookingNumber: "BK-TEST-001",
+      bookingNumber: BOOKING_NUMBER_EXAMPLE,
       amount: 120,
       currency: "GBP",
       videoRoomUrl: `${APP_URL}/room/test-room`,
@@ -28,7 +29,7 @@ const SAMPLE_DATA = {
       doctorName: "Dr. Sarah Williams",
       date: "2026-04-01",
       time: "10:00",
-      bookingNumber: "BK-TEST-001",
+      bookingNumber: BOOKING_NUMBER_EXAMPLE,
       refundAmount: 120,
       currency: "GBP",
     }),
@@ -39,7 +40,7 @@ const SAMPLE_DATA = {
       date: "2026-04-01",
       time: "10:00",
       consultationType: "Video Consultation",
-      bookingNumber: "BK-TEST-001",
+      bookingNumber: BOOKING_NUMBER_EXAMPLE,
       videoRoomUrl: `${APP_URL}/room/test-room`,
     }),
   doctorNewBooking: () =>
@@ -49,7 +50,7 @@ const SAMPLE_DATA = {
       date: "Mon, 1 Apr",
       time: "10:00",
       consultationType: "Video Consultation",
-      bookingNumber: "BK-TEST-001",
+      bookingNumber: BOOKING_NUMBER_EXAMPLE,
       amount: 120,
       currency: "GBP",
       isUrgent: true,
@@ -192,7 +193,7 @@ const SAMPLE_DATA = {
       date: "2026-04-15",
       time: "14:30",
       consultationType: "In-Person",
-      bookingNumber: "BK-TEST-002",
+      bookingNumber: BOOKING_NUMBER_EXAMPLE,
       amount: 200,
       currency: "GBP",
       paymentUrl: `${APP_URL}/pay/test-session`,
@@ -237,7 +238,7 @@ const SAMPLE_DATA = {
       patientName: "John",
       claimUrl: `${APP_URL}/en/callback?next=/en/dashboard/bookings`,
       setPasswordUrl: `${APP_URL}/en/callback?next=/en/reset-password`,
-      bookingNumber: "BK-TEST-001",
+      bookingNumber: BOOKING_NUMBER_EXAMPLE,
       magicSession: true,
     }),
   reviewRequest: () =>
@@ -253,7 +254,7 @@ const SAMPLE_DATA = {
       doctorDisplayName: "Vera Softsmoke",
       appointmentDate: "2026-09-26",
       appointmentTime: "2026-09-26T08:00:00+00:00",
-      bookingRef: "BK-SOFTSMOKE-001",
+      bookingRef: BOOKING_NUMBER_EXAMPLE,
       appointmentType: "video",
       joinUrl: `${APP_URL}/en/dashboard/bookings/preview`,
       manageUrl: `${APP_URL}/en/dashboard/bookings/preview`,
@@ -264,7 +265,7 @@ const SAMPLE_DATA = {
       doctorDisplayName: "Vera Softsmoke",
       appointmentDate: "2026-09-26",
       appointmentTime: "09:00",
-      bookingRef: "BK-SOFTSMOKE-001",
+      bookingRef: BOOKING_NUMBER_EXAMPLE,
       appointmentType: "video",
       joinUrl: `${APP_URL}/en/dashboard/bookings/preview`,
       manageUrl: `${APP_URL}/en/dashboard/bookings/preview`,
@@ -273,7 +274,7 @@ const SAMPLE_DATA = {
     softsmoke.softsmokePatientRescheduleEmail({
       patientFirstName: "Darren",
       doctorDisplayName: "Vera Softsmoke",
-      bookingRef: "BK-SOFTSMOKE-001",
+      bookingRef: BOOKING_NUMBER_EXAMPLE,
       oldDate: "2026-09-26",
       oldTime: "09:00",
       newDate: "2026-09-27",
@@ -284,7 +285,7 @@ const SAMPLE_DATA = {
   softsmokePatientRefund: () =>
     softsmoke.softsmokePatientRefundEmail({
       patientFirstName: "Darren",
-      bookingRef: "BK-SOFTSMOKE-001",
+      bookingRef: BOOKING_NUMBER_EXAMPLE,
       refundRef: "re_preview",
       refundAmount: 49,
       currency: "GBP",
@@ -297,7 +298,7 @@ const SAMPLE_DATA = {
       patientFirstName: "Darren",
       appointmentDate: "2026-09-26",
       appointmentTime: "09:00",
-      bookingRef: "BK-SOFTSMOKE-001",
+      bookingRef: BOOKING_NUMBER_EXAMPLE,
       appointmentType: "video",
     }),
   softsmokeDoctorReminder: () =>
@@ -306,7 +307,7 @@ const SAMPLE_DATA = {
       patientFirstName: "Darren",
       appointmentDate: "2026-09-26",
       appointmentTime: "09:00",
-      bookingRef: "BK-SOFTSMOKE-001",
+      bookingRef: BOOKING_NUMBER_EXAMPLE,
       appointmentType: "video",
     }),
   softsmokeDoctorCancelReschedule: () =>
@@ -314,7 +315,7 @@ const SAMPLE_DATA = {
       kind: "cancel",
       doctorFirstName: "Vera",
       patientFirstName: "Darren",
-      bookingRef: "BK-SOFTSMOKE-001",
+      bookingRef: BOOKING_NUMBER_EXAMPLE,
       oldDate: "2026-09-26",
       oldTime: "09:00",
       appointmentType: "video",
@@ -326,7 +327,7 @@ const SAMPLE_DATA = {
       platformFee: 12,
       netToConnectedAccount: 68,
       currency: "GBP",
-      bookingRef: "BK-SOFTSMOKE-001",
+      bookingRef: BOOKING_NUMBER_EXAMPLE,
       payoutOrTransferRef: "tr_preview",
       periodOrDate: "2026-09-26",
     }),

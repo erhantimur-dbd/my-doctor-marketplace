@@ -8,10 +8,15 @@ import { subscriptionUpgradeInviteEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
 import {
+  CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
-import { refundConsultCardAndCreditShare } from "@/lib/stripe/wallet-credit-share";
+import {
+  refundAdminBookingPayment,
+  refundConsultSplit,
+  storedConsultPaidParts,
+} from "@/lib/stripe/consult-refund";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { sendEmail } from "@/lib/email/client";
@@ -717,33 +722,17 @@ export async function adminRefundBooking(
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, status, total_amount_cents, stripe_payment_intent_id, paid_at, refunded_at, currency")
+    .select("*")
     .eq("id", bookingId)
     .single();
 
   if (!booking) return { error: "Booking not found" };
-  if (!booking.paid_at) return { error: "Booking has not been paid" };
-  if (booking.refunded_at) return { error: "Booking has already been refunded" };
-  if (!booking.stripe_payment_intent_id) return { error: "No Stripe payment intent found" };
 
-  const refundAmount = amountCents || booking.total_amount_cents;
-  if (refundAmount <= 0 || refundAmount > booking.total_amount_cents) {
-    return { error: "Invalid refund amount" };
-  }
+  const settled = await refundAdminBookingPayment(booking, amountCents);
+  if ("error" in settled) return { error: settled.error };
 
-  let refundRef = `refund-${bookingId}`;
-  try {
-    const settled = await refundConsultCardAndCreditShare({
-      paymentIntentId: booking.stripe_payment_intent_id,
-      cardRefundCents: refundAmount,
-      bookingId,
-      refundAmountCents: refundAmount,
-      paidAmountCents: booking.total_amount_cents,
-    });
-    if (settled.cardRefundId) refundRef = settled.cardRefundId;
-  } catch (err: any) {
-    return { error: safeError(err) };
-  }
+  const refundAmount = settled.refundAmountCents;
+  let refundRef = settled.cardRefundId || `refund-${bookingId}`;
 
   const { error: updateError } = await supabase
     .from("bookings")
@@ -1891,6 +1880,7 @@ export async function adminCreateBookingOnBehalf(input: {
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
     customer_email: patient.email,
     line_items: [
       {
@@ -2050,6 +2040,7 @@ export async function adminResendPaymentLink(bookingId: string) {
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
     customer_email: patient.email,
     line_items: [
       {
@@ -2206,26 +2197,29 @@ export async function adminCancelBooking(
     refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
   }
 
-  // Process Stripe refund
+  // Same split as a patient cancel: credit back to the wallet, card to the card.
   let refundAmountCents = 0;
   let refundRef: string | null = null;
+  const paidParts = storedConsultPaidParts(booking);
   if (
-    booking.stripe_payment_intent_id &&
     refundPercent > 0 &&
-    booking.total_amount_cents > 0
+    booking.paid_at &&
+    (paidParts.cardPaidCents > 0 || paidParts.creditPaidCents > 0)
   ) {
-    refundAmountCents = Math.round(
-      (booking.total_amount_cents * refundPercent) / 100
-    );
-
     try {
-      const settled = await refundConsultCardAndCreditShare({
-        paymentIntentId: booking.stripe_payment_intent_id,
-        cardRefundCents: refundAmountCents,
+      const settled = await refundConsultSplit({
         bookingId,
-        refundAmountCents,
-        paidAmountCents: booking.total_amount_cents,
+        bookingNumber: booking.booking_number,
+        patientId: booking.patient_id,
+        currency: booking.currency,
+        destination: "bank",
+        paymentIntentId: booking.stripe_payment_intent_id,
+        cardPaidCents: paidParts.cardPaidCents,
+        creditPaidCents: paidParts.creditPaidCents,
+        refundPercent,
+        sourceType: "refund",
       });
+      refundAmountCents = settled.cardRefundedToCardCents + settled.walletCreditCents;
       refundRef = settled.cardRefundId;
     } catch (err: any) {
       log.error("Admin cancel refund error:", { err: err });

@@ -19,6 +19,23 @@ describe("guestAccountClaimEmail", () => {
     expect(html).toContain("Alex");
   });
 
+  it("prints legacy BK- and short MD- booking numbers, including -R", () => {
+    for (const bookingNumber of [
+      "BK-20260926-2FB5",
+      "BK-20260926-2FB5-R",
+      "MD-7K3Q9X",
+      "MD-7K3Q9X-R",
+    ]) {
+      const { html } = guestAccountClaimEmail({
+        patientName: "Alex",
+        claimUrl: "https://example.com/magic",
+        bookingNumber,
+        magicSession: true,
+      });
+      expect(html).toContain(bookingNumber);
+    }
+  });
+
   it("recovery-only fallback still works", () => {
     const { html } = guestAccountClaimEmail({
       patientName: "Sam",

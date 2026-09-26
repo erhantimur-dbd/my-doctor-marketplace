@@ -6,10 +6,19 @@ import { revalidatePath } from "next/cache";
 import { requireOrgMember } from "./organization";
 import { getStripe } from "@/lib/stripe/client";
 import {
+  CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
+import {
+  clinicianReassignmentBlockReason,
+  refundClinicCancellation,
+} from "@/lib/stripe/consult-refund";
 import { sendEmail } from "@/lib/email/client";
+import {
+  bookingNumberRoot,
+  rescheduleSuccessorBookingNumber,
+} from "@/lib/booking/booking-number";
 import { reschedulePaymentEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
 import { z } from "zod/v4";
@@ -103,28 +112,15 @@ export async function adminCancelBooking(formData: FormData) {
     return { error: "This booking cannot be cancelled in its current state." };
   }
 
-  // Process Stripe refund if booking was paid
+  // Clinic cancellations: full refund. Card returns to the card, credit
+  // returns to the wallet, and the doctor's credit transfer is reversed.
   let refundAmountCents = 0;
-  if (booking.stripe_payment_intent_id && booking.paid_at) {
-    // Admin cancellations: always full refund (clinic takes responsibility)
-    refundAmountCents = booking.payment_mode === "deposit"
-      ? (booking.deposit_amount_cents ?? 0)
-      : booking.total_amount_cents;
-
-    if (refundAmountCents > 0) {
-      try {
-        const stripe = getStripe();
-        await stripe.refunds.create({
-          payment_intent: booking.stripe_payment_intent_id,
-          amount: refundAmountCents,
-          reverse_transfer: true,
-          refund_application_fee: true,
-        });
-      } catch (err) {
-        log.error("Stripe refund failed during admin cancellation:", { err, bookingId: booking.id });
-        return { error: "Failed to process refund. Please try again or contact support." };
-      }
-    }
+  try {
+    const settled = await refundClinicCancellation(booking);
+    refundAmountCents = settled.refundAmountCents;
+  } catch (err) {
+    log.error("Stripe refund failed during admin cancellation:", { err, bookingId: booking.id });
+    return { error: "Failed to process refund. Please try again or contact support." };
   }
 
   // Update booking status
@@ -149,7 +145,7 @@ export async function adminCancelBooking(formData: FormData) {
     sendEmail({
       to: patient.email,
       subject: `Appointment Cancelled — ${booking.booking_number}`,
-      html: `<p>Hi ${patient.first_name}, your appointment with Dr. ${doctorProfile?.last_name} on ${booking.appointment_date} has been cancelled by the clinic. ${refundAmountCents > 0 ? "A full refund has been issued and should appear within 5-10 business days." : ""}</p>`,
+      html: `<p>Hi ${patient.first_name}, your appointment with Dr. ${doctorProfile?.last_name} on ${booking.appointment_date} has been cancelled by the clinic. ${refundAmountCents > 0 ? "A full refund has been issued. Any amount paid by card goes back to the card, and any MyDoctors360 credit goes back to your wallet." : ""}</p>`,
     }).catch((err) => log.error("Cancel notification email failed:", { err }));
   }
 
@@ -215,6 +211,12 @@ export async function adminRescheduleBooking(formData: FormData) {
     .single();
 
   if (!newDoctor) return { error: "New doctor not found" };
+
+  if (parsed.data.new_doctor_id !== booking.doctor_id) {
+    const blocked = clinicianReassignmentBlockReason(booking);
+    if (blocked) return { error: blocked };
+  }
+
   const newDoctorProfile: any = Array.isArray(newDoctor.profile)
     ? newDoctor.profile[0]
     : newDoctor.profile;
@@ -288,10 +290,35 @@ export async function adminRescheduleBooking(formData: FormData) {
 
   // Create a new booking record for the new slot in pending_reschedule_payment status
   // The original booking remains confirmed until payment is received.
+  // A later reschedule of the same root takes -R2, -R3, ... rather than
+  // inserting the occupied -R value again.
+  const root = bookingNumberRoot(booking.booking_number);
+  if (!root) return { error: "This booking number cannot be rescheduled." };
+
+  const { data: successors, error: successorError } = await adminSupabase
+    .from("bookings")
+    .select("booking_number")
+    .like("booking_number", `${root}-R%`);
+
+  if (successorError) {
+    return { error: "Failed to allocate a reschedule booking number" };
+  }
+
+  const taken = (successors ?? [])
+    .map((row) => row.booking_number)
+    .filter((value): value is string => typeof value === "string");
+
+  let successorNumber: string;
+  try {
+    successorNumber = rescheduleSuccessorBookingNumber(booking.booking_number, taken);
+  } catch {
+    return { error: "Failed to allocate a reschedule booking number" };
+  }
+
   const { data: newBooking, error: newBookingError } = await adminSupabase
     .from("bookings")
     .insert({
-      booking_number: `${booking.booking_number}-R`,
+      booking_number: successorNumber,
       patient_id: booking.patient_id,
       doctor_id: parsed.data.new_doctor_id,
       appointment_date: parsed.data.new_appointment_date,
@@ -330,6 +357,7 @@ export async function adminRescheduleBooking(formData: FormData) {
     const intent = await stripe.paymentIntents.create({
       amount: priceDiffCents,
       currency: booking.currency.toLowerCase(),
+      payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
       customer: undefined, // We'll use email receipt
       receipt_email: patient.email,
       description: `Reschedule balance for booking ${booking.booking_number}`,

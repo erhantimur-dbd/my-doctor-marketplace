@@ -193,17 +193,27 @@ export interface WalletCreditTransferStore {
 export interface WalletCreditDeps {
   stripe?: ConnectTransferClient & {
     refunds?: {
-      create(params: {
-        payment_intent: string;
-        amount: number;
-        reverse_transfer: boolean;
-        refund_application_fee: boolean;
-      }): Promise<{ id: string }>;
+      create(
+        params: {
+          payment_intent: string;
+          amount: number;
+          reverse_transfer: boolean;
+          refund_application_fee: boolean;
+        },
+        options?: { idempotencyKey?: string }
+      ): Promise<{ id: string }>;
     };
   };
   store?: WalletCreditTransferStore;
   alreadyDebited?: (bookingId: string) => Promise<boolean>;
   debit?: () => Promise<void>;
+}
+
+export function consultCardRefundIdempotencyKey(
+  bookingId: string,
+  cardRefundCents: number
+): string {
+  return `consult-card-refund-${bookingId}-${cardRefundCents}`;
 }
 
 const TABLE = "doctor_wallet_credit_transfers";
@@ -628,9 +638,19 @@ export async function reverseDoctorWalletCreditShare(
   return { reversedCents: reversalCents, reversalId: reversal.reversalId };
 }
 
+/** Read the credit-share row. No row means the booking did not pay with credit. */
+export async function loadWalletCreditTransfer(
+  bookingId: string,
+  deps?: WalletCreditDeps
+): Promise<WalletCreditTransferRecord | null> {
+  return storeOf(deps).findByBookingId(bookingId);
+}
+
 /**
  * Refund the card charge (destination reversal + application fee) and
  * reverse the wallet-credit transfer. Card-only bookings have no transfer row.
+ * The Stripe refund key is stable for this booking and amount, so a retry
+ * returns the original refund.
  */
 export async function refundConsultCardAndCreditShare(
   input: {
@@ -650,12 +670,20 @@ export async function refundConsultCardAndCreditShare(
     if (!stripe.refunds) {
       throw new Error("Stripe refunds client is not available");
     }
-    const refund = await stripe.refunds.create({
-      payment_intent: input.paymentIntentId,
-      amount: input.cardRefundCents,
-      reverse_transfer: true,
-      refund_application_fee: true,
-    });
+    const refund = await stripe.refunds.create(
+      {
+        payment_intent: input.paymentIntentId,
+        amount: input.cardRefundCents,
+        reverse_transfer: true,
+        refund_application_fee: true,
+      },
+      {
+        idempotencyKey: consultCardRefundIdempotencyKey(
+          input.bookingId,
+          input.cardRefundCents
+        ),
+      }
+    );
     cardRefundId = refund.id;
   }
 
