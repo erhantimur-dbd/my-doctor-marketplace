@@ -491,6 +491,8 @@
     "cancel_policy_strict_detail": "Annulation stricte : remboursement intégral si plus de 72 heures avant le rendez-vous.",
     "deposit_secures_info": "Un {deposit} sécurise votre rendez-vous. Le reste {remainder} est payable au médecin le jour même. Les acomptes sont entièrement remboursables dans le délai d'annulation.",
     "payment_deposit_paying": "Vous payez un {deposit} pour sécuriser le rendez-vous. Le reste {remainder} est payable au médecin le jour même.",
+    "confirmation_payment_pending_title": "Paiement encore requis",
+    "payment_complete_note": "Paiement reçu. Vous recevrez un e-mail de confirmation avec tous les détails.",
     "payment_confirm_note": "Votre rendez-vous sera confirmé une fois le paiement effectué. Vous recevrez un e-mail de confirmation.",
     "doctors_nav": "Médecins",
     "book_nav": "Prendre rendez-vous",

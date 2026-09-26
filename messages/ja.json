@@ -411,6 +411,8 @@
     "cancel_policy_strict_detail": "厳格なキャンセル：予約の72時間超前なら全額返金。",
     "deposit_secures_info": "{deposit}で予約を確保します。残額 {remainder} は当日に医師へお支払いください。キャンセル期間内はデポジット全額返金です。",
     "payment_deposit_paying": "予約確保のため {deposit} をお支払いします。残額 {remainder} は当日に医師へ。",
+    "confirmation_payment_pending_title": "お支払いがまだ必要です",
+    "payment_complete_note": "お支払いを受け付けました。詳細を記載した確認メールをお送りします。",
     "payment_confirm_note": "お支払い完了後に予約が確定します。確認メールが届きます。",
     "doctors_nav": "医師",
     "book_nav": "予約する",

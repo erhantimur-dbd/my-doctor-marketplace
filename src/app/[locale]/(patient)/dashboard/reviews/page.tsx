@@ -210,13 +210,13 @@ export default async function ReviewsPage() {
                             </span>
                           </div>
                         </div>
-                        {canEdit && (
+                        {canEdit && doctor?.id && (
                           <WriteReviewDialog
                             bookingId={review.booking_id}
-                            doctorId={review.doctor.id}
+                            doctorId={doctor.id}
                             doctorName={doctorName}
                             doctorSpecialtySlugs={
-                              (review.doctor.doctor_specialties ?? [])
+                              (doctor.doctor_specialties ?? [])
                                 .map((ds: { specialty: { slug: string } | { slug: string }[] }) => {
                                   const s = Array.isArray(ds.specialty) ? ds.specialty[0] : ds.specialty;
                                   return s?.slug;

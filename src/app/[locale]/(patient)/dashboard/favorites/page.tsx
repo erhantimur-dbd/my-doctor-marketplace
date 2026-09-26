@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
+import { patientBookingDoctorName } from "@/lib/patient/booking-doctor-embed";
 import { RemoveFavoriteButton } from "./remove-favorite-button";
 import type { Metadata } from "next";
 
@@ -103,8 +104,22 @@ export default async function FavoritesPage({ params }: FavoritesPageProps) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {typedFavorites.map((favorite) => {
-            const doctor = favorite.doctor;
-            const doctorName = `${doctor.title || ""} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
+            const doctor = Array.isArray(favorite.doctor)
+              ? favorite.doctor[0]
+              : favorite.doctor;
+            const profile = Array.isArray(doctor?.profile)
+              ? doctor.profile[0]
+              : doctor?.profile;
+            const doctorName = patientBookingDoctorName(doctor);
+            if (!doctor?.id) {
+              return (
+                <Card key={favorite.created_at}>
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold">{doctorName}</h3>
+                  </CardContent>
+                </Card>
+              );
+            }
             const primarySpecialty =
               doctor.specialties?.find((s: any) => s.is_primary)?.specialty ||
               doctor.specialties?.[0]?.specialty;
@@ -123,9 +138,9 @@ export default async function FavoritesPage({ params }: FavoritesPageProps) {
                   <div className="flex gap-4">
                     {/* Avatar */}
                     <Avatar className="h-14 w-14 shrink-0">
-                      {doctor.profile.avatar_url ? (
+                      {profile?.avatar_url ? (
                         <AvatarImage
-                          src={doctor.profile.avatar_url}
+                          src={profile.avatar_url}
                           alt={doctorName}
                         />
                       ) : null}

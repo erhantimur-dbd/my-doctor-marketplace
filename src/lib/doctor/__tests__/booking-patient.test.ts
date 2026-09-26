@@ -59,14 +59,24 @@ describe("doctor bookings page patient access", () => {
   const reviews = read(
     "src/app/[locale]/(doctor)/doctor-dashboard/reviews/page.tsx"
   );
+  const messages = read(
+    "src/app/[locale]/(doctor)/doctor-dashboard/messages/page.tsx"
+  );
+  const patientDetail = read(
+    "src/app/[locale]/(doctor)/doctor-dashboard/patients/[id]/page.tsx"
+  );
 
   it("does not read booking.patient.first_name unprotected", () => {
-    for (const source of [page, home, payments, patients, reviews]) {
+    for (const source of [page, home, payments, patients, reviews, messages, patientDetail]) {
       expect(source).not.toMatch(/booking\.patient\.first_name/);
       expect(source).not.toMatch(/booking\.patient\.last_name/);
       expect(source).not.toMatch(/booking\.patient\.email/);
       expect(source).not.toMatch(/review\.patient\.first_name/);
       expect(source).not.toMatch(/review\.patient\.last_name/);
+    }
+    for (const source of [messages, patientDetail]) {
+      expect(source).not.toMatch(/patient\.first_name/);
+      expect(source).not.toMatch(/patient\.last_name/);
     }
   });
 
@@ -87,6 +97,8 @@ describe("doctor bookings page patient access", () => {
     expect(patients).toContain("unwrapBookingPatient");
     expect(reviews).toContain("unwrapBookingPatient");
     expect(reviews).toContain("doctorBookingPatientName");
+    expect(messages).toContain("doctorBookingPatientName");
+    expect(patientDetail).toContain("doctorBookingPatientName");
   });
 });
 

@@ -18,7 +18,10 @@ import {
 import { CreditCard, TrendingUp, Receipt } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
 import { PaymentFilters } from "./payment-filters";
-import { PATIENT_PAYMENTS_LIST_SELECT } from "@/lib/patient/booking-doctor-embed";
+import {
+  PATIENT_PAYMENTS_LIST_SELECT,
+  patientBookingDoctorName,
+} from "@/lib/patient/booking-doctor-embed";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Payment History" };
@@ -157,11 +160,7 @@ export default async function PaymentsPage({
                 const doctor: any = Array.isArray(payment.doctor)
                   ? payment.doctor[0]
                   : payment.doctor;
-                const doctorProfile: any = doctor
-                  ? Array.isArray(doctor.profile)
-                    ? doctor.profile[0]
-                    : doctor.profile
-                  : null;
+                const doctorName = patientBookingDoctorName(doctor);
 
                 return (
                   <TableRow key={payment.id}>
@@ -176,9 +175,7 @@ export default async function PaymentsPage({
                       )}
                     </TableCell>
                     <TableCell className="text-sm font-medium">
-                      {doctor?.title}{" "}
-                      {doctorProfile?.first_name}{" "}
-                      {doctorProfile?.last_name}
+                      {doctorName}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs capitalize">

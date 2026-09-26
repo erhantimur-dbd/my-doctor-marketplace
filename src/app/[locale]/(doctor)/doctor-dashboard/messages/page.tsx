@@ -33,6 +33,7 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
+import { doctorBookingPatientName } from "@/lib/doctor/booking-patient";
 import { uploadMessageAttachment } from "@/actions/attachments";
 import { FileUploadButton } from "@/components/shared/file-upload-button";
 import { AttachmentPreview } from "@/components/shared/attachment-preview";
@@ -262,14 +263,16 @@ function MessagesContent() {
                   </p>
                 ) : (
                   eligiblePatients.map((patient) => {
+                    const patientName = doctorBookingPatientName(patient);
                     const hasConv = conversations.some(
-                      (c) => c.patientId === patient.id
+                      (c) => c.patientId === patient?.id
                     );
                     return (
                       <button
-                        key={patient.id}
+                        key={patient?.id ?? patientName}
                         className="flex w-full items-center gap-3 rounded-lg p-3 text-left hover:bg-muted transition-colors"
                         onClick={() => {
+                          if (!patient?.id) return;
                           if (hasConv) {
                             const conv = conversations.find(
                               (c) => c.patientId === patient.id
@@ -284,19 +287,17 @@ function MessagesContent() {
                         }}
                       >
                         <Avatar className="h-10 w-10">
-                          <AvatarImage src={patient.avatar_url || undefined} />
+                          <AvatarImage src={patient?.avatar_url || undefined} />
                           <AvatarFallback>
-                            {getInitials(
-                              `${patient.first_name} ${patient.last_name}`
-                            )}
+                            {getInitials(patientName)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">
-                            {patient.first_name} {patient.last_name}
+                            {patientName}
                           </p>
                           <p className="text-xs text-muted-foreground truncate">
-                            {patient.email}
+                            {patient?.email}
                           </p>
                         </div>
                         {hasConv && (

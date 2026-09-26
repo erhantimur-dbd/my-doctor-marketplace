@@ -55,8 +55,10 @@ describe("patient bookings doctor embed", () => {
     expect(listPage).not.toMatch(/profile:profiles\(/);
 
     expect(payments).toContain("PATIENT_PAYMENTS_LIST_SELECT");
+    expect(payments).toContain("patientBookingDoctorName");
     expect(payments).not.toMatch(/doctor:doctors\(/);
     expect(payments).not.toMatch(/profile:profiles\(/);
+    expect(payments).not.toMatch(/\.profile\.first_name/);
 
     expect(reviews).toContain("PATIENT_PENDING_REVIEW_BOOKINGS_SELECT");
     expect(reviews).toContain("BOOKING_DOCTOR_PROFILE_EMBED");
@@ -67,9 +69,18 @@ describe("patient bookings doctor embed", () => {
     for (const source of [detailPage, dashboard]) {
       expect(source).toContain("BOOKING_CURRENT_DOCTOR_EMBED");
       expect(source).toContain("BOOKING_DOCTOR_PROFILE_EMBED");
+      expect(source).toContain("patientBookingDoctorName");
       expect(source).not.toMatch(/doctor:doctors\(/);
       expect(source).not.toMatch(/profile:profiles\(/);
+      expect(source).not.toMatch(/\.profile\.first_name/);
     }
+
+    const favorites = read(
+      "src/app/[locale]/(patient)/dashboard/favorites/page.tsx"
+    );
+    expect(favorites).toContain("patientBookingDoctorName");
+    expect(favorites).not.toMatch(/\.profile\.first_name/);
+    expect(detailPage).not.toMatch(/first_name:\s*[^,\n]*\|\|\s*"Doctor"/);
   });
 
   it("checkout confirmation, webhook re-fetch, and finalize name the current-doctor FK", () => {

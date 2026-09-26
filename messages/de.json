@@ -730,6 +730,8 @@
     "cancel_policy_strict_detail": "Strenge Stornierung: Volle Rückerstattung bei Stornierung mehr als 72 Stunden vor dem Termin.",
     "deposit_secures_info": "Eine {deposit} sichert Ihren Termin. Die restlichen {remainder} zahlen Sie am Tag beim Arzt. Anzahlungen sind bei Stornierung innerhalb der Frist voll erstattbar.",
     "payment_deposit_paying": "Sie zahlen eine {deposit}, um den Termin zu sichern. Die restlichen {remainder} zahlen Sie am Tag beim Arzt.",
+    "confirmation_payment_pending_title": "Zahlung noch erforderlich",
+    "payment_complete_note": "Zahlung erhalten. Sie erhalten eine Bestätigungs-E-Mail mit allen Details.",
     "payment_confirm_note": "Ihr Termin wird nach Zahlung bestätigt. Sie erhalten eine Bestätigungs-E-Mail mit allen Details.",
     "doctors_nav": "Ärzte",
     "book_nav": "Termin buchen",

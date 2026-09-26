@@ -30,9 +30,11 @@ import {
   AnimatedSuccessIcon,
 } from "@/components/shared/booking-success-animation";
 import { resolveConfirmationLookup } from "@/lib/booking/confirmation-params";
+import { confirmationCopy } from "@/lib/booking/confirmation-copy";
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
+  patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
 import { getTranslations } from "next-intl/server";
 
@@ -108,6 +110,8 @@ export default async function BookingConfirmationPage({
 
   let bookingId: string | null = null;
   let allowAdminGuestFallback = false;
+  let stripePaymentStatus: string | null = null;
+  let stripeSessionStatus: string | null = null;
 
   if (lookup.mode === "stripe_session") {
     let stripeSession;
@@ -118,6 +122,8 @@ export default async function BookingConfirmationPage({
     } catch {
       redirect(`/${locale}`);
     }
+    stripePaymentStatus = stripeSession.payment_status ?? null;
+    stripeSessionStatus = stripeSession.status ?? null;
     bookingId = stripeSession.metadata?.booking_id ?? null;
     if (!bookingId) {
       redirect(`/${locale}`);
@@ -175,15 +181,19 @@ export default async function BookingConfirmationPage({
   const doctor: any = Array.isArray(booking.doctor)
     ? booking.doctor[0]
     : booking.doctor;
-  const profile: any = Array.isArray(doctor.profile)
-    ? doctor.profile[0]
-    : doctor.profile;
-  const fullName =
-    `${doctor.title || "Dr."} ${profile.first_name} ${profile.last_name}`.trim();
+  const fullName = patientBookingDoctorName(doctor);
+
+  const copy = confirmationCopy({
+    status: booking.status,
+    paidAt: booking.paid_at,
+    stripePaymentStatus,
+    stripeSessionStatus,
+    lookupMode: lookup.mode,
+  });
 
   const primarySpecialty =
-    doctor.specialties?.find((s: any) => s.is_primary)?.specialty ||
-    doctor.specialties?.[0]?.specialty;
+    doctor?.specialties?.find((s: any) => s.is_primary)?.specialty ||
+    doctor?.specialties?.[0]?.specialty;
 
   const specialtyName = primarySpecialty
     ? formatSpecialtyName(primarySpecialty.name_key)
@@ -205,9 +215,9 @@ export default async function BookingConfirmationPage({
   }
 
   const policyKey =
-    doctor.cancellation_policy === "flexible"
+    doctor?.cancellation_policy === "flexible"
       ? "flexible_policy"
-      : doctor.cancellation_policy === "moderate"
+      : doctor?.cancellation_policy === "moderate"
         ? "moderate_policy"
         : "strict_policy";
 
@@ -223,9 +233,9 @@ export default async function BookingConfirmationPage({
                 </div>
               </AnimatedSuccessIcon>
 
-              <h1 className="text-2xl font-bold">{t("booking_confirmed")}</h1>
+              <h1 className="text-2xl font-bold">{t(copy.headingKey)}</h1>
               <p className="text-muted-foreground">
-                {t("payment_confirm_note")}
+                {t(copy.bodyKey)}
               </p>
             </CardHeader>
 
@@ -300,7 +310,7 @@ export default async function BookingConfirmationPage({
               </div>
 
               {booking.consultation_type === "in_person" &&
-                (doctor.clinic_name || doctor.address) && (
+                (doctor?.clinic_name || doctor?.address) && (
                   <>
                     <Separator />
                     <div className="flex items-center justify-between">
@@ -309,10 +319,10 @@ export default async function BookingConfirmationPage({
                         <span className="text-muted-foreground">Location</span>
                       </div>
                       <div className="text-right text-sm">
-                        {doctor.clinic_name && (
+                        {doctor?.clinic_name && (
                           <p className="font-medium">{doctor.clinic_name}</p>
                         )}
-                        {doctor.address && (
+                        {doctor?.address && (
                           <p className="text-muted-foreground">
                             {doctor.address}
                           </p>
