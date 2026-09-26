@@ -85,6 +85,15 @@ describe("isAllowedOnComingSoon", () => {
     expect(isComingSoonBookDeepLink("/en/doctors/dr-jane")).toBe(false);
   });
 
+  it("allows booking-confirmation after Softsmoke / Stripe checkout", () => {
+    expect(isAllowedOnComingSoon("/en/booking-confirmation")).toBe(true);
+    expect(
+      isAllowedOnComingSoon(
+        "/en/booking-confirmation?booking_id=abc&confirm=1"
+      )
+    ).toBe(true);
+  });
+
   it("does not allow patient marketplace / search", () => {
     expect(isAllowedOnComingSoon("/en/doctors")).toBe(false);
     expect(isAllowedOnComingSoon("/en/doctors/dr-jane")).toBe(false);

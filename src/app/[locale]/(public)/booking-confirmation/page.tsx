@@ -30,6 +30,10 @@ import {
   AnimatedSuccessIcon,
 } from "@/components/shared/booking-success-animation";
 import { resolveConfirmationLookup } from "@/lib/booking/confirmation-params";
+import {
+  BOOKING_CURRENT_DOCTOR_INNER_EMBED,
+  BOOKING_DOCTOR_PROFILE_EMBED,
+} from "@/lib/patient/booking-doctor-embed";
 import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
@@ -43,6 +47,7 @@ interface BookingConfirmationPageProps {
     session_id?: string;
     booking_id?: string;
     wallet?: string;
+    confirm?: string;
   }>;
 }
 
@@ -67,14 +72,14 @@ const bookingSelect = `
       paid_at,
       is_guest,
       patient_id,
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         slug,
         title,
         clinic_name,
         address,
         cancellation_policy,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
+        profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name, avatar_url),
         location:locations(city, country_code, timezone),
         specialties:doctor_specialties(
           specialty:specialties(id, name_key, slug),
@@ -118,6 +123,12 @@ export default async function BookingConfirmationPage({
       redirect(`/${locale}`);
     }
     // Stripe session_id proves payment ownership for guest shadow accounts.
+    allowAdminGuestFallback = true;
+  } else if (lookup.mode === "direct_confirm") {
+    // Softsmoke charge-skip: booking already confirmed server-side. Guests have
+    // no session cookie; allow admin read by booking id (UUID). Claim email is
+    // sent from createBookingAndCheckout for guest Softsmoke books.
+    bookingId = lookup.bookingId;
     allowAdminGuestFallback = true;
   } else {
     // Wallet-only path — patient must be signed in and own the booking (RLS).

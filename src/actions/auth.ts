@@ -1372,7 +1372,13 @@ export async function logout(locale: string = "en") {
   redirect(`/${locale}`);
 }
 
-type OAuthSignInOptions = { doctorIntent?: boolean };
+type OAuthSignInOptions = {
+  /**
+   * @deprecated Soft Launch: public OAuth must not escalate to doctor.
+   * Doctor signup is email/password register-doctor only. Ignored if passed.
+   */
+  doctorIntent?: boolean;
+};
 
 const PROVIDER_LABELS: Record<OAuthProviderId, string> = {
   google: "Google",
@@ -1382,16 +1388,10 @@ const PROVIDER_LABELS: Record<OAuthProviderId, string> = {
   twitter: "X",
 };
 
-async function setDoctorOAuthIntentCookie(doctorIntent?: boolean) {
-  if (!doctorIntent) return;
-  const jar = await cookies();
-  jar.set(DOCTOR_OAUTH_INTENT_COOKIE, "1", {
-    path: "/",
-    maxAge: 60 * 15,
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-  });
+async function setDoctorOAuthIntentCookie(_doctorIntent?: boolean) {
+  // Intentionally a no-op. Accepting doctorIntent from any client allowed
+  // self-promotion to doctor + Founding Free via OAuth callback bootstrap.
+  return;
 }
 
 /**
@@ -1416,9 +1416,9 @@ export async function signInWithOAuthProvider(
   locale = sanitizeAuthLocale(locale);
   const supabase = await createClient();
   const origin = await getOrigin();
-  const next =
-    redirectTo ||
-    (options?.doctorIntent ? `/${locale}/doctor-dashboard` : undefined);
+  // Never honor doctorIntent for post-OAuth destination — register-doctor is
+  // email/password only.
+  const next = redirectTo || undefined;
 
   const oauthOptions: {
     redirectTo: string;

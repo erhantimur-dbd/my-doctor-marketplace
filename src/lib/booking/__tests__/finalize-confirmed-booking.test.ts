@@ -314,7 +314,10 @@ describe("charge-skip confirm", () => {
       expect.objectContaining({
         table: "bookings",
         action: "update",
-        payload: { status: "confirmed" },
+        payload: expect.objectContaining({
+          status: "confirmed",
+          paid_at: expect.any(String),
+        }),
         filters: {
           "eq:id": BOOKING_ID,
           "eq:status": "pending_payment",

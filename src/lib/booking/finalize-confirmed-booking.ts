@@ -378,7 +378,12 @@ export async function confirmBookingWithoutStripeCheckout(
   // cancelled/expired booking if called twice or against a stale id.
   const { data: updated, error } = await supabase
     .from("bookings")
-    .update({ status: BOOKING_STATUSES.CONFIRMED })
+    .update({
+      status: BOOKING_STATUSES.CONFIRMED,
+      // Softsmoke charge-skip has no Stripe PI; still stamp paid_at so doctor
+      // payment UIs that key off paid_at do not show the booking as unpaid.
+      paid_at: new Date().toISOString(),
+    })
     .eq("id", bookingId)
     .eq("status", BOOKING_STATUSES.PENDING_PAYMENT)
     .select("id")
