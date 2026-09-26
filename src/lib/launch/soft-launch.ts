@@ -21,6 +21,13 @@ export const PUBLIC_CHAT_DISABLED_MESSAGE = "This assistant is unavailable.";
 
 export const SYMPTOM_ANALYSIS_DISABLED_MESSAGE = "This tool is unavailable.";
 
+/**
+ * Spend fuse for natural-language search. Coming-soon hides the search
+ * bar; this still stops a direct call to `parseNaturalLanguageSearch`
+ * from billing a model. Not a license-tier gate.
+ */
+export const NL_SEARCH_DISABLED_MESSAGE = "This tool is unavailable.";
+
 export function isPrescriptionsEnabled(): boolean {
   return false;
 }
@@ -34,5 +41,9 @@ export function isPublicChatEnabled(): boolean {
 }
 
 export function isSymptomAnalysisEnabled(): boolean {
+  return false;
+}
+
+export function isNaturalLanguageSearchEnabled(): boolean {
   return false;
 }

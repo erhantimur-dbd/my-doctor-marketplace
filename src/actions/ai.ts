@@ -1,6 +1,7 @@
 "use server";
 
 import { generateObject } from "ai";
+import { headers } from "next/headers";
 import { aiModel, isAIEnabled } from "@/lib/ai/provider";
 import {
   symptomAnalysisSchema,
@@ -9,6 +10,7 @@ import {
   type NLSearchFilters,
 } from "@/lib/ai/schemas";
 import { detectEmergency } from "@/lib/ai/emergency-classifier";
+import { tryLocalNlSearch } from "@/lib/ai/nl-search-local";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SPECIALTIES } from "@/lib/constants/specialties";
 import {
@@ -17,8 +19,11 @@ import {
 } from "@/lib/location/match-location";
 import crypto from "crypto";
 import { log } from "@/lib/utils/logger";
+import { rateLimit } from "@/lib/rate-limit";
 import {
+  isNaturalLanguageSearchEnabled,
   isSymptomAnalysisEnabled,
+  NL_SEARCH_DISABLED_MESSAGE,
   SYMPTOM_ANALYSIS_DISABLED_MESSAGE,
 } from "@/lib/launch/soft-launch";
 
@@ -226,26 +231,107 @@ fields in the response schema.`,
 }
 
 // ── Feature 4: Natural Language Search ──────────────────────
+//
+// Spend fuse: `isNaturalLanguageSearchEnabled()` is hard-off. The
+// coming-soon page hides the search bar; this action is what bills.
+// A direct server-action call hits the same fuse.
+//
+// While the helper returns false, nothing below it runs. If it is
+// later switched on, the order is: emergency classifier (no model,
+// nothing stored), IP rate limit, keyword/location match, hash cache,
+// then one model call. The prompt does not include the location
+// catalog — city names are resolved locally afterwards.
+
+const NL_SEARCH_MAX_INPUT = 500;
+const NL_SEARCH_RATE_LIMIT = 20;
+const NL_SEARCH_RATE_WINDOW_MS = 60 * 60 * 1000;
+
+const EMPTY_NL_FILTERS: NLSearchFilters = {
+  specialty: null,
+  location: null,
+  language: null,
+  maxPrice: null,
+  minRating: null,
+  consultationType: null,
+  query: null,
+};
+
+type NlSearchUsage = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+};
+
+/** JSON usage line for this path only. No query text. */
+function meterNlSearch(
+  outcome: "model" | "model_error" | "local" | "cache" | "emergency",
+  usage?: NlSearchUsage
+) {
+  log.info("ai_usage", {
+    feature: "nl_search",
+    outcome,
+    billed: outcome === "model" || outcome === "model_error",
+    inputTokens: usage?.inputTokens ?? 0,
+    outputTokens: usage?.outputTokens ?? 0,
+    totalTokens: usage?.totalTokens ?? 0,
+  });
+}
+
+async function getClientIp(): Promise<string> {
+  const h = await headers();
+  return (
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    h.get("x-real-ip") ||
+    "unknown"
+  );
+}
 
 export async function parseNaturalLanguageSearch(
   input: string,
   locale: string
 ): Promise<{ data: NLSearchFilters | null; error: string | null }> {
-  if (!isAIEnabled()) {
-    log.warn("[AI] parseNaturalLanguageSearch: OPENAI_API_KEY not found in env");
-    return { data: null, error: "AI not configured" };
+  if (!isNaturalLanguageSearchEnabled()) {
+    return { data: null, error: NL_SEARCH_DISABLED_MESSAGE };
   }
-  console.log("[AI] parseNaturalLanguageSearch: starting for input:", input.substring(0, 50));
 
   const trimmed = input.trim();
   if (trimmed.length < 5) {
     return { data: null, error: "Input too short" };
   }
 
+  // Emergencies never bill and are not cached. Chest pain is also a
+  // cardiology keyword, so this has to run before the local matcher.
+  // Empty filters (not an error) keep the search bar from putting the
+  // raw phrase into a doctor query. This action does not render 999 copy.
+  const emergency = detectEmergency(trimmed);
+  if (emergency.isEmergency) {
+    meterNlSearch("emergency");
+    return { data: EMPTY_NL_FILTERS, error: null };
+  }
+
+  const ip = await getClientIp();
+  const { limited } = await rateLimit(
+    `nl-search:${ip}`,
+    NL_SEARCH_RATE_LIMIT,
+    NL_SEARCH_RATE_WINDOW_MS
+  );
+  if (limited) {
+    return {
+      data: null,
+      error: "Too many searches. Please try again later.",
+    };
+  }
+
+  const locations = await getActiveLocations();
+  const local = tryLocalNlSearch(trimmed, locations);
+  if (local) {
+    meterNlSearch("local");
+    return { data: local, error: null };
+  }
+
   const supabase = createAdminClient();
   const hash = hashInput(trimmed, locale);
 
-  // 1. Check cache
   try {
     const { data: cached } = await supabase
       .from("ai_search_cache")
@@ -255,40 +341,40 @@ export async function parseNaturalLanguageSearch(
       .single();
 
     if (cached?.parsed_filters) {
-      console.log("[AI] parseNaturalLanguageSearch: cache hit");
+      meterNlSearch("cache");
       return {
         data: cached.parsed_filters as NLSearchFilters,
         error: null,
       };
     }
-  } catch (e) {
-    // Cache miss
-    console.log("[AI] parseNaturalLanguageSearch: cache miss or table error:", (e as Error)?.message);
+  } catch {
+    // Cache miss or table unavailable — fall through.
   }
 
-  // 2. Build context
+  if (trimmed.length > NL_SEARCH_MAX_INPUT) {
+    return { data: null, error: "Input too long" };
+  }
+
+  if (!isAIEnabled()) {
+    log.warn("[AI] parseNaturalLanguageSearch: OPENAI_API_KEY not found in env");
+    return { data: null, error: "AI not configured" };
+  }
+
   const specialtyList = SPECIALTIES.map(
     (s) => `${s.slug} (${s.nameKey.replace("specialty.", "").replace(/_/g, " ")})`
   ).join(", ");
 
-  const locations = await getActiveLocations();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-  const locationList = locations
-    .map((l) => `${l.slug} (${l.city}, ${l.country_code})`)
-    .join(", ");
-
-  // 3. AI call
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
-
-    const { object } = await generateObject({
+    const { object, usage } = await generateObject({
       model: aiModel,
       schema: nlSearchSchema,
+      maxRetries: 0,
       prompt: `Parse this natural language healthcare search query into structured filters.
 
 Available specialties: ${specialtyList}
-Available locations: ${locationList}
 Common languages: English, German, Turkish, French, Italian, Spanish, Portuguese, Arabic, Russian, Chinese, Japanese
 
 User query: "${trimmed}"
@@ -320,7 +406,7 @@ IMPORTANT TRIAGE RULES:
 Rules:
 - Map specialty references to the exact slug (e.g. "heart doctor" → "cardiology", "skin doctor" → "dermatology")
 - Map prices to CENTS (e.g. "100 euros" → 10000, "50 dollars" → 5000)
-- Map location references to the closest location slug
+- If the user explicitly names a city or place, set location to that place name as written (e.g. "Birmingham"). Do not invent a slug and do not pick a city they did not name. Otherwise null.
 - Extract rating preferences (e.g. "highly rated" → 4.0, "best rated" → 4.5)
 - Set consultationType only if explicitly mentioned (e.g. "video call", "online", "in person")
 - Put any remaining text that doesn't map to a filter in the "query" field
@@ -328,24 +414,20 @@ Rules:
 CRITICAL FILTER RULES:
 - ONLY include filters that the user EXPLICITLY states in their query text.
 - Do NOT infer language from the user's locale or the language the query is written in. Only set language if the user explicitly says something like "Turkish-speaking doctor" or "doctor who speaks German".
-- Do NOT infer location from the query. Only set location if the user explicitly names a city or place.
+- Do NOT infer a location. Only set location when the user names a city or place.
 - When in doubt, leave a filter as null rather than guessing.
 - The "query" field should ONLY contain text that does NOT map to any filter. If the entire input maps to a specialty (e.g. "I have a headache" → general-practice), set query to null. Do NOT echo the user's input back in the query field.`,
       abortSignal: controller.signal,
     });
 
-    clearTimeout(timeout);
-    console.log("[AI] parseNaturalLanguageSearch: AI returned:", JSON.stringify(object));
+    meterNlSearch("model", usage);
 
-    // Validate specialty slug if present
     const validSlugs = new Set(SPECIALTIES.map((s) => s.slug));
 
-    // Validate / normalize location slug if present (city names → slug)
     let resolvedLocation: string | null = null;
     if (object.location && locations) {
       resolvedLocation = resolveLocationSlug(object.location, locations);
     }
-    // Fallback: scan full user text for city names (e.g. "GP in Birmingham")
     if (!resolvedLocation && locations) {
       resolvedLocation = matchLocationFromSearchText(trimmed, locations);
     }
@@ -359,17 +441,15 @@ CRITICAL FILTER RULES:
       location: resolvedLocation,
     };
 
-    // 4. Cache result
+    // Hash and parsed filters only. The plaintext query column is not
+    // written; a leftover NOT NULL column fails the upsert, which is ignored.
     try {
       await supabase.from("ai_search_cache").upsert(
         {
           input_hash: hash,
-          input_text: trimmed,
           locale,
           parsed_filters: result as unknown as Record<string, unknown>,
-          expires_at: new Date(
-            Date.now() + 60 * 60 * 1000
-          ).toISOString(),
+          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         },
         { onConflict: "input_hash" }
       );
@@ -379,7 +459,12 @@ CRITICAL FILTER RULES:
 
     return { data: result, error: null };
   } catch (err) {
-    log.error("NL search parse error:", { err: err });
+    meterNlSearch("model_error");
+    log.error("NL search parse error", {
+      name: err instanceof Error ? err.name : "unknown",
+    });
     return { data: null, error: "AI search parsing failed" };
+  } finally {
+    clearTimeout(timeout);
   }
 }
