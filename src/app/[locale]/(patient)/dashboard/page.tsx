@@ -29,6 +29,12 @@ import {
   BOOKING_DOCTOR_PROFILE_EMBED,
   patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
+import { PatientPlatformFeedbackPrompt } from "@/components/feedback/patient-platform-feedback-prompt";
+import {
+  pendingPlatformFeedback,
+  toPlatformFeedbackPrompt,
+} from "@/lib/feedback/post-visit";
+import { SOFT_LAUNCH_SOFTSMOKE_DOCTOR } from "@/lib/soft-launch/softsmoke-connect-bypass";
 
 function getCountdownBadge(startTime: string) {
   const now = new Date();
@@ -89,6 +95,8 @@ export default async function PatientDashboard() {
     { data: profile },
     { data: upcomingBookings },
     { data: notifications },
+    { data: softsmokeVisits },
+    { data: submittedPlatformFeedback },
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase
@@ -113,7 +121,32 @@ export default async function PatientDashboard() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(10),
+    supabase
+      .from("bookings")
+      .select(
+        `
+        id, booking_number, start_time, status, consultation_type, doctor_id,
+        doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(id, slug)
+      `
+      )
+      .eq("patient_id", user.id)
+      .eq("status", "completed")
+      .eq("consultation_type", "video")
+      .eq("doctor_id", SOFT_LAUNCH_SOFTSMOKE_DOCTOR.id)
+      .order("start_time", { ascending: false })
+      .limit(5),
+    supabase
+      .from("post_visit_feedback")
+      .select("booking_id")
+      .eq("patient_id", user.id),
   ]);
+
+  const platformFeedbackDue = pendingPlatformFeedback(
+    (softsmokeVisits ?? []).map((row) => toPlatformFeedbackPrompt(row)),
+    (submittedPlatformFeedback ?? []).map(
+      (row: { booking_id: string }) => row.booking_id
+    )
+  );
 
   const quickActions = [
     {
@@ -153,6 +186,14 @@ export default async function PatientDashboard() {
       <h1 className="text-2xl font-bold">
         Welcome back, {profile?.first_name}
       </h1>
+
+      <PatientPlatformFeedbackPrompt
+        bookings={platformFeedbackDue.map((booking) => ({
+          id: booking.id,
+          bookingNumber: booking.bookingNumber,
+          startTime: booking.startTime,
+        }))}
+      />
 
       {/* Quick Actions */}
       <div data-tour="patient-quick-actions">

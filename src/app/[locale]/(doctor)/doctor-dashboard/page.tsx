@@ -12,6 +12,8 @@ import { doctorDashboardSteps } from "@/components/shared/onboarding-steps";
 import { doctorBookingPatientName } from "@/lib/doctor/booking-patient";
 import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
 import { Link } from "@/i18n/navigation";
+import { DoctorPrivatePlatformFeedback } from "@/components/feedback/doctor-private-platform-feedback";
+import { isSoftLaunchSoftsmokeDoctor } from "@/lib/soft-launch/softsmoke-connect-bypass";
 
 export default async function DoctorDashboard() {
   const supabase = await createClient();
@@ -56,9 +58,15 @@ export default async function DoctorDashboard() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("first_name, avatar_url")
+    .select("first_name, avatar_url, email")
     .eq("id", user.id)
     .single();
+
+  const showPrivatePlatformFeedback = isSoftLaunchSoftsmokeDoctor({
+    id: doctor.id,
+    slug: doctor.slug,
+    email: profile?.email ?? user.email ?? null,
+  });
 
   // Check for education entries + availability for completion guide
   const { count: educationCount } = await supabase
@@ -123,6 +131,10 @@ export default async function DoctorDashboard() {
       <h1 className="text-2xl font-bold">
         Welcome back, {profile?.first_name}
       </h1>
+
+      {showPrivatePlatformFeedback ? (
+        <DoctorPrivatePlatformFeedback doctorId={doctor.id} />
+      ) : null}
 
       {/* Founding Doctor Programme */}
       {doctor.is_founding_member && (

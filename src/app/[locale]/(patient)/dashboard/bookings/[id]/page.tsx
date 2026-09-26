@@ -37,6 +37,13 @@ import { CancelBookingDialog } from "./cancel-booking-dialog";
 import { AddToCalendarButton } from "./add-to-calendar-button";
 import { RescheduleDialog } from "@/components/booking/reschedule-dialog";
 import { PrintButton } from "@/components/shared/print-button";
+import { PostVisitFeedbackPanel } from "@/components/feedback/post-visit-feedback-panel";
+import type { SavedPlatformFeedback } from "@/components/feedback/post-visit-feedback-panel";
+import {
+  isSoftsmokePublicReviewBlocked,
+  PATIENT_PLATFORM_FEEDBACK_SELECT,
+  shouldPromptSoftsmokePlatformFeedback,
+} from "@/lib/feedback/post-visit";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -282,6 +289,26 @@ export default async function BookingDetailPage({
     .eq("patient_id", user.id)
     .single();
 
+  const showPlatformFeedback = shouldPromptSoftsmokePlatformFeedback({
+    id: typedBooking.id,
+    status: typedBooking.status,
+    consultationType: typedBooking.consultation_type,
+    doctorId: typedBooking.doctor_id,
+    doctorSlug: doctor.slug || null,
+  });
+  const hidePublicReview = isSoftsmokePublicReviewBlocked(typedBooking.doctor_id);
+
+  let savedPlatformFeedback: SavedPlatformFeedback | null = null;
+  if (showPlatformFeedback) {
+    const { data: platformFeedback } = await supabase
+      .from("post_visit_feedback")
+      .select(PATIENT_PLATFORM_FEEDBACK_SELECT)
+      .eq("booking_id", typedBooking.id)
+      .eq("patient_id", user.id)
+      .maybeSingle();
+    savedPlatformFeedback = (platformFeedback as SavedPlatformFeedback | null) ?? null;
+  }
+
   const doctorName = patientBookingDoctorName(doctor);
   const startDate = new Date(typedBooking.start_time);
   const endDate = new Date(typedBooking.end_time);
@@ -305,7 +332,7 @@ export default async function BookingDetailPage({
   const isWithinJoinWindow = now >= joinWindowStart && now <= endDate;
 
   const canWriteReview =
-    typedBooking.status === "completed" && !existingReview;
+    typedBooking.status === "completed" && !existingReview && !hidePublicReview;
 
   const canAddToCalendar =
     typedBooking.status === "confirmed" || typedBooking.status === "approved";
@@ -376,6 +403,13 @@ export default async function BookingDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main content */}
         <div className="space-y-6 lg:col-span-2">
+          {showPlatformFeedback ? (
+            <PostVisitFeedbackPanel
+              bookingId={typedBooking.id}
+              existing={savedPlatformFeedback}
+            />
+          ) : null}
+
           {/* Doctor info */}
           <Card>
             <CardHeader>
