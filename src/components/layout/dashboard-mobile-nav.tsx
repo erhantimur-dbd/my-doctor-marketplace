@@ -18,6 +18,7 @@ import {
   patientSidebarLinks,
   adminSidebarLinks,
   adminSidebarGroups,
+  withActivityStatementLink,
   type SidebarLink,
   type SidebarGroup,
 } from "@/lib/constants/sidebar-links";
@@ -75,17 +76,29 @@ interface DashboardMobileNavProps {
   portal: Portal;
   /** Server-rendered UnreadBadge passed from layout */
   messagesBadge?: React.ReactNode;
+  /** Tester-only activity statement. Omitted for everyone else. */
+  showActivityStatement?: boolean;
 }
 
 export function DashboardMobileNav({
   portal,
   messagesBadge,
+  showActivityStatement = false,
 }: DashboardMobileNavProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const pathname = usePathname();
 
   const config = portalConfig[portal];
-  const { links, groups, quickHrefs, title, rootPath } = config;
+  const showStatement = portal === "doctor" && showActivityStatement;
+  const links = showStatement ? withActivityStatementLink(config.links) : config.links;
+  const groups = showStatement
+    ? config.groups?.map((group) =>
+        group.label === "Financial"
+          ? { ...group, links: withActivityStatementLink(group.links) }
+          : group
+      )
+    : config.groups;
+  const { quickHrefs, title, rootPath } = config;
   const quickLinks = links.filter((l) => quickHrefs.includes(l.href));
 
   const PortalIcon = portal === "admin" ? ShieldCheck : LayoutDashboard;
