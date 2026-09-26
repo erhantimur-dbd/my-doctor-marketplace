@@ -110,6 +110,20 @@ describe("Softsmoke transactional bodies", () => {
     expect(softsmokePatientReminderEmail(booking).html).not.toMatch(/symptom/i);
   });
 
+  it("prints legacy BK- and short MD- refs, including -R, without parsing a date", () => {
+    for (const bookingRef of [
+      "BK-20260926-2FB5",
+      "BK-20260231-2FB5",
+      "BK-20260926-2FB5-R",
+      "MD-7K3Q9X",
+      "MD-7K3Q9X-R",
+    ]) {
+      const mail = softsmokePatientConfirmEmail({ ...booking, bookingRef });
+      expect(mail.subject).toContain(bookingRef);
+      expect(mail.html).toContain(bookingRef);
+    }
+  });
+
   it("shows old and new slots on the patient reschedule", () => {
     const mail = softsmokePatientRescheduleEmail({
       patientFirstName: "Darren",

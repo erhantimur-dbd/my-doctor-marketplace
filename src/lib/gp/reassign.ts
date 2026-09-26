@@ -13,7 +13,11 @@ import {
   doctorNetFromBooking,
   handoffConnectTransfer,
 } from "@/lib/stripe/transfer-handoff";
-import { getStripe } from "@/lib/stripe/client";
+import {
+  clinicianReassignmentBlockReason,
+  refundConsultSplit,
+  storedConsultPaidParts,
+} from "@/lib/stripe/consult-refund";
 import { sendEmail } from "@/lib/email/client";
 import { sendSms } from "@/lib/sms/client";
 import {
@@ -36,29 +40,46 @@ export type ReassignmentOutcome =
 
 async function fullRefundBooking(booking: {
   id: string;
+  booking_number?: string | null;
+  patient_id?: string | null;
   stripe_payment_intent_id: string | null;
   payment_mode?: string | null;
   deposit_amount_cents?: number | null;
   total_amount_cents: number;
+  wallet_credit_applied_cents?: number | null;
+  currency?: string | null;
   paid_at?: string | null;
 }): Promise<{ refunded: boolean; amount: number; error?: string }> {
-  const amount =
-    booking.payment_mode === "deposit" && booking.deposit_amount_cents != null
-      ? booking.deposit_amount_cents
-      : booking.total_amount_cents;
+  const parts = storedConsultPaidParts(booking);
+  const amount = parts.cardPaidCents + parts.creditPaidCents;
 
-  if (!booking.stripe_payment_intent_id || !booking.paid_at || amount <= 0) {
+  if (!booking.paid_at || amount <= 0) {
     return { refunded: false, amount: 0 };
+  }
+  if (parts.cardPaidCents > 0 && !booking.stripe_payment_intent_id) {
+    return { refunded: false, amount: 0 };
+  }
+  if (!booking.patient_id || !booking.currency) {
+    return { refunded: false, amount: 0, error: "Booking is missing a patient" };
   }
 
   try {
-    await getStripe().refunds.create({
-      payment_intent: booking.stripe_payment_intent_id,
-      amount,
-      reverse_transfer: true,
-      refund_application_fee: true,
+    const settled = await refundConsultSplit({
+      bookingId: booking.id,
+      bookingNumber: booking.booking_number || undefined,
+      patientId: booking.patient_id,
+      currency: booking.currency,
+      destination: "bank",
+      paymentIntentId: booking.stripe_payment_intent_id,
+      cardPaidCents: parts.cardPaidCents,
+      creditPaidCents: parts.creditPaidCents,
+      refundPercent: 100,
+      sourceType: "refund",
     });
-    return { refunded: true, amount };
+    return {
+      refunded: true,
+      amount: settled.cardRefundedToCardCents + settled.walletCreditCents,
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Refund failed";
     log.error("[GP] fullRefundBooking failed", { err, bookingId: booking.id });
@@ -170,6 +191,11 @@ export async function executeGpReassignmentRequest(params: {
       outcome: "error",
       error: "This flow is only for GP pool appointments",
     };
+  }
+
+  const creditBlock = clinicianReassignmentBlockReason(booking);
+  if (creditBlock) {
+    return { outcome: "error", error: creditBlock };
   }
 
   const patient = Array.isArray(booking.patient)
@@ -424,6 +450,9 @@ export async function acceptGpSlotOffer(
   if (booking.gp_reassignment_status !== "pending_patient_choice") {
     return { error: "Booking is not awaiting your choice" };
   }
+
+  const creditBlock = clinicianReassignmentBlockReason(booking);
+  if (creditBlock) return { error: creditBlock };
 
   // Load old + new doctor stripe accounts
   const { data: oldDoctor } = await supabase

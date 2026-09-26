@@ -67,7 +67,7 @@ export function RefundChoiceDialog({
           <DialogTitle>Cancel Booking</DialogTitle>
           <DialogDescription>
             {refundPercent > 0
-              ? `You're eligible for a ${refundPercent}% refund of ${formatCurrency(refundAmountCents, currency)}. How would you like to receive it?`
+              ? `You're eligible for a ${refundPercent}% refund of ${formatCurrency(refundAmountCents, currency)}. Any amount paid with MyDoctors360 credit goes back to your wallet. Choose where the card payment goes.`
               : "No refund is applicable based on the cancellation policy. Would you like to proceed?"}
           </DialogDescription>
         </DialogHeader>
@@ -94,7 +94,7 @@ export function RefundChoiceDialog({
                   </span>
                 </div>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                  Get {formatCurrency(refundAmountCents, currency)} credited instantly. Use it for your next booking.
+                  Credit the card payment instantly, as well as any MyDoctors360 credit. Use it for your next booking.
                 </p>
                 <p className="mt-1 text-xs text-green-600">
                   New wallet balance: {formatCurrency(newWalletBalance, currency)}
@@ -122,7 +122,7 @@ export function RefundChoiceDialog({
                   </span>
                 </div>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                  Refund {formatCurrency(refundAmountCents, currency)} back to your original payment method.
+                  Refund the card payment to your original payment method. MyDoctors360 credit still returns to your wallet.
                 </p>
               </div>
             </button>

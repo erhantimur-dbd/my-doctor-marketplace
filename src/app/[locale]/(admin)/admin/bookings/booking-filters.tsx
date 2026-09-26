@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, X } from "lucide-react";
+import { BOOKING_NUMBER_EXAMPLE } from "@/lib/booking/booking-number";
 
 export function BookingFilters() {
   const router = useRouter();
@@ -47,9 +48,9 @@ export function BookingFilters() {
       <div className="relative">
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search booking #, patient, doctor..."
+          placeholder={`Search ${BOOKING_NUMBER_EXAMPLE}, patient, doctor...`}
           defaultValue={currentQ}
-          className="w-[270px] pl-9"
+          className="w-[340px] pl-9"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               updateFilter("q", (e.target as HTMLInputElement).value);

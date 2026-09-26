@@ -27,7 +27,8 @@ import {
 import { formatCurrency } from "@/lib/utils/currency";
 import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
-import { creditWallet, debitWallet } from "@/lib/wallet";
+import { creditWallet } from "@/lib/wallet";
+import { settlePartCreditAfterCardPayment } from "@/lib/stripe/wallet-credit-share";
 import { createNotification } from "@/lib/notifications";
 import {
   flagOrphanedOfferSubscription,
@@ -395,12 +396,14 @@ export async function POST(request: NextRequest) {
             deposit_amount_cents,
             remainder_due_cents,
             commission_cents,
+            wallet_credit_applied_cents,
             deposit_type,
             deposit_value,
             is_guest,
             patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
             doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
               id,
+              stripe_account_id,
               clinic_name,
               address,
               profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
@@ -410,6 +413,29 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (booking) {
+          const doctorForCredit: any = Array.isArray(booking.doctor)
+            ? booking.doctor[0]
+            : booking.doctor;
+          const walletFromBooking = Number(booking.wallet_credit_applied_cents || 0);
+          const walletFromSession = parseInt(session.metadata?.wallet_credit_cents || "0", 10);
+          const walletCreditCents =
+            walletFromBooking > 0 ? walletFromBooking : walletFromSession;
+
+          // Card payment has succeeded. Take the credit and pay the doctor's
+          // share before recording the fee, so a failure retries cleanly.
+          if (walletCreditCents > 0) {
+            await settlePartCreditAfterCardPayment({
+              patientId: booking.patient_id,
+              currency: booking.currency,
+              bookingId,
+              bookingNumber: booking.booking_number,
+              doctorId: booking.doctor_id,
+              stripeAccountId: doctorForCredit?.stripe_account_id || "",
+              creditAmountCents: walletCreditCents,
+              description: `Wallet credit applied to booking ${booking.booking_number}`,
+            });
+          }
+
           // Record platform fee (commission from doctor's share)
           const platformFeeTotal = booking.platform_fee_cents + (booking.commission_cents || 0);
           await supabase.from("platform_fees").insert({
@@ -419,26 +445,6 @@ export async function POST(request: NextRequest) {
             amount_cents: platformFeeTotal,
             currency: booking.currency,
           });
-
-          // Debit wallet if credit was applied to this booking
-          const walletCreditStr = session.metadata?.wallet_credit_cents;
-          if (walletCreditStr && parseInt(walletCreditStr, 10) > 0) {
-            const walletCreditCents = parseInt(walletCreditStr, 10);
-            try {
-              await debitWallet({
-                patientId: booking.patient_id,
-                currency: booking.currency,
-                amountCents: walletCreditCents,
-                sourceType: "refund",
-                targetBookingId: bookingId,
-                description: `Wallet credit applied to booking ${booking.booking_number}`,
-              });
-            } catch (err) {
-              console.error("Wallet debit error (non-fatal):", err);
-              // Non-fatal: booking is confirmed, just wallet debit failed
-              // Admin can reconcile manually
-            }
-          }
 
           // Export confirmed booking to doctor's connected calendars (non-blocking)
           exportBookingToGoogleCalendar(bookingId).catch((err) =>

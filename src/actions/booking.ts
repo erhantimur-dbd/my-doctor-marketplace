@@ -53,7 +53,17 @@ import {
   CONSULT_PAYMENT_METHOD_TYPES,
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   doctorCanAcceptConsultCardPayment,
+  doctorCanReceiveConsultCreditPayment,
 } from "@/lib/stripe/consult-merchant";
+import {
+  consultCheckoutMoney,
+  reverseDoctorWalletCreditShare,
+  runFullCreditSettlement,
+} from "@/lib/stripe/wallet-credit-share";
+import {
+  refundConsultSplit,
+  storedConsultPaidParts,
+} from "@/lib/stripe/consult-refund";
 import {
   confirmBookingWithoutStripeCheckout,
   finalizeConfirmedBookingById,
@@ -391,14 +401,6 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       ? depositAmountCents
       : totalAmountCents;
 
-    // Application fee = 15% commission from doctor's share
-    // In deposit mode the commission is still on the full consultation fee,
-    // but it's capped at the Stripe charge so Stripe doesn't reject it.
-    const applicationFeeCents = Math.min(
-      commissionCents,
-      stripeChargeCents
-    );
-
     // Tag GP-pool bookings for reassignment + display rules
     let isGpPool = false;
     let displayDoctorAs: "named" | "generic_gp" | null = null;
@@ -534,27 +536,94 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       walletCreditToApply = Math.min(walletBalance, stripeChargeCents);
     }
     const remainingCharge = stripeChargeCents - walletCreditToApply;
+    const checkoutMoney = consultCheckoutMoney({
+      consultationFeeCents,
+      stripeChargeCents,
+      walletCreditCents: walletCreditToApply,
+    });
 
-    // If wallet covers the full charge, confirm booking immediately (no Stripe needed)
+    // If wallet covers the full charge, pay the doctor from the platform
+    // balance and confirm. No Stripe Checkout session.
     if (remainingCharge === 0 && walletCreditToApply > 0) {
-      await debitWallet({
-        patientId,
-        currency: doctor.base_currency,
-        amountCents: walletCreditToApply,
-        sourceType: "refund",
-        targetBookingId: booking.id,
-        description: `Payment for booking ${booking.booking_number} (wallet only)`,
+      const fullCredit = await runFullCreditSettlement({
+        stripeAccountId: doctor.stripe_account_id,
+        accounts: getStripe(),
+        credit: {
+          bookingId: booking.id,
+          bookingNumber: booking.booking_number,
+          doctorId: doctor.id,
+          currency: doctor.base_currency,
+          creditAmountCents: checkoutMoney.creditCents,
+          commissionCents: checkoutMoney.creditCommissionCents,
+          amountCents: checkoutMoney.doctorCreditShareCents,
+        },
+        debit: async () => {
+          await debitWallet({
+            patientId,
+            currency: doctor.base_currency,
+            amountCents: walletCreditToApply,
+            sourceType: "refund",
+            targetBookingId: booking.id,
+            description: `Payment for booking ${booking.booking_number} (wallet only)`,
+          });
+        },
+        restoreWallet: async () => {
+          await creditWallet({
+            patientId,
+            currency: doctor.base_currency,
+            amountCents: walletCreditToApply,
+            sourceType: "refund",
+            sourceBookingId: booking.id,
+            description: `Wallet credit returned for booking ${booking.booking_number}`,
+          });
+        },
       });
+      if (!fullCredit.ok) {
+        await adminSupabase
+          .from("bookings")
+          .update({ status: BOOKING_STATUSES.EXPIRED })
+          .eq("id", booking.id);
+        return { error: fullCredit.error };
+      }
 
-      // Confirm booking immediately
-      await writeClient
+      const { error: confirmError } = await adminSupabase
         .from("bookings")
         .update({
           status: BOOKING_STATUSES.CONFIRMED,
           paid_at: new Date().toISOString(),
           wallet_credit_applied_cents: walletCreditToApply,
+          commission_cents: checkoutMoney.commissionCents,
         })
         .eq("id", booking.id);
+
+      if (confirmError) {
+        log.error("Full-credit confirm failed after doctor was paid", {
+          err: confirmError,
+          bookingId: booking.id,
+        });
+        await reverseDoctorWalletCreditShare({
+          bookingId: booking.id,
+          refundAmountCents: walletCreditToApply,
+          paidAmountCents: walletCreditToApply,
+        }).catch((err) =>
+          log.error("Full-credit reversal after confirm failure", { err })
+        );
+        await creditWallet({
+          patientId,
+          currency: doctor.base_currency,
+          amountCents: walletCreditToApply,
+          sourceType: "refund",
+          sourceBookingId: booking.id,
+          description: `Reversed wallet debit for booking ${booking.booking_number}`,
+        }).catch((err) =>
+          log.error("Full-credit wallet restore after confirm failure", { err })
+        );
+        await adminSupabase
+          .from("bookings")
+          .update({ status: BOOKING_STATUSES.EXPIRED })
+          .eq("id", booking.id);
+        return { error: "We couldn't confirm this booking. Please try again." };
+      }
 
       await finalizeConfirmedBookingById(booking.id);
 
@@ -613,21 +682,48 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       return { error: merchant.error };
     }
 
+    // Credit needs a transfer as well as card_payments. Refuse before
+    // reserving the wallet so a blocked doctor is never debited.
+    if (walletCreditToApply > 0) {
+      const creditPayee = await doctorCanReceiveConsultCreditPayment(
+        getStripe(),
+        doctor.stripe_account_id
+      );
+      if (!creditPayee.ok) {
+        await adminSupabase
+          .from("bookings")
+          .update({ status: BOOKING_STATUSES.EXPIRED })
+          .eq("id", booking.id);
+        return { error: creditPayee.error };
+      }
+    }
+
     // Store wallet credit on booking for later debit on payment completion
     if (walletCreditToApply > 0) {
-      await writeClient
+      const { error: walletMarkError } = await adminSupabase
         .from("bookings")
         .update({ wallet_credit_applied_cents: walletCreditToApply })
         .eq("id", booking.id);
+      const { error: commissionError } = await adminSupabase
+        .from("bookings")
+        .update({ commission_cents: checkoutMoney.commissionCents })
+        .eq("id", booking.id);
+      if (walletMarkError || commissionError) {
+        log.error("Failed to store wallet credit on booking", {
+          walletMarkError,
+          commissionError,
+          bookingId: booking.id,
+        });
+        await adminSupabase
+          .from("bookings")
+          .update({ status: BOOKING_STATUSES.EXPIRED })
+          .eq("id", booking.id);
+        return { error: "We couldn't start this payment. Please try again." };
+      }
     }
 
     // Create Stripe Checkout Session for the remaining amount
     const { origin, locale } = await getOriginAndLocale();
-
-    // Adjust application fee proportionally if wallet credit reduces the charge
-    const adjustedApplicationFee = walletCreditToApply > 0
-      ? Math.min(applicationFeeCents, remainingCharge)
-      : applicationFeeCents;
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
@@ -651,7 +747,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         },
       ],
       payment_intent_data: {
-        application_fee_amount: adjustedApplicationFee,
+        application_fee_amount: checkoutMoney.applicationFeeCents,
         on_behalf_of: doctor.stripe_account_id,
         transfer_data: {
           destination: doctor.stripe_account_id,
@@ -771,58 +867,37 @@ export async function cancelBooking(input: CancelBookingInput) {
       refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
     }
 
-    // Process refund — either to wallet (instant) or bank (3-5 days via Stripe)
-    // For deposit bookings, refund is based on what was actually charged (deposit only)
+    // Credit always returns to the wallet. Card returns to the card unless
+    // the patient chose wallet. Amounts come from the stored card and credit
+    // parts, not a single percentage of the consultation total.
+    const paidParts = storedConsultPaidParts(booking);
     const stripeChargedAmount =
-      booking.payment_mode === "deposit" && booking.deposit_amount_cents != null
-        ? booking.deposit_amount_cents
-        : booking.total_amount_cents;
+      paidParts.cardPaidCents + paidParts.creditPaidCents;
 
     let walletCreditCents = 0;
+    let cardRefundedToCardCents = 0;
     let refundRef: string | null = null;
     const refundDestination = parsed.data.refund_destination || "bank";
 
-    if (refundPercent > 0 && stripeChargedAmount > 0) {
-      const refundAmount = Math.round(
-        (stripeChargedAmount * refundPercent) / 100
-      );
-
-      if (refundDestination === "wallet") {
-        // Instant: credit patient wallet, still refund doctor via Stripe
-        walletCreditCents = refundAmount;
-
-        // Refund Stripe to reverse the doctor's transfer + platform fee
-        if (booking.stripe_payment_intent_id) {
-          const stripeRefund = await getStripe().refunds.create({
-            payment_intent: booking.stripe_payment_intent_id,
-            amount: refundAmount,
-            reverse_transfer: true,
-            refund_application_fee: true,
-          });
-          refundRef = stripeRefund.id;
-        }
-
-        // Credit the patient's wallet balance
-        await creditWallet({
-          patientId: user.id,
-          currency: booking.currency,
-          amountCents: refundAmount,
-          sourceType: "refund",
-          sourceBookingId: booking.id,
-          description: `Refund from cancelled booking ${booking.booking_number}`,
-        });
-      } else {
-        // Bank refund: standard Stripe refund back to patient's payment method
-        if (booking.stripe_payment_intent_id) {
-          const stripeRefund = await getStripe().refunds.create({
-            payment_intent: booking.stripe_payment_intent_id,
-            amount: refundAmount,
-            reverse_transfer: true,
-            refund_application_fee: true,
-          });
-          refundRef = stripeRefund.id;
-        }
-      }
+    if (
+      refundPercent > 0 &&
+      (paidParts.cardPaidCents > 0 || paidParts.creditPaidCents > 0)
+    ) {
+      const settled = await refundConsultSplit({
+        bookingId: booking.id,
+        bookingNumber: booking.booking_number,
+        patientId: user.id,
+        currency: booking.currency,
+        destination: refundDestination,
+        paymentIntentId: booking.stripe_payment_intent_id,
+        cardPaidCents: paidParts.cardPaidCents,
+        creditPaidCents: paidParts.creditPaidCents,
+        refundPercent,
+        sourceType: "refund",
+      });
+      walletCreditCents = settled.walletCreditCents;
+      cardRefundedToCardCents = settled.cardRefundedToCardCents;
+      refundRef = settled.cardRefundId;
     }
 
     // Update booking status
@@ -866,9 +941,9 @@ export async function cancelBooking(input: CancelBookingInput) {
       : null;
 
     if (patient?.email && doctorProfile) {
-      const refundAmount = refundPercent > 0
-        ? (stripeChargedAmount * refundPercent) / 100 / 100
-        : 0;
+      const patientRefundCents =
+        walletCreditCents + cardRefundedToCardCents;
+      const refundAmount = patientRefundCents / 100;
 
       const softsmoke = isSoftsmokeTransactionalDoctor({
         id: doctor?.id || booking.doctor_id,
@@ -999,12 +1074,15 @@ export async function cancelBooking(input: CancelBookingInput) {
 
     revalidatePath("/", "layout");
 
-    const isWalletRefund = refundDestination === "wallet" && walletCreditCents > 0;
+    const money = (cents: number) =>
+      `${booking.currency.toUpperCase()} ${(cents / 100).toFixed(2)}`;
     let message: string;
-    if (refundPercent === 0) {
+    if (refundPercent === 0 || (walletCreditCents === 0 && cardRefundedToCardCents === 0)) {
       message = "Booking cancelled. No refund is applicable based on the cancellation policy.";
-    } else if (isWalletRefund) {
-      message = `Booking cancelled. ${booking.currency.toUpperCase()} ${(walletCreditCents / 100).toFixed(2)} has been credited to your wallet instantly.`;
+    } else if (walletCreditCents > 0 && cardRefundedToCardCents > 0) {
+      message = `Booking cancelled. ${money(walletCreditCents)} has been credited to your wallet. ${money(cardRefundedToCardCents)} will be refunded to your card (3-5 business days).`;
+    } else if (walletCreditCents > 0) {
+      message = `Booking cancelled. ${money(walletCreditCents)} has been credited to your wallet instantly.`;
     } else {
       message = `Booking cancelled. A ${refundPercent}% refund will be processed to your bank (3-5 business days).`;
     }
@@ -1079,34 +1157,31 @@ export async function cancelAndRebook(input: {
       refundPercent = hoursUntil > 72 ? 100 : 0;
     }
 
-    const stripeCharged = oldBooking.payment_mode === "deposit" && oldBooking.deposit_amount_cents != null
-      ? oldBooking.deposit_amount_cents
-      : oldBooking.total_amount_cents;
-    const refundAmount = Math.round((stripeCharged * refundPercent) / 100);
+    const paidParts = storedConsultPaidParts(oldBooking);
+    let walletCreditCents = 0;
 
-    // 3. Refund old booking via Stripe (to reverse doctor transfer)
-    if (oldBooking.stripe_payment_intent_id && refundAmount > 0) {
-      await getStripe().refunds.create({
-        payment_intent: oldBooking.stripe_payment_intent_id,
-        amount: refundAmount,
-        reverse_transfer: true,
-        refund_application_fee: true,
-      });
-    }
-
-    // 4. Credit wallet with refund
-    if (refundAmount > 0) {
-      await creditWallet({
+    // 3. Credit always returns to the wallet. Cancel-and-rebook puts the card
+    // part there too, and claws the doctor's card transfer back once.
+    if (
+      refundPercent > 0 &&
+      (paidParts.cardPaidCents > 0 || paidParts.creditPaidCents > 0)
+    ) {
+      const settled = await refundConsultSplit({
+        bookingId: oldBooking.id,
+        bookingNumber: oldBooking.booking_number,
         patientId: user.id,
         currency: oldBooking.currency,
-        amountCents: refundAmount,
+        destination: "wallet",
+        paymentIntentId: oldBooking.stripe_payment_intent_id,
+        cardPaidCents: paidParts.cardPaidCents,
+        creditPaidCents: paidParts.creditPaidCents,
+        refundPercent,
         sourceType: "cancel_rebook",
-        sourceBookingId: oldBooking.id,
-        description: `Cancel & rebook: credit from ${oldBooking.booking_number}`,
       });
+      walletCreditCents = settled.walletCreditCents;
     }
 
-    // 5. Cancel old booking
+    // 4. Cancel old booking
     await supabase
       .from("bookings")
       .update({
@@ -1124,7 +1199,7 @@ export async function cancelAndRebook(input: {
       deleteRoom(oldBooking.daily_room_name).catch(() => {});
     }
 
-    // 6. Create new booking via standard flow (wallet will be applied automatically)
+    // 5. Create new booking via standard flow (wallet will be applied automatically)
     const result = await createBookingAndCheckout({
       doctor_id: input.doctor_id,
       appointment_date: input.appointment_date,
@@ -1138,7 +1213,7 @@ export async function cancelAndRebook(input: {
     return {
       ...result,
       cancelledBookingId: oldBooking.id,
-      walletCreditCents: refundAmount,
+      walletCreditCents,
       refundPercent,
     };
   } catch (err) {
