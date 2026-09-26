@@ -11,6 +11,7 @@ import {
   DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
   doctorCanAcceptConsultCardPayment,
 } from "@/lib/stripe/consult-merchant";
+import { refundConsultCardAndCreditShare } from "@/lib/stripe/wallet-credit-share";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { sendEmail } from "@/lib/email/client";
@@ -732,14 +733,14 @@ export async function adminRefundBooking(
 
   let refundRef = `refund-${bookingId}`;
   try {
-    const { getStripe } = await import("@/lib/stripe/client");
-    const stripeRefund = await getStripe().refunds.create({
-      payment_intent: booking.stripe_payment_intent_id,
-      amount: refundAmount,
-      reverse_transfer: true,
-      refund_application_fee: true,
-    } as any);
-    if (stripeRefund?.id) refundRef = stripeRefund.id;
+    const settled = await refundConsultCardAndCreditShare({
+      paymentIntentId: booking.stripe_payment_intent_id,
+      cardRefundCents: refundAmount,
+      bookingId,
+      refundAmountCents: refundAmount,
+      paidAmountCents: booking.total_amount_cents,
+    });
+    if (settled.cardRefundId) refundRef = settled.cardRefundId;
   } catch (err: any) {
     return { error: safeError(err) };
   }
@@ -2218,13 +2219,14 @@ export async function adminCancelBooking(
     );
 
     try {
-      const stripeRefund = await getStripe().refunds.create({
-        payment_intent: booking.stripe_payment_intent_id,
-        amount: refundAmountCents,
-        reverse_transfer: true,
-        refund_application_fee: true,
-      } as any);
-      refundRef = stripeRefund.id;
+      const settled = await refundConsultCardAndCreditShare({
+        paymentIntentId: booking.stripe_payment_intent_id,
+        cardRefundCents: refundAmountCents,
+        bookingId,
+        refundAmountCents,
+        paidAmountCents: booking.total_amount_cents,
+      });
+      refundRef = settled.cardRefundId;
     } catch (err: any) {
       log.error("Admin cancel refund error:", { err: err });
       return { error: safeError(err) };

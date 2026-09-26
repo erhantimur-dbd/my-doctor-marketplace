@@ -11,6 +11,93 @@
 import { getStripe } from "@/lib/stripe/client";
 import { log } from "@/lib/utils/logger";
 
+export interface ConnectTransferClient {
+  transfers: {
+    create(
+      params: {
+        amount: number;
+        currency: string;
+        destination: string;
+        metadata?: Record<string, string>;
+        transfer_group?: string;
+      },
+      options?: { idempotencyKey?: string }
+    ): Promise<{ id: string }>;
+    createReversal(
+      id: string,
+      params?: {
+        amount?: number;
+        metadata?: Record<string, string>;
+      },
+      options?: { idempotencyKey?: string }
+    ): Promise<{ id: string }>;
+  };
+}
+
+function connectClient(stripe?: ConnectTransferClient): ConnectTransferClient {
+  return stripe ?? (getStripe() as unknown as ConnectTransferClient);
+}
+
+/**
+ * Send funds from the platform balance to a connected account.
+ * GP reassignment re-sends through this after a reversal. Wallet-credit
+ * doctor share uses the same call.
+ */
+export async function createConnectTransfer(input: {
+  amountCents: number;
+  currency: string;
+  destinationAccountId: string;
+  metadata?: Record<string, string>;
+  transferGroup?: string;
+  idempotencyKey: string;
+  stripe?: ConnectTransferClient;
+}): Promise<{ transferId: string }> {
+  const client = connectClient(input.stripe);
+  const params: {
+    amount: number;
+    currency: string;
+    destination: string;
+    metadata?: Record<string, string>;
+    transfer_group?: string;
+  } = {
+    amount: input.amountCents,
+    currency: input.currency.toLowerCase(),
+    destination: input.destinationAccountId,
+    metadata: input.metadata,
+  };
+  if (input.transferGroup) {
+    params.transfer_group = input.transferGroup;
+  }
+  const transfer = await client.transfers.create(params, {
+    idempotencyKey: input.idempotencyKey,
+  });
+  return { transferId: transfer.id };
+}
+
+/**
+ * Pull a Connect transfer back to the platform balance.
+ * GP reassignment reverses the old doctor before re-sending.
+ * Wallet-credit refunds reverse through this same call.
+ */
+export async function reverseConnectTransfer(input: {
+  transferId: string;
+  amountCents?: number;
+  metadata?: Record<string, string>;
+  idempotencyKey: string;
+  stripe?: ConnectTransferClient;
+}): Promise<{ reversalId: string }> {
+  const client = connectClient(input.stripe);
+  const reversal = await client.transfers.createReversal(
+    input.transferId,
+    {
+      ...(input.amountCents != null ? { amount: input.amountCents } : {}),
+      ...(input.metadata ? { metadata: input.metadata } : {}),
+    },
+    { idempotencyKey: input.idempotencyKey }
+  );
+  return { reversalId: reversal.id };
+}
+
 export interface TransferHandoffInput {
   paymentIntentId: string;
   fromAccountId: string;
@@ -150,39 +237,38 @@ export async function handoffConnectTransfer(
 
     const reverseAmount = Math.min(amountCents, found.amount);
 
-    const reversal = await stripe.transfers.createReversal(
-      found.transferId,
-      {
-        amount: reverseAmount,
-        metadata: {
-          booking_id: bookingId,
-          type: "gp_reassignment_reversal",
-          to_account: toAccountId,
-        },
+    const client = stripe as unknown as ConnectTransferClient;
+    const reversal = await reverseConnectTransfer({
+      transferId: found.transferId,
+      amountCents: reverseAmount,
+      metadata: {
+        booking_id: bookingId,
+        type: "gp_reassignment_reversal",
+        to_account: toAccountId,
       },
-      { idempotencyKey: `${keyBase}-reverse` }
-    );
+      idempotencyKey: `${keyBase}-reverse`,
+      stripe: client,
+    });
 
-    const newTransfer = await stripe.transfers.create(
-      {
-        amount: reverseAmount,
-        currency: (currency || found.currency).toLowerCase(),
-        destination: toAccountId,
-        metadata: {
-          booking_id: bookingId,
-          type: "gp_reassignment",
-          from_account: fromAccountId,
-          reversed_transfer: found.transferId,
-        },
+    const created = await createConnectTransfer({
+      amountCents: reverseAmount,
+      currency: currency || found.currency,
+      destinationAccountId: toAccountId,
+      metadata: {
+        booking_id: bookingId,
+        type: "gp_reassignment",
+        from_account: fromAccountId,
+        reversed_transfer: found.transferId,
       },
-      { idempotencyKey: `${keyBase}-create` }
-    );
+      idempotencyKey: `${keyBase}-create`,
+      stripe: client,
+    });
 
     return {
       success: true,
       reversedTransferId: found.transferId,
-      reversalId: reversal.id,
-      newTransferId: newTransfer.id,
+      reversalId: reversal.reversalId,
+      newTransferId: created.transferId,
     };
   } catch (err) {
     const message =

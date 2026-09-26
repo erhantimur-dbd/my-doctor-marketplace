@@ -13,7 +13,7 @@ import {
   doctorNetFromBooking,
   handoffConnectTransfer,
 } from "@/lib/stripe/transfer-handoff";
-import { getStripe } from "@/lib/stripe/client";
+import { refundConsultCardAndCreditShare } from "@/lib/stripe/wallet-credit-share";
 import { sendEmail } from "@/lib/email/client";
 import { sendSms } from "@/lib/sms/client";
 import {
@@ -52,11 +52,12 @@ async function fullRefundBooking(booking: {
   }
 
   try {
-    await getStripe().refunds.create({
-      payment_intent: booking.stripe_payment_intent_id,
-      amount,
-      reverse_transfer: true,
-      refund_application_fee: true,
+    await refundConsultCardAndCreditShare({
+      paymentIntentId: booking.stripe_payment_intent_id,
+      cardRefundCents: amount,
+      bookingId: booking.id,
+      refundAmountCents: amount,
+      paidAmountCents: amount,
     });
     return { refunded: true, amount };
   } catch (err) {

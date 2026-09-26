@@ -23,7 +23,10 @@ export type CardPaymentsCapabilityStatus =
   | "unknown";
 
 type AccountCapabilities = {
-  capabilities?: { card_payments?: string | null } | null;
+  capabilities?: {
+    card_payments?: string | null;
+    transfers?: string | null;
+  } | null;
 };
 
 type CardPaymentsStripe = {
@@ -54,6 +57,12 @@ export function isCardPaymentsCapabilityActive(
   return cardPaymentsCapabilityStatus(capabilities) === "active";
 }
 
+export function isTransfersCapabilityActive(
+  capabilities: { transfers?: string | null } | null | undefined
+): boolean {
+  return capabilities?.transfers === "active";
+}
+
 /**
  * Live check against Stripe. Pending, inactive, missing, and retrieve
  * failures all refuse the charge.
@@ -69,6 +78,32 @@ export async function doctorCanAcceptConsultCardPayment(
     }
   } catch {
     // Fail closed. A Stripe outage must not charge under the platform name.
+  }
+  return { ok: false, error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+}
+
+/**
+ * Credit-paid consults move money with a platform transfer as well as
+ * a destination charge, so both capabilities must already be active.
+ * Same patient message as a card-only refusal.
+ */
+export async function doctorCanReceiveConsultCreditPayment(
+  stripe: Pick<CardPaymentsStripe, "accounts">,
+  stripeAccountId: string | null | undefined
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!stripeAccountId) {
+    return { ok: false, error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+  try {
+    const account = await stripe.accounts.retrieve(stripeAccountId);
+    if (
+      isCardPaymentsCapabilityActive(account.capabilities) &&
+      isTransfersCapabilityActive(account.capabilities)
+    ) {
+      return { ok: true };
+    }
+  } catch {
+    // Fail closed. A Stripe outage must not take wallet credit unpaid.
   }
   return { ok: false, error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
 }
