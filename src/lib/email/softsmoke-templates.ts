@@ -15,7 +15,7 @@ import {
   formatEmailDateTime,
 } from "@/lib/email/format-appointment";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+import { EMAIL_APP_URL as APP_URL } from "@/lib/email/app-url";
 
 export const SOFTSMOKE_BANNER_LINE =
   "Softsmoke transactional — tester path only. Soft CTA founding email HOLD.";

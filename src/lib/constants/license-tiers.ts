@@ -282,7 +282,9 @@ export function getEnvLicensePriceId(tier: string): string | null {
  * Stripe Prices at request time (avoids orphaned catalogue drift).
  *
  * Monthly: STRIPE_PRICE_STARTER | STRIPE_PRICE_PROFESSIONAL | STRIPE_PRICE_CLINIC
- * Annual:  STRIPE_PRICE_<TIER>_ANNUAL (required for annual checkout)
+ * Annual:  STRIPE_PRICE_<TIER>_ANNUAL (required for public annual checkout).
+ * Offer checkout does not use this function. It reads plan_price_versions
+ * only while the Stripe secret is a test key.
  */
 
 /** User-facing / action-layer soft-fail for missing STRIPE_PRICE_* config. */

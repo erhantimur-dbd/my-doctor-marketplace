@@ -32,6 +32,7 @@ import {
   ThumbsUp,
   Video,
   Bell,
+  BadgePercent,
 } from "lucide-react";
 
 export interface SidebarLink {
@@ -245,6 +246,7 @@ export const adminSidebarLinks: SidebarLink[] = [
   { href: "/admin/payments", icon: CreditCard, label: "Payments" },
   { href: "/admin/licenses", icon: Wallet, label: "Licenses" },
   { href: "/admin/coupons", icon: Tag, label: "Coupons" },
+  { href: "/admin/subscription-offers", icon: BadgePercent, label: "Offers" },
   { href: "/admin/blog", icon: FileText, label: "Blog" },
   { href: "/admin/analytics", icon: BarChart3, label: "Analytics" },
   { href: "/admin/nps", icon: ThumbsUp, label: "NPS Surveys" },
@@ -297,6 +299,7 @@ export const adminSidebarGroups: SidebarGroup[] = [
       { href: "/admin/payments", icon: CreditCard, label: "Payments" },
       { href: "/admin/licenses", icon: Wallet, label: "Licenses" },
       { href: "/admin/coupons", icon: Tag, label: "Coupons" },
+      { href: "/admin/subscription-offers", icon: BadgePercent, label: "Offers" },
     ],
   },
   {

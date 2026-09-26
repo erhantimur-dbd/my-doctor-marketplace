@@ -390,8 +390,13 @@ describe("platform charges do not set on_behalf_of", () => {
       "src/actions/referral.ts",
       "src/actions/invoices.ts",
       "src/lib/gp/reassign.ts",
+      "src/lib/offers/checkout.ts",
+      "src/lib/offers/signup.ts",
     ]) {
       expect(read(rel), rel).not.toContain("on_behalf_of");
+    }
+    for (const rel of ["src/lib/offers/checkout.ts", "src/lib/offers/signup.ts"]) {
+      expect(read(rel), rel).not.toContain("transfer_data");
     }
   });
 

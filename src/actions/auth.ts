@@ -218,7 +218,10 @@ export async function register(formData: FormData) {
 
 // ─── Internal helper: shared doctor account creation ────────────────
 
-async function createDoctorAccount(formData: FormData): Promise<
+async function createDoctorAccount(
+  formData: FormData,
+  options?: { skipFoundingClaim?: boolean }
+): Promise<
   | { error: string }
   | {
       userId: string;
@@ -722,8 +725,9 @@ async function createDoctorAccount(formData: FormData): Promise<
     });
   }
 
-  // Founding Doctor Programme — first 100 get founding number + featured priority
-  if (newDoctor) {
+  // Founding Doctor Programme — first 100 get founding number + featured priority.
+  // Offer signups pass skipFoundingClaim so the offer is not stacked on Founding Free.
+  if (newDoctor && !options?.skipFoundingClaim) {
     try {
       const { claimFoundingMembership } = await import(
         "@/lib/founding/members"
@@ -903,6 +907,158 @@ export async function registerDoctorWithCheckout(formData: FormData) {
   });
 
   return { checkoutUrl: session.url };
+}
+
+/**
+ * Annual Solo/Pro signup from a founder invite. Does not claim Founding Free
+ * and does not send the specialty-benefits email.
+ */
+export async function registerDoctorWithAnnualOffer(formData: FormData) {
+  const { assertStripeTestMode } = await import("@/lib/offers/stripe-mode");
+  try {
+    assertStripeTestMode();
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "Stripe test mode is required.",
+    };
+  }
+
+  const token = String(formData.get("invite") || "");
+  const tier = String(formData.get("tier") || "");
+  const extraCode = String(formData.get("coupon_code") || formData.get("promotion_code") || "");
+  const {
+    assertOfferCheckoutAllowed,
+    createOfferCheckoutSession,
+    loadInviteForCheckout,
+    planIdFromTier,
+  } = await import("@/lib/offers/signup");
+  const { refuseUsedInvite } = await import("@/lib/offers/attribution-claim");
+
+  const invite = await loadInviteForCheckout(token);
+  if (!invite) return { error: "This signup link is not valid." };
+  const used = refuseUsedInvite(invite.usedAt);
+  if (used) return { error: used };
+  const planId = planIdFromTier(tier);
+  if (!planId) return { error: "Choose annual Solo or annual Pro." };
+
+  const email = invite.email;
+  const submitted = String(formData.get("email") || "").trim().toLowerCase();
+  if (submitted && submitted !== email) {
+    return { error: "Use the email address this invite was created for." };
+  }
+
+  const allowed = await assertOfferCheckoutAllowed({
+    email,
+    planId,
+    offer: invite.offer,
+    extraPromotionCode: extraCode || null,
+  });
+  if (!allowed.ok) return { error: allowed.error };
+
+  const accountForm = new FormData();
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string") accountForm.append(key, value);
+  }
+  accountForm.set("email", email);
+  accountForm.set("selected_specialties", JSON.stringify([invite.specialtySlug]));
+  accountForm.set("locale", sanitizeAuthLocale(formData.get("locale") as string | null));
+
+  const account = await createDoctorAccount(accountForm, { skipFoundingClaim: true });
+  if ("error" in account) {
+    if (account.error.includes("already exists")) {
+      return {
+        error: "An account with this email already exists. Sign in to continue checkout.",
+      };
+    }
+    return account;
+  }
+  if (!account.orgId) return { error: "Organization creation failed. Please try again." };
+
+  const marked = await createAdminClient()
+    .from("subscription_offer_invites")
+    .update({ used_at: new Date().toISOString() })
+    .eq("id", invite.inviteId)
+    .is("used_at", null)
+    .select("id")
+    .maybeSingle();
+  if (marked.error || !marked.data) {
+    return { error: "This signup link has already been used." };
+  }
+
+  try {
+    const origin = await getOrigin();
+    return await createOfferCheckoutSession({
+      stripe: getStripe(),
+      origin,
+      locale: account.locale,
+      email,
+      organizationId: account.orgId,
+      doctorId: account.doctorId,
+      invite,
+      planId,
+    });
+  } catch (err) {
+    log.error("Offer checkout failed", { err });
+    const message = err instanceof Error ? err.message : "Could not start checkout.";
+    return { error: message };
+  }
+}
+
+export async function resumeAnnualOfferCheckout(token: string, tier: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) return { error: "Sign in to continue checkout." };
+
+  const {
+    createOfferCheckoutSession,
+    loadInviteForCheckout,
+    planIdFromTier,
+  } = await import("@/lib/offers/signup");
+  const invite = await loadInviteForCheckout(token);
+  if (!invite) return { error: "This signup link is not valid." };
+  if (user.email.toLowerCase() !== invite.email) {
+    return { error: "Sign in with the email address this invite was created for." };
+  }
+
+  const adminSupabase = createAdminClient();
+  const { data: doctor } = await adminSupabase
+    .from("doctors")
+    .select("id, organization_id, is_founding_member")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  if (!doctor?.organization_id) {
+    return { error: "No practice organization found." };
+  }
+  if (doctor.is_founding_member) {
+    return { error: "Offers can't be combined with Founding Free." };
+  }
+
+  const planId = planIdFromTier(tier);
+  if (!planId || !invite.offer.eligiblePlans.includes(planId)) {
+    return { error: "Choose annual Solo or annual Pro." };
+  }
+  const origin = await getOrigin();
+  const { locale: resumeLocaleRaw } = await import("@/lib/http/origin").then((m) =>
+    m.getRequestOriginAndLocale()
+  );
+  try {
+    return await createOfferCheckoutSession({
+      stripe: getStripe(),
+      origin,
+      locale: sanitizeAuthLocale(resumeLocaleRaw),
+      email: invite.email,
+      organizationId: doctor.organization_id,
+      doctorId: doctor.id,
+      invite,
+      planId,
+    });
+  } catch (err) {
+    log.error("Offer resume checkout failed", { err });
+    const message = err instanceof Error ? err.message : "Could not start checkout.";
+    return { error: message };
+  }
 }
 
 /**

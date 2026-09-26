@@ -70,6 +70,8 @@ import {
   formatDoctorLicenseTitle,
   isFoundingFreeLicense,
 } from "@/lib/license/display";
+import { AnnualSubscriptionCancel } from "@/components/doctor/annual-subscription-cancel";
+import { offerSubscriptionCancelEnabled } from "@/actions/subscription-cancel";
 
 export default function BillingPage() {
   const searchParams = useSearchParams();
@@ -86,6 +88,7 @@ export default function BillingPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [showResumeCheckout, setShowResumeCheckout] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
+  const [offerCancelEnabled, setOfferCancelEnabled] = useState(false);
   const resumeTier = searchParams.get("tier") || "starter";
 
   useEffect(() => {
@@ -109,6 +112,7 @@ export default function BillingPage() {
     const result = await getOrganizationLicense();
     setLicense(result.license);
     setModules(result.modules || []);
+    setOfferCancelEnabled(await offerSubscriptionCancelEnabled());
     setLoading(false);
   }
 
@@ -449,6 +453,18 @@ export default function BillingPage() {
           </CardContent>
         </Card>
       )}
+
+      {license && offerCancelEnabled && license.offer_id ? (
+        <AnnualSubscriptionCancel
+          tier={license.tier ?? null}
+          status={license.status ?? null}
+          billingPeriod={license.billing_period ?? null}
+          offerId={license.offer_id ?? null}
+          trialEndsAt={license.trial_ends_at ?? null}
+          periodEnd={license.current_period_end ?? null}
+          cancelAtPeriodEnd={Boolean(license.cancel_at_period_end)}
+        />
+      ) : null}
 
       {/* Extra Seats (only for tiers that support it) */}
       {license && (() => {
