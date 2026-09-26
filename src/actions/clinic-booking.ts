@@ -13,12 +13,19 @@ import {
 } from "@/lib/stripe/consult-merchant";
 import {
   CLINIC_CANCEL_STATUS,
+  balanceCommissionForReschedule,
+  cancelOpenRescheduleBalance,
+  loadCommissionChain,
   clinicCancelMakeWhole,
   createDestinationRefunds,
+  refundCardCharge,
   refundReschedulePairIfPaid,
-  rescheduleBalanceApplicationFeeCents,
+  refundReversesTransfer,
+  rescheduleBalanceIdempotencyKey,
   rescheduleDoctorChangeError,
+  dearerChainRescheduleError,
   stripeChargedCents,
+  cardChargeNetOfWallet,
 } from "@/lib/booking/reschedule-balance";
 import { creditWallet } from "@/lib/wallet";
 import { sendEmail } from "@/lib/email/client";
@@ -113,6 +120,8 @@ export async function adminCancelBooking(formData: FormData) {
     return { error: "This booking cannot be cancelled in its current state." };
   }
 
+  await cancelOpenRescheduleBalance(booking);
+
   // Clinic cancellations make the patient whole. A paid dearer-slot
   // reschedule has two destination charges; both come back with the
   // doctor's transfer and our fee reversed. Wallet credit is returned
@@ -145,7 +154,15 @@ export async function adminCancelBooking(formData: FormData) {
     walletCreditCents = plan.walletCreditCents;
     if (plan.legs.length > 0) {
       try {
-        await createDestinationRefunds(getStripe(), plan.legs);
+        await createDestinationRefunds(
+          getStripe(),
+          plan.legs.map((leg) => ({
+            ...leg,
+            bookingId: booking.id,
+            reason: "clinic_cancel",
+            reverseTransfer: refundReversesTransfer(booking),
+          }))
+        );
         rowCardRefundCents = plan.legs.reduce(
           (sum, leg) => sum + leg.amountCents,
           0
@@ -264,14 +281,6 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: "This booking cannot be rescheduled in its current state." };
   }
 
-  // Before any refund, slot update, or balance charge. The original
-  // transfer already sits with this doctor, and we do not move it.
-  const doctorChangeError = rescheduleDoctorChangeError(
-    booking.doctor_id,
-    parsed.data.new_doctor_id
-  );
-  if (doctorChangeError) return { error: doctorChangeError };
-
   const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
   const originalDoctor: any = Array.isArray(booking.doctor) ? booking.doctor[0] : booking.doctor;
   const originalDoctorProfile: any = Array.isArray(originalDoctor?.profile)
@@ -302,13 +311,21 @@ export async function adminRescheduleBooking(formData: FormData) {
   if (priceDiffCents <= 0) {
     const refundCents = Math.abs(priceDiffCents);
 
-    if (refundCents > 0 && booking.stripe_payment_intent_id && booking.paid_at) {
+    const cardRefundCents = Math.min(
+      refundCents,
+      cardChargeNetOfWallet(
+        stripeChargedCents(booking),
+        booking.wallet_credit_applied_cents
+      )
+    );
+    if (cardRefundCents > 0 && booking.stripe_payment_intent_id && booking.paid_at) {
       try {
-        await stripe.refunds.create({
-          payment_intent: booking.stripe_payment_intent_id,
-          amount: refundCents,
-          reverse_transfer: true,
-          refund_application_fee: true,
+        await refundCardCharge(stripe, {
+          paymentIntentId: booking.stripe_payment_intent_id,
+          amountCents: cardRefundCents,
+          bookingId: booking.id,
+          reason: "reschedule_cheaper",
+          reverseTransfer: refundReversesTransfer(booking),
         });
       } catch (err) {
         log.error("Partial refund failed during reschedule:", { err });
@@ -348,7 +365,31 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: null, requiresPayment: false };
   }
 
-  // Case 2: New slot is more expensive → destination charge for the diff
+  // Case 2: New slot is more expensive → destination charge for the diff.
+  // Changing clinician is refused only here: same-price and cheaper moves
+  // still update the doctor. A paid -R is not moved onto a third charge.
+  const doctorChangeError = rescheduleDoctorChangeError(
+    booking.doctor_id,
+    parsed.data.new_doctor_id,
+    priceDiffCents
+  );
+  if (doctorChangeError) return { error: doctorChangeError };
+
+  const chainError = dearerChainRescheduleError(booking);
+  if (chainError) return { error: chainError };
+
+  const { data: pendingSuccessor } = await adminSupabase
+    .from("bookings")
+    .select("id")
+    .eq("rescheduled_from_booking_id", booking.id)
+    .eq("status", "pending_reschedule_payment")
+    .limit(1);
+  if (pendingSuccessor && pendingSuccessor.length > 0) {
+    return {
+      error: "A reschedule balance is already waiting for payment.",
+    };
+  }
+
   if (!patient?.email) return { error: "Cannot send payment request: patient email not found" };
 
   const destinationAccountId = (newDoctor.stripe_account_id as string | null) ?? "";
@@ -361,10 +402,19 @@ export async function adminRescheduleBooking(formData: FormData) {
   );
   if (!merchant.ok) return { error: merchant.error };
 
-  const balanceCommissionCents = rescheduleBalanceApplicationFeeCents({
+  const chain = await loadCommissionChain(booking, async (parentId) => {
+    const { data } = await adminSupabase
+      .from("bookings")
+      .select(
+        "id, commission_cents, consultation_fee_cents, rescheduled_from_booking_id"
+      )
+      .eq("id", parentId)
+      .maybeSingle();
+    return data;
+  });
+  const balanceCommissionCents = balanceCommissionForReschedule({
+    chainNewestFirst: chain,
     priceDiffCents,
-    originalCommissionCents: (booking.commission_cents as number | null) ?? 0,
-    originalFeeBasisCents: (booking.consultation_fee_cents as number | null) ?? 0,
   });
 
   // Create a new booking record for the new slot in pending_reschedule_payment status
@@ -404,29 +454,55 @@ export async function adminRescheduleBooking(formData: FormData) {
     return { error: "Failed to create rescheduled booking record" };
   }
 
+  const { data: pendingRows } = await adminSupabase
+    .from("bookings")
+    .select("id, created_at")
+    .eq("rescheduled_from_booking_id", booking.id)
+    .eq("status", "pending_reschedule_payment")
+    .order("created_at", { ascending: true });
+  if (
+    pendingRows &&
+    pendingRows.length > 1 &&
+    pendingRows[0]?.id !== newBooking.id
+  ) {
+    await adminSupabase.from("bookings").delete().eq("id", newBooking.id);
+    return {
+      error: "A reschedule balance is already waiting for payment.",
+    };
+  }
+
   // Create Stripe Payment Intent for the price difference only
   let paymentIntentClientSecret: string | null = null;
   let paymentLinkUrl: string | null = null;
 
   try {
-    const intent = await stripe.paymentIntents.create({
-      amount: priceDiffCents,
-      currency: booking.currency.toLowerCase(),
-      payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
-      customer: undefined, // We'll use email receipt
-      receipt_email: patient.email,
-      description: `Reschedule balance for booking ${booking.booking_number}`,
-      ...consultDestinationChargeParams({
-        destinationAccountId,
-        applicationFeeCents: balanceCommissionCents,
-      }),
-      metadata: {
-        original_booking_id: booking.id,
-        new_booking_id: newBooking.id,
-        organization_id: org.id,
-        type: "reschedule_balance",
+    const intent = await stripe.paymentIntents.create(
+      {
+        amount: priceDiffCents,
+        currency: booking.currency.toLowerCase(),
+        payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
+        customer: undefined, // We'll use email receipt
+        receipt_email: patient.email,
+        description: `Reschedule balance for booking ${booking.booking_number}`,
+        ...consultDestinationChargeParams({
+          destinationAccountId,
+          applicationFeeCents: balanceCommissionCents,
+        }),
+        metadata: {
+          original_booking_id: booking.id,
+          new_booking_id: newBooking.id,
+          organization_id: org.id,
+          type: "reschedule_balance",
+        },
       },
-    });
+      {
+        idempotencyKey: rescheduleBalanceIdempotencyKey({
+          bookingId: booking.id,
+          priceDiffCents,
+          startTime: parsed.data.new_start_time,
+        }),
+      }
+    );
 
     await adminSupabase
       .from("bookings")

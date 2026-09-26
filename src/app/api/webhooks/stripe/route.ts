@@ -28,6 +28,11 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
 import { creditWallet, debitWallet } from "@/lib/wallet";
+import {
+  alertRescheduleBalanceAdmins,
+  applyRescheduleBalanceSuccess,
+  shouldAbandonRescheduleBalance,
+} from "@/lib/booking/reschedule-balance";
 import { createNotification } from "@/lib/notifications";
 import { earnPoints } from "@/lib/points";
 import Stripe from "stripe";
@@ -1116,25 +1121,48 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      // 1. Confirm the new (rescheduled) booking
-      await supabase
+      const { data: balanceRow } = await supabase
         .from("bookings")
-        .update({
-          status: "confirmed",
-          reschedule_payment_status: "paid",
-          stripe_payment_intent_id: paymentIntent.id,
-          paid_at: new Date().toISOString(),
-        })
+        .select(
+          "id, status, commission_cents, consultation_fee_cents, reschedule_price_diff_cents, doctor_id, currency, refunded_at"
+        )
         .eq("id", newBookingId)
-        .neq("status", "confirmed");
-
-      // 2. Cancel the original booking (superseded by the rescheduled one)
-      await supabase
+        .maybeSingle();
+      const { data: originalRow } = await supabase
         .from("bookings")
-        .update({ status: "cancelled_doctor" })
-        .eq("id", originalBookingId);
+        .select("id, status, commission_cents, consultation_fee_cents, refunded_at")
+        .eq("id", originalBookingId)
+        .maybeSingle();
 
-      // 3. Fetch new booking for email + calendar exports
+      if (!balanceRow || !originalRow) {
+        console.error("[Stripe] reschedule_balance bookings missing", paymentIntent.id);
+        break;
+      }
+
+      const balanceOutcome = await applyRescheduleBalanceSuccess({
+        newBooking: balanceRow,
+        originalBooking: originalRow,
+        paymentIntentId: paymentIntent.id,
+        paymentIntentAmountCents: paymentIntent.amount,
+        stripe: getStripe(),
+        updateBooking: async (id, patch, match) => {
+          let query = supabase.from("bookings").update(patch).eq("id", id);
+          if (match?.status) query = query.eq("status", match.status);
+          if (match?.statusIn?.length) query = query.in("status", match.statusIn);
+          const { data, error } = await query.select("id");
+          if (error) throw new Error(error.message);
+          return data?.length ?? 0;
+        },
+        insertPlatformFee: async (row) => {
+          const { error } = await supabase.from("platform_fees").insert(row);
+          if (error) throw new Error(error.message);
+        },
+        alertAdmin: alertRescheduleBalanceAdmins,
+      });
+
+      if (balanceOutcome !== "confirm") break;
+
+      // Fetch new booking for email + calendar exports
       const { data: rescheduleBooking } = await supabase
         .from("bookings")
         .select(`
@@ -1164,23 +1192,6 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (rescheduleBooking) {
-        // Record the fee stored when the -R row was created. That is the
-        // application fee on the destination charge, at the original
-        // booking's commission rate. Do not recompute 15% here.
-        const balanceFeeCents = Math.max(
-          0,
-          Math.round((rescheduleBooking as { commission_cents?: number | null }).commission_cents || 0)
-        );
-        if (balanceFeeCents > 0) {
-          await supabase.from("platform_fees").insert({
-            booking_id: newBookingId,
-            doctor_id: rescheduleBooking.doctor_id,
-            fee_type: "commission",
-            amount_cents: balanceFeeCents,
-            currency: rescheduleBooking.currency,
-          });
-        }
-
         // Export to connected calendars (non-blocking)
         exportBookingToGoogleCalendar(newBookingId).catch((err) =>
           console.error("Google Calendar export error (reschedule):", err)
@@ -1273,6 +1284,18 @@ export async function POST(request: NextRequest) {
       const originalBookingId = paymentIntent.metadata.original_booking_id;
 
       if (!newBookingId || !originalBookingId) break;
+
+      if (
+        !shouldAbandonRescheduleBalance({
+          eventType: event.type,
+          paymentIntentStatus: paymentIntent.status,
+        })
+      ) {
+        console.warn(
+          `[Stripe] Reschedule balance payment can still be retried for booking ${newBookingId}.`
+        );
+        break;
+      }
 
       // Mark the pending rescheduled booking as expired (only if still pending)
       await supabase

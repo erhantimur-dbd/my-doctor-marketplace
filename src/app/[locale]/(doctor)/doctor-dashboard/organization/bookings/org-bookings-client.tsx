@@ -46,7 +46,6 @@ import {
 import { Link } from "@/i18n/navigation";
 import { formatCurrency } from "@/lib/utils/currency";
 import { adminCancelBooking, adminRescheduleBooking } from "@/actions/clinic-booking";
-import { DOCTOR_CHANGE_RESCHEDULE_MESSAGE } from "@/lib/booking/reschedule-copy";
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -313,25 +312,6 @@ function RescheduleDialog({
     setNewEndTime(addMinutes(val, originalDuration || 30));
   }
 
-  function handleCancelWithFullRefund() {
-    setError(null);
-    const fd = new FormData();
-    fd.set("booking_id", booking.id);
-    fd.set(
-      "reason",
-      "Cancelled by the clinic to rebook with another clinician"
-    );
-    startTransition(async () => {
-      const result = await adminCancelBooking(fd);
-      if (result.error) {
-        setError(result.error);
-      } else {
-        onSuccess();
-        onOpenChange(false);
-      }
-    });
-  }
-
   function handleSubmit() {
     setError(null);
     if (!newDoctorId || !newDate || !newStartTime || !newEndTime) {
@@ -532,16 +512,6 @@ function RescheduleDialog({
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-          )}
-          {error === DOCTOR_CHANGE_RESCHEDULE_MESSAGE && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCancelWithFullRefund}
-              disabled={isPending}
-            >
-              Cancel with full refund
-            </Button>
           )}
         </div>
 

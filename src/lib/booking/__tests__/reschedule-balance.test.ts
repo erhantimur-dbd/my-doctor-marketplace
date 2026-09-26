@@ -5,14 +5,27 @@ import { getCommissionCents } from "@/lib/utils/currency";
 import { consultDestinationChargeParams } from "@/lib/stripe/consult-charge";
 import {
   CLINIC_CANCEL_STATUS,
+  DEARER_CHAIN_RESCHEDULE_MESSAGE,
   DOCTOR_CHANGE_RESCHEDULE_MESSAGE,
+  addedRefundCents,
   allocateRescheduleRefundCents,
+  applyRescheduleBalanceSuccess,
+  balanceCommissionForReschedule,
+  balanceFeeToRecord,
   clinicCancelMakeWhole,
   createDestinationRefunds,
+  dearerChainRescheduleError,
+  openBalancePaymentToCancel,
+  persistAddedRefund,
+  refundIdempotencyKey,
   refundReschedulePairIfPaid,
   rescheduleBalanceApplicationFeeCents,
+  rescheduleBalanceSuccessAction,
   rescheduleDoctorChangeError,
   rescheduleRefundLegs,
+  rootCommissionFromChain,
+  shouldAbandonRescheduleBalance,
+  walletCreditOnCancel,
   type RescheduleRefundBooking,
 } from "@/lib/booking/reschedule-balance";
 
@@ -92,14 +105,12 @@ describe("reschedule balance destination charge", () => {
 
     const blockAt = fn.indexOf("rescheduleDoctorChangeError");
     const slotUpdateAt = fn.indexOf("doctor_id: parsed.data.new_doctor_id");
-    const refundAt = fn.indexOf("refunds.create");
-    expect(blockAt).toBeGreaterThan(-1);
-    expect(refundAt).toBeGreaterThan(blockAt);
-    expect(slotUpdateAt).toBeGreaterThan(blockAt);
+    expect(blockAt).toBeGreaterThan(slotUpdateAt);
     expect(createAt).toBeGreaterThan(blockAt);
-    expect(fn.slice(0, slotUpdateAt)).toContain(
-      "if (doctorChangeError) return { error: doctorChangeError }"
-    );
+    expect(fn.slice(0, slotUpdateAt)).not.toContain("rescheduleDoctorChangeError");
+    expect(fn).toContain("dearerChainRescheduleError");
+    expect(fn).toContain("balanceCommissionForReschedule");
+    expect(fn).toContain("idempotencyKey: rescheduleBalanceIdempotencyKey");
   });
 
   it("sends consult checkout through the same charge parameters", () => {
@@ -132,6 +143,8 @@ describe("doctor change is refused before any charge", () => {
     expect(rescheduleDoctorChangeError("", "doctor-a")).toBe(
       DOCTOR_CHANGE_RESCHEDULE_MESSAGE
     );
+    expect(rescheduleDoctorChangeError("doctor-a", "doctor-b", 0)).toBeNull();
+    expect(rescheduleDoctorChangeError("doctor-a", "doctor-b", -500)).toBeNull();
   });
 });
 
@@ -145,6 +158,7 @@ describe("paid reschedule refunds both destination charges", () => {
     reschedule_price_diff_cents: 1500,
     total_amount_cents: 5500,
     payment_mode: "full",
+    commission_cents: 225,
   };
   const original: RescheduleRefundBooking = {
     id: "booking-original",
@@ -152,19 +166,29 @@ describe("paid reschedule refunds both destination charges", () => {
     total_amount_cents: 4000,
     payment_mode: "full",
     reschedule_payment_status: null,
+    commission_cents: 600,
   };
 
-  function stripeFake() {
-    const creates: Array<Record<string, unknown>> = [];
+  function stripeFake(
+    existing?: Record<
+      string,
+      Array<{ id: string; amount: number; status?: string }>
+    >
+  ) {
+    const creates: Array<{
+      params: Record<string, unknown>;
+      idempotencyKey?: string;
+    }> = [];
     const stripe = {
       refunds: {
-        async create(params: {
-          payment_intent: string;
-          amount: number;
-          reverse_transfer: true;
-          refund_application_fee: true;
-        }) {
-          creates.push(params);
+        async list(params: { payment_intent: string }) {
+          return { data: existing?.[params.payment_intent] ?? [] };
+        },
+        async create(
+          params: Record<string, unknown>,
+          options?: { idempotencyKey?: string }
+        ) {
+          creates.push({ params, idempotencyKey: options?.idempotencyKey });
           return { id: `re_${creates.length}` };
         },
       },
@@ -197,8 +221,11 @@ describe("paid reschedule refunds both destination charges", () => {
       rowRefundCents: 1500,
       refundIds: ["re_1", "re_2"],
       walletCreditCents: 0,
+      originalCardCents: 4000,
+      balanceCardCents: 1500,
+      successorId: "booking-successor",
     });
-    expect(creates).toEqual([
+    expect(creates.map((call) => call.params)).toEqual([
       {
         payment_intent: "pi_original",
         amount: 4000,
@@ -211,6 +238,10 @@ describe("paid reschedule refunds both destination charges", () => {
         reverse_transfer: true,
         refund_application_fee: true,
       },
+    ]);
+    expect(creates.map((call) => call.idempotencyKey)).toEqual([
+      "refund:booking-original:pi_original:4000:reschedule_pair",
+      "refund:booking-successor:pi_balance:1500:reschedule_pair",
     ]);
     expect(persisted).toEqual([
       { id: "booking-original", amountCents: 4000 },
@@ -233,12 +264,32 @@ describe("paid reschedule refunds both destination charges", () => {
 
     const { stripe, creates } = stripeFake();
     await createDestinationRefunds(stripe, [
-      { paymentIntentId: "pi_original", amountCents: 2000 },
-      { paymentIntentId: "pi_balance", amountCents: 750 },
+      {
+        paymentIntentId: "pi_original",
+        amountCents: 2000,
+        bookingId: "booking-original",
+        reason: "partial",
+        reverseTransfer: true,
+      },
+      {
+        paymentIntentId: "pi_balance",
+        amountCents: 750,
+        bookingId: "booking-successor",
+        reason: "partial",
+        reverseTransfer: true,
+      },
     ]);
-    expect(creates.every((call) => call.reverse_transfer === true)).toBe(true);
-    expect(creates.every((call) => call.refund_application_fee === true)).toBe(
+    expect(creates.every((call) => call.params.reverse_transfer === true)).toBe(
       true
+    );
+    expect(
+      creates.every((call) => call.params.refund_application_fee === true)
+    ).toBe(true);
+    expect(creates[0]?.idempotencyKey).toBe(
+      "refund:booking-original:pi_original:2000:partial"
+    );
+    expect(creates[1]?.idempotencyKey).toBe(
+      "refund:booking-successor:pi_balance:750:partial"
     );
   });
 
@@ -296,8 +347,11 @@ describe("paid reschedule refunds both destination charges", () => {
       rowRefundCents: 1500,
       refundIds: ["re_1", "re_2"],
       walletCreditCents: 1000,
+      originalCardCents: 3000,
+      balanceCardCents: 1500,
+      successorId: "booking-successor",
     });
-    expect(creates).toEqual([
+    expect(creates.map((call) => call.params)).toEqual([
       {
         payment_intent: "pi_original",
         amount: 3000,
@@ -375,18 +429,14 @@ describe("paid reschedule refunds both destination charges", () => {
     expect(body).not.toMatch(/refundPercent\s*=/);
   });
 
-  it("offers cancel with full refund next to the doctor-change message", () => {
+  it("does not add a clinic cancel-with-full-refund button", () => {
     const client = read(
       "src/app/[locale]/(doctor)/doctor-dashboard/organization/bookings/org-bookings-client.tsx"
     );
-    expect(client).toContain('from "@/lib/booking/reschedule-copy"');
     expect(client).not.toContain("reschedule-balance");
-    expect(client).toContain("DOCTOR_CHANGE_RESCHEDULE_MESSAGE");
-    expect(client).toContain("Cancel with full refund");
+    expect(client).not.toContain("Cancel with full refund");
+    expect(client).not.toContain("DOCTOR_CHANGE_RESCHEDULE_MESSAGE");
     expect(client).toContain("adminCancelBooking");
-    expect(client).toContain(
-      "Cancelled by the clinic to rebook with another clinician"
-    );
   });
 
   it("is used by patient, clinic, and admin refunds", () => {
@@ -398,7 +448,432 @@ describe("paid reschedule refunds both destination charges", () => {
     expect(admin.match(/await refundReschedulePairIfPaid/g)?.length).toBe(2);
 
     const helper = read("src/lib/booking/reschedule-balance.ts");
-    expect(helper).toContain("reverse_transfer: true");
-    expect(helper).toContain("refund_application_fee: true");
+    expect(helper).toContain("params.reverse_transfer = true");
+    expect(helper).toContain("params.refund_application_fee = true");
+    expect(booking).toContain("walletCreditOnCancel");
+    expect(booking).toContain("refund_amount_cents: addedRefundCents");
+    expect(admin).toContain('status: "refunded"');
+  });
+
+  it("does not refund a leg the booking row already covers", async () => {
+    const { stripe, creates } = stripeFake();
+    const result = await refundReschedulePairIfPaid(successor, {
+      refundPercent: 100,
+      stripe,
+      loadBooking: async (id) => {
+        const row = loadBooking(id);
+        if (!row) return row;
+        if (row.id === original.id) {
+          return {
+            ...row,
+            refunded_at: "2026-01-01T00:00:00.000Z",
+            refund_amount_cents: 4000,
+          };
+        }
+        return row;
+      },
+      findPaidSuccessor: async () => null,
+      persistOtherRefund: async () => {},
+    });
+    expect(result).toMatchObject({
+      applied: true,
+      originalCardCents: 0,
+      balanceCardCents: 1500,
+      totalCents: 1500,
+    });
+    expect(creates).toHaveLength(1);
+    expect(creates[0]?.params.payment_intent).toBe("pi_balance");
+    expect(creates[0]?.idempotencyKey).toContain("pi_balance");
+  });
+
+  it("omits reverse flags on a legacy platform balance with no commission", async () => {
+    const { stripe, creates } = stripeFake();
+    const legacy = { ...successor, commission_cents: 0 };
+    await refundReschedulePairIfPaid(legacy, {
+      refundPercent: 100,
+      stripe,
+      loadBooking: async (id) => (id === legacy.id ? legacy : original),
+      findPaidSuccessor: async () => null,
+      persistOtherRefund: async () => {},
+    });
+    const balance = creates.find(
+      (call) => call.params.payment_intent === "pi_balance"
+    );
+    const first = creates.find(
+      (call) => call.params.payment_intent === "pi_original"
+    );
+    expect(balance?.params).toEqual({
+      payment_intent: "pi_balance",
+      amount: 1500,
+    });
+    expect(first?.params.reverse_transfer).toBe(true);
+    expect(first?.params.refund_application_fee).toBe(true);
+  });
+
+  it("does not create a second Stripe refund when the charge is already refunded", async () => {
+    const { stripe, creates } = stripeFake({
+      pi_original: [{ id: "re_existing", amount: 4000, status: "succeeded" }],
+      pi_balance: [{ id: "re_balance", amount: 1500, status: "succeeded" }],
+    });
+    const ids = await createDestinationRefunds(stripe, [
+      {
+        paymentIntentId: "pi_original",
+        amountCents: 4000,
+        bookingId: "booking-original",
+        reason: "reschedule_pair",
+        reverseTransfer: true,
+      },
+      {
+        paymentIntentId: "pi_balance",
+        amountCents: 1500,
+        bookingId: "booking-successor",
+        reason: "reschedule_pair",
+        reverseTransfer: true,
+      },
+    ]);
+    expect(creates).toEqual([]);
+    expect(ids).toEqual(["re_existing", "re_balance"]);
+  });
+});
+
+describe("reschedule balance review rules", () => {
+  it("takes the commission rate from the first booking in the chain", () => {
+    const root = rootCommissionFromChain([
+      {
+        commissionCents: 225,
+        feeBasisCents: 5500,
+        rescheduledFromBookingId: "original",
+      },
+      {
+        commissionCents: 600,
+        feeBasisCents: 4000,
+        rescheduledFromBookingId: null,
+      },
+    ]);
+    expect(root).toEqual({ commissionCents: 600, feeBasisCents: 4000 });
+    const fee = balanceCommissionForReschedule({
+      chainNewestFirst: [
+        {
+          commissionCents: 225,
+          feeBasisCents: 5500,
+          rescheduledFromBookingId: "original",
+        },
+        {
+          commissionCents: 600,
+          feeBasisCents: 4000,
+          rescheduledFromBookingId: null,
+        },
+      ],
+      priceDiffCents: 1500,
+    });
+    expect(fee).toBe(225);
+    expect(fee).not.toBe(Math.round((1500 * 225) / 5500));
+  });
+
+  it("records a fallback fee when a pre-deploy -R still has a zero commission", () => {
+    expect(
+      balanceFeeToRecord({
+        storedCommissionCents: 0,
+        priceDiffCents: 1500,
+        originalCommissionCents: 600,
+        originalFeeBasisCents: 4000,
+      })
+    ).toBe(225);
+    expect(
+      balanceFeeToRecord({
+        storedCommissionCents: 0,
+        priceDiffCents: 1500,
+        originalCommissionCents: 0,
+        originalFeeBasisCents: 0,
+      })
+    ).toBe(getCommissionCents(1500));
+    expect(
+      balanceFeeToRecord({
+        storedCommissionCents: 180,
+        priceDiffCents: 1500,
+        originalCommissionCents: 600,
+        originalFeeBasisCents: 4000,
+      })
+    ).toBe(180);
+  });
+
+  it("blocks a second dearer reschedule of a paid -R booking", () => {
+    expect(
+      dearerChainRescheduleError({
+        rescheduled_from_booking_id: "original",
+        reschedule_payment_status: "paid",
+      })
+    ).toBe(DEARER_CHAIN_RESCHEDULE_MESSAGE);
+    expect(
+      dearerChainRescheduleError({
+        rescheduled_from_booking_id: null,
+        reschedule_payment_status: null,
+      })
+    ).toBeNull();
+  });
+
+  it("credits wallet spend, and credits the original card only when the destination is the wallet", () => {
+    expect(
+      walletCreditOnCancel({
+        destination: "bank",
+        appliedWalletCents: 1000,
+        originalCardCents: 3000,
+        balanceCardCents: 1500,
+      })
+    ).toBe(1000);
+    expect(
+      walletCreditOnCancel({
+        destination: "wallet",
+        appliedWalletCents: 1000,
+        originalCardCents: 3000,
+        balanceCardCents: 1500,
+      })
+    ).toBe(4000);
+  });
+
+  it("adds to a stored refund and throws when the database write fails", async () => {
+    expect(addedRefundCents(1000, 500)).toBe(1500);
+    const writes: number[] = [];
+    await persistAddedRefund("booking-1", 500, {
+      read: async () => ({ refund_amount_cents: 1000 }),
+      write: async (_id, amount) => {
+        writes.push(amount);
+        return {};
+      },
+    });
+    expect(writes).toEqual([1500]);
+    await expect(
+      persistAddedRefund("booking-1", 500, {
+        read: async () => ({ error: "read failed" }),
+        write: async () => ({}),
+      })
+    ).rejects.toThrow("read failed");
+  });
+
+  it("builds an idempotency key from the booking, payment, amount, and reason", () => {
+    expect(
+      refundIdempotencyKey({
+        bookingId: "booking-1",
+        paymentIntentId: "pi_1",
+        amountCents: 1500,
+        reason: "orphan_balance",
+      })
+    ).toBe("refund:booking-1:pi_1:1500:orphan_balance");
+  });
+
+  it("confirms a pending balance, ignores a replay, and refunds an orphan payment", () => {
+    expect(
+      rescheduleBalanceSuccessAction({
+        newStatus: "pending_reschedule_payment",
+        originalStatus: "confirmed",
+      })
+    ).toBe("confirm");
+    expect(
+      rescheduleBalanceSuccessAction({
+        newStatus: "confirmed",
+        originalStatus: "confirmed",
+      })
+    ).toBe("replay");
+    expect(
+      rescheduleBalanceSuccessAction({
+        newStatus: "pending_reschedule_payment",
+        originalStatus: "cancelled_patient",
+      })
+    ).toBe("refund_orphan");
+    expect(
+      rescheduleBalanceSuccessAction({
+        newStatus: "cancelled_doctor",
+        originalStatus: "cancelled_patient",
+        balanceRefundedAt: "2026-01-01T00:00:00.000Z",
+      })
+    ).toBe("replay");
+  });
+
+  it("does not abandon a reschedule balance on the first card decline", () => {
+    expect(
+      shouldAbandonRescheduleBalance({
+        eventType: "payment_intent.payment_failed",
+        paymentIntentStatus: "requires_payment_method",
+      })
+    ).toBe(false);
+    expect(
+      shouldAbandonRescheduleBalance({
+        eventType: "payment_intent.canceled",
+        paymentIntentStatus: "canceled",
+      })
+    ).toBe(true);
+    expect(
+      shouldAbandonRescheduleBalance({
+        eventType: "payment_intent.payment_failed",
+        paymentIntentStatus: "canceled",
+      })
+    ).toBe(true);
+  });
+
+  it("cancels the open balance PaymentIntent for a waiting -R or its original", () => {
+    expect(
+      openBalancePaymentToCancel({
+        bookingId: "new",
+        bookingStatus: "pending_reschedule_payment",
+        bookingPaymentIntentId: "pi_open",
+      })
+    ).toEqual({ closeBookingId: null, paymentIntentId: "pi_open" });
+    expect(
+      openBalancePaymentToCancel({
+        bookingId: "original",
+        bookingStatus: "confirmed",
+        pendingSuccessor: {
+          id: "new",
+          status: "pending_reschedule_payment",
+          paymentIntentId: "pi_open",
+        },
+      })
+    ).toEqual({ closeBookingId: "new", paymentIntentId: "pi_open" });
+    expect(
+      openBalancePaymentToCancel({
+        bookingId: "original",
+        bookingStatus: "confirmed",
+        pendingSuccessor: null,
+      })
+    ).toBeNull();
+  });
+
+  it("refunds the balance when the original was already cancelled and does not refund a replay", async () => {
+    const updates: Array<{ id: string; patch: Record<string, unknown> }> = [];
+    const fees: unknown[] = [];
+    const alerts: string[] = [];
+    const creates: Array<{ idempotencyKey?: string }> = [];
+    const stripe = {
+      refunds: {
+        async list() {
+          return { data: [] };
+        },
+        async create(
+          _params: Record<string, unknown>,
+          options?: { idempotencyKey?: string }
+        ) {
+          creates.push({ idempotencyKey: options?.idempotencyKey });
+          return { id: "re_orphan" };
+        },
+      },
+    };
+
+    const orphan = await applyRescheduleBalanceSuccess({
+      newBooking: {
+        id: "new-booking",
+        status: "pending_reschedule_payment",
+        commission_cents: 225,
+        reschedule_price_diff_cents: 1500,
+        doctor_id: "doctor-1",
+        currency: "gbp",
+      },
+      originalBooking: {
+        id: "original-booking",
+        status: "cancelled_patient",
+        commission_cents: 600,
+        consultation_fee_cents: 4000,
+      },
+      paymentIntentId: "pi_balance",
+      stripe,
+      updateBooking: async (id, patch) => {
+        updates.push({ id, patch });
+        return 1;
+      },
+      insertPlatformFee: async (row) => {
+        fees.push(row);
+      },
+      alertAdmin: async (message) => {
+        alerts.push(message);
+      },
+    });
+    expect(orphan).toBe("refund_orphan");
+    expect(fees).toEqual([]);
+    expect(creates[0]?.idempotencyKey).toBe(
+      "refund:new-booking:pi_balance:1500:orphan_balance"
+    );
+    expect(alerts).toHaveLength(1);
+    expect(updates.some((row) => row.id === "new-booking" && row.patch.refunded_at)).toBe(
+      true
+    );
+    expect(
+      updates.some((row) => row.patch.status === "confirmed")
+    ).toBe(false);
+
+    const replayFees: unknown[] = [];
+    const replay = await applyRescheduleBalanceSuccess({
+      newBooking: {
+        id: "new-booking",
+        status: "confirmed",
+        commission_cents: 225,
+        reschedule_price_diff_cents: 1500,
+        doctor_id: "doctor-1",
+        currency: "gbp",
+      },
+      originalBooking: {
+        id: "original-booking",
+        status: "cancelled_doctor",
+        commission_cents: 600,
+        consultation_fee_cents: 4000,
+      },
+      paymentIntentId: "pi_balance",
+      stripe,
+      updateBooking: async () => {
+        throw new Error("replay must not write");
+      },
+      insertPlatformFee: async (row) => {
+        replayFees.push(row);
+      },
+      alertAdmin: async () => {
+        throw new Error("replay must not alert");
+      },
+    });
+    expect(replay).toBe("replay");
+    expect(replayFees).toEqual([]);
+  });
+
+  it("writes the fallback fee when confirming a -R that still has a zero commission", async () => {
+    const updates: Array<Record<string, unknown>> = [];
+    const fees: Array<{ amount_cents: number }> = [];
+    const outcome = await applyRescheduleBalanceSuccess({
+      newBooking: {
+        id: "new-booking",
+        status: "pending_reschedule_payment",
+        commission_cents: 0,
+        reschedule_price_diff_cents: 1500,
+        doctor_id: "doctor-1",
+        currency: "gbp",
+      },
+      originalBooking: {
+        id: "original-booking",
+        status: "confirmed",
+        commission_cents: 600,
+        consultation_fee_cents: 4000,
+      },
+      paymentIntentId: "pi_balance",
+      stripe: {
+        refunds: {
+          async create() {
+            throw new Error("confirm must not refund");
+          },
+        },
+      },
+      updateBooking: async (id, patch, match) => {
+        updates.push({ id, patch, match });
+        if (match?.statusIn) return 1;
+        if (match?.status === "pending_reschedule_payment") return 1;
+        return 1;
+      },
+      insertPlatformFee: async (row) => {
+        fees.push(row);
+      },
+      alertAdmin: async () => {},
+    });
+    expect(outcome).toBe("confirm");
+    expect(fees).toEqual([
+      expect.objectContaining({ amount_cents: 225, booking_id: "new-booking" }),
+    ]);
+    expect(updates.some((row) => row.patch && (row.patch as { commission_cents?: number }).commission_cents === 225)).toBe(
+      true
+    );
   });
 });

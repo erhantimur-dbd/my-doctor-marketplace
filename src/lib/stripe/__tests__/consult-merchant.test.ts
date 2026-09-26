@@ -301,7 +301,6 @@ describe("consult charges set on_behalf_of", () => {
 
     for (const rel of [
       "src/actions/follow-up.ts",
-      "src/actions/admin.ts",
       "src/actions/invoices.ts",
       "src/actions/treatment-plan.ts",
     ]) {
@@ -312,13 +311,29 @@ describe("consult charges set on_behalf_of", () => {
       expect(combinesWalletAndGate, rel).toBe(false);
     }
 
+    const admin = read("src/actions/admin.ts");
+    const createOnBehalf = admin.slice(
+      admin.indexOf("export async function adminCreateBookingOnBehalf"),
+      admin.indexOf("export async function adminResendPaymentLink")
+    );
+    const resend = admin.slice(
+      admin.indexOf("export async function adminResendPaymentLink"),
+      admin.indexOf("export async function adminCancelBooking")
+    );
+    for (const body of [createOnBehalf, resend]) {
+      expect(body).toContain("doctorCanAcceptConsultCardPayment");
+      expect(body).not.toContain("debitWallet");
+      expect(body).not.toContain("wallet_credit_applied_cents");
+    }
+
     const clinic = read("src/actions/clinic-booking.ts");
     const reschedule = clinic.slice(
       clinic.indexOf("export async function adminRescheduleBooking")
     );
+    const balanceCharge = reschedule.slice(reschedule.indexOf("paymentIntents.create"));
     expect(reschedule).toContain("doctorCanAcceptConsultCardPayment");
-    expect(reschedule).not.toContain("debitWallet");
-    expect(reschedule).not.toContain("wallet_credit_applied_cents");
+    expect(balanceCharge).not.toContain("debitWallet");
+    expect(balanceCharge).not.toContain("wallet_credit_applied_cents");
   });
 });
 
