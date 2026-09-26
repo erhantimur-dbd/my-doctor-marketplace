@@ -32,6 +32,13 @@ import {
   BOOKING_CURRENT_DOCTOR_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
 } from "@/lib/patient/booking-doctor-embed";
+import {
+  bookingHasRefundableCharge,
+  hoursUntilAppointment,
+  refundAmountCents,
+  refundPercentForPolicy,
+  stripeChargedAmountCents,
+} from "@/lib/booking/cancellation-refund";
 import { CancelBookingDialog } from "./cancel-booking-dialog";
 import { AddToCalendarButton } from "./add-to-calendar-button";
 import { RescheduleDialog } from "@/components/booking/reschedule-dialog";
@@ -45,6 +52,7 @@ export const metadata: Metadata = {
 type BookingDetail = {
   id: string;
   booking_number: string;
+  appointment_date: string;
   start_time: string;
   end_time: string;
   status: string;
@@ -65,6 +73,8 @@ type BookingDetail = {
   cancellation_reason: string | null;
   payment_status: string | null;
   payment_intent_id: string | null;
+  stripe_payment_intent_id: string | null;
+  paid_at: string | null;
   video_room_url: string | null;
   created_at: string;
   patient_id: string;
@@ -77,6 +87,8 @@ type BookingDetail = {
     address: string | null;
     consultation_fee_cents: number;
     base_currency: string;
+    cancellation_policy?: string | null;
+    cancellation_hours?: number | null;
     profile: {
       first_name: string;
       last_name: string;
@@ -227,6 +239,7 @@ export default async function BookingDetailPage({
       doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(
         id, slug, title, clinic_name, address,
         consultation_fee_cents, base_currency,
+        cancellation_policy, cancellation_hours,
         profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name, avatar_url),
         location:locations(city, country_code),
         specialties:doctor_specialties(
@@ -293,6 +306,20 @@ export default async function BookingDetailPage({
     isVideo &&
     typedBooking.status === "confirmed" &&
     typedBooking.video_room_url;
+
+  const cancelHoursUntil = hoursUntilAppointment(
+    typedBooking.appointment_date || typedBooking.start_time.slice(0, 10),
+    typedBooking.start_time
+  );
+  const cancelRefundPercent = refundPercentForPolicy(
+    doctor.cancellation_policy,
+    cancelHoursUntil
+  );
+  const cancelRefundAmountCents = refundAmountCents(
+    stripeChargedAmountCents(typedBooking),
+    cancelRefundPercent
+  );
+  const cancelHasRefundableCharge = bookingHasRefundableCharge(typedBooking);
 
   // Allow joining 10 minutes before start
   const joinWindowStart = new Date(startDate.getTime() - 10 * 60 * 1000);
@@ -821,6 +848,10 @@ export default async function BookingDetailPage({
                 <CancelBookingDialog
                   bookingId={typedBooking.id}
                   bookingNumber={typedBooking.booking_number}
+                  refundPercent={cancelRefundPercent}
+                  refundAmountCents={cancelRefundAmountCents}
+                  currency={typedBooking.currency}
+                  hasRefundableCharge={cancelHasRefundableCharge}
                 />
               )}
 

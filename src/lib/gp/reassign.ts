@@ -444,26 +444,13 @@ export async function acceptGpSlotOffer(
     return { error: "Replacement doctor cannot accept payments yet" };
   }
 
-  const handoff = await applyDoctorHandoff(
-    booking,
-    oldDoctor?.stripe_account_id || null,
-    newDoctor.stripe_account_id
-  );
-
-  if (!handoff.ok) {
-    return {
-      error:
-        handoff.error ||
-        "Could not move payment to the new doctor. Please contact support.",
-    };
-  }
-
   const displayMode = await resolveGpDisplayMode(
     newDoctor.id,
     newDoctor.organization_id
   );
 
-  await supabase
+  // Claim the booking before moving money / refund cron can race.
+  const { data: claimed } = await supabase
     .from("bookings")
     .update({
       doctor_id: offer.doctor_id,
@@ -476,10 +463,41 @@ export async function acceptGpSlotOffer(
       display_doctor_as: displayMode,
       is_gp_pool: true,
       organization_id: newDoctor.organization_id,
-      stripe_reassignment_transfer_id: handoff.newTransferId || null,
       status: "confirmed",
     })
-    .eq("id", booking.id);
+    .eq("id", booking.id)
+    .eq("gp_reassignment_status", "pending_patient_choice")
+    .select("id")
+    .maybeSingle();
+
+  if (!claimed) {
+    return { error: "This offer is no longer available" };
+  }
+
+  const handoff = await applyDoctorHandoff(
+    booking,
+    oldDoctor?.stripe_account_id || null,
+    newDoctor.stripe_account_id
+  );
+
+  if (!handoff.ok) {
+    log.error("[GP] accept handoff failed after claim", {
+      bookingId: booking.id,
+      error: handoff.error,
+    });
+    return {
+      error:
+        handoff.error ||
+        "Could not move payment to the new doctor. Please contact support.",
+    };
+  }
+
+  if (handoff.newTransferId) {
+    await supabase
+      .from("bookings")
+      .update({ stripe_reassignment_transfer_id: handoff.newTransferId })
+      .eq("id", booking.id);
+  }
 
   // Supersede other offers
   await supabase
@@ -546,19 +564,34 @@ export async function declineAllGpOffers(
     return { error: "Nothing to decline" };
   }
 
-  const refund = await fullRefundBooking(booking);
-
-  await supabase
+  // Claim cancel before refunding so expire/accept cannot race.
+  const { data: declined } = await supabase
     .from("bookings")
     .update({
       status: "cancelled_doctor",
       cancelled_at: new Date().toISOString(),
       gp_reassignment_status: "patient_declined",
-      refunded_at: refund.refunded ? new Date().toISOString() : null,
-      refund_amount_cents: refund.refunded ? refund.amount : null,
       cancellation_reason: "Patient declined alternate GP slots",
     })
-    .eq("id", booking.id);
+    .eq("id", booking.id)
+    .eq("gp_reassignment_status", "pending_patient_choice")
+    .select("id")
+    .maybeSingle();
+
+  if (!declined) {
+    return { error: "Nothing to decline" };
+  }
+
+  const refund = await fullRefundBooking(booking);
+  if (refund.refunded) {
+    await supabase
+      .from("bookings")
+      .update({
+        refunded_at: new Date().toISOString(),
+        refund_amount_cents: refund.amount,
+      })
+      .eq("id", booking.id);
+  }
 
   await supabase
     .from("gp_slot_offers")
@@ -606,14 +639,21 @@ export async function expireGpOffersAndRefund(): Promise<{
 
   let processed = 0;
   for (const bookingId of bookingIds) {
-    const { data: booking } = await supabase
+    // Claim first — only refund if we win the race against accept/decline.
+    const { data: claimed } = await supabase
       .from("bookings")
-      .select("*")
+      .update({
+        status: "cancelled_doctor",
+        cancelled_at: new Date().toISOString(),
+        gp_reassignment_status: "refunded",
+        cancellation_reason: "Alternate GP offers expired without response",
+      })
       .eq("id", bookingId)
       .eq("gp_reassignment_status", "pending_patient_choice")
+      .select("*")
       .maybeSingle();
 
-    if (!booking) continue;
+    if (!claimed) continue;
 
     await supabase
       .from("gp_slot_offers")
@@ -621,18 +661,16 @@ export async function expireGpOffersAndRefund(): Promise<{
       .eq("booking_id", bookingId)
       .eq("status", "pending");
 
-    const refund = await fullRefundBooking(booking);
-    await supabase
-      .from("bookings")
-      .update({
-        status: "cancelled_doctor",
-        cancelled_at: new Date().toISOString(),
-        gp_reassignment_status: "refunded",
-        refunded_at: refund.refunded ? new Date().toISOString() : null,
-        refund_amount_cents: refund.refunded ? refund.amount : null,
-        cancellation_reason: "Alternate GP offers expired without response",
-      })
-      .eq("id", bookingId);
+    const refund = await fullRefundBooking(claimed);
+    if (refund.refunded) {
+      await supabase
+        .from("bookings")
+        .update({
+          refunded_at: new Date().toISOString(),
+          refund_amount_cents: refund.amount,
+        })
+        .eq("id", bookingId);
+    }
 
     processed++;
   }
