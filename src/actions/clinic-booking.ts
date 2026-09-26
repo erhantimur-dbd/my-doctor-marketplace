@@ -5,6 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { requireOrgMember } from "./organization";
 import { getStripe } from "@/lib/stripe/client";
+import {
+  DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE,
+  doctorCanAcceptConsultCardPayment,
+} from "@/lib/stripe/consult-merchant";
 import { sendEmail } from "@/lib/email/client";
 import { reschedulePaymentEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
@@ -273,6 +277,15 @@ export async function adminRescheduleBooking(formData: FormData) {
   // Case 2: New slot is more expensive → create Stripe Payment Intent for the diff
   if (!patient?.email) return { error: "Cannot send payment request: patient email not found" };
 
+  if (!newDoctor.stripe_account_id) {
+    return { error: DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE };
+  }
+  const merchant = await doctorCanAcceptConsultCardPayment(
+    stripe,
+    newDoctor.stripe_account_id
+  );
+  if (!merchant.ok) return { error: merchant.error };
+
   // Create a new booking record for the new slot in pending_reschedule_payment status
   // The original booking remains confirmed until payment is received.
   const { data: newBooking, error: newBookingError } = await adminSupabase
@@ -320,6 +333,9 @@ export async function adminRescheduleBooking(formData: FormData) {
       customer: undefined, // We'll use email receipt
       receipt_email: patient.email,
       description: `Reschedule balance for booking ${booking.booking_number}`,
+      // Statement descriptor follows the new doctor. Funds stay on the platform;
+      // this balance was never a destination charge.
+      on_behalf_of: newDoctor.stripe_account_id,
       metadata: {
         original_booking_id: booking.id,
         new_booking_id: newBooking.id,

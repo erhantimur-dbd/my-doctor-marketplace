@@ -14,6 +14,7 @@ import {
 } from "@/lib/validators/booking";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { getCommissionCents, formatCurrency } from "@/lib/utils/currency";
+import { doctorCanAcceptConsultCardPayment } from "@/lib/stripe/consult-merchant";
 import { sendEmail } from "@/lib/email/client";
 import { followUpInvitationEmail } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
@@ -403,6 +404,22 @@ export async function createInvitationCheckout(
       return { error: "Failed to create booking. Please try again." };
     }
 
+    if (!doctor.stripe_account_id) {
+      return { error: "Doctor payment setup is incomplete." };
+    }
+    const merchant = await doctorCanAcceptConsultCardPayment(
+      getStripe(),
+      doctor.stripe_account_id
+    );
+    if (!merchant.ok) {
+      const adminSupabase = createAdminClient();
+      await adminSupabase
+        .from("bookings")
+        .update({ status: BOOKING_STATUSES.EXPIRED })
+        .eq("id", booking.id);
+      return { error: merchant.error };
+    }
+
     // Create Stripe Checkout Session
     const { origin, locale } = await getOriginAndLocale();
     const profile: any = Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile;
@@ -432,6 +449,7 @@ export async function createInvitationCheckout(
       ],
       payment_intent_data: {
         application_fee_amount: getCommissionCents(invitation.discounted_total_cents),
+        on_behalf_of: doctor.stripe_account_id,
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
