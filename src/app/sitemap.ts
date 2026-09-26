@@ -29,6 +29,7 @@ const SOFT_LAUNCH_PUBLIC_PAGES = [
   "/contact",
   "/support",
   "/help-center",
+  "/find-booking",
   "/terms",
   "/privacy",
   "/cookie-policy",

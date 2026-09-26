@@ -37,6 +37,12 @@ import {
   patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
 import { getTranslations } from "next-intl/server";
+import { GuestAccountCard } from "@/components/booking/guest-account-card";
+import {
+  classifyGuestAuthUser,
+  guestConfirmationPrompt,
+  shouldShowGuestSignupCard,
+} from "@/lib/booking/guest-account-link";
 
 export const metadata: Metadata = {
   title: "Booking Confirmed",
@@ -74,6 +80,7 @@ const bookingSelect = `
       paid_at,
       is_guest,
       patient_id,
+      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         slug,
@@ -175,8 +182,49 @@ export default async function BookingConfirmationPage({
     redirect(`/${locale}`);
   }
 
-  const isGuestBooking =
-    !user || (booking as { is_guest?: boolean }).is_guest === true;
+  const guestBooking = (booking as { is_guest?: boolean }).is_guest === true;
+  const showGuestSignup = shouldShowGuestSignupCard({
+    isGuest: guestBooking,
+    loggedIn: Boolean(user),
+  });
+
+  let guestPrompt: "create" | "login" = "create";
+  let guestContact = { firstName: "", lastName: "", email: "" };
+  if (showGuestSignup) {
+    const patient = Array.isArray(
+      (booking as { patient?: unknown }).patient
+    )
+      ? (booking as { patient: { first_name?: string | null; last_name?: string | null; email?: string | null }[] }).patient[0]
+      : (booking as { patient?: { first_name?: string | null; last_name?: string | null; email?: string | null } | null }).patient;
+    guestContact = {
+      firstName: patient?.first_name || "",
+      lastName: patient?.last_name || "",
+      email: patient?.email || "",
+    };
+    const patientId = (booking as { patient_id?: string }).patient_id;
+    if (patientId) {
+      const adminForAccount = createAdminClient();
+      const { data: authUser } = await adminForAccount.auth.admin.getUserById(
+        patientId
+      );
+      const meta = (authUser?.user?.user_metadata ?? {}) as Record<string, unknown>;
+      const kind = classifyGuestAuthUser({
+        bookingPatientId: patientId,
+        authUserId: authUser?.user?.id ?? null,
+        createdVia: typeof meta.created_via === "string" ? meta.created_via : null,
+        passwordSetAt:
+          typeof meta.password_set_at === "string" ? meta.password_set_at : null,
+      });
+      guestPrompt =
+        guestConfirmationPrompt({
+          isGuest: true,
+          loggedIn: false,
+          accountKind: kind,
+        }) === "login"
+          ? "login"
+          : "create";
+    }
+  }
 
   const doctor: any = Array.isArray(booking.doctor)
     ? booking.doctor[0]
@@ -392,28 +440,31 @@ export default async function BookingConfirmationPage({
             </CardContent>
 
             <CardFooter className="flex flex-col gap-3">
-              {isGuestBooking && !user ? (
-                <>
-                  <Button className="w-full" asChild>
-                    <Link href="/forgot-password">
-                      Set a password to manage bookings
-                    </Link>
-                  </Button>
-                  <p className="text-center text-xs text-muted-foreground">
-                    We emailed a one-click sign-in link — open it to access your
-                    bookings without a password. You can set a password later
-                    from that email. Prefer not to wait? Use the button above
-                    with the same email you booked with.
-                  </p>
-                </>
-              ) : (
+              {user ? (
                 <Button className="w-full" asChild>
                   <Link href="/dashboard/bookings">
                     <LayoutDashboard className="mr-2 h-4 w-4" />
                     View My Bookings
                   </Link>
                 </Button>
+              ) : showGuestSignup ? (
+                <p className="text-center text-xs text-muted-foreground">
+                  We emailed a one-click sign-in link. You can also create a
+                  password below, or look this booking up later.
+                </p>
+              ) : (
+                <Button className="w-full" asChild>
+                  <Link href="/login">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Log in to see this booking
+                  </Link>
+                </Button>
               )}
+              {showGuestSignup ? (
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/find-booking">Find this booking later</Link>
+                </Button>
+              ) : null}
               <Button variant="outline" className="w-full" asChild>
                 <Link href="/">
                   <Home className="mr-2 h-4 w-4" />
@@ -422,6 +473,18 @@ export default async function BookingConfirmationPage({
               </Button>
             </CardFooter>
           </Card>
+          {showGuestSignup ? (
+            <div className="mt-6">
+              <GuestAccountCard
+                mode={guestPrompt}
+                bookingId={(booking as { id: string }).id}
+                firstName={guestContact.firstName}
+                lastName={guestContact.lastName}
+                email={guestContact.email}
+                locale={locale}
+              />
+            </div>
+          ) : null}
         </div>
       </BookingSuccessAnimation>
     </div>

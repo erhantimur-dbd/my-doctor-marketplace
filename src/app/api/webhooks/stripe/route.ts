@@ -18,6 +18,7 @@ import {
   sendSoftsmokeTransferNotice,
 } from "@/lib/email/softsmoke-send";
 import { sendGuestAccountClaimEmail } from "@/lib/auth/guest-claim";
+import { publicFindBookingUrl } from "@/lib/booking/find-booking";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
 import {
   TEMPLATE_BOOKING_CONFIRMATION,
@@ -514,6 +515,10 @@ export async function POST(request: NextRequest) {
                 slug: doctor.slug,
                 email: doctorProfile.email,
               },
+              findBookingUrl:
+                booking.is_guest === true || session.metadata?.is_guest === "1"
+                  ? publicFindBookingUrl()
+                  : undefined,
             });
 
             sendEmail({ to: patient.email, subject, html }).catch((err) =>

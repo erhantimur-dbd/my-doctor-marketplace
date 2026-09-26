@@ -245,6 +245,8 @@ export interface SoftsmokeBookingFields {
   joinUrl?: string | null;
   manageUrl?: string | null;
   diaryUrl?: string | null;
+  /** Public lookup page. Omitted from the body when unset. */
+  findBookingUrl?: string | null;
 }
 
 function bookingDetails(fields: SoftsmokeBookingFields, who: "doctor" | "patient") {
@@ -289,6 +291,11 @@ export function softsmokePatientConfirmEmail(
     </p>
     ${join ? primaryButton("Join Video Call", join) : ""}
     ${secondaryButton("View Booking Details", manage)}
+    ${
+      fields.findBookingUrl
+        ? secondaryButton("Find my booking", fields.findBookingUrl)
+        : ""
+    }
   `);
   return {
     subject: `Booking confirmed — ${fields.bookingRef}`,

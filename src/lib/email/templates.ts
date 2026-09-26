@@ -129,6 +129,8 @@ interface BookingConfirmationParams {
   remainderDue?: number;
   depositType?: string; // 'percentage' | 'flat'
   depositValue?: number; // the percentage or flat value used
+  /** Public lookup page. Included on guest confirmation mail when set. */
+  findBookingUrl?: string | null;
 }
 
 export function bookingConfirmationEmail({
@@ -148,6 +150,7 @@ export function bookingConfirmationEmail({
   remainderDue,
   depositType,
   depositValue,
+  findBookingUrl,
 }: BookingConfirmationParams): { subject: string; html: string } {
   const subject = `Booking Confirmed - ${bookingNumber}`;
 
@@ -224,6 +227,13 @@ export function bookingConfirmationEmail({
     ${videoBlock}
 
     ${button("View Booking Details")}
+    ${
+      findBookingUrl
+        ? `<p style="margin: 0 0 8px; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      Need this booking later? <a href="${findBookingUrl}" style="color: ${BRAND_COLOR}; text-decoration: underline;">Find my booking</a> with your booking number and the email you used.
+    </p>`
+        : ""
+    }
   `);
 
   return { subject, html };
@@ -1974,6 +1984,8 @@ interface GuestAccountClaimParams {
   setPasswordUrl?: string;
   /** When true, primary CTA opens a signed-in session (no password first) */
   magicSession?: boolean;
+  /** Public lookup page for guests who still have the booking number. */
+  findBookingUrl?: string | null;
 }
 
 export function guestAccountClaimEmail({
@@ -1982,6 +1994,7 @@ export function guestAccountClaimEmail({
   bookingNumber,
   setPasswordUrl,
   magicSession = true,
+  findBookingUrl,
 }: GuestAccountClaimParams): { subject: string; html: string } {
   const subject = magicSession
     ? "Open your MyDoctors360 booking (one-click sign-in)"
@@ -2015,8 +2028,41 @@ export function guestAccountClaimEmail({
     </p>
     ${button(primaryCta, claimUrl)}
     ${secondary}
+    ${
+      findBookingUrl
+        ? `<p style="margin: 16px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      Looking this booking up later? <a href="${findBookingUrl}" style="color: ${BRAND_COLOR}; text-decoration: underline;">Find my booking</a> with your booking number and this email address.
+    </p>`
+        : ""
+    }
     <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       If you did not book an appointment, you can ignore this email.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+export function bookingManageLinkEmail({
+  bookingNumber,
+  manageUrl,
+  expiresMinutes = 30,
+}: {
+  bookingNumber: string;
+  manageUrl: string;
+  expiresMinutes?: number;
+}): { subject: string; html: string } {
+  const subject = `Manage booking ${bookingNumber}`;
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Manage your booking</h2>
+    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Use the button below to manage booking <strong>${bookingNumber}</strong>.
+      This link expires in ${expiresMinutes} minutes and works once.
+      Cancel and reschedule stay on the manage page this link opens.
+    </p>
+    ${button("Manage this booking", manageUrl)}
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you did not ask for this link, you can ignore this email.
     </p>
   `);
 
