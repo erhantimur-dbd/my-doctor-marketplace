@@ -329,7 +329,15 @@ describe("consult charges are card-only", () => {
 
   it("sets payment_method_types to that list on every consult session and intent, and keeps on_behalf_of where it was set", () => {
     const cardOnly = /payment_method_types:\s*CONSULT_PAYMENT_METHOD_TYPES\b/;
-    const behalf = "on_behalf_of: doctor.stripe_account_id";
+    const charge = read("src/lib/stripe/consult-charge.ts");
+    expect(charge).toContain("on_behalf_of: input.destinationAccountId");
+
+    function expectCardDestination(arg: string) {
+      expect(arg).toMatch(cardOnly);
+      expect(arg).toContain("consultDestinationChargeParams");
+      expect(arg).toContain("destinationAccountId");
+      expect(arg).not.toContain("automatic_payment_methods");
+    }
 
     const bookingSrc = read("src/actions/booking.ts");
     const bookingCalls = callArgs(bookingSrc, "checkout.sessions.create");
@@ -338,21 +346,19 @@ describe("consult charges are card-only", () => {
       "createBookingAndCheckout"
     );
     // Full payment, deposit, guest, and signed-in all share this one session.
-    expect(bookingCalls[0]).toMatch(cardOnly);
-    expect(bookingCalls[0]).toContain(behalf);
+    expectCardDestination(bookingCalls[0]);
+    expect(bookingCalls[0]).toContain("destinationAccountId: doctor.stripe_account_id");
     expect(bookingCalls[0]).toContain('payment_mode: isDeposit ? "deposit" : "full"');
     expect(bookingCalls[0]).toContain('is_guest: isGuest ? "1" : "0"');
     expect(bookingCalls[0]).toContain("customer_email: guestEmail || undefined");
-    expect(bookingCalls[0]).not.toContain("automatic_payment_methods");
 
     const followUpSrc = read("src/actions/follow-up.ts");
     const followUpAt = followUpSrc.indexOf("checkout.sessions.create");
     const followUpCalls = callArgs(followUpSrc, "checkout.sessions.create");
     expect(followUpCalls).toHaveLength(1);
     expect(enclosingFunction(followUpSrc, followUpAt)).toBe("createInvitationCheckout");
-    expect(followUpCalls[0]).toMatch(cardOnly);
-    expect(followUpCalls[0]).toContain(behalf);
-    expect(followUpCalls[0]).not.toContain("automatic_payment_methods");
+    expectCardDestination(followUpCalls[0]);
+    expect(followUpCalls[0]).toContain("destinationAccountId: doctor.stripe_account_id");
 
     const adminSrc = read("src/actions/admin.ts");
     const adminCalls = callArgs(adminSrc, "checkout.sessions.create");
@@ -362,9 +368,8 @@ describe("consult charges are card-only", () => {
     );
     expect(adminFns).toEqual(["adminCreateBookingOnBehalf", "adminResendPaymentLink"]);
     for (const arg of adminCalls) {
-      expect(arg).toMatch(cardOnly);
-      expect(arg).toContain(behalf);
-      expect(arg).not.toContain("automatic_payment_methods");
+      expectCardDestination(arg);
+      expect(arg).toContain("destinationAccountId: doctor.stripe_account_id");
     }
 
     const clinicSrc = read("src/actions/clinic-booking.ts");
@@ -372,9 +377,8 @@ describe("consult charges are card-only", () => {
     const clinicCalls = callArgs(clinicSrc, "paymentIntents.create");
     expect(clinicCalls).toHaveLength(1);
     expect(enclosingFunction(clinicSrc, clinicAt)).toBe("adminRescheduleBooking");
-    expect(clinicCalls[0]).toMatch(cardOnly);
-    expect(clinicCalls[0]).not.toContain("on_behalf_of");
-    expect(clinicCalls[0]).not.toContain("automatic_payment_methods");
+    expectCardDestination(clinicCalls[0]);
+    expect(clinicCalls[0]).toContain("applicationFeeCents: balanceCommissionCents");
   });
 
   it("leaves non-consult checkouts on dynamic payment methods", () => {
