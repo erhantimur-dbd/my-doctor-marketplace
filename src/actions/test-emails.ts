@@ -6,8 +6,12 @@ import * as templates from "@/lib/email/templates";
 import * as softsmoke from "@/lib/email/softsmoke-templates";
 import { TEMPLATE_LIST, type TemplateKey } from "@/lib/email/template-list";
 import { BOOKING_NUMBER_EXAMPLE } from "@/lib/booking/booking-number";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+import {
+  priceChangeNoticeEmail,
+  trialChargeReminderEmail,
+} from "@/lib/offers/service-email-templates";
+import { EMAIL_APP_URL as APP_URL } from "@/lib/email/app-url";
+import { isServiceEmailRecipientAllowed } from "@/lib/offers/allowlist";
 
 // Sample data for each template
 const SAMPLE_DATA = {
@@ -331,7 +335,31 @@ const SAMPLE_DATA = {
       payoutOrTransferRef: "tr_preview",
       periodOrDate: "2026-09-26",
     }),
+  trialChargeReminder: () =>
+    trialChargeReminderEmail({
+      planLabel: "Solo",
+      amountPence: 199000,
+      chargeOn: new Date("2026-12-25T12:00:00.000Z"),
+    }),
+  priceChangeNotice: () =>
+    priceChangeNoticeEmail({
+      planLabel: "Pro",
+      fromPence: 299000,
+      toPence: 319000,
+      renewsOn: new Date("2027-09-26T12:00:00.000Z"),
+    }),
 };
+
+const SERVICE_EMAIL_KEYS = new Set<TemplateKey>([
+  "trialChargeReminder",
+  "priceChangeNotice",
+]);
+
+function serviceEmailSendBlock(templateKey: TemplateKey, toEmail: string): string | null {
+  if (!SERVICE_EMAIL_KEYS.has(templateKey)) return null;
+  if (isServiceEmailRecipientAllowed(toEmail)) return null;
+  return "Service emails are limited to the Softsmoke test allowlist until launch.";
+}
 
 // TemplateKey and TEMPLATE_LIST imported from @/lib/email/template-list
 
@@ -368,6 +396,9 @@ export async function sendTestEmail(templateKey: TemplateKey, toEmail: string) {
     .single();
   if (profile?.role !== "admin") return { error: "Admin access required" };
 
+  const blocked = serviceEmailSendBlock(templateKey, toEmail);
+  if (blocked) return { error: blocked };
+
   const generator = SAMPLE_DATA[templateKey];
   if (!generator) return { error: `Unknown template: ${templateKey}` };
 
@@ -401,6 +432,11 @@ export async function sendAllTestEmails(toEmail: string) {
   const results: { key: string; success: boolean; error?: string }[] = [];
 
   for (const { key } of TEMPLATE_LIST) {
+    const blocked = serviceEmailSendBlock(key, toEmail);
+    if (blocked) {
+      results.push({ key, success: false, error: blocked });
+      continue;
+    }
     const generator = SAMPLE_DATA[key];
     const { subject, html } = generator();
 

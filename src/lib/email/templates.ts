@@ -1,7 +1,7 @@
 // Email templates as pure functions returning { subject, html }
 // No external React Email dependency needed - uses inline CSS for compatibility
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+import { EMAIL_APP_URL as APP_URL } from "@/lib/email/app-url";
 const BRAND_COLOR = "#0284c7";
 const BRAND_COLOR_END = "#0d9488"; // teal-600 — gradient end
 const BRAND_NAME = "MyDoctors360";
@@ -1181,7 +1181,7 @@ export function contactInquiryAutoReplyEmail(params: {
 }): { subject: string; html: string } {
   const subject = `We've Received Your Inquiry — ${BRAND_NAME}`;
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+  const appUrl = APP_URL;
 
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 22px; font-weight: 700; color: #111827;">

@@ -30,6 +30,10 @@ import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/
 import { creditWallet } from "@/lib/wallet";
 import { settlePartCreditAfterCardPayment } from "@/lib/stripe/wallet-credit-share";
 import { createNotification } from "@/lib/notifications";
+import {
+  flagOrphanedOfferSubscription,
+  isUniqueLicenceConflict,
+} from "@/lib/offers/orphan-offer-alert";
 import { earnPoints } from "@/lib/points";
 import Stripe from "stripe";
 
@@ -753,6 +757,11 @@ export async function POST(request: NextRequest) {
               ? new Date(periodEnd * 1000).toISOString()
               : new Date().toISOString(),
             cancel_at_period_end: subscription.cancel_at_period_end,
+            ...(subscription.trial_end
+              ? {
+                  trial_ends_at: new Date(subscription.trial_end * 1000).toISOString(),
+                }
+              : {}),
             ...(licenseStatus === "grace_period" && {
               grace_period_start: new Date().toISOString(),
             }),
@@ -762,6 +771,69 @@ export async function POST(request: NextRequest) {
           },
           { onConflict: "stripe_subscription_id" }
         );
+
+        // Offer attribution is a separate update so a missing migration does
+        // not fail monthly subscription webhooks. A second offer is ignored.
+        const offerId = subscription.metadata?.offer_id || "";
+        const billingPeriodMeta = subscription.metadata?.billing_period || "";
+        if (offerId || billingPeriodMeta === "annual" || billingPeriodMeta === "monthly") {
+          const patch: Record<string, string | null> = {};
+          if (billingPeriodMeta === "annual" || billingPeriodMeta === "monthly") {
+            patch.billing_period = billingPeriodMeta;
+          }
+          if (offerId) {
+            const { data: attached } = await supabase
+              .from("licenses")
+              .select("offer_id")
+              .eq("stripe_subscription_id", subscription.id)
+              .maybeSingle();
+            const already = (attached as { offer_id?: string | null } | null)?.offer_id;
+            if (already && already !== offerId) {
+              console.error("Refusing second subscription offer", {
+                subscriptionId: subscription.id,
+                already,
+                offerId,
+              });
+            } else {
+              patch.offer_id = offerId;
+              patch.attribution_specialty =
+                subscription.metadata?.attribution_specialty || null;
+              patch.offer_invite_id = subscription.metadata?.offer_invite_id || null;
+            }
+          }
+          if (Object.keys(patch).length > 0) {
+            const { error: offerPatchError } = await supabase
+              .from("licenses")
+              .update(patch)
+              .eq("stripe_subscription_id", subscription.id);
+            if (offerPatchError) {
+              console.error("Offer attribution update failed:", offerPatchError);
+              if (isUniqueLicenceConflict(offerPatchError)) {
+                await flagOrphanedOfferSubscription(supabase, {
+                  organizationId: orgId,
+                  subscriptionId: subscription.id,
+                  offerId,
+                  detail: offerPatchError.message || "unique violation",
+                });
+              }
+            } else if (offerId) {
+              try {
+                const { recordSubscribedAttribution } = await import(
+                  "@/lib/offers/signup"
+                );
+                await recordSubscribedAttribution({
+                  offerId,
+                  inviteId: subscription.metadata?.offer_invite_id || null,
+                  specialty: subscription.metadata?.attribution_specialty || null,
+                  subscriptionId: subscription.id,
+                  organizationId: orgId,
+                });
+              } catch (attrErr) {
+                console.error("Offer attribution row failed:", attrErr);
+              }
+            }
+          }
+        }
 
         // Paid→paid scheduled downgrade: when period rolls, switch price with no proration
         const pendingTier = subscription.metadata?.pending_tier;
