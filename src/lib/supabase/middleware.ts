@@ -55,3 +55,22 @@ export async function updateSession(
     return { supabase: null, user: null, response };
   }
 }
+
+/**
+ * Copy cookies already written onto `from` onto `to`.
+ *
+ * `updateSession` rotates Supabase auth cookies onto the next-intl response.
+ * Protected-route exits return a new `NextResponse.redirect`, which drops
+ * those `Set-Cookie` headers. The browser then keeps the pre-rotation
+ * refresh token and the next login, MFA, role, or billing navigation logs
+ * the user out. Call this on every redirect that happens after refresh.
+ */
+export function copyResponseCookies(
+  from: NextResponse,
+  to: NextResponse
+): NextResponse {
+  for (const cookie of from.cookies.getAll()) {
+    to.cookies.set(cookie);
+  }
+  return to;
+}
