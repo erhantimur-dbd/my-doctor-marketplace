@@ -189,3 +189,240 @@ describe("card payments capability", () => {
     });
   });
 });
+
+describe("consult charges set on_behalf_of", () => {
+  it("sets on_behalf_of on standard, deposit, guest, and signed-in booking checkout", () => {
+    const booking = read("src/actions/booking.ts");
+    expect(booking.match(/checkout\.sessions\.create/g)?.length).toBe(1);
+    expect(booking).toContain("on_behalf_of: doctor.stripe_account_id");
+    expect(booking).toContain("destination: doctor.stripe_account_id");
+    expect(booking).toContain("customer_email: guestEmail || undefined");
+    expect(booking).toContain('payment_mode: isDeposit ? "deposit" : "full"');
+
+    const skipAt = booking.indexOf("confirmBookingWithoutStripeCheckout");
+    const walletAt = booking.indexOf("walletOnly: true");
+    const gateAt = booking.indexOf("await doctorCanAcceptConsultCardPayment");
+    const createAt = booking.indexOf("checkout.sessions.create");
+    expect(skipAt).toBeGreaterThan(-1);
+    expect(walletAt).toBeGreaterThan(skipAt);
+    expect(gateAt).toBeGreaterThan(walletAt);
+    expect(createAt).toBeGreaterThan(gateAt);
+    expect(booking.slice(gateAt, createAt)).toContain("BOOKING_STATUSES.EXPIRED");
+    expect(booking.indexOf("on_behalf_of:")).toBeGreaterThan(createAt);
+  });
+
+  it("sets on_behalf_of on follow-up checkout behind the care-plan kill switch", () => {
+    const src = read("src/actions/follow-up.ts");
+    const fn = src.slice(src.indexOf("export async function createInvitationCheckout"));
+    expect(fn.indexOf("isCarePlansEnabled")).toBeGreaterThan(-1);
+    expect(fn.indexOf("isCarePlansEnabled")).toBeLessThan(
+      fn.indexOf("doctorCanAcceptConsultCardPayment")
+    );
+    expect(fn).toContain("on_behalf_of: doctor.stripe_account_id");
+    expect(fn).toContain("destination: doctor.stripe_account_id");
+  });
+
+  it("expires a follow-up booking with the patient message when the doctor has no Stripe account", () => {
+    const src = read("src/actions/follow-up.ts");
+    const fn = src.slice(src.indexOf("export async function createInvitationCheckout"));
+    const missingAt = fn.indexOf("if (!doctor.stripe_account_id)");
+    const gateAt = fn.indexOf("await doctorCanAcceptConsultCardPayment");
+    expect(missingAt).toBeGreaterThan(-1);
+    expect(gateAt).toBeGreaterThan(missingAt);
+    const branch = fn.slice(missingAt, gateAt);
+    expect(branch).toContain("BOOKING_STATUSES.EXPIRED");
+    expect(branch).toContain("DOCTOR_CARD_PAYMENTS_UNAVAILABLE_MESSAGE");
+    expect(branch).not.toContain("Doctor payment setup is incomplete.");
+  });
+
+  it("sets on_behalf_of on admin consult payment links and checks capability before resend expiry", () => {
+    const src = read("src/actions/admin.ts");
+    expect(src.match(/on_behalf_of: doctor\.stripe_account_id/g)?.length).toBe(2);
+    expect(src.match(/await doctorCanAcceptConsultCardPayment/g)?.length).toBe(2);
+
+    const resend = src.slice(src.indexOf("export async function adminResendPaymentLink"));
+    const gateAt = resend.indexOf("doctorCanAcceptConsultCardPayment");
+    const expireAt = resend.indexOf("checkout.sessions.expire");
+    const behalfAt = resend.indexOf("on_behalf_of:");
+    expect(gateAt).toBeGreaterThan(-1);
+    expect(gateAt).toBeLessThan(expireAt);
+    expect(behalfAt).toBeGreaterThan(expireAt);
+  });
+
+  it("blocks the clinic reschedule balance when card_payments is inactive and does not set on_behalf_of", () => {
+    // Platform charge with no transfer. Miles is converting this to a
+    // destination charge separately; until then the doctor's name must not
+    // appear on the statement. The capability check stays in front of it.
+    const src = read("src/actions/clinic-booking.ts");
+    const fn = src.slice(src.indexOf("export async function adminRescheduleBooking"));
+    expect(fn).not.toContain("on_behalf_of");
+    expect(fn).not.toContain("transfer_data");
+    const gateAt = fn.indexOf("await doctorCanAcceptConsultCardPayment");
+    const createAt = fn.indexOf("paymentIntents.create");
+    expect(gateAt).toBeGreaterThan(-1);
+    expect(createAt).toBeGreaterThan(gateAt);
+    expect(fn.slice(gateAt, createAt)).toContain(
+      "if (!merchant.ok) return { error: merchant.error }"
+    );
+  });
+
+  it("does not debit or reserve a partial wallet when the capability check refuses the charge", () => {
+    const booking = read("src/actions/booking.ts");
+    const fn = booking.slice(
+      booking.indexOf("export async function createBookingAndCheckout")
+    );
+    const gateAt = fn.indexOf("await doctorCanAcceptConsultCardPayment");
+    const refusalEnd = fn.indexOf("return { error: merchant.error }");
+    const partialReserve = fn.indexOf(
+      ".update({ wallet_credit_applied_cents: walletCreditToApply })"
+    );
+    const debitAt = fn.indexOf("await debitWallet(");
+    const walletOnlyAt = fn.indexOf("walletOnly: true");
+
+    expect(debitAt).toBeGreaterThan(-1);
+    expect(debitAt).toBeLessThan(walletOnlyAt);
+    expect(walletOnlyAt).toBeLessThan(gateAt);
+    expect(refusalEnd).toBeGreaterThan(gateAt);
+    expect(partialReserve).toBeGreaterThan(refusalEnd);
+
+    const refused = fn.slice(gateAt, refusalEnd);
+    expect(refused).not.toContain("debitWallet");
+    expect(refused).not.toContain("wallet_credit_applied_cents");
+
+    for (const rel of [
+      "src/actions/follow-up.ts",
+      "src/actions/admin.ts",
+      "src/actions/clinic-booking.ts",
+      "src/actions/invoices.ts",
+      "src/actions/treatment-plan.ts",
+    ]) {
+      const src = read(rel);
+      // Capability-gated card checkout must not also debit/settle wallet credit
+      // on the same charge path. Reading wallet_credit_applied_cents for refund
+      // rebase (clinic cheaper reschedule) is fine.
+      const combinesWalletAndGate =
+        src.includes("doctorCanAcceptConsultCardPayment") &&
+        (src.includes("debitWallet") ||
+          src.includes("runFullCreditSettlement") ||
+          src.includes("settlePartCreditAfterCardPayment"));
+      expect(combinesWalletAndGate, rel).toBe(false);
+    }
+  });
+});
+
+describe("consult charges are card-only", () => {
+  it("exports payment method types as exactly card", () => {
+    expect(CONSULT_PAYMENT_METHOD_TYPES).toEqual(["card"]);
+  });
+
+  it("sets payment_method_types to that list on every consult session and intent, and keeps on_behalf_of where it was set", () => {
+    const cardOnly = /payment_method_types:\s*CONSULT_PAYMENT_METHOD_TYPES\b/;
+    const behalf = "on_behalf_of: doctor.stripe_account_id";
+
+    const bookingSrc = read("src/actions/booking.ts");
+    const bookingCalls = callArgs(bookingSrc, "checkout.sessions.create");
+    expect(bookingCalls).toHaveLength(1);
+    expect(enclosingFunction(bookingSrc, bookingSrc.indexOf("checkout.sessions.create"))).toBe(
+      "createBookingAndCheckout"
+    );
+    // Full payment, deposit, guest, and signed-in all share this one session.
+    expect(bookingCalls[0]).toMatch(cardOnly);
+    expect(bookingCalls[0]).toContain(behalf);
+    expect(bookingCalls[0]).toContain('payment_mode: isDeposit ? "deposit" : "full"');
+    expect(bookingCalls[0]).toContain('is_guest: isGuest ? "1" : "0"');
+    expect(bookingCalls[0]).toContain("customer_email: guestEmail || undefined");
+    expect(bookingCalls[0]).not.toContain("automatic_payment_methods");
+
+    const followUpSrc = read("src/actions/follow-up.ts");
+    const followUpAt = followUpSrc.indexOf("checkout.sessions.create");
+    const followUpCalls = callArgs(followUpSrc, "checkout.sessions.create");
+    expect(followUpCalls).toHaveLength(1);
+    expect(enclosingFunction(followUpSrc, followUpAt)).toBe("createInvitationCheckout");
+    expect(followUpCalls[0]).toMatch(cardOnly);
+    expect(followUpCalls[0]).toContain(behalf);
+    expect(followUpCalls[0]).not.toContain("automatic_payment_methods");
+
+    const adminSrc = read("src/actions/admin.ts");
+    const adminCalls = callArgs(adminSrc, "checkout.sessions.create");
+    expect(adminCalls).toHaveLength(2);
+    const adminFns = [...adminSrc.matchAll(/checkout\.sessions\.create/g)].map((match) =>
+      enclosingFunction(adminSrc, match.index ?? -1)
+    );
+    expect(adminFns).toEqual(["adminCreateBookingOnBehalf", "adminResendPaymentLink"]);
+    for (const arg of adminCalls) {
+      expect(arg).toMatch(cardOnly);
+      expect(arg).toContain(behalf);
+      expect(arg).not.toContain("automatic_payment_methods");
+    }
+
+    const clinicSrc = read("src/actions/clinic-booking.ts");
+    const clinicAt = clinicSrc.indexOf("paymentIntents.create");
+    const clinicCalls = callArgs(clinicSrc, "paymentIntents.create");
+    expect(clinicCalls).toHaveLength(1);
+    expect(enclosingFunction(clinicSrc, clinicAt)).toBe("adminRescheduleBooking");
+    expect(clinicCalls[0]).toMatch(cardOnly);
+    expect(clinicCalls[0]).not.toContain("on_behalf_of");
+    expect(clinicCalls[0]).not.toContain("automatic_payment_methods");
+  });
+
+  it("leaves non-consult checkouts on dynamic payment methods", () => {
+    for (const rel of [
+      "src/actions/doctor.ts",
+      "src/actions/license.ts",
+      "src/actions/auth.ts",
+      "src/actions/wallet.ts",
+      "src/actions/coupon.ts",
+      "src/actions/referral.ts",
+      "src/actions/invoices.ts",
+      "src/actions/treatment-plan.ts",
+      "src/lib/gp/reassign.ts",
+    ]) {
+      const src = read(rel);
+      expect(src, rel).not.toContain("CONSULT_PAYMENT_METHOD_TYPES");
+      expect(src, rel).not.toMatch(/payment_method_types\s*:/);
+    }
+  });
+});
+
+describe("platform charges do not set on_behalf_of", () => {
+  it("leaves subscriptions, annual plans, coupons, offers, wallet, and invoices alone", () => {
+    for (const rel of [
+      "src/actions/doctor.ts",
+      "src/actions/license.ts",
+      "src/actions/auth.ts",
+      "src/actions/wallet.ts",
+      "src/actions/coupon.ts",
+      "src/actions/referral.ts",
+      "src/actions/invoices.ts",
+      "src/lib/gp/reassign.ts",
+    ]) {
+      expect(read(rel), rel).not.toContain("on_behalf_of");
+    }
+  });
+
+  it("does not modify disabled treatment-plan checkout", () => {
+    const src = read("src/actions/treatment-plan.ts");
+    expect(src).not.toContain("on_behalf_of");
+    expect(src).toContain("isCarePlansEnabled");
+    expect(src).toContain("destination: doctor.stripe_account_id");
+  });
+});
+
+describe("onboarding requests both capabilities", () => {
+  it("requests card_payments and transfers on create, and card_payments again for existing accounts", () => {
+    const doctor = read("src/actions/doctor.ts");
+    expect(doctor).toContain("capabilities: EXPRESS_CONNECT_CAPABILITIES");
+    expect(doctor).toContain("requestCardPaymentsIfNeeded");
+    const createAt = doctor.indexOf("accounts.create");
+    const existingAt = doctor.indexOf("await requestCardPaymentsIfNeeded");
+    expect(createAt).toBeGreaterThan(-1);
+    expect(existingAt).toBeGreaterThan(createAt);
+
+    const payments = read(
+      "src/app/[locale]/(doctor)/doctor-dashboard/payments/page.tsx"
+    );
+    expect(payments).toContain("requestCardPaymentsIfNeeded");
+    const dashboard = read("src/app/[locale]/(doctor)/doctor-dashboard/page.tsx");
+    expect(dashboard).toContain("requestCardPaymentsIfNeeded");
+  });
+});
