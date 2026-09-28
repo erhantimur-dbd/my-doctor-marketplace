@@ -123,8 +123,28 @@ export function bookingRefundSettlementPatch(
   > & { cardRefundCents?: number },
   options?: { markStatusRefunded?: boolean }
 ): Record<string, unknown> | null {
-  if (settled.alreadyApplied) return null;
   const prior = remainingConsultPaidParts(booking);
+  const original = storedConsultPaidParts(booking);
+  const originalPaid = original.cardPaidCents + original.creditPaidCents;
+  const alreadyCounted =
+    prior.cardRefundedToCardCents +
+    prior.cardCreditedToWalletCents +
+    prior.creditRefundedCents;
+  const splitTotal =
+    (settled.cardRefundCents ??
+      settled.cardRefundedToCardCents +
+        Math.max(
+          0,
+          (settled.walletCreditCents || 0) - (settled.creditRefundCents || 0)
+        )) + (settled.creditRefundCents || 0);
+
+  // alreadyApplied means the wallet/Stripe side already ran. Still persist
+  // counters when a prior attempt moved money but the booking update failed.
+  if (settled.alreadyApplied) {
+    if (originalPaid <= 0 || alreadyCounted >= originalPaid) return null;
+    if (prior.remainingPaidCents < splitTotal) return null;
+  }
+
   const cardToWallet = Math.max(
     0,
     (settled.walletCreditCents || 0) - (settled.creditRefundCents || 0)
@@ -133,11 +153,8 @@ export function bookingRefundSettlementPatch(
     prior.cardRefundedToCardCents + (settled.cardRefundedToCardCents || 0);
   const nextCardToWallet = prior.cardCreditedToWalletCents + cardToWallet;
   const nextCredit = prior.creditRefundedCents + (settled.creditRefundCents || 0);
-  const original = storedConsultPaidParts(booking);
-  const cumulative =
-    nextCardToCard + nextCardToWallet + nextCredit;
-  const fullySettled =
-    cumulative >= original.cardPaidCents + original.creditPaidCents;
+  const cumulative = nextCardToCard + nextCardToWallet + nextCredit;
+  const fullySettled = cumulative >= originalPaid;
   const patch: Record<string, unknown> = {
     card_refunded_to_card_cents: nextCardToCard,
     card_credited_to_wallet_cents: nextCardToWallet,
@@ -151,6 +168,48 @@ export function bookingRefundSettlementPatch(
     }
   }
   return patch;
+}
+
+/**
+ * After a cheaper clinic reschedule refund, rebase the booking's paid parts to
+ * the new fee so later refunds use remainingConsultPaidParts against the
+ * reduced total instead of original-paid counters.
+ */
+export function cheaperReschedulePaidRebasePatch(input: {
+  originalTotalCents: number;
+  refundCents: number;
+  walletCreditAppliedCents: number;
+  settled: Pick<
+    ConsultRefundResult,
+    "creditRefundCents" | "cardRefundedToCardCents" | "walletCreditCents"
+  >;
+  priorRefundAmountCents?: number;
+}): Record<string, unknown> {
+  const newTotal = Math.max(0, input.originalTotalCents - input.refundCents);
+  const newCredit = Math.max(
+    0,
+    Number(input.walletCreditAppliedCents || 0) -
+      (input.settled.creditRefundCents || 0)
+  );
+  const cumulative =
+    Math.max(0, Number(input.priorRefundAmountCents || 0)) +
+    (input.settled.cardRefundedToCardCents || 0) +
+    Math.max(
+      0,
+      (input.settled.walletCreditCents || 0) -
+        (input.settled.creditRefundCents || 0)
+    ) +
+    (input.settled.creditRefundCents || 0);
+  return {
+    total_amount_cents: newTotal,
+    wallet_credit_applied_cents: Math.min(newCredit, newTotal),
+    // Counters reset against the rebased paid parts; cumulative refund history
+    // stays on refund_amount_cents for admin display.
+    card_refunded_to_card_cents: 0,
+    card_credited_to_wallet_cents: 0,
+    credit_refunded_cents: 0,
+    refund_amount_cents: cumulative,
+  };
 }
 
 /**

@@ -14,7 +14,7 @@ import {
   clinicianReassignmentBlockReason,
   refundClinicCancellation,
   refundConsultSplit,
-  bookingRefundSettlementPatch,
+  cheaperReschedulePaidRebasePatch,
   remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import { sendEmail } from "@/lib/email/client";
@@ -252,7 +252,17 @@ export async function adminRescheduleBooking(formData: FormData) {
             alreadyRefundedCents: Number(booking.refund_amount_cents || 0),
             sourceType: "refund",
           });
-          refundSettlementPatch = bookingRefundSettlementPatch(booking, settled);
+          // Rebase paid parts to the new fee so later refunds don't subtract
+          // original-payment counters from the reduced total.
+          refundSettlementPatch = cheaperReschedulePaidRebasePatch({
+            originalTotalCents: originalAmountPaid,
+            refundCents,
+            walletCreditAppliedCents: Number(
+              booking.wallet_credit_applied_cents || 0
+            ),
+            settled,
+            priorRefundAmountCents: Number(booking.refund_amount_cents || 0),
+          });
         } catch (err) {
           log.error("Partial refund failed during reschedule:", { err });
           // Non-fatal — proceed with reschedule, flag in metadata
