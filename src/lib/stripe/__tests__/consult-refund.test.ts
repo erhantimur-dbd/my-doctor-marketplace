@@ -794,3 +794,186 @@ describe("wallet destination never refunds the card", () => {
         currency: "GBP",
         destination: "wallet",
         paymentIntentId: "pi_card",
+        cardPaidCents: 6000,
+        creditPaidCents: 4000,
+        refundPercent: 100,
+        sourceType: "cancel_rebook",
+      },
+      deps
+    );
+    const patch = bookingRefundSettlementPatch(
+      {
+        total_amount_cents: 10000,
+        wallet_credit_applied_cents: 4000,
+      },
+      walletCancel
+    );
+    expect(patch).toMatchObject({
+      card_credited_to_wallet_cents: 6000,
+      credit_refunded_cents: 4000,
+      refund_amount_cents: 10000,
+    });
+    expect(patch?.refunded_at).toBeTruthy();
+
+    const admin = await refundAdminBookingPayment(
+      {
+        id: BOOKING_ID,
+        booking_number: "MD-WLT",
+        patient_id: "pat-1",
+        currency: "GBP",
+        stripe_payment_intent_id: "pi_card",
+        total_amount_cents: 10000,
+        wallet_credit_applied_cents: 4000,
+        paid_at: "2026-09-26T12:00:00.000Z",
+        refunded_at: patch?.refunded_at as string,
+        refund_amount_cents: 10000,
+        card_credited_to_wallet_cents: 6000,
+        credit_refunded_cents: 4000,
+      },
+      undefined,
+      deps
+    );
+
+    expect(admin).toEqual({ error: "Booking has already been refunded" });
+    expect(stripe.refunds).toHaveLength(0);
+    expect(wallet.credits).toHaveLength(1);
+  });
+
+  it("patient 50% bank then admin remaining does not collide on wallet description", async () => {
+    const store = memoryStore();
+    await seedTransfer(store, {
+      amountCents: 3400,
+      creditAmountCents: 4000,
+      commissionCents: 600,
+    });
+    const { wallet, stripe, deps } = harness(store);
+
+    const first = await refundConsultSplit(
+      {
+        bookingId: BOOKING_ID,
+        bookingNumber: "MD-PART",
+        patientId: "pat-1",
+        currency: "GBP",
+        destination: "bank",
+        paymentIntentId: "pi_card",
+        cardPaidCents: 6000,
+        creditPaidCents: 4000,
+        refundPercent: 50,
+        alreadyRefundedCents: 0,
+      },
+      deps
+    );
+    const patch = bookingRefundSettlementPatch(
+      {
+        total_amount_cents: 10000,
+        wallet_credit_applied_cents: 4000,
+      },
+      first
+    );
+
+    const admin = await refundAdminBookingPayment(
+      {
+        id: BOOKING_ID,
+        booking_number: "MD-PART",
+        patient_id: "pat-1",
+        currency: "GBP",
+        stripe_payment_intent_id: "pi_card",
+        total_amount_cents: 10000,
+        wallet_credit_applied_cents: 4000,
+        paid_at: "2026-09-26T12:00:00.000Z",
+        refunded_at: null,
+        refund_amount_cents: Number(patch?.refund_amount_cents || 0),
+        card_refunded_to_card_cents: Number(
+          patch?.card_refunded_to_card_cents || 0
+        ),
+        credit_refunded_cents: Number(patch?.credit_refunded_cents || 0),
+      },
+      undefined,
+      deps
+    );
+
+    expect("error" in admin).toBe(false);
+    if ("error" in admin) return;
+    expect(first.cardRefundedToCardCents).toBe(3000);
+    expect(first.walletCreditCents).toBe(2000);
+    expect(admin.cardRefundedToCardCents).toBe(3000);
+    expect(admin.walletCreditCents).toBe(2000);
+    expect(stripe.refunds).toHaveLength(2);
+    expect(wallet.credits.map((row) => row.amountCents)).toEqual([2000, 2000]);
+    expect(await store.findByBookingId(BOOKING_ID)).toMatchObject({
+      reversed_cents: 3400,
+    });
+  });
+
+  it("alreadyApplied still persists counters when the booking update never landed", () => {
+    const patch = bookingRefundSettlementPatch(
+      {
+        total_amount_cents: 10000,
+        wallet_credit_applied_cents: 4000,
+      },
+      {
+        cardRefundCents: 6000,
+        cardRefundedToCardCents: 0,
+        creditRefundCents: 4000,
+        walletCreditCents: 10000,
+        alreadyApplied: true,
+      }
+    );
+    expect(patch).toMatchObject({
+      card_credited_to_wallet_cents: 6000,
+      credit_refunded_cents: 4000,
+      refund_amount_cents: 10000,
+    });
+    expect(patch?.refunded_at).toBeTruthy();
+
+    const second = bookingRefundSettlementPatch(
+      {
+        total_amount_cents: 10000,
+        wallet_credit_applied_cents: 4000,
+        card_credited_to_wallet_cents: 6000,
+        credit_refunded_cents: 4000,
+        refund_amount_cents: 10000,
+      },
+      {
+        cardRefundCents: 6000,
+        cardRefundedToCardCents: 0,
+        creditRefundCents: 4000,
+        walletCreditCents: 10000,
+        alreadyApplied: true,
+      }
+    );
+    expect(second).toBeNull();
+  });
+
+  it("cheaper reschedule rebase keeps later remaining refunds aligned to the new fee", () => {
+    const rebase = cheaperReschedulePaidRebasePatch({
+      originalTotalCents: 10000,
+      refundCents: 2000,
+      walletCreditAppliedCents: 4000,
+      settled: {
+        cardRefundedToCardCents: 1200,
+        creditRefundCents: 800,
+        walletCreditCents: 800,
+      },
+      priorRefundAmountCents: 0,
+    });
+    expect(rebase).toMatchObject({
+      total_amount_cents: 8000,
+      wallet_credit_applied_cents: 3200,
+      card_refunded_to_card_cents: 0,
+      card_credited_to_wallet_cents: 0,
+      credit_refunded_cents: 0,
+      refund_amount_cents: 2000,
+    });
+    const remaining = remainingConsultPaidParts({
+      total_amount_cents: rebase.total_amount_cents as number,
+      wallet_credit_applied_cents: rebase.wallet_credit_applied_cents as number,
+      card_refunded_to_card_cents: 0,
+      card_credited_to_wallet_cents: 0,
+      credit_refunded_cents: 0,
+    });
+    expect(remaining.remainingPaidCents).toBe(8000);
+    expect(remaining.cardPaidCents).toBe(4800);
+    expect(remaining.creditPaidCents).toBe(3200);
+  });
+});
