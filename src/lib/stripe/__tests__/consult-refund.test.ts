@@ -685,3 +685,112 @@ describe("wallet destination never refunds the card", () => {
       expect.objectContaining({ amountCents: 5000, sourceType: "refund" }),
     ]);
   });
+
+  it("a replay does not reverse the destination transfer or credit the wallet again", async () => {
+    const store = memoryStore();
+    const { wallet, stripe, deps } = destinationHarness(store);
+    const input = {
+      bookingId: BOOKING_ID,
+      bookingNumber: "MD-300",
+      patientId: "pat-1",
+      currency: "GBP",
+      destination: "wallet" as const,
+      paymentIntentId: "pi_card",
+      cardPaidCents: 6000,
+      creditPaidCents: 0,
+      refundPercent: 100,
+      sourceType: "refund" as const,
+    };
+
+    const first = await refundConsultSplit(input, deps);
+    const second = await refundConsultSplit(input, deps);
+
+    expect(first.alreadyApplied).toBe(false);
+    expect(second.alreadyApplied).toBe(true);
+    expect(stripe.refunds).toHaveLength(0);
+    expect(cardReversals(stripe.reversals)).toHaveLength(1);
+    expect(wallet.credits).toHaveLength(1);
+  });
+
+  it("cancel and cancel-and-rebook both use the split, and neither refunds the card itself", () => {
+    const booking = read("src/actions/booking.ts");
+    const cancel = booking.slice(
+      booking.indexOf("export async function cancelBooking"),
+      booking.indexOf("export async function cancelAndRebook")
+    );
+    const rebook = booking.slice(booking.indexOf("export async function cancelAndRebook"));
+    expect(cancel).toContain("refundConsultSplit");
+    expect(cancel).toContain("bookingRefundSettlementPatch");
+    expect(cancel).not.toContain("refunds.create");
+    expect(cancel).not.toContain("creditWallet(");
+    expect(rebook).toContain('destination: "wallet"');
+    expect(rebook).toContain("refundConsultSplit");
+    expect(rebook).toContain("bookingRefundSettlementPatch");
+    expect(rebook).not.toContain("refunds.create");
+    expect(rebook).not.toContain("creditWallet(");
+  });
+
+  it("two equal credit slices reverse the transfer both times", async () => {
+    const store = memoryStore();
+    await seedTransfer(store, {
+      amountCents: 8500,
+      creditAmountCents: 10000,
+      commissionCents: 1500,
+    });
+    const { wallet, stripe, deps } = harness(store);
+
+    const first = await refundConsultSplit(
+      {
+        bookingId: BOOKING_ID,
+        bookingNumber: "MD-SEQ",
+        patientId: "pat-1",
+        currency: "GBP",
+        destination: "bank",
+        paymentIntentId: null,
+        cardPaidCents: 0,
+        creditPaidCents: 10000,
+        refundPercent: 50,
+        alreadyRefundedCents: 0,
+      },
+      deps
+    );
+    const second = await refundConsultSplit(
+      {
+        bookingId: BOOKING_ID,
+        bookingNumber: "MD-SEQ",
+        patientId: "pat-1",
+        currency: "GBP",
+        destination: "bank",
+        paymentIntentId: null,
+        cardPaidCents: 0,
+        creditPaidCents: 10000,
+        refundPercent: 50,
+        alreadyRefundedCents: 5000,
+      },
+      deps
+    );
+
+    expect(first.walletCreditCents).toBe(5000);
+    expect(second.walletCreditCents).toBe(5000);
+    expect(first.alreadyApplied).toBe(false);
+    expect(second.alreadyApplied).toBe(false);
+    expect(stripe.reversals).toHaveLength(2);
+    expect(await store.findByBookingId(BOOKING_ID)).toMatchObject({
+      status: "reversed",
+      reversed_cents: 8500,
+    });
+    expect(wallet.credits.map((row) => row.amountCents)).toEqual([5000, 5000]);
+  });
+
+  it("wallet cancel settlement blocks a later admin card refund of the same booking", async () => {
+    const store = memoryStore();
+    const { wallet, stripe, deps } = destinationHarness(store);
+
+    const walletCancel = await refundConsultSplit(
+      {
+        bookingId: BOOKING_ID,
+        bookingNumber: "MD-WLT",
+        patientId: "pat-1",
+        currency: "GBP",
+        destination: "wallet",
+        paymentIntentId: "pi_card",
