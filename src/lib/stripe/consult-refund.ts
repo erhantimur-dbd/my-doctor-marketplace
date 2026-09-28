@@ -15,8 +15,6 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { creditWallet, type WalletSourceType } from "@/lib/wallet";
 import { log } from "@/lib/utils/logger";
 import {
-  loadWalletCreditTransfer,
-  proportionalCreditTransferReversalCents,
   refundConsultCardAndCreditShare,
   type WalletCreditDeps,
 } from "@/lib/stripe/wallet-credit-share";
@@ -58,6 +56,101 @@ export function storedConsultPaidParts(booking: {
     cardPaidCents: Math.max(0, due - creditPaidCents),
     creditPaidCents,
   };
+}
+
+export interface ConsultRefundCounters {
+  cardRefundedToCardCents: number;
+  cardCreditedToWalletCents: number;
+  creditRefundedCents: number;
+}
+
+export function storedConsultRefundCounters(booking: {
+  card_refunded_to_card_cents?: number | null;
+  card_credited_to_wallet_cents?: number | null;
+  credit_refunded_cents?: number | null;
+  refund_amount_cents?: number | null;
+}): ConsultRefundCounters {
+  return {
+    cardRefundedToCardCents: Math.max(
+      0,
+      Number(booking.card_refunded_to_card_cents || 0)
+    ),
+    cardCreditedToWalletCents: Math.max(
+      0,
+      Number(booking.card_credited_to_wallet_cents || 0)
+    ),
+    creditRefundedCents: Math.max(0, Number(booking.credit_refunded_cents || 0)),
+  };
+}
+
+/**
+ * Card/credit still available to return. Wallet-destination card settlements
+ * are not Stripe-refundable later.
+ */
+export function remainingConsultPaidParts(
+  booking: Parameters<typeof storedConsultPaidParts>[0] &
+    Parameters<typeof storedConsultRefundCounters>[0]
+): ConsultPaidParts & ConsultRefundCounters & { remainingPaidCents: number } {
+  const paid = storedConsultPaidParts(booking);
+  const counters = storedConsultRefundCounters(booking);
+  const cardPaidCents = Math.max(
+    0,
+    paid.cardPaidCents -
+      counters.cardRefundedToCardCents -
+      counters.cardCreditedToWalletCents
+  );
+  const creditPaidCents = Math.max(
+    0,
+    paid.creditPaidCents - counters.creditRefundedCents
+  );
+  return {
+    ...counters,
+    cardPaidCents,
+    creditPaidCents,
+    remainingPaidCents: cardPaidCents + creditPaidCents,
+  };
+}
+
+/** Booking columns to persist after a successful refundConsultSplit. */
+export function bookingRefundSettlementPatch(
+  booking: Parameters<typeof remainingConsultPaidParts>[0],
+  settled: Pick<
+    ConsultRefundResult,
+    | "cardRefundedToCardCents"
+    | "creditRefundCents"
+    | "walletCreditCents"
+    | "alreadyApplied"
+  > & { cardRefundCents?: number },
+  options?: { markStatusRefunded?: boolean }
+): Record<string, unknown> | null {
+  if (settled.alreadyApplied) return null;
+  const prior = remainingConsultPaidParts(booking);
+  const cardToWallet = Math.max(
+    0,
+    (settled.walletCreditCents || 0) - (settled.creditRefundCents || 0)
+  );
+  const nextCardToCard =
+    prior.cardRefundedToCardCents + (settled.cardRefundedToCardCents || 0);
+  const nextCardToWallet = prior.cardCreditedToWalletCents + cardToWallet;
+  const nextCredit = prior.creditRefundedCents + (settled.creditRefundCents || 0);
+  const original = storedConsultPaidParts(booking);
+  const cumulative =
+    nextCardToCard + nextCardToWallet + nextCredit;
+  const fullySettled =
+    cumulative >= original.cardPaidCents + original.creditPaidCents;
+  const patch: Record<string, unknown> = {
+    card_refunded_to_card_cents: nextCardToCard,
+    card_credited_to_wallet_cents: nextCardToWallet,
+    credit_refunded_cents: nextCredit,
+    refund_amount_cents: cumulative,
+  };
+  if (fullySettled) {
+    patch.refunded_at = new Date().toISOString();
+    if (options?.markStatusRefunded) {
+      patch.status = "refunded";
+    }
+  }
+  return patch;
 }
 
 /**
@@ -127,9 +220,12 @@ export function proportionalCardTransferClawbackCents(input: {
 
 export function consultCardClawbackIdempotencyKey(
   bookingId: string,
-  cardRefundCents: number
+  cardRefundCents: number,
+  alreadyRefundedCents = 0
 ): string {
-  return `wallet-refund-reversal-${bookingId}-${cardRefundCents}`;
+  // Include prior refunded cents so two equal-sized sequential clawbacks
+  // do not reuse Stripe's first reversal idempotency key.
+  return `wallet-refund-reversal-${bookingId}-${alreadyRefundedCents}-${cardRefundCents}`;
 }
 
 export function clinicianReassignmentBlockReason(booking: {
@@ -180,10 +276,15 @@ function refundCreditDescription(input: {
   sourceType: string;
   destination: ConsultRefundDestination;
   cardToWalletCents: number;
+  cardToStripeCents: number;
   creditRefundCents: number;
+  alreadyRefundedCents: number;
 }): string {
   const ref = input.bookingNumber || input.bookingId;
-  return `Consult refund ${ref} [${input.sourceType}:${input.destination}:card ${input.cardToWalletCents}:credit ${input.creditRefundCents}]`;
+  // Include Stripe card amount and prior refunded total so two different
+  // refunds with the same credit slice do not collide, and so sequential
+  // equal-shaped partials stay distinct.
+  return `Consult refund ${ref} [${input.sourceType}:${input.destination}:stripe ${input.cardToStripeCents}:wallet-card ${input.cardToWalletCents}:credit ${input.creditRefundCents}:prior ${input.alreadyRefundedCents}]`;
 }
 
 function defaultWallet(): ConsultRefundWallet {
@@ -242,25 +343,6 @@ export async function clawbackCardDestinationShare(
   };
 }
 
-async function creditReversalAlreadyCovers(
-  bookingId: string,
-  creditRefundCents: number,
-  creditPaidCents: number,
-  deps?: WalletCreditDeps
-): Promise<boolean> {
-  if (creditRefundCents <= 0 || creditPaidCents <= 0) return true;
-  const record = await loadWalletCreditTransfer(bookingId, deps);
-  if (!record?.stripe_transfer_id) return false;
-  const target = proportionalCreditTransferReversalCents({
-    transferAmountCents: record.amount_cents,
-    alreadyReversedCents: 0,
-    refundAmountCents: creditRefundCents,
-    paidAmountCents: creditPaidCents,
-  });
-  if (target <= 0) return true;
-  return (record.reversed_cents || 0) >= target;
-}
-
 export interface ConsultRefundResult {
   cardRefundCents: number;
   creditRefundCents: number;
@@ -289,11 +371,14 @@ export async function refundConsultSplit(
     creditPaidCents: number;
     refundPercent?: number;
     refundAmountCents?: number;
+    /** Cumulative patient-facing refund already settled on this booking. */
+    alreadyRefundedCents?: number;
     sourceType?: Extract<WalletSourceType, "refund" | "cancel_rebook">;
   },
   deps?: ConsultRefundDeps
 ): Promise<ConsultRefundResult> {
   const sourceType = input.sourceType ?? "refund";
+  const alreadyRefundedCents = Math.max(0, Math.round(input.alreadyRefundedCents || 0));
   const split = splitConsultRefund({
     cardPaidCents: input.cardPaidCents,
     creditPaidCents: input.creditPaidCents,
@@ -330,7 +415,9 @@ export async function refundConsultSplit(
     sourceType,
     destination: input.destination,
     cardToWalletCents,
+    cardToStripeCents,
     creditRefundCents: split.creditRefundCents,
+    alreadyRefundedCents,
   });
   const wallet = deps?.wallet ?? defaultWallet();
 
@@ -342,20 +429,17 @@ export async function refundConsultSplit(
     throw new Error("This card payment has no payment intent to refund");
   }
 
-  const skipReversal = await creditReversalAlreadyCovers(
-    input.bookingId,
-    split.creditRefundCents,
-    input.creditPaidCents,
-    deps
-  );
-
+  // Always reverse the credit-share transfer for this slice. Lower-level
+  // reverseDoctorWalletCreditShare already subtracts reversed_cents; skipping
+  // here when reversed >= this slice alone blocked a second equal partial.
   const settled = await refundConsultCardAndCreditShare(
     {
       paymentIntentId: cardToStripeCents > 0 ? input.paymentIntentId : null,
       cardRefundCents: cardToStripeCents,
       bookingId: input.bookingId,
-      refundAmountCents: skipReversal ? 0 : split.creditRefundCents,
-      paidAmountCents: skipReversal ? 0 : input.creditPaidCents,
+      refundAmountCents: split.creditRefundCents,
+      paidAmountCents: input.creditPaidCents,
+      alreadyRefundedCents,
     },
     deps
   );
@@ -376,7 +460,8 @@ export async function refundConsultSplit(
       cardRefundCents: cardToWalletCents,
       idempotencyKey: consultCardClawbackIdempotencyKey(
         input.bookingId,
-        cardToWalletCents
+        cardToWalletCents,
+        alreadyRefundedCents
       ),
     });
     if (!clawed.transferFound) {
@@ -422,11 +507,20 @@ export async function refundClinicCancellation(
     total_amount_cents?: number | null;
     wallet_credit_applied_cents?: number | null;
     paid_at?: string | null;
+    refund_amount_cents?: number | null;
+    card_refunded_to_card_cents?: number | null;
+    card_credited_to_wallet_cents?: number | null;
+    credit_refunded_cents?: number | null;
   },
   deps?: ConsultRefundDeps
-): Promise<ConsultRefundResult & { refundAmountCents: number }> {
-  const parts = storedConsultPaidParts(booking);
-  if (!booking.paid_at || (parts.cardPaidCents <= 0 && parts.creditPaidCents <= 0)) {
+): Promise<
+  ConsultRefundResult & {
+    refundAmountCents: number;
+    settlementPatch: Record<string, unknown> | null;
+  }
+> {
+  const remaining = remainingConsultPaidParts(booking);
+  if (!booking.paid_at || remaining.remainingPaidCents <= 0) {
     return {
       cardRefundCents: 0,
       creditRefundCents: 0,
@@ -437,6 +531,7 @@ export async function refundClinicCancellation(
       cardClawbackCents: 0,
       alreadyApplied: false,
       refundAmountCents: 0,
+      settlementPatch: null,
     };
   }
   const settled = await refundConsultSplit(
@@ -447,9 +542,10 @@ export async function refundClinicCancellation(
       currency: booking.currency,
       destination: "bank",
       paymentIntentId: booking.stripe_payment_intent_id || null,
-      cardPaidCents: parts.cardPaidCents,
-      creditPaidCents: parts.creditPaidCents,
+      cardPaidCents: remaining.cardPaidCents,
+      creditPaidCents: remaining.creditPaidCents,
       refundPercent: 100,
+      alreadyRefundedCents: Number(booking.refund_amount_cents || 0),
       sourceType: "refund",
     },
     deps
@@ -457,6 +553,7 @@ export async function refundClinicCancellation(
   return {
     ...settled,
     refundAmountCents: settled.cardRefundedToCardCents + settled.walletCreditCents,
+    settlementPatch: bookingRefundSettlementPatch(booking, settled),
   };
 }
 
@@ -473,21 +570,30 @@ export async function refundAdminBookingPayment(
     wallet_credit_applied_cents?: number | null;
     paid_at?: string | null;
     refunded_at?: string | null;
+    refund_amount_cents?: number | null;
+    card_refunded_to_card_cents?: number | null;
+    card_credited_to_wallet_cents?: number | null;
+    credit_refunded_cents?: number | null;
   },
   amountCents?: number,
   deps?: ConsultRefundDeps
 ): Promise<
   | { error: string }
-  | (ConsultRefundResult & { refundAmountCents: number })
+  | (ConsultRefundResult & {
+      refundAmountCents: number;
+      settlementPatch: Record<string, unknown>;
+    })
 > {
-  if (booking.refunded_at) return { error: "Booking has already been refunded" };
-  const parts = storedConsultPaidParts(booking);
-  const paid = parts.cardPaidCents + parts.creditPaidCents;
-  if (!booking.paid_at || paid <= 0) {
+  const remaining = remainingConsultPaidParts(booking);
+  const original = storedConsultPaidParts(booking);
+  if (!booking.paid_at || original.cardPaidCents + original.creditPaidCents <= 0) {
     return { error: "Booking has not been paid" };
   }
-  const refundAmount = amountCents ?? paid;
-  if (refundAmount <= 0 || refundAmount > paid) {
+  if (remaining.remainingPaidCents <= 0 || booking.refunded_at) {
+    return { error: "Booking has already been refunded" };
+  }
+  const refundAmount = amountCents ?? remaining.remainingPaidCents;
+  if (refundAmount <= 0 || refundAmount > remaining.remainingPaidCents) {
     return { error: "Invalid refund amount" };
   }
   try {
@@ -499,16 +605,31 @@ export async function refundAdminBookingPayment(
         currency: booking.currency,
         destination: "bank",
         paymentIntentId: booking.stripe_payment_intent_id || null,
-        cardPaidCents: parts.cardPaidCents,
-        creditPaidCents: parts.creditPaidCents,
+        // Split against remaining unsettled parts so prior wallet clawbacks
+        // are not Stripe-refunded again.
+        cardPaidCents: remaining.cardPaidCents,
+        creditPaidCents: remaining.creditPaidCents,
         refundAmountCents: refundAmount,
+        alreadyRefundedCents: Number(booking.refund_amount_cents || 0),
         sourceType: "refund",
       },
       deps
     );
+    if (settled.alreadyApplied) {
+      return { error: "Booking has already been refunded" };
+    }
+    const settlementPatch = bookingRefundSettlementPatch(booking, settled, {
+      markStatusRefunded: true,
+    });
+    if (!settlementPatch) {
+      return { error: "Booking has already been refunded" };
+    }
+    const refundAmountCents =
+      settled.cardRefundedToCardCents + settled.walletCreditCents;
     return {
       ...settled,
-      refundAmountCents: settled.cardRefundedToCardCents + settled.walletCreditCents,
+      refundAmountCents,
+      settlementPatch,
     };
   } catch (err) {
     log.error("[consult-refund] admin refund failed", { err, bookingId: booking.id });

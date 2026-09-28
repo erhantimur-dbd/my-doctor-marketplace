@@ -211,9 +211,10 @@ export interface WalletCreditDeps {
 
 export function consultCardRefundIdempotencyKey(
   bookingId: string,
-  cardRefundCents: number
+  cardRefundCents: number,
+  alreadyRefundedCents = 0
 ): string {
-  return `consult-card-refund-${bookingId}-${cardRefundCents}`;
+  return `consult-card-refund-${bookingId}-${alreadyRefundedCents}-${cardRefundCents}`;
 }
 
 const TABLE = "doctor_wallet_credit_transfers";
@@ -659,6 +660,7 @@ export async function refundConsultCardAndCreditShare(
     bookingId: string;
     refundAmountCents: number;
     paidAmountCents: number;
+    alreadyRefundedCents?: number;
   },
   deps?: WalletCreditDeps
 ): Promise<{ cardRefundId: string | null; reversedCents: number }> {
@@ -680,7 +682,8 @@ export async function refundConsultCardAndCreditShare(
       {
         idempotencyKey: consultCardRefundIdempotencyKey(
           input.bookingId,
-          input.cardRefundCents
+          input.cardRefundCents,
+          Math.max(0, Math.round(input.alreadyRefundedCents || 0))
         ),
       }
     );

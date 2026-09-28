@@ -173,7 +173,9 @@ export async function findDestinationTransfer(
   const candidates = [...list.data, ...bySource.data];
   const match = candidates.find((t) => {
     const dest =
-      typeof t.destination === "string" ? t.destination : t.destination;
+      typeof t.destination === "string"
+        ? t.destination
+        : t.destination?.id;
     if (expectedDestination && dest !== expectedDestination) return false;
     return t.amount > 0 && !t.reversed;
   });

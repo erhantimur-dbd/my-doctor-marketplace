@@ -13,6 +13,9 @@ import {
 import {
   clinicianReassignmentBlockReason,
   refundClinicCancellation,
+  refundConsultSplit,
+  bookingRefundSettlementPatch,
+  remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import { sendEmail } from "@/lib/email/client";
 import {
@@ -115,9 +118,11 @@ export async function adminCancelBooking(formData: FormData) {
   // Clinic cancellations: full refund. Card returns to the card, credit
   // returns to the wallet, and the doctor's credit transfer is reversed.
   let refundAmountCents = 0;
+  let refundSettlementPatch: Record<string, unknown> | null = null;
   try {
     const settled = await refundClinicCancellation(booking);
     refundAmountCents = settled.refundAmountCents;
+    refundSettlementPatch = settled.settlementPatch;
   } catch (err) {
     log.error("Stripe refund failed during admin cancellation:", { err, bookingId: booking.id });
     return { error: "Failed to process refund. Please try again or contact support." };
@@ -131,8 +136,7 @@ export async function adminCancelBooking(formData: FormData) {
       cancelled_at: new Date().toISOString(),
       cancellation_reason: parsed.data.reason || "Cancelled by clinic administrator",
       rescheduled_by: membership.user_id,
-      refund_amount_cents: refundAmountCents,
-      refunded_at: refundAmountCents > 0 ? new Date().toISOString() : null,
+      ...(refundSettlementPatch || {}),
     })
     .eq("id", booking.id);
 
@@ -229,18 +233,30 @@ export async function adminRescheduleBooking(formData: FormData) {
   // Case 1: Same price or cheaper → reschedule immediately, issue partial refund if applicable
   if (priceDiffCents <= 0) {
     const refundCents = Math.abs(priceDiffCents);
+    let refundSettlementPatch: Record<string, unknown> | null = null;
 
-    if (refundCents > 0 && booking.stripe_payment_intent_id && booking.paid_at) {
-      try {
-        await stripe.refunds.create({
-          payment_intent: booking.stripe_payment_intent_id,
-          amount: refundCents,
-          reverse_transfer: true,
-          refund_application_fee: true,
-        });
-      } catch (err) {
-        log.error("Partial refund failed during reschedule:", { err });
-        // Non-fatal — proceed with reschedule, flag in metadata
+    if (refundCents > 0 && booking.paid_at) {
+      const remaining = remainingConsultPaidParts(booking);
+      if (remaining.remainingPaidCents > 0) {
+        try {
+          const settled = await refundConsultSplit({
+            bookingId: booking.id,
+            bookingNumber: booking.booking_number || undefined,
+            patientId: booking.patient_id,
+            currency: booking.currency,
+            destination: "bank",
+            paymentIntentId: booking.stripe_payment_intent_id || null,
+            cardPaidCents: remaining.cardPaidCents,
+            creditPaidCents: remaining.creditPaidCents,
+            refundAmountCents: Math.min(refundCents, remaining.remainingPaidCents),
+            alreadyRefundedCents: Number(booking.refund_amount_cents || 0),
+            sourceType: "refund",
+          });
+          refundSettlementPatch = bookingRefundSettlementPatch(booking, settled);
+        } catch (err) {
+          log.error("Partial refund failed during reschedule:", { err });
+          // Non-fatal — proceed with reschedule, flag in metadata
+        }
       }
     }
 
@@ -260,6 +276,7 @@ export async function adminRescheduleBooking(formData: FormData) {
         rescheduled_by: membership.user_id,
         rescheduled_at: new Date().toISOString(),
         cancellation_reason: parsed.data.reason || null,
+        ...(refundSettlementPatch || {}),
       })
       .eq("id", booking.id);
 

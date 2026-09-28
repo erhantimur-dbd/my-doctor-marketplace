@@ -16,7 +16,8 @@ import {
 import {
   clinicianReassignmentBlockReason,
   refundConsultSplit,
-  storedConsultPaidParts,
+  bookingRefundSettlementPatch,
+  remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import { sendEmail } from "@/lib/email/client";
 import { sendSms } from "@/lib/sms/client";
@@ -49,15 +50,24 @@ async function fullRefundBooking(booking: {
   wallet_credit_applied_cents?: number | null;
   currency?: string | null;
   paid_at?: string | null;
-}): Promise<{ refunded: boolean; amount: number; error?: string }> {
-  const parts = storedConsultPaidParts(booking);
-  const amount = parts.cardPaidCents + parts.creditPaidCents;
+  refund_amount_cents?: number | null;
+  card_refunded_to_card_cents?: number | null;
+  card_credited_to_wallet_cents?: number | null;
+  credit_refunded_cents?: number | null;
+}): Promise<{
+  refunded: boolean;
+  amount: number;
+  error?: string;
+  settlementPatch?: Record<string, unknown> | null;
+}> {
+  const parts = remainingConsultPaidParts(booking);
+  const amount = parts.remainingPaidCents;
 
   if (!booking.paid_at || amount <= 0) {
-    return { refunded: false, amount: 0 };
+    return { refunded: false, amount: 0, settlementPatch: null };
   }
   if (parts.cardPaidCents > 0 && !booking.stripe_payment_intent_id) {
-    return { refunded: false, amount: 0 };
+    return { refunded: false, amount: 0, settlementPatch: null };
   }
   if (!booking.patient_id || !booking.currency) {
     return { refunded: false, amount: 0, error: "Booking is missing a patient" };
@@ -74,11 +84,13 @@ async function fullRefundBooking(booking: {
       cardPaidCents: parts.cardPaidCents,
       creditPaidCents: parts.creditPaidCents,
       refundPercent: 100,
+      alreadyRefundedCents: Number(booking.refund_amount_cents || 0),
       sourceType: "refund",
     });
     return {
       refunded: true,
       amount: settled.cardRefundedToCardCents + settled.walletCreditCents,
+      settlementPatch: bookingRefundSettlementPatch(booking, settled),
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Refund failed";
@@ -403,8 +415,7 @@ export async function executeGpReassignmentRequest(params: {
       cancellation_reason:
         params.reason || "Doctor unavailable — no GP replacement found",
       gp_reassignment_status: "refunded",
-      refunded_at: refund.refunded ? new Date().toISOString() : null,
-      refund_amount_cents: refund.refunded ? refund.amount : null,
+      ...(refund.settlementPatch || {}),
     })
     .eq("id", booking.id);
 
@@ -583,8 +594,7 @@ export async function declineAllGpOffers(
       status: "cancelled_doctor",
       cancelled_at: new Date().toISOString(),
       gp_reassignment_status: "patient_declined",
-      refunded_at: refund.refunded ? new Date().toISOString() : null,
-      refund_amount_cents: refund.refunded ? refund.amount : null,
+      ...(refund.settlementPatch || {}),
       cancellation_reason: "Patient declined alternate GP slots",
     })
     .eq("id", booking.id);
@@ -657,8 +667,7 @@ export async function expireGpOffersAndRefund(): Promise<{
         status: "cancelled_doctor",
         cancelled_at: new Date().toISOString(),
         gp_reassignment_status: "refunded",
-        refunded_at: refund.refunded ? new Date().toISOString() : null,
-        refund_amount_cents: refund.refunded ? refund.amount : null,
+        ...(refund.settlementPatch || {}),
         cancellation_reason: "Alternate GP offers expired without response",
       })
       .eq("id", bookingId);
