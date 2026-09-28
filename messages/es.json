@@ -488,7 +488,11 @@
     "booking_type_video": "Vídeo",
     "booking_type_in_person": "Presencial",
     "booking_from": "Desde",
-    "booking_verified": "Verificado"
+    "booking_verified": "Verificado",
+    "signup_terms_prefix": "Acepto los",
+    "terms_link": "Términos de servicio",
+    "privacy_link": "Política de privacidad",
+    "and": "y"
   },
   "dashboard": {
     "welcome": "Bienvenido de nuevo, {name}",

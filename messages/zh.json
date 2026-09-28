@@ -494,7 +494,11 @@
     "booking_type_video": "视频",
     "booking_type_in_person": "面诊",
     "booking_from": "起价",
-    "booking_verified": "已认证"
+    "booking_verified": "已认证",
+    "signup_terms_prefix": "我同意",
+    "terms_link": "服务条款",
+    "privacy_link": "隐私政策",
+    "and": "和"
   },
   "dashboard": {
     "welcome": "欢迎回来，{name}",

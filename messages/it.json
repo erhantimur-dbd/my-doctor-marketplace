@@ -488,7 +488,11 @@
     "booking_type_video": "Video",
     "booking_type_in_person": "Di persona",
     "booking_from": "Da",
-    "booking_verified": "Verificato"
+    "booking_verified": "Verificato",
+    "signup_terms_prefix": "Accetto i",
+    "terms_link": "Termini di servizio",
+    "privacy_link": "Informativa sulla privacy",
+    "and": "e"
   },
   "dashboard": {
     "welcome": "Bentornato, {name}",
