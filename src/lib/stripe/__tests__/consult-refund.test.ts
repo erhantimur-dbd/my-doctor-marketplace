@@ -503,3 +503,294 @@ describe("moving a credit booking to another clinician", () => {
 
     const gp = read("src/lib/gp/reassign.ts");
     const request = gp.slice(
+      gp.indexOf("export async function executeGpReassignmentRequest")
+    );
+    const requestGuard = request.indexOf("clinicianReassignmentBlockReason");
+    const requestSearch = request.indexOf("findSameSlotGpReplacements");
+    expect(requestGuard).toBeGreaterThan(-1);
+    expect(requestSearch).toBeGreaterThan(requestGuard);
+
+    const accept = gp.slice(gp.indexOf("export async function acceptGpSlotOffer"));
+    const acceptGuard = accept.indexOf("clinicianReassignmentBlockReason");
+    const acceptHandoff = accept.indexOf("applyDoctorHandoff");
+    expect(acceptGuard).toBeGreaterThan(-1);
+    expect(acceptHandoff).toBeGreaterThan(acceptGuard);
+
+    const clinic = read("src/actions/clinic-booking.ts");
+    const reschedule = clinic.slice(
+      clinic.indexOf("export async function adminRescheduleBooking")
+    );
+    const clinicGuard = reschedule.indexOf("clinicianReassignmentBlockReason");
+    expect(clinicGuard).toBeGreaterThan(-1);
+    expect(reschedule.slice(0, clinicGuard)).toContain(
+      "parsed.data.new_doctor_id !== booking.doctor_id"
+    );
+  });
+});
+
+describe("wallet-destination card clawback", () => {
+  it("reverses the doctor's card transfer in proportion, with an idempotency key", async () => {
+    expect(
+      proportionalCardTransferClawbackCents({
+        transferAmountCents: 5100,
+        cardPaidCents: 6000,
+        cardRefundCents: 3000,
+      })
+    ).toBe(2550);
+
+    const reversals: { amountCents?: number; idempotencyKey: string }[] = [];
+    const result = await clawbackCardDestinationShare(
+      {
+        paymentIntentId: "pi_card",
+        bookingId: BOOKING_ID,
+        cardPaidCents: 6000,
+        cardRefundCents: 3000,
+        idempotencyKey: consultCardClawbackIdempotencyKey(BOOKING_ID, 3000),
+      },
+      {
+        async findTransfer() {
+          return { transferId: "tr_card", amount: 5100, currency: "gbp" };
+        },
+        async reverseTransfer(input) {
+          reversals.push({
+            amountCents: input.amountCents,
+            idempotencyKey: input.idempotencyKey,
+          });
+          return { reversalId: "trr_card" };
+        },
+      }
+    );
+
+    expect(result).toEqual({
+      reversalId: "trr_card",
+      reversedCents: 2550,
+      transferFound: true,
+    });
+    expect(reversals).toEqual([
+      {
+        amountCents: 2550,
+        idempotencyKey: consultCardClawbackIdempotencyKey(BOOKING_ID, 3000),
+      },
+    ]);
+    expect(consultCardClawbackIdempotencyKey(BOOKING_ID, 3000)).toBe(
+      `wallet-refund-reversal-${BOOKING_ID}-0-3000`
+    );
+  });
+});
+
+describe("wallet destination never refunds the card", () => {
+  async function walletRefund(input: {
+    sourceType: "refund" | "cancel_rebook";
+    refundPercent: number;
+    creditPaidCents?: number;
+    creditTransferCents?: number;
+  }) {
+    const store = memoryStore();
+    if (input.creditPaidCents && input.creditTransferCents) {
+      await seedTransfer(store, {
+        amountCents: input.creditTransferCents,
+        creditAmountCents: input.creditPaidCents,
+        commissionCents: input.creditPaidCents - input.creditTransferCents,
+      });
+    }
+    const { wallet, stripe, deps } = destinationHarness(store);
+    const result = await refundConsultSplit(
+      {
+        bookingId: BOOKING_ID,
+        bookingNumber: "MD-300",
+        patientId: "pat-1",
+        currency: "GBP",
+        destination: "wallet",
+        paymentIntentId: "pi_card",
+        cardPaidCents: 6000,
+        creditPaidCents: input.creditPaidCents ?? 0,
+        refundPercent: input.refundPercent,
+        sourceType: input.sourceType,
+      },
+      deps
+    );
+    return { result, wallet, stripe, store };
+  }
+
+  function cardReversals(
+    reversals: { id: string; params?: unknown; options?: { idempotencyKey?: string } }[]
+  ) {
+    return reversals.filter((row) => row.id === "tr_dest");
+  }
+
+  it("cancel credits the card once and reverses the destination transfer once", async () => {
+    const { result, wallet, stripe } = await walletRefund({
+      sourceType: "refund",
+      refundPercent: 100,
+    });
+
+    expect(result.walletCreditCents).toBe(6000);
+    expect(result.cardClawbackCents).toBe(5100);
+    expect(stripe.refunds).toHaveLength(0);
+    expect(cardReversals(stripe.reversals)).toEqual([
+      {
+        id: "tr_dest",
+        params: expect.objectContaining({ amount: 5100 }),
+        options: {
+          idempotencyKey: `wallet-refund-reversal-${BOOKING_ID}-0-6000`,
+        },
+      },
+    ]);
+    expect(wallet.credits).toEqual([
+      expect.objectContaining({ amountCents: 6000, sourceType: "refund" }),
+    ]);
+  });
+
+  it("cancel-and-rebook credits the card once and reverses the destination transfer once", async () => {
+    const { result, wallet, stripe } = await walletRefund({
+      sourceType: "cancel_rebook",
+      refundPercent: 100,
+    });
+
+    expect(result.walletCreditCents).toBe(6000);
+    expect(stripe.refunds).toHaveLength(0);
+    expect(cardReversals(stripe.reversals)).toHaveLength(1);
+    expect(cardReversals(stripe.reversals)[0]?.params).toMatchObject({ amount: 5100 });
+    expect(wallet.credits).toEqual([
+      expect.objectContaining({ amountCents: 6000, sourceType: "cancel_rebook" }),
+    ]);
+  });
+
+  it("a partial wallet refund reverses the same proportion of the destination transfer", async () => {
+    const { result, wallet, stripe } = await walletRefund({
+      sourceType: "refund",
+      refundPercent: 50,
+      creditPaidCents: 4000,
+      creditTransferCents: 3400,
+    });
+
+    expect(result.cardRefundCents).toBe(3000);
+    expect(result.creditRefundCents).toBe(2000);
+    expect(result.walletCreditCents).toBe(5000);
+    expect(result.cardClawbackCents).toBe(2550);
+    expect(stripe.refunds).toHaveLength(0);
+    expect(cardReversals(stripe.reversals)).toEqual([
+      {
+        id: "tr_dest",
+        params: expect.objectContaining({ amount: 2550 }),
+        options: {
+          idempotencyKey: `wallet-refund-reversal-${BOOKING_ID}-0-3000`,
+        },
+      },
+    ]);
+    expect(stripe.reversals.filter((row) => row.id === "tr_credit")).toEqual([
+      expect.objectContaining({ params: expect.objectContaining({ amount: 1700 }) }),
+    ]);
+    expect(wallet.credits).toEqual([
+      expect.objectContaining({ amountCents: 5000, sourceType: "refund" }),
+    ]);
+  });
+
+  it("a replay does not reverse the destination transfer or credit the wallet again", async () => {
+    const store = memoryStore();
+    const { wallet, stripe, deps } = destinationHarness(store);
+    const input = {
+      bookingId: BOOKING_ID,
+      bookingNumber: "MD-300",
+      patientId: "pat-1",
+      currency: "GBP",
+      destination: "wallet" as const,
+      paymentIntentId: "pi_card",
+      cardPaidCents: 6000,
+      creditPaidCents: 0,
+      refundPercent: 100,
+      sourceType: "refund" as const,
+    };
+
+    const first = await refundConsultSplit(input, deps);
+    const second = await refundConsultSplit(input, deps);
+
+    expect(first.alreadyApplied).toBe(false);
+    expect(second.alreadyApplied).toBe(true);
+    expect(stripe.refunds).toHaveLength(0);
+    expect(cardReversals(stripe.reversals)).toHaveLength(1);
+    expect(wallet.credits).toHaveLength(1);
+  });
+
+  it("cancel and cancel-and-rebook both use the split, and neither refunds the card itself", () => {
+    const booking = read("src/actions/booking.ts");
+    const cancel = booking.slice(
+      booking.indexOf("export async function cancelBooking"),
+      booking.indexOf("export async function cancelAndRebook")
+    );
+    const rebook = booking.slice(booking.indexOf("export async function cancelAndRebook"));
+    expect(cancel).toContain("refundConsultSplit");
+    expect(cancel).toContain("bookingRefundSettlementPatch");
+    expect(cancel).not.toContain("refunds.create");
+    expect(cancel).not.toContain("creditWallet(");
+    expect(rebook).toContain('destination: "wallet"');
+    expect(rebook).toContain("refundConsultSplit");
+    expect(rebook).toContain("bookingRefundSettlementPatch");
+    expect(rebook).not.toContain("refunds.create");
+    expect(rebook).not.toContain("creditWallet(");
+  });
+
+  it("two equal credit slices reverse the transfer both times", async () => {
+    const store = memoryStore();
+    await seedTransfer(store, {
+      amountCents: 8500,
+      creditAmountCents: 10000,
+      commissionCents: 1500,
+    });
+    const { wallet, stripe, deps } = harness(store);
+
+    const first = await refundConsultSplit(
+      {
+        bookingId: BOOKING_ID,
+        bookingNumber: "MD-SEQ",
+        patientId: "pat-1",
+        currency: "GBP",
+        destination: "bank",
+        paymentIntentId: null,
+        cardPaidCents: 0,
+        creditPaidCents: 10000,
+        refundPercent: 50,
+        alreadyRefundedCents: 0,
+      },
+      deps
+    );
+    const second = await refundConsultSplit(
+      {
+        bookingId: BOOKING_ID,
+        bookingNumber: "MD-SEQ",
+        patientId: "pat-1",
+        currency: "GBP",
+        destination: "bank",
+        paymentIntentId: null,
+        cardPaidCents: 0,
+        creditPaidCents: 10000,
+        refundPercent: 50,
+        alreadyRefundedCents: 5000,
+      },
+      deps
+    );
+
+    expect(first.walletCreditCents).toBe(5000);
+    expect(second.walletCreditCents).toBe(5000);
+    expect(first.alreadyApplied).toBe(false);
+    expect(second.alreadyApplied).toBe(false);
+    expect(stripe.reversals).toHaveLength(2);
+    expect(await store.findByBookingId(BOOKING_ID)).toMatchObject({
+      status: "reversed",
+      reversed_cents: 8500,
+    });
+    expect(wallet.credits.map((row) => row.amountCents)).toEqual([5000, 5000]);
+  });
+
+  it("wallet cancel settlement blocks a later admin card refund of the same booking", async () => {
+    const store = memoryStore();
+    const { wallet, stripe, deps } = destinationHarness(store);
+
+    const walletCancel = await refundConsultSplit(
+      {
+        bookingId: BOOKING_ID,
+        bookingNumber: "MD-WLT",
+        patientId: "pat-1",
+        currency: "GBP",
+        destination: "wallet",
+        paymentIntentId: "pi_card",
