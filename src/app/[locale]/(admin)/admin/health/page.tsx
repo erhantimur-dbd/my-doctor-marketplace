@@ -32,6 +32,41 @@ const CRON_JOBS = [
     description: "Google / Microsoft / CalDAV calendar sync",
   },
   {
+    path: "/api/cron/gp-offer-expiry",
+    schedule: "*/15 * * * *",
+    description: "Expire stale GP offers",
+  },
+  {
+    path: "/api/cron/wallet-credit-transfers",
+    schedule: "*/15 * * * *",
+    description: "Reconcile pending doctor credit transfers",
+  },
+  {
+    path: "/api/cron/license-enforcement",
+    schedule: "0 3 * * *",
+    description: "License past_due → grace → suspended transitions",
+  },
+  {
+    path: "/api/cron/verify-doctor-credentials",
+    schedule: "0 4 * * *",
+    description: "Nightly GMC / credential re-checks",
+  },
+  {
+    path: "/api/cron/expire-featured",
+    schedule: "0 5 * * *",
+    description: "Expire featured doctor placements",
+  },
+  {
+    path: "/api/cron/generate-review-summaries",
+    schedule: "0 6 * * *",
+    description: "AI review summaries for verified doctors",
+  },
+  {
+    path: "/api/cron/invoice-status",
+    schedule: "0 8 * * *",
+    description: "Invoice overdue / reminders / expire",
+  },
+  {
     path: "/api/cron/treatment-reminders",
     schedule: "0 9 * * *",
     description: "Treatment plan reminders (daily 09:00 UTC)",
@@ -42,14 +77,9 @@ const CRON_JOBS = [
     description: "Send NPS surveys after completed bookings",
   },
   {
-    path: "/api/cron/verify-doctor-credentials",
-    schedule: "0 4 * * *",
-    description: "Weekly GMC / credential re-checks",
-  },
-  {
-    path: "/api/cron/wallet-credit-transfers",
-    schedule: "*/15 * * * *",
-    description: "Reconcile pending doctor credit transfers",
+    path: "/api/cron/request-reviews",
+    schedule: "0 11 * * *",
+    description: "Request public reviews after completed bookings",
   },
 ];
 
