@@ -37,7 +37,8 @@ export type TemplateKey =
   | "softsmokeDoctorNewBooking"
   | "softsmokeDoctorReminder"
   | "softsmokeDoctorCancelReschedule"
-  | "softsmokeDoctorPayout";
+  | "softsmokeDoctorPayout"
+  | "passkeyAdded";
 
 export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string }[] = [
   // Booking
@@ -87,4 +88,6 @@ export const TEMPLATE_LIST: { key: TemplateKey; label: string; category: string 
   { key: "softsmokeDoctorReminder", label: "Softsmoke · Doctor reminder", category: "Softsmoke" },
   { key: "softsmokeDoctorCancelReschedule", label: "Softsmoke · Doctor cancel/reschedule", category: "Softsmoke" },
   { key: "softsmokeDoctorPayout", label: "Softsmoke · Stripe payout", category: "Softsmoke" },
+  // Account security
+  { key: "passkeyAdded", label: "Passkey Added", category: "Security" },
 ];

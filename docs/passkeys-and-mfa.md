@@ -7,6 +7,7 @@
 
 1. **Passkeys for sign-on** — users can register passkeys in Security settings and sign in from `/login` with Face ID / Touch ID / Windows Hello / security keys.
 2. **Hardened TOTP 2FA** — enrollment now persists the AAL2 session; verify page supports multiple authenticators; backup TOTP factor; MFA redirects preserve the original destination; OAuth/magic-link callbacks enforce MFA when enrolled.
+3. **Security email on passkey create** — after a successful `registerPasskey()`, the app sends a Tesla-style **You Have Added A Passkey** notice (`notifyPasskeyAdded` → `passkeyAddedEmail`).
 
 ## Dashboard prerequisites (required)
 

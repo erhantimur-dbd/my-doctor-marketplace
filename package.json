@@ -22,7 +22,7 @@
     "@sentry/nextjs": "^10.43.0",
     "@stripe/stripe-js": "^8.8.0",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.117.0",
+    "@supabase/supabase-js": "^2.117.2",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
     "@vis.gl/react-google-maps": "^1.7.1",

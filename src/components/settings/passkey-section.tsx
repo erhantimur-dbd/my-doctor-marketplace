@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
   CardContent,
@@ -37,6 +37,7 @@ import {
   isUserCancelledPasskey,
   passkeyErrorMessage,
 } from "@/lib/auth/passkey-errors";
+import { notifyPasskeyAdded } from "@/actions/passkeys";
 
 type PasskeyRow = {
   id: string;
@@ -56,6 +57,7 @@ function formatWhen(iso: string | null | undefined, neverLabel: string) {
 
 export function PasskeySection() {
   const t = useTranslations("passkeys");
+  const locale = useLocale();
   const supabase = createClient();
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -104,6 +106,17 @@ export function PasskeySection() {
       }
       toast.success(t("success_added"));
       await refresh();
+
+      // Best-effort Tesla-style security email; enrollment already succeeded.
+      const path =
+        typeof window !== "undefined" &&
+        window.location.pathname.includes("/settings")
+          ? window.location.pathname
+          : `/${locale}/dashboard/settings`;
+      const notify = await notifyPasskeyAdded({ settingsPath: path });
+      if (notify.error) {
+        console.error("Passkey notify failed:", notify.error);
+      }
     } catch (err) {
       if (!isUserCancelledPasskey(err)) {
         toast.error(passkeyErrorMessage(err, t("error_generic")));

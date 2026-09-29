@@ -4,10 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/client";
 import * as templates from "@/lib/email/templates";
 import * as softsmoke from "@/lib/email/softsmoke-templates";
+import * as security from "@/lib/email/security-templates";
 import { TEMPLATE_LIST, type TemplateKey } from "@/lib/email/template-list";
 import { BOOKING_NUMBER_EXAMPLE } from "@/lib/booking/booking-number";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+
+function fromForTemplate(templateKey: TemplateKey): string | undefined {
+  if (templateKey === "passkeyAdded") return security.SECURITY_EMAIL_FROM;
+  return undefined;
+}
 
 // Sample data for each template
 const SAMPLE_DATA = {
@@ -331,6 +337,11 @@ const SAMPLE_DATA = {
       payoutOrTransferRef: "tr_preview",
       periodOrDate: "2026-09-26",
     }),
+  passkeyAdded: () =>
+    security.passkeyAddedEmail({
+      settingsUrl: `${APP_URL}/en/dashboard/settings`,
+      supportUrl: `${APP_URL}/en/help-center`,
+    }),
 };
 
 // TemplateKey and TEMPLATE_LIST imported from @/lib/email/template-list
@@ -378,6 +389,7 @@ export async function sendTestEmail(templateKey: TemplateKey, toEmail: string) {
       to: toEmail,
       subject: `[TEST] ${subject}`,
       html,
+      from: fromForTemplate(templateKey),
     });
     return { success: result.success, error: result.error || undefined };
   } catch (err: any) {
@@ -409,6 +421,7 @@ export async function sendAllTestEmails(toEmail: string) {
         to: toEmail,
         subject: `[TEST] ${subject}`,
         html,
+        from: fromForTemplate(key),
       });
       results.push({ key, success: result.success });
     } catch (err: any) {
