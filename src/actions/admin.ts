@@ -2174,11 +2174,12 @@ export async function adminCancelBooking(
 
   // Calculate refund based on cancellation policy (TIMESTAMPTZ-safe)
   const doctor: any = booking.doctor;
+  const policy = doctor.cancellation_policy;
   const { hoursUntil: hoursUntilAppointment, refundPercent } =
     computeCancellationRefundPercent(
       booking.appointment_date,
       booking.start_time,
-      doctor.cancellation_policy
+      policy
     );
 
   // Same split as a patient cancel: credit back to the wallet, card to the card.

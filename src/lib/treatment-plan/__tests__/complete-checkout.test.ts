@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { applyTreatmentPlanCheckoutPayment } from "@/lib/treatment-plan/complete-checkout";
 
@@ -109,7 +110,7 @@ describe("applyTreatmentPlanCheckoutPayment", () => {
     const client = makeClient({ plan: null, bookingCount: 0, booking: null });
     const result = await applyTreatmentPlanCheckoutPayment(
       { id: "cs_1", metadata: {} },
-      client
+      client as unknown as SupabaseClient
     );
     expect(result).toEqual({ handled: false });
   });
@@ -175,7 +176,7 @@ describe("applyTreatmentPlanCheckoutPayment", () => {
           first_booking_id: "bk-1",
         },
       },
-      client
+      client as unknown as SupabaseClient
     );
 
     expect(result).toEqual({ handled: true });

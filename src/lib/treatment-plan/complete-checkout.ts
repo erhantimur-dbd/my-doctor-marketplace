@@ -6,6 +6,7 @@
  * confirmed bookings so webhook retries stay idempotent.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureDailyVideoRoom } from "@/lib/booking/finalize-confirmed-booking";
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
@@ -25,11 +26,6 @@ import {
 } from "@/lib/whatsapp/templates";
 import { formatCurrency } from "@/lib/utils/currency";
 import { createNotification } from "@/lib/notifications";
-
-type AdminClient = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  from: (table: string) => any;
-};
 
 export type TreatmentPlanCheckoutSession = {
   id: string;
@@ -60,7 +56,7 @@ const COUNTED_SESSION_STATUSES = [
 
 export async function applyTreatmentPlanCheckoutPayment(
   session: TreatmentPlanCheckoutSession,
-  supabase: AdminClient
+  supabase: SupabaseClient
 ): Promise<{ handled: boolean }> {
   const planId = session.metadata?.treatment_plan_id;
   if (!planId) {
