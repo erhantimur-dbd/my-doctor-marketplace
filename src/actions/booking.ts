@@ -68,6 +68,7 @@ import {
   confirmBookingWithoutStripeCheckout,
   finalizeConfirmedBookingById,
 } from "@/lib/booking/finalize-confirmed-booking";
+import { computeCancellationRefundPercent } from "@/lib/booking/cancellation-refund";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -838,34 +839,13 @@ export async function cancelBooking(input: CancelBookingInput) {
       return { error: "This booking cannot be cancelled in its current state." };
     }
 
-    // Calculate hours until appointment
-    const appointmentDateTime = new Date(
-      `${booking.appointment_date}T${booking.start_time}`
-    );
-    const now = new Date();
-    const hoursUntilAppointment =
-      (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-    // Determine refund amount based on cancellation policy
-    let refundPercent = 0;
-    const policy = booking.doctor.cancellation_policy;
-
-    if (policy === "flexible") {
-      // Full refund if more than 24 hours before appointment
-      refundPercent = hoursUntilAppointment > 24 ? 100 : 0;
-    } else if (policy === "moderate") {
-      // 50% refund if more than 48 hours before
-      if (hoursUntilAppointment > 48) {
-        refundPercent = 100;
-      } else if (hoursUntilAppointment > 24) {
-        refundPercent = 50;
-      } else {
-        refundPercent = 0;
-      }
-    } else if (policy === "strict") {
-      // No refund if less than 72 hours before
-      refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
-    }
+    // Calculate hours until appointment (TIMESTAMPTZ-safe)
+    const { hoursUntil: hoursUntilAppointment, refundPercent } =
+      computeCancellationRefundPercent(
+        booking.appointment_date,
+        booking.start_time,
+        booking.doctor.cancellation_policy
+      );
 
     // Credit always returns to the wallet. Card returns to the card unless
     // the patient chose wallet. Amounts come from the stored card and credit
@@ -1137,25 +1117,13 @@ export async function cancelAndRebook(input: {
       return { error: "This booking cannot be rescheduled." };
     }
 
-    // 2. Calculate refund from old booking
-    const appointmentDateTime = new Date(
-      `${oldBooking.appointment_date}T${oldBooking.start_time}`
-    );
-    const now = new Date();
-    const hoursUntil = (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
+    // 2. Calculate refund from old booking (TIMESTAMPTZ-safe)
     const doctor: any = oldBooking.doctor;
-    const policy = doctor.cancellation_policy;
-    let refundPercent = 0;
-
-    if (policy === "flexible") {
-      refundPercent = hoursUntil > 24 ? 100 : 0;
-    } else if (policy === "moderate") {
-      if (hoursUntil > 48) refundPercent = 100;
-      else if (hoursUntil > 24) refundPercent = 50;
-    } else if (policy === "strict") {
-      refundPercent = hoursUntil > 72 ? 100 : 0;
-    }
+    const { refundPercent } = computeCancellationRefundPercent(
+      oldBooking.appointment_date,
+      oldBooking.start_time,
+      doctor.cancellation_policy
+    );
 
     const paidParts = storedConsultPaidParts(oldBooking);
     let walletCreditCents = 0;

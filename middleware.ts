@@ -106,9 +106,10 @@ export async function middleware(request: NextRequest) {
       const { data: aal } =
         await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aal?.nextLevel === "aal2" && aal?.currentLevel === "aal1") {
-        return NextResponse.redirect(
-          new URL(`/${locale}/verify-mfa`, request.url)
-        );
+        const mfaUrl = new URL(`/${locale}/verify-mfa`, request.url);
+        const resume = `${pathname}${request.nextUrl.search}`;
+        mfaUrl.searchParams.set("redirect", resume);
+        return NextResponse.redirect(mfaUrl);
       }
     }
   }

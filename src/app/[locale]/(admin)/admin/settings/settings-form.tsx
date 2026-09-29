@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { updatePlatformSetting, updateAdminProfile } from "@/actions/admin";
 import { User, ShieldAlert } from "lucide-react";
+import { AccountSecuritySections } from "@/components/settings/account-security-sections";
 import { DEFAULT_BLOCKED_KEYWORDS } from "@/lib/reviews/blocked-keywords";
 
 interface AdminSettingsFormProps {
@@ -192,6 +193,8 @@ export function AdminSettingsForm({
           </div>
         </CardContent>
       </Card>
+
+      <AccountSecuritySections />
 
       <Separator />
 

@@ -18,6 +18,7 @@ import {
   isSafeRelativePath,
   sanitizeAuthLocale,
 } from "@/lib/auth/return-cookie";
+import { resolvePostAuthPath } from "@/lib/auth/role-redirect";
 import type { OAuthProviderId } from "@/lib/auth/oauth-providers";
 import { OAUTH_PROVIDERS, TERMS_VERSION } from "@/lib/auth/oauth-providers";
 
@@ -60,16 +61,27 @@ function buildOAuthCallback(
 }
 
 export async function login(formData: FormData) {
-  // Rate limit: 5 login attempts per 15 minutes per IP
   const ip = await getClientIp();
+  const email = ((formData.get("email") as string) || "").trim().toLowerCase();
   const { limited } = await rateLimit(`login:${ip}`, 5, 15 * 60 * 1000);
   if (limited) {
     return { error: "Too many login attempts. Please try again in a few minutes." };
   }
+  if (email) {
+    const { limited: emailLimited } = await rateLimit(
+      `login-email:${email}`,
+      8,
+      15 * 60 * 1000
+    );
+    if (emailLimited) {
+      return {
+        error: "Too many login attempts. Please try again in a few minutes.",
+      };
+    }
+  }
 
   const supabase = await createClient();
 
-  const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const redirectTo = formData.get("redirect") as string;
   const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
@@ -90,7 +102,7 @@ export async function login(formData: FormData) {
       error:
         "Please verify your email address before signing in. Check your inbox for the verification link.",
       needsVerification: true as const,
-      email: email.trim().toLowerCase(),
+      email,
       locale,
     };
   }
@@ -104,21 +116,8 @@ export async function login(formData: FormData) {
 
   revalidatePath("/", "layout");
 
-  // If there's an explicit redirect (e.g. from middleware), honour it
-  // Only allow relative paths to prevent open redirect attacks
-  if (redirectTo && isSafeRelativePath(redirectTo)) {
-    redirect(redirectTo);
-  }
-
-  // Otherwise send the user to their role-specific dashboard
   const role = data.user?.user_metadata?.role as string | undefined;
-  if (role === "doctor") {
-    redirect(`/${locale}/doctor-dashboard`);
-  } else if (role === "admin") {
-    redirect(`/${locale}/admin`);
-  } else {
-    redirect(`/${locale}/dashboard`);
-  }
+  redirect(resolvePostAuthPath(locale, role, redirectTo));
 }
 
 export async function register(formData: FormData) {

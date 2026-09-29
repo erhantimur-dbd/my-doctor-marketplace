@@ -19,6 +19,7 @@ describe("patient bookings doctor embed", () => {
     expect(BOOKING_CURRENT_DOCTOR_EMBED).not.toContain(
       "reassigned_from_doctor"
     );
+    expect(PATIENT_BOOKINGS_LIST_SELECT).toContain("appointment_date");
     expect(PATIENT_BOOKINGS_LIST_SELECT).toContain(
       `doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(`
     );

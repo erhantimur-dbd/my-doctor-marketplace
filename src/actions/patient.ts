@@ -93,6 +93,11 @@ export async function exportPatientData() {
     prescriptions,
     pushSubscriptions,
     cookieConsent,
+    invoices,
+    walletBalances,
+    walletTransactions,
+    postVisitFeedback,
+    satisfactionSurveys,
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("bookings").select("*").eq("patient_id", user.id),
@@ -119,12 +124,26 @@ export async function exportPatientData() {
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle(),
+    supabase.from("invoices").select("*").eq("patient_id", user.id),
+    supabase.from("patient_wallet").select("*").eq("patient_id", user.id),
+    supabase
+      .from("wallet_transactions")
+      .select("*")
+      .eq("patient_id", user.id)
+      .order("created_at", { ascending: false }),
+    // Ratings only — private free-text notes stay in post_visit_feedback_notes
+    // and are intentionally omitted from portable export.
+    supabase.from("post_visit_feedback").select("*").eq("patient_id", user.id),
+    supabase
+      .from("satisfaction_surveys")
+      .select("*")
+      .eq("patient_id", user.id),
   ]);
 
   return {
     data: {
       exported_at: new Date().toISOString(),
-      format_version: "1.0",
+      format_version: "1.1",
       profile: profile.data,
       medical_profile: medicalProfile.data || null,
       bookings: bookings.data || [],
@@ -139,6 +158,11 @@ export async function exportPatientData() {
       notifications: notifications.data || [],
       push_subscriptions: pushSubscriptions.data || [],
       cookie_consent: cookieConsent.data || null,
+      invoices: invoices.data || [],
+      wallet_balances: walletBalances.data || [],
+      wallet_transactions: walletTransactions.data || [],
+      post_visit_feedback: postVisitFeedback.data || [],
+      satisfaction_surveys: satisfactionSurveys.data || [],
     },
   };
 }

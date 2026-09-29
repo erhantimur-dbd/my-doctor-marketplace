@@ -1,15 +1,12 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { SUPABASE_AUTH_CLIENT_OPTIONS } from "@/lib/supabase/auth-options";
 
 export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      auth: {
-        // Passkeys are enabled by default in supabase-js ≥ 2.105; keep the
-        // experimental flag so older docs/snippets remain valid.
-        experimental: { passkey: true },
-      },
+      auth: SUPABASE_AUTH_CLIENT_OPTIONS,
     }
   );
 }

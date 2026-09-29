@@ -1,7 +1,10 @@
 # GTM Phase B & C status
 
-**Updated:** 2026-07-23  
+**Updated:** 2026-09-29  
 **Stripe plugin:** installed (`stripe/ai` → Grok providers/plugin v0.2.0)
+
+> **Latest full feature pass:** see [`docs/gtm-feature-test-report.md`](./gtm-feature-test-report.md) (2026-09-29).
+> Missing invoice / license / review-summary crons were registered; GDPR export bumped to 1.1.
 
 ## Phase B — verification (no production gate lift)
 

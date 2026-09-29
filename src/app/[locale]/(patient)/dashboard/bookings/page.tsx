@@ -19,6 +19,7 @@ import {
   PATIENT_BOOKINGS_LIST_SELECT,
   patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
+import { partitionPatientBookings } from "@/lib/patient/booking-history";
 import { CalendarView } from "./calendar-view";
 import type { Metadata } from "next";
 
@@ -29,20 +30,6 @@ export const metadata: Metadata = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type BookingRow = any;
 
-const UPCOMING_STATUSES = [
-  "confirmed",
-  "approved",
-  "pending_payment",
-  "pending_approval",
-];
-const PAST_STATUSES = [
-  "completed",
-  "cancelled_patient",
-  "cancelled_doctor",
-  "no_show",
-  "refunded",
-];
-
 function getStatusBadgeVariant(
   status: string
 ): "default" | "secondary" | "destructive" | "outline" {
@@ -52,6 +39,7 @@ function getStatusBadgeVariant(
       return "default";
     case "pending_payment":
     case "pending_approval":
+    case "pending_reschedule_payment":
       return "secondary";
     case "completed":
       return "outline";
@@ -59,6 +47,8 @@ function getStatusBadgeVariant(
     case "cancelled_doctor":
     case "no_show":
     case "refunded":
+    case "rejected":
+    case "expired":
       return "destructive";
     default:
       return "secondary";
@@ -72,6 +62,7 @@ function getStatusColor(status: string): string {
       return "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400";
     case "pending_payment":
     case "pending_approval":
+    case "pending_reschedule_payment":
       return "bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400";
     case "completed":
       return "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-400";
@@ -79,6 +70,8 @@ function getStatusColor(status: string): string {
     case "cancelled_doctor":
     case "no_show":
     case "refunded":
+    case "rejected":
+    case "expired":
       return "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-400";
     default:
       return "";
@@ -221,12 +214,8 @@ export default async function BookingsPage({
 
   const typedBookings = (bookings || []) as unknown as BookingRow[];
 
-  const upcomingBookings = typedBookings.filter((b) =>
-    UPCOMING_STATUSES.includes(b.status)
-  );
-  const pastBookings = typedBookings.filter((b) =>
-    PAST_STATUSES.includes(b.status)
-  );
+  const { upcoming: upcomingBookings, past: pastBookings } =
+    partitionPatientBookings(typedBookings);
 
   return (
     <div className="space-y-6">

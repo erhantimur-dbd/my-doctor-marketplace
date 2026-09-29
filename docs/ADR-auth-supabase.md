@@ -18,9 +18,11 @@ Keep **Supabase Auth** as the identity provider. Do **not** integrate Clerk (or 
 ## Consequences
 
 - Continue polishing existing login/register/MFA/verify flows.
+- Passkeys (experimental Supabase Auth WebAuthn) and TOTP MFA live in-app; see `docs/passkeys-and-mfa.md`.
 - Revisit Clerk / WorkOS only post-beta if enterprise SSO is a closed-won requirement.
 
 ## Related
 
 - Founder go-live work on branch `fix/founder-signup-go-live`
 - Plan evaluation: Clerk for MD360 (Option D)
+- `docs/passkeys-and-mfa.md`

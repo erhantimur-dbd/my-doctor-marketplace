@@ -195,8 +195,9 @@ function getCountdownLabel(
     return { label: "In Progress", variant: "default" };
   }
 
+  // Past start without a completed status — do not imply the visit finished.
   if (diffMs < 0) {
-    return { label: "Completed", variant: "outline" };
+    return { label: "Ended", variant: "secondary" };
   }
 
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -319,12 +320,18 @@ export default async function BookingDetailPage({
     doctor.specialties?.[0]?.specialty;
 
   const canCancel =
-    typedBooking.status === "confirmed" || typedBooking.status === "approved";
-  const canReschedule = canCancel && startDate > now; // Only future bookings
+    typedBooking.status === "confirmed" ||
+    typedBooking.status === "approved" ||
+    typedBooking.status === "pending_approval";
+  const canReschedule =
+    (typedBooking.status === "confirmed" ||
+      typedBooking.status === "approved") &&
+    startDate > now; // Only future confirmed/approved bookings
   const isVideo = typedBooking.consultation_type === "video";
   const canJoinVideo =
     isVideo &&
-    typedBooking.status === "confirmed" &&
+    (typedBooking.status === "confirmed" ||
+      typedBooking.status === "approved") &&
     typedBooking.video_room_url;
 
   // Allow joining 10 minutes before start

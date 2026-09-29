@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
-import { Loader2, Stethoscope, Mail, KeyRound } from "lucide-react";
+import { Loader2, Stethoscope, Mail } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -31,7 +31,7 @@ import type { BookingAuthContext } from "@/lib/auth/booking-context";
 
 import { login, register } from "@/actions/auth";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
-import { createClient } from "@/lib/supabase/client";
+import { PasskeySignInButton } from "@/components/auth/passkey-sign-in-button";
 import { isSafeRelativePath } from "@/lib/auth/return-cookie";
 import {
   FOUNDING_REGISTER_HREF,
@@ -66,7 +66,6 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   const [needsVerificationEmail, setNeedsVerificationEmail] = useState<
     string | null
   >(null);
-  const [passkeyLoading, setPasskeyLoading] = useState(false);
 
   // Smart default: show sign-up when coming from a patient book redirect.
   // Doctor-dashboard /bookings must stay on Sign In (see isBookRedirect).
@@ -94,7 +93,11 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
 
     const result = await login(formData);
     if (result && "mfaRequired" in result && result.mfaRequired) {
-      router.push(`/${locale}/verify-mfa`);
+      const qs =
+        redirectTo && isSafeRelativePath(redirectTo)
+          ? `?redirect=${encodeURIComponent(redirectTo)}`
+          : "";
+      router.push(`/${locale}/verify-mfa${qs}`);
       return;
     }
     if (result && "needsVerification" in result && result.needsVerification) {
@@ -168,74 +171,6 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
       ? `${newPath}?redirect=${encodeURIComponent(redirectTo)}`
       : newPath;
     router.replace(url, { scroll: false });
-  }
-
-  async function handlePasskeySignIn() {
-    setPasskeyLoading(true);
-    setError("");
-    setNeedsVerificationEmail(null);
-
-    try {
-      const supabase = createClient();
-      const { data, error: passkeyError } = await supabase.auth.signInWithPasskey();
-      if (passkeyError || !data?.user) {
-        const code = (passkeyError as { code?: string } | null)?.code || "";
-        const message = (passkeyError?.message || "").toLowerCase();
-        if (code === "passkey_disabled" || message.includes("passkey_disabled")) {
-          setError(
-            "Passkey sign-in is not enabled yet. Use email and password, or ask an admin to enable passkeys."
-          );
-        } else if (
-          message.includes("not allowed") ||
-          message.includes("abort") ||
-          message.includes("cancel")
-        ) {
-          setError("Passkey sign-in was cancelled.");
-        } else {
-          setError(
-            passkeyError?.message ||
-              "Passkey sign-in failed. Try again or use email and password."
-          );
-        }
-        setPasskeyLoading(false);
-        return;
-      }
-
-      if (!data.user.email_confirmed_at) {
-        await supabase.auth.signOut();
-        setNeedsVerificationEmail(data.user.email || "");
-        setError(
-          "Please verify your email address before signing in. Check your inbox for the verification link."
-        );
-        setPasskeyLoading(false);
-        return;
-      }
-
-      const { data: aal } =
-        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aal?.nextLevel === "aal2" && aal?.currentLevel === "aal1") {
-        router.push(`/${locale}/verify-mfa`);
-        return;
-      }
-
-      if (redirectTo && isSafeRelativePath(redirectTo)) {
-        router.push(redirectTo);
-        return;
-      }
-
-      const role = data.user.user_metadata?.role as string | undefined;
-      if (role === "doctor") {
-        router.push(`/${locale}/doctor-dashboard`);
-      } else if (role === "admin") {
-        router.push(`/${locale}/admin`);
-      } else {
-        router.push(`/${locale}/dashboard`);
-      }
-    } catch (err) {
-      console.error("Passkey sign-in failed:", err);
-      setError("Passkey sign-in failed. Try again or use email and password.");
-      setPasskeyLoading(false);
-    }
   }
 
   const summaryMode = activeTab === "sign-up" ? "sign-up" : "sign-in";
@@ -323,25 +258,6 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
             redirectTo={redirectTo || undefined}
             onError={setError}
           />
-
-          {activeTab === "sign-in" && (
-            <div className="mt-3">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                disabled={passkeyLoading || loginLoading}
-                onClick={handlePasskeySignIn}
-              >
-                {passkeyLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <KeyRound className="mr-2 h-4 w-4" />
-                )}
-                {t("sign_in_with_passkey")}
-              </Button>
-            </div>
-          )}
 
           {/* ── Sign Up form ── */}
           <TabsContent value="sign-up" className="mt-0">
@@ -446,6 +362,13 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
 
           {/* ── Sign In form ── */}
           <TabsContent value="sign-in" className="mt-0">
+            <div className="mb-4 space-y-3">
+              <PasskeySignInButton
+                locale={locale}
+                redirectTo={redirectTo || undefined}
+                onError={setError}
+              />
+            </div>
             <form action={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="login-email">{t("email")}</Label>

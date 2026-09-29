@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import type { User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { SUPABASE_AUTH_CLIENT_OPTIONS } from "@/lib/supabase/auth-options";
 
 type SessionResult = {
   supabase: ReturnType<typeof createServerClient> | null;
@@ -32,6 +33,7 @@ export async function updateSession(
 
   try {
     const supabase = createServerClient(url, key, {
+      auth: SUPABASE_AUTH_CLIENT_OPTIONS,
       cookies: {
         getAll() {
           return request.cookies.getAll();
