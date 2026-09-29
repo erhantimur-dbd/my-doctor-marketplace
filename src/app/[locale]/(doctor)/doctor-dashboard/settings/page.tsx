@@ -63,7 +63,7 @@ import {
   saveDoctorReminderPreferences,
   type ReminderPreference,
 } from "@/actions/doctor";
-import { TwoFactorSection } from "@/components/settings/two-factor-section";
+import { AccountSecuritySections } from "@/components/settings/account-security-sections";
 
 const REMINDER_TIME_PRESETS = [
   { value: 15, label: "15 minutes before" },
@@ -803,8 +803,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Two-Factor Authentication */}
-      <TwoFactorSection showRecommendation />
+      <AccountSecuritySections showRecommendation />
 
       {/* Calendar Integration */}
       <Card>

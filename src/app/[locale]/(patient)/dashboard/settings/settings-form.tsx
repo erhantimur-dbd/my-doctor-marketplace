@@ -34,7 +34,7 @@ import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
 import { MedicalProfileSection } from "./medical-profile-section";
 import { SavedPaymentsSection } from "./saved-payments-section";
 import { DataPrivacySection } from "./data-privacy-section";
-import { TwoFactorSection } from "@/components/settings/two-factor-section";
+import { AccountSecuritySections } from "@/components/settings/account-security-sections";
 import { PushNotificationToggle } from "@/components/shared/push-notification-toggle";
 
 interface ProfileData {
@@ -80,7 +80,7 @@ export function SettingsForm({ profile, userEmail, medicalProfile }: SettingsFor
       <MedicalProfileSection medicalProfile={medicalProfile} />
       <PreferencesSection profile={profile} />
       <ChangePasswordSection />
-      <TwoFactorSection />
+      <AccountSecuritySections />
       <NotificationsSection profile={profile} />
       <PushNotificationToggle />
       <SavedPaymentsSection />

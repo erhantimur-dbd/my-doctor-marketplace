@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
-import { completeMfaLogin } from "./actions";
+import { completeMfaLogin, cancelMfaLogin } from "@/actions/mfa";
 import {
   Card,
   CardContent,
@@ -12,200 +12,105 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Shield, Loader2, AlertTriangle } from "lucide-react";
-import { Link } from "@/i18n/navigation";
-
-/* ── Individual Digit Input ── */
-
-function OtpInput({
-  value,
-  onChange,
-  onComplete,
-  disabled,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onComplete: () => void;
-  disabled: boolean;
-}) {
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = Array.from({ length: 6 }, (_, i) => value[i] || "");
-
-  function handleChange(index: number, char: string) {
-    const sanitized = char.replace(/\D/g, "");
-    if (!sanitized) return;
-
-    const newDigits = [...digits];
-    newDigits[index] = sanitized[0];
-    const newValue = newDigits.join("");
-    onChange(newValue);
-
-    if (index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-
-    if (newValue.length === 6) {
-      setTimeout(onComplete, 50);
-    }
-  }
-
-  function handleKeyDown(index: number, e: React.KeyboardEvent) {
-    if (e.key === "Backspace") {
-      e.preventDefault();
-      const newDigits = [...digits];
-      if (digits[index]) {
-        newDigits[index] = "";
-        onChange(newDigits.join(""));
-      } else if (index > 0) {
-        newDigits[index - 1] = "";
-        onChange(newDigits.join(""));
-        inputRefs.current[index - 1]?.focus();
-      }
-    } else if (e.key === "Enter" && value.length === 6) {
-      onComplete();
-    } else if (e.key === "ArrowLeft" && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    } else if (e.key === "ArrowRight" && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handlePaste(e: React.ClipboardEvent) {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted) {
-      onChange(pasted);
-      const focusIndex = Math.min(pasted.length, 5);
-      inputRefs.current[focusIndex]?.focus();
-      if (pasted.length === 6) {
-        setTimeout(onComplete, 50);
-      }
-    }
-  }
-
-  return (
-    <div className="flex justify-center gap-2 sm:gap-3">
-      {digits.map((digit, i) => (
-        <input
-          key={i}
-          ref={(el) => { inputRefs.current[i] = el; }}
-          type="text"
-          inputMode="numeric"
-          maxLength={1}
-          value={digit}
-          onChange={(e) => handleChange(i, e.target.value)}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          onPaste={i === 0 ? handlePaste : undefined}
-          onFocus={(e) => e.target.select()}
-          disabled={disabled}
-          autoFocus={i === 0}
-          className="h-14 w-11 sm:w-12 rounded-lg border-2 border-input bg-background text-center text-2xl font-mono font-semibold transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-          aria-label={`Digit ${i + 1}`}
-        />
-      ))}
-    </div>
-  );
-}
-
-/* ── Form ── */
+import { OtpInput } from "@/components/auth/otp-input";
+import {
+  challengeAndVerifyTotp,
+  mfaFailureMessage,
+} from "@/lib/auth/mfa-rest";
+import { resolvePostAuthPath } from "@/lib/auth/role-redirect";
+import { createClient } from "@/lib/supabase/client";
 
 export function VerifyMfaForm({
-  factorId,
+  factors,
   accessToken,
   locale,
   userRole,
+  redirectTo,
 }: {
-  factorId: string;
+  factors: { id: string; name: string }[];
   accessToken: string;
   locale: string;
   userRole?: string;
+  redirectTo?: string;
 }) {
   const t = useTranslations("twoFactor");
 
+  const [mode, setMode] = useState<"totp" | "recovery">("totp");
+  const [factorId, setFactorId] = useState(factors[0]?.id ?? "");
   const [code, setCode] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
   const [error, setError] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const finishLogin = useCallback(
+    async (access: string, refresh: string) => {
+      const { success, error: persistError } = await completeMfaLogin(
+        access,
+        refresh
+      );
+      if (!success) {
+        setError(
+          persistError === "too_many"
+            ? t("error_too_many")
+            : t("error_invalid_code")
+        );
+        setVerifying(false);
+        return false;
+      }
+      window.location.href = resolvePostAuthPath(locale, userRole, redirectTo);
+      return true;
+    },
+    [locale, userRole, redirectTo, t]
+  );
 
   const handleVerify = useCallback(async () => {
-    if (code.length !== 6 || verifying) return;
+    if (code.length !== 6 || verifying || !factorId) return;
 
     setVerifying(true);
     setError("");
 
-    // Use fetch directly — no Supabase client calls (NavigatorLock hang)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-      apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    };
+    const result = await challengeAndVerifyTotp({
+      factorId,
+      accessToken,
+      code,
+    });
 
-    // Step 1: Challenge
-    const challengeRes = await fetch(
-      `${supabaseUrl}/auth/v1/factors/${factorId}/challenge`,
-      { method: "POST", headers }
-    );
-
-    if (!challengeRes.ok) {
-      setError(t("error_invalid_code"));
+    if (!result.ok) {
+      setError(mfaFailureMessage(result.reason, t));
+      if (result.reason === "verify") setCode("");
       setVerifying(false);
       return;
     }
 
-    const challengeData = await challengeRes.json();
+    await finishLogin(result.accessToken, result.refreshToken);
+  }, [factorId, accessToken, code, verifying, finishLogin, t]);
 
-    // Step 2: Verify
-    const verifyRes = await fetch(
-      `${supabaseUrl}/auth/v1/factors/${factorId}/verify`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          challenge_id: challengeData.id,
-          code,
-        }),
-      }
-    );
+  const handleRecoveryVerify = useCallback(async () => {
+    const trimmed = recoveryCode.trim();
+    if (!trimmed || verifying) return;
+    setVerifying(true);
+    setError("");
 
-    if (!verifyRes.ok) {
-      setError(t("error_invalid_code"));
-      setCode("");
-      setVerifying(false);
-      return;
-    }
-
-    // Set session cookies via server action, then navigate client-side
-    const verifyData = await verifyRes.json();
-    if (verifyData.access_token && verifyData.refresh_token) {
-      // Set cookies server-side (no redirect — we handle navigation here)
-      const { success } = await completeMfaLogin(
-        verifyData.access_token,
-        verifyData.refresh_token
-      );
-
-      if (!success) {
-        console.warn("MFA: setSession returned error");
-        setError(t("error_invalid_code"));
-        setCode("");
+    try {
+      const supabase = createClient();
+      const { data, error: verifyError } =
+        await supabase.auth.mfa.recoveryCodes.verify({ code: trimmed });
+      if (verifyError || !data?.access_token || !data?.refresh_token) {
+        setError(t("error_invalid_recovery"));
+        setRecoveryCode("");
         setVerifying(false);
         return;
       }
-
-      const target =
-        userRole === "doctor"
-          ? `/${locale}/doctor-dashboard`
-          : userRole === "admin"
-            ? `/${locale}/admin`
-            : `/${locale}/dashboard`;
-
-      // Use window.location for a full page load (ensures fresh cookies)
-      window.location.href = target;
-    } else {
-      setError(t("error_invalid_code"));
-      setCode("");
+      await finishLogin(data.access_token, data.refresh_token);
+    } catch {
+      setError(t("error_invalid_recovery"));
+      setRecoveryCode("");
       setVerifying(false);
     }
-  }, [factorId, accessToken, code, verifying, locale, userRole, t]);
+  }, [recoveryCode, verifying, finishLogin, t]);
 
   return (
     <Card>
@@ -214,7 +119,9 @@ export function VerifyMfaForm({
           <Shield className="h-6 w-6 text-primary" />
         </div>
         <CardTitle className="text-2xl">{t("verify_page_title")}</CardTitle>
-        <CardDescription>{t("verify_page_desc")}</CardDescription>
+        <CardDescription>
+          {mode === "totp" ? t("verify_page_desc") : t("recovery_verify_desc")}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {error && (
@@ -224,35 +131,109 @@ export function VerifyMfaForm({
           </div>
         )}
 
-        <div className="space-y-3">
-          <Label className="text-center block">{t("enter_code")}</Label>
-          <OtpInput
-            value={code}
-            onChange={(val) => {
-              setCode(val);
-              setError("");
-            }}
-            onComplete={handleVerify}
+        {mode === "totp" ? (
+          <>
+            {factors.length > 1 && (
+              <div className="space-y-2">
+                <Label htmlFor="mfa-factor">{t("choose_factor")}</Label>
+                <select
+                  id="mfa-factor"
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={factorId}
+                  onChange={(e) => setFactorId(e.target.value)}
+                  disabled={verifying}
+                >
+                  {factors.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Label className="block text-center">{t("enter_code")}</Label>
+              <OtpInput
+                value={code}
+                onChange={(val) => {
+                  setCode(val);
+                  setError("");
+                }}
+                onComplete={handleVerify}
+                disabled={verifying}
+                autoFocus
+                size="lg"
+              />
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={handleVerify}
+              disabled={code.length !== 6 || verifying}
+            >
+              {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("verify_button")}
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="recovery-code">{t("recovery_code_label")}</Label>
+              <Input
+                id="recovery-code"
+                value={recoveryCode}
+                onChange={(e) => {
+                  setRecoveryCode(e.target.value);
+                  setError("");
+                }}
+                autoComplete="one-time-code"
+                placeholder="xxxx-xxxx-xxxx-xxxx"
+                disabled={verifying}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleRecoveryVerify();
+                }}
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleRecoveryVerify}
+              disabled={!recoveryCode.trim() || verifying}
+            >
+              {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {t("verify_button")}
+            </Button>
+          </>
+        )}
+
+        <div className="flex flex-col items-center gap-2 text-center">
+          <button
+            type="button"
+            className="text-sm text-primary hover:underline"
             disabled={verifying}
-          />
-        </div>
-
-        <Button
-          className="w-full"
-          onClick={handleVerify}
-          disabled={code.length !== 6 || verifying}
-        >
-          {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {t("verify_button")}
-        </Button>
-
-        <div className="text-center">
-          <Link
-            href="/login"
+            onClick={() => {
+              setMode(mode === "totp" ? "recovery" : "totp");
+              setError("");
+              setCode("");
+              setRecoveryCode("");
+            }}
+          >
+            {mode === "totp"
+              ? t("use_recovery_code")
+              : t("use_authenticator")}
+          </button>
+          <button
+            type="button"
             className="text-sm text-muted-foreground hover:text-primary"
+            disabled={cancelling}
+            onClick={async () => {
+              setCancelling(true);
+              await cancelMfaLogin(locale);
+            }}
           >
             {t("back_to_login")}
-          </Link>
+          </button>
         </div>
       </CardContent>
     </Card>
