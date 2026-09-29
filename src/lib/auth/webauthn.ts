@@ -1,5 +1,3 @@
-import { APP_BRAND_HOST_SUFFIXES } from "@/lib/http/origin";
-
 /** Default RP ID for production passkeys (must match Supabase Auth → Passkeys). */
 export const DEFAULT_WEBAUTHN_RP_ID = "mydoctors360.com";
 
@@ -27,11 +25,6 @@ export function hostMatchesWebAuthnRp(
   if (!h || !rp) return false;
   if (h === "localhost" || h.startsWith("127.") || h === "[::1]") return true;
   return h === rp || h.endsWith(`.${rp}`);
-}
-
-export function isLikelyPublicBrandHost(host: string): boolean {
-  const h = hostnameWithoutPort(host);
-  return APP_BRAND_HOST_SUFFIXES.some((suffix) => h === suffix || h === `www.${suffix}`);
 }
 
 export function browserSupportsPasskeys(): boolean {
