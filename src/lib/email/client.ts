@@ -19,12 +19,19 @@ export async function sendEmail({
   to,
   subject,
   html,
+  from,
 }: {
   to: string;
   subject: string;
   html: string;
+  /** Optional From override (e.g. Account Security notices). */
+  from?: string;
 }) {
   const resend = getResend();
+  const fromAddress =
+    from ||
+    process.env.EMAIL_FROM ||
+    "MyDoctors360 <noreply@mydoctors360.com>";
 
   if (!resend) {
     // Fail closed in production so misconfigured deploys never silently
@@ -49,7 +56,7 @@ export async function sendEmail({
 
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_FROM || "MyDoctors360 <noreply@mydoctors360.com>",
+      from: fromAddress,
       to,
       subject,
       html,
