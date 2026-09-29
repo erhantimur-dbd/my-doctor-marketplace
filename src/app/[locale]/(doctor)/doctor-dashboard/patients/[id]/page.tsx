@@ -51,7 +51,7 @@ export default async function PatientDetailPage({
 
   if (!doctor) redirect(`/${locale}/register-doctor`);
 
-  // Verify doctor has completed bookings with this patient
+  // Verify doctor has bookings with this patient (history includes cancellations)
   const { data: bookings } = await supabase
     .from("bookings")
     .select(
@@ -59,7 +59,16 @@ export default async function PatientDetailPage({
     )
     .eq("doctor_id", doctor.id)
     .eq("patient_id", patientId)
-    .in("status", ["confirmed", "approved", "completed"])
+    .in("status", [
+      "confirmed",
+      "approved",
+      "completed",
+      "cancelled_patient",
+      "cancelled_doctor",
+      "rejected",
+      "no_show",
+      "refunded",
+    ])
     .order("appointment_date", { ascending: false });
 
   if (!bookings || bookings.length === 0) {
@@ -104,6 +113,11 @@ export default async function PatientDetailPage({
     confirmed: "bg-blue-100 text-blue-800",
     approved: "bg-green-100 text-green-800",
     completed: "bg-gray-100 text-gray-800",
+    cancelled_patient: "bg-red-100 text-red-800",
+    cancelled_doctor: "bg-red-100 text-red-800",
+    rejected: "bg-red-100 text-red-800",
+    no_show: "bg-orange-100 text-orange-800",
+    refunded: "bg-purple-100 text-purple-800",
   };
 
   return (

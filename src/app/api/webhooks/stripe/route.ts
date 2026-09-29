@@ -29,6 +29,7 @@ import { sendSms as sendSmsMessage } from "@/lib/sms/client";
 import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/sms/templates";
 import { creditWallet } from "@/lib/wallet";
 import { settlePartCreditAfterCardPayment } from "@/lib/stripe/wallet-credit-share";
+import { applyTreatmentPlanCheckoutPayment } from "@/lib/treatment-plan/complete-checkout";
 import { createNotification } from "@/lib/notifications";
 import { earnPoints } from "@/lib/points";
 import Stripe from "stripe";
@@ -158,6 +159,7 @@ export async function POST(request: NextRequest) {
 
       const bookingId = session.metadata?.booking_id;
       const invitationId = session.metadata?.invitation_id;
+      const treatmentPlanId = session.metadata?.treatment_plan_id;
 
       const invoiceId = session.metadata?.invoice_id;
 
@@ -359,6 +361,10 @@ export async function POST(request: NextRequest) {
             }
           }
         }
+      } else if (treatmentPlanId && session.mode === "payment") {
+        // Care plan pay_full / pay_per_visit — must run before the generic
+        // booking_id branch (per-visit metadata also sets booking_id).
+        await applyTreatmentPlanCheckoutPayment(session, supabase);
       } else if (bookingId && session.mode === "payment") {
         await supabase
           .from("bookings")

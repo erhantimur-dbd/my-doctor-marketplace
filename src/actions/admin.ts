@@ -19,6 +19,7 @@ import {
 } from "@/lib/stripe/consult-refund";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
+import { computeCancellationRefundPercent } from "@/lib/booking/cancellation-refund";
 import { sendEmail } from "@/lib/email/client";
 import {
   adminBookingPaymentLinkEmail,
@@ -2171,31 +2172,15 @@ export async function adminCancelBooking(
     return { error: `Cannot cancel a booking with status "${booking.status}".` };
   }
 
-  // Calculate refund based on cancellation policy
-  const appointmentDateTime = new Date(
-    `${booking.appointment_date}T${booking.start_time}`
-  );
-  const now = new Date();
-  const hoursUntilAppointment =
-    (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-  let refundPercent = 0;
+  // Calculate refund based on cancellation policy (TIMESTAMPTZ-safe)
   const doctor: any = booking.doctor;
   const policy = doctor.cancellation_policy;
-
-  if (policy === "flexible") {
-    refundPercent = hoursUntilAppointment > 24 ? 100 : 0;
-  } else if (policy === "moderate") {
-    if (hoursUntilAppointment > 48) {
-      refundPercent = 100;
-    } else if (hoursUntilAppointment > 24) {
-      refundPercent = 50;
-    } else {
-      refundPercent = 0;
-    }
-  } else if (policy === "strict") {
-    refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
-  }
+  const { hoursUntil: hoursUntilAppointment, refundPercent } =
+    computeCancellationRefundPercent(
+      booking.appointment_date,
+      booking.start_time,
+      policy
+    );
 
   // Same split as a patient cancel: credit back to the wallet, card to the card.
   let refundAmountCents = 0;
@@ -2409,26 +2394,12 @@ export async function adminGetCancelPreview(bookingId: string) {
 
   const doctor: any = booking.doctor;
   const policy = doctor.cancellation_policy;
-
-  const appointmentDateTime = new Date(
-    `${booking.appointment_date}T${booking.start_time}`
-  );
-  const now = new Date();
-  const hoursUntilAppointment =
-    (appointmentDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-
-  let refundPercent = 0;
-  if (policy === "flexible") {
-    refundPercent = hoursUntilAppointment > 24 ? 100 : 0;
-  } else if (policy === "moderate") {
-    if (hoursUntilAppointment > 48) {
-      refundPercent = 100;
-    } else if (hoursUntilAppointment > 24) {
-      refundPercent = 50;
-    }
-  } else if (policy === "strict") {
-    refundPercent = hoursUntilAppointment > 72 ? 100 : 0;
-  }
+  const { hoursUntil: hoursUntilAppointment, refundPercent } =
+    computeCancellationRefundPercent(
+      booking.appointment_date,
+      booking.start_time,
+      policy
+    );
 
   const refundAmountCents = Math.round(
     (booking.total_amount_cents * refundPercent) / 100

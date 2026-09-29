@@ -21,6 +21,7 @@ export const BOOKING_DOCTOR_PROFILE_EMBED = "profiles!doctors_profile_id_fkey";
 export const PATIENT_BOOKINGS_LIST_SELECT = `
       id,
       booking_number,
+      appointment_date,
       start_time,
       end_time,
       status,

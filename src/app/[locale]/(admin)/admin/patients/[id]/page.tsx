@@ -77,17 +77,23 @@ export default async function AdminPatientDetailPage({
     // Ignore errors — just show as not banned
   }
 
-  // Get bookings
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select(
-      `id, booking_number, appointment_date, start_time, status, consultation_type,
-       total_amount_cents, currency,
-       doctor:doctors!inner(slug, profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
-    )
-    .eq("patient_id", id)
-    .order("appointment_date", { ascending: false })
-    .limit(20);
+  // Get recent bookings for history + accurate total count
+  const [{ data: bookings }, { count: totalBookingsCount }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select(
+        `id, booking_number, appointment_date, start_time, status, consultation_type,
+         total_amount_cents, currency,
+         doctor:doctors!inner(slug, profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+      )
+      .eq("patient_id", id)
+      .order("appointment_date", { ascending: false })
+      .limit(20),
+    supabase
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("patient_id", id),
+  ]);
 
   // Get reviews
   const { data: reviews } = await supabase
@@ -215,7 +221,7 @@ export default async function AdminPatientDetailPage({
           <CardContent className="space-y-3">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Bookings</span>
-              <span className="font-bold">{bookings?.length || 0}</span>
+              <span className="font-bold">{totalBookingsCount ?? bookings?.length ?? 0}</span>
             </div>
             <Separator />
             <div className="flex justify-between">

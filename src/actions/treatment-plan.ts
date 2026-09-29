@@ -22,6 +22,10 @@ import {
   CARE_PLANS_DISABLED_MESSAGE,
   isCarePlansEnabled,
 } from "@/lib/launch/soft-launch";
+import {
+  nextTreatmentPlanStatusAfterSession,
+  treatmentPlanPerVisitAmountCents,
+} from "@/lib/treatment-plan/pricing";
 
 // ─── types ────────────────────────────────────────────────────
 
@@ -534,27 +538,35 @@ export async function acceptTreatmentPlanPerVisit(
       return { error: "Failed to accept care plan. Please try again." };
     }
 
-    // Notify doctor
+    // Notify doctor (notifications.user_id is profiles.id, not doctors.id)
     const { data: patient } = await supabase
       .from("profiles")
       .select("first_name, last_name")
       .eq("id", user.id)
       .single();
 
+    const { data: doctorRow } = await supabase
+      .from("doctors")
+      .select("profile_id")
+      .eq("id", plan.doctor_id)
+      .single();
+
     const patientName = patient
       ? `${patient.first_name} ${patient.last_name}`
       : "A patient";
 
-    createNotification({
-      userId: plan.doctor_id,
-      type: "treatment_plan_accepted",
-      title: "Care Plan Accepted",
-      message: `${patientName} has accepted the care plan: ${plan.title}`,
-      channels: ["in_app"],
-      metadata: { treatment_plan_id: plan.id },
-    }).catch((err) =>
-      log.error("Treatment plan accepted notification error:", { err: err })
-    );
+    if (doctorRow?.profile_id) {
+      createNotification({
+        userId: doctorRow.profile_id,
+        type: "treatment_plan_accepted",
+        title: "Care Plan Accepted",
+        message: `${patientName} has accepted the care plan: ${plan.title}`,
+        channels: ["in_app"],
+        metadata: { treatment_plan_id: plan.id },
+      }).catch((err) =>
+        log.error("Treatment plan accepted notification error:", { err: err })
+      );
+    }
 
     revalidatePath("/", "layout");
     return { success: true };
@@ -636,14 +648,8 @@ export async function bookTreatmentPlanSession(
       }
 
       // Increment sessions_completed
-      const newSessionsCompleted = plan.sessions_completed + 1;
-      let newStatus = plan.status;
-      if (plan.sessions_completed === 0) {
-        newStatus = "in_progress";
-      }
-      if (newSessionsCompleted >= plan.total_sessions) {
-        newStatus = "completed";
-      }
+      const { sessions_completed: newSessionsCompleted, status: newStatus } =
+        nextTreatmentPlanStatusAfterSession(plan);
 
       await supabase
         .from("treatment_plans")
@@ -737,7 +743,7 @@ export async function bookTreatmentPlanSession(
     }
 
     // ─── Pay Per Visit: create booking + Stripe checkout ───
-    const perSessionAmountCents = plan.unit_price_cents;
+    const perSessionAmountCents = treatmentPlanPerVisitAmountCents(plan);
     const perSessionFeeCents = 0;
     const totalForSession = perSessionAmountCents;
 
