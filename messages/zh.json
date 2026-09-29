@@ -456,6 +456,7 @@
     "sign_up": "注册",
     "sign_in_with_google": "使用Google登录",
     "sign_in_with_apple": "使用Apple登录",
+    "sign_in_with_passkey": "使用通行密钥登录",
     "sign_up_with_google": "使用Google注册",
     "sign_up_with_apple": "使用Apple注册",
     "or_continue_with": "或继续使用",
@@ -1030,6 +1031,25 @@
     "success_disabled": "双重身份验证已停用。",
     "recommendation_title": "使用双重身份验证保护您的账户",
     "recommendation_desc": "作为医疗服务提供者，我们强烈建议您启用 2FA 以保护您的账户和患者数据。"
+  },
+  "passkeys": {
+    "title": "通行密钥",
+    "description": "使用 Face ID、Touch ID、Windows Hello 或安全密钥登录 — 比密码更快，也更抗钓鱼。",
+    "add": "添加通行密钥",
+    "remove": "移除通行密钥",
+    "empty": "尚无通行密钥。添加后即可无密码登录。",
+    "unnamed": "通行密钥",
+    "added_on": "添加于 {date}",
+    "last_used": "最近使用 {date}",
+    "unsupported_hint": "此浏览器或设备不支持通行密钥。",
+    "success_created": "通行密钥已添加到您的账户。",
+    "success_removed": "通行密钥已移除。",
+    "error_unsupported": "此浏览器不支持通行密钥。",
+    "error_not_enabled": "此项目尚未启用通行密钥。请在 Supabase Auth → Passkeys 中开启。",
+    "error_too_many": "您已达到此账户的通行密钥数量上限。",
+    "error_already_registered": "此设备或身份验证器已在您的账户上注册通行密钥。",
+    "error_cancelled": "通行密钥设置已取消。",
+    "error_generic": "无法完成通行密钥操作。请重试。"
   },
   "organization": {
     "title": "组织",

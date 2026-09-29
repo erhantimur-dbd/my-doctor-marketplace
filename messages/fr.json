@@ -206,6 +206,7 @@
     "sign_up": "S'inscrire",
     "sign_in_with_google": "Continuer avec Google",
     "sign_in_with_apple": "Continuer avec Apple",
+    "sign_in_with_passkey": "Se connecter avec une clé d’accès",
     "sign_up_with_google": "S'inscrire avec Google",
     "sign_up_with_apple": "S'inscrire avec Apple",
     "or_continue_with": "ou continuer avec",
@@ -1177,6 +1178,25 @@
     "success_disabled": "L'authentification à deux facteurs a été désactivée.",
     "recommendation_title": "Sécurisez votre compte avec l'authentification à deux facteurs",
     "recommendation_desc": "En tant que professionnel de santé, nous vous recommandons vivement d'activer la 2FA pour protéger votre compte et les données de vos patients."
+  },
+  "passkeys": {
+    "title": "Clés d’accès",
+    "description": "Connectez-vous avec Face ID, Touch ID, Windows Hello ou une clé de sécurité — plus rapide et plus résistant au phishing qu’un mot de passe.",
+    "add": "Ajouter une clé d’accès",
+    "remove": "Supprimer la clé d’accès",
+    "empty": "Aucune clé d’accès pour le moment. Ajoutez-en une pour vous connecter sans mot de passe.",
+    "unnamed": "Clé d’accès",
+    "added_on": "Ajoutée le {date}",
+    "last_used": "Dernière utilisation {date}",
+    "unsupported_hint": "Ce navigateur ou cet appareil ne prend pas en charge les clés d’accès.",
+    "success_created": "Clé d’accès ajoutée à votre compte.",
+    "success_removed": "Clé d’accès supprimée.",
+    "error_unsupported": "Les clés d’accès ne sont pas prises en charge dans ce navigateur.",
+    "error_not_enabled": "Les clés d’accès ne sont pas encore activées pour ce projet. Activez-les dans Supabase Auth → Passkeys.",
+    "error_too_many": "Vous avez atteint le nombre maximum de clés d’accès pour ce compte.",
+    "error_already_registered": "Cet appareil ou authenticator a déjà une clé d’accès sur votre compte.",
+    "error_cancelled": "La configuration de la clé d’accès a été annulée.",
+    "error_generic": "Impossible de terminer l’action liée à la clé d’accès. Réessayez."
   },
   "organization": {
     "title": "Organisation",

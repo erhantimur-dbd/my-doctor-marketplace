@@ -450,6 +450,7 @@
     "sign_up": "新規登録",
     "sign_in_with_google": "Googleで続ける",
     "sign_in_with_apple": "Appleで続ける",
+    "sign_in_with_passkey": "パスキーでサインイン",
     "sign_up_with_google": "Googleで登録",
     "sign_up_with_apple": "Appleで登録",
     "or_continue_with": "または次で続ける",
@@ -1024,6 +1025,25 @@
     "success_disabled": "二要素認証が無効になりました。",
     "recommendation_title": "二要素認証でアカウントを保護しましょう",
     "recommendation_desc": "医療従事者として、アカウントと患者データを保護するため、2FA の有効化を強くお勧めします。"
+  },
+  "passkeys": {
+    "title": "パスキー",
+    "description": "Face ID、Touch ID、Windows Hello、またはセキュリティキーでサインイン — パスワードより速く、フィッシングに強い方式です。",
+    "add": "パスキーを追加",
+    "remove": "パスキーを削除",
+    "empty": "パスキーはまだありません。パスワードなしでサインインするには追加してください。",
+    "unnamed": "パスキー",
+    "added_on": "追加日 {date}",
+    "last_used": "最終利用 {date}",
+    "unsupported_hint": "このブラウザまたはデバイスはパスキーに対応していません。",
+    "success_created": "パスキーがアカウントに追加されました。",
+    "success_removed": "パスキーを削除しました。",
+    "error_unsupported": "このブラウザではパスキーを利用できません。",
+    "error_not_enabled": "このプロジェクトではパスキーがまだ有効になっていません。Supabase Auth → Passkeys で有効にしてください。",
+    "error_too_many": "このアカウントのパスキー上限に達しました。",
+    "error_already_registered": "このデバイスまたは認証器にはすでにパスキーが登録されています。",
+    "error_cancelled": "パスキーの設定がキャンセルされました。",
+    "error_generic": "パスキー操作を完了できませんでした。もう一度お試しください。"
   },
   "organization": {
     "title": "組織",

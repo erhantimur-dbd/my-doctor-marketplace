@@ -450,6 +450,7 @@
     "sign_up": "Cadastrar",
     "sign_in_with_google": "Continuar com Google",
     "sign_in_with_apple": "Continuar com Apple",
+    "sign_in_with_passkey": "Iniciar sessão com passkey",
     "sign_up_with_google": "Cadastrar com Google",
     "sign_up_with_apple": "Cadastrar com Apple",
     "or_continue_with": "ou continuar com",
@@ -1024,6 +1025,25 @@
     "success_disabled": "A autenticação de dois fatores foi desativada.",
     "recommendation_title": "Proteja sua conta com autenticação de dois fatores",
     "recommendation_desc": "Como profissional de saúde, recomendamos fortemente que você ative a 2FA para proteger sua conta e os dados dos pacientes."
+  },
+  "passkeys": {
+    "title": "Passkeys",
+    "description": "Inicie sessão com Face ID, Touch ID, Windows Hello ou uma chave de segurança — mais rápido e resistente a phishing do que uma palavra-passe.",
+    "add": "Adicionar passkey",
+    "remove": "Remover passkey",
+    "empty": "Ainda não há passkeys. Adicione uma para iniciar sessão sem palavra-passe.",
+    "unnamed": "Passkey",
+    "added_on": "Adicionada {date}",
+    "last_used": "Último uso {date}",
+    "unsupported_hint": "Este browser ou dispositivo não suporta passkeys.",
+    "success_created": "Passkey adicionada à sua conta.",
+    "success_removed": "Passkey removida.",
+    "error_unsupported": "As passkeys não são suportadas neste browser.",
+    "error_not_enabled": "As passkeys ainda não estão ativadas neste projeto. Ative-as em Supabase Auth → Passkeys.",
+    "error_too_many": "Atingiu o número máximo de passkeys para esta conta.",
+    "error_already_registered": "Este dispositivo ou autenticador já tem uma passkey na sua conta.",
+    "error_cancelled": "A configuração da passkey foi cancelada.",
+    "error_generic": "Não foi possível concluir a ação da passkey. Tente novamente."
   },
   "organization": {
     "title": "Organização",

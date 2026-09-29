@@ -206,6 +206,7 @@
     "sign_up": "Registrieren",
     "sign_in_with_google": "Mit Google fortfahren",
     "sign_in_with_apple": "Mit Apple fortfahren",
+    "sign_in_with_passkey": "Mit Passkey anmelden",
     "sign_up_with_google": "Mit Google registrieren",
     "sign_up_with_apple": "Mit Apple registrieren",
     "or_continue_with": "oder fortfahren mit",
@@ -1177,6 +1178,25 @@
     "success_disabled": "Zwei-Faktor-Authentifizierung wurde deaktiviert.",
     "recommendation_title": "Sichern Sie Ihr Konto mit Zwei-Faktor-Authentifizierung",
     "recommendation_desc": "Als Gesundheitsdienstleister empfehlen wir Ihnen dringend, 2FA zu aktivieren, um Ihr Konto und Patientendaten zu schützen."
+  },
+  "passkeys": {
+    "title": "Passkeys",
+    "description": "Melden Sie sich mit Face ID, Touch ID, Windows Hello oder einem Sicherheitsschlüssel an — schneller und sicherer als ein Passwort.",
+    "add": "Passkey hinzufügen",
+    "remove": "Passkey entfernen",
+    "empty": "Noch keine Passkeys. Fügen Sie einen hinzu, um sich ohne Passwort anzumelden.",
+    "unnamed": "Passkey",
+    "added_on": "Hinzugefügt {date}",
+    "last_used": "Zuletzt verwendet {date}",
+    "unsupported_hint": "Dieser Browser oder dieses Gerät unterstützt keine Passkeys.",
+    "success_created": "Passkey wurde zu Ihrem Konto hinzugefügt.",
+    "success_removed": "Passkey entfernt.",
+    "error_unsupported": "Passkeys werden in diesem Browser nicht unterstützt.",
+    "error_not_enabled": "Passkeys sind für dieses Projekt noch nicht aktiviert. Bitte in Supabase Auth → Passkeys einschalten.",
+    "error_too_many": "Sie haben die maximale Anzahl an Passkeys für dieses Konto erreicht.",
+    "error_already_registered": "Dieses Gerät oder dieser Authenticator hat bereits einen Passkey für Ihr Konto.",
+    "error_cancelled": "Passkey-Einrichtung wurde abgebrochen.",
+    "error_generic": "Die Passkey-Aktion konnte nicht abgeschlossen werden. Bitte erneut versuchen."
   },
   "organization": {
     "title": "Organisation",

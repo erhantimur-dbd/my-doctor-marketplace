@@ -64,6 +64,8 @@ import {
   type ReminderPreference,
 } from "@/actions/doctor";
 import { TwoFactorSection } from "@/components/settings/two-factor-section";
+import { PasskeySection } from "@/components/settings/passkey-section";
+import { useLocale } from "next-intl";
 
 const REMINDER_TIME_PRESETS = [
   { value: 15, label: "15 minutes before" },
@@ -85,11 +87,17 @@ const DEFAULT_REMINDERS: ReminderPreference[] = [
 function createSupabase() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        experimental: { passkey: true },
+      },
+    }
   );
 }
 
 export default function SettingsPage() {
+  const locale = useLocale();
   const [loading, setLoading] = useState(true);
   const [doctorId, setDoctorId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -802,6 +810,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Passkeys */}
+      <PasskeySection settingsPath={`/${locale}/doctor-dashboard/settings`} />
 
       {/* Two-Factor Authentication */}
       <TwoFactorSection showRecommendation />

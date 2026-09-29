@@ -35,7 +35,9 @@ import { MedicalProfileSection } from "./medical-profile-section";
 import { SavedPaymentsSection } from "./saved-payments-section";
 import { DataPrivacySection } from "./data-privacy-section";
 import { TwoFactorSection } from "@/components/settings/two-factor-section";
+import { PasskeySection } from "@/components/settings/passkey-section";
 import { PushNotificationToggle } from "@/components/shared/push-notification-toggle";
+import { useLocale } from "next-intl";
 
 interface ProfileData {
   id: string;
@@ -74,12 +76,14 @@ interface SettingsFormProps {
 }
 
 export function SettingsForm({ profile, userEmail, medicalProfile }: SettingsFormProps) {
+  const locale = useLocale();
   return (
     <div className="space-y-6">
       <PersonalInfoSection profile={profile} userEmail={userEmail} />
       <MedicalProfileSection medicalProfile={medicalProfile} />
       <PreferencesSection profile={profile} />
       <ChangePasswordSection />
+      <PasskeySection settingsPath={`/${locale}/dashboard/settings`} />
       <TwoFactorSection />
       <NotificationsSection profile={profile} />
       <PushNotificationToggle />
