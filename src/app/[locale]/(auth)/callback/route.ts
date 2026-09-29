@@ -71,6 +71,20 @@ export async function GET(
     }
   );
 
+  async function redirectAfterAuth(url: string) {
+    if (url.includes("reset-password")) {
+      return createRedirectWithCookies(url);
+    }
+    const { data: aal } =
+      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal?.nextLevel === "aal2" && aal?.currentLevel === "aal1") {
+      return createRedirectWithCookies(
+        `/${locale}/verify-mfa?redirect=${encodeURIComponent(url)}`
+      );
+    }
+    return createRedirectWithCookies(url);
+  }
+
   /** Resolve post-auth destination; force terms interstitial for OAuth users
    *  who have not yet accepted terms/privacy. */
   async function resolvePostAuthRedirect(
@@ -152,7 +166,7 @@ export async function GET(
               firstName: firstName || "Doctor",
               lastName: lastName || "User",
             });
-            const res = createRedirectWithCookies(
+            const res = await redirectAfterAuth(
               `/${locale}/doctor-dashboard`
             );
             res.cookies.set(DOCTOR_OAUTH_INTENT_COOKIE, "", {
@@ -178,16 +192,16 @@ export async function GET(
               dest = `/${locale}/dashboard`;
             }
             const finalUrl = await resolvePostAuthRedirect(user.id, true, dest);
-            return createRedirectWithCookies(finalUrl);
+            return redirectAfterAuth(finalUrl);
           }
-          return createRedirectWithCookies(`/${locale}/email-verified`);
+          return redirectAfterAuth(`/${locale}/email-verified`);
         }
 
         const finalUrl = await resolvePostAuthRedirect(user.id, isOAuth, next);
-        return createRedirectWithCookies(finalUrl);
+        return redirectAfterAuth(finalUrl);
       }
 
-      return createRedirectWithCookies(next);
+      return redirectAfterAuth(next);
     }
   }
 
@@ -206,16 +220,16 @@ export async function GET(
       // One-click guest claim / magic session — signed in without password
       if (type === "magiclink" || type === "email") {
         if (next && next !== `/${locale}`) {
-          return createRedirectWithCookies(next);
+          return redirectAfterAuth(next);
         }
         // Default: patient bookings (guest claim) or email-verified for generic
-        return createRedirectWithCookies(`/${locale}/dashboard/bookings`);
+        return redirectAfterAuth(`/${locale}/dashboard/bookings`);
       }
       if (type === "signup") {
         if (next && next !== `/${locale}`) {
-          return createRedirectWithCookies(next);
+          return redirectAfterAuth(next);
         }
-        return createRedirectWithCookies(`/${locale}/email-verified`);
+        return redirectAfterAuth(`/${locale}/email-verified`);
       }
       if (type === "recovery") {
         // Prefer explicit next (e.g. reset-password); otherwise force set-password
@@ -224,7 +238,7 @@ export async function GET(
         }
         return createRedirectWithCookies(`/${locale}/reset-password`);
       }
-      return createRedirectWithCookies(next);
+      return redirectAfterAuth(next);
     }
   }
 

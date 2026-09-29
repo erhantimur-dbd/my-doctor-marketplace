@@ -29,97 +29,24 @@ import {
   Copy,
   CheckCircle2,
   AlertTriangle,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
-
-/* ── Individual Digit OTP Input ── */
-
-function OtpInput({
-  value,
-  onChange,
-  onComplete,
-  disabled,
-  autoFocus = false,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  onComplete?: () => void;
-  disabled?: boolean;
-  autoFocus?: boolean;
-}) {
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const digits = Array.from({ length: 6 }, (_, i) => value[i] || "");
-
-  function handleChange(index: number, char: string) {
-    const sanitized = char.replace(/\D/g, "");
-    if (!sanitized) return;
-    const newDigits = [...digits];
-    newDigits[index] = sanitized[0];
-    const newValue = newDigits.join("");
-    onChange(newValue);
-    if (index < 5) inputRefs.current[index + 1]?.focus();
-    if (newValue.length === 6 && onComplete) {
-      setTimeout(onComplete, 50);
-    }
-  }
-
-  function handleKeyDown(index: number, e: React.KeyboardEvent) {
-    if (e.key === "Backspace") {
-      e.preventDefault();
-      const newDigits = [...digits];
-      if (digits[index]) {
-        newDigits[index] = "";
-        onChange(newDigits.join(""));
-      } else if (index > 0) {
-        newDigits[index - 1] = "";
-        onChange(newDigits.join(""));
-        inputRefs.current[index - 1]?.focus();
-      }
-    } else if (e.key === "Enter" && value.length === 6 && onComplete) {
-      onComplete();
-    } else if (e.key === "ArrowLeft" && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    } else if (e.key === "ArrowRight" && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handlePaste(e: React.ClipboardEvent) {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
-    if (pasted) {
-      onChange(pasted);
-      const focusIndex = Math.min(pasted.length, 5);
-      inputRefs.current[focusIndex]?.focus();
-      if (pasted.length === 6 && onComplete) setTimeout(onComplete, 50);
-    }
-  }
-
-  return (
-    <div className="flex justify-center gap-2">
-      {digits.map((digit, i) => (
-        <input
-          key={i}
-          ref={(el) => { inputRefs.current[i] = el; }}
-          type="text"
-          inputMode="numeric"
-          maxLength={1}
-          value={digit}
-          onChange={(e) => handleChange(i, e.target.value)}
-          onKeyDown={(e) => handleKeyDown(i, e)}
-          onPaste={i === 0 ? handlePaste : undefined}
-          onFocus={(e) => e.target.select()}
-          disabled={disabled}
-          autoFocus={autoFocus && i === 0}
-          className="h-12 w-10 rounded-lg border-2 border-input bg-background text-center text-xl font-mono font-semibold transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50"
-          aria-label={`Digit ${i + 1}`}
-        />
-      ))}
-    </div>
-  );
-}
+import { OtpInput } from "@/components/auth/otp-input";
+import { completeMfaLogin } from "@/actions/mfa";
+import {
+  challengeAndVerifyTotp,
+  mfaFailureMessage,
+  unenrollMfaFactor,
+} from "@/lib/auth/mfa-rest";
 
 type MfaState = "loading" | "disabled" | "enabled";
+
+interface TotpFactor {
+  id: string;
+  friendlyName?: string | null;
+  status: string;
+}
 
 interface EnrollData {
   factorId: string;
@@ -128,97 +55,135 @@ interface EnrollData {
   accessToken: string;
 }
 
-export function TwoFactorSection({ showRecommendation = false }: { showRecommendation?: boolean }) {
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), ms)
+    ),
+  ]);
+}
+
+export function TwoFactorSection({
+  showRecommendation = false,
+}: {
+  showRecommendation?: boolean;
+}) {
   const t = useTranslations("twoFactor");
   const supabase = createClient();
 
   const [mfaState, setMfaState] = useState<MfaState>("loading");
-  const [factorId, setFactorId] = useState<string | null>(null);
+  const [factors, setFactors] = useState<TotpFactor[]>([]);
   const accessTokenRef = useRef<string | null>(null);
+  const busyRef = useRef(false);
 
-  // Enrollment dialog
   const [enrollDialogOpen, setEnrollDialogOpen] = useState(false);
   const [enrollData, setEnrollData] = useState<EnrollData | null>(null);
   const [enrollCode, setEnrollCode] = useState("");
   const [enrolling, setEnrolling] = useState(false);
   const [enrollError, setEnrollError] = useState("");
   const [secretCopied, setSecretCopied] = useState(false);
+  const [enrollAsBackup, setEnrollAsBackup] = useState(false);
 
-  // Disable dialog
+  // Recovery codes (shown once after generate)
+  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
+  const [recoveryStatus, setRecoveryStatus] = useState<{
+    remaining: number;
+    total: number;
+  } | null>(null);
+  const [codesCopied, setCodesCopied] = useState(false);
+  const [regenBusy, setRegenBusy] = useState(false);
+
   const [disableDialogOpen, setDisableDialogOpen] = useState(false);
+  const [disableTarget, setDisableTarget] = useState<TotpFactor | null>(null);
   const [disableCode, setDisableCode] = useState("");
   const [disabling, setDisabling] = useState(false);
   const [disableError, setDisableError] = useState("");
 
   const checkMfaStatus = useCallback(async () => {
     try {
-      // Race against timeout — getSession/listFactors can hang due to NavigatorLock
-      const timeout = <T,>(ms: number): Promise<T> =>
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms));
-
-      // Cache the access token for later use in fetch-based MFA calls
-      const { data: sessionData } = await Promise.race([
+      const { data: sessionData } = await withTimeout(
         supabase.auth.getSession(),
-        timeout<never>(5000),
-      ]);
+        5000
+      );
       if (sessionData.session?.access_token) {
         accessTokenRef.current = sessionData.session.access_token;
       }
-      const { data: factors, error } = await Promise.race([
+      const { data: listed, error } = await withTimeout(
         supabase.auth.mfa.listFactors(),
-        timeout<never>(5000),
-      ]);
+        5000
+      );
       if (error) {
         console.error("MFA listFactors error:", error);
         setMfaState("disabled");
         return;
       }
-      const verifiedTotps = factors?.totp?.filter((f) => f.status === "verified") ?? [];
+      const verifiedTotps =
+        listed?.totp?.filter((f) => f.status === "verified") ?? [];
+      setFactors(
+        verifiedTotps.map((f) => ({
+          id: f.id,
+          friendlyName: f.friendly_name,
+          status: f.status,
+        }))
+      );
+      setMfaState(verifiedTotps.length > 0 ? "enabled" : "disabled");
+
       if (verifiedTotps.length > 0) {
-        setMfaState("enabled");
-        setFactorId(verifiedTotps[0].id);
+        try {
+          const { data: status } = await supabase.auth.mfa.recoveryCodes.getStatus();
+          if (status) {
+            setRecoveryStatus({
+              remaining: status.remaining,
+              total: status.total,
+            });
+          } else {
+            setRecoveryStatus(null);
+          }
+        } catch {
+          setRecoveryStatus(null);
+        }
       } else {
-        setMfaState("disabled");
-        setFactorId(null);
+        setRecoveryStatus(null);
       }
     } catch (err) {
       console.error("MFA check failed:", err);
       setMfaState("disabled");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     checkMfaStatus();
   }, [checkMfaStatus]);
 
-  // ── Enrollment Flow ──
-  async function startEnrollment() {
+  async function startEnrollment(asBackup: boolean) {
     setEnrollError("");
     setEnrollCode("");
     setSecretCopied(false);
+    setEnrollAsBackup(asBackup);
 
-    // Clean up any unverified factors first
-    const { data: factors } = await supabase.auth.mfa.listFactors();
-    const unverified = factors?.totp?.filter((f) => f.status !== "verified") ?? [];
+    const { data: listed } = await supabase.auth.mfa.listFactors();
+    const unverified = listed?.totp?.filter((f) => f.status !== "verified") ?? [];
     for (const f of unverified) {
       await supabase.auth.mfa.unenroll({ factorId: f.id });
     }
 
-    // Grab the access token now (before any lock contention)
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     if (!accessToken) {
-      toast.error("Session expired. Please log in again.");
+      toast.error(t("error_session_expired"));
       return;
     }
+    accessTokenRef.current = accessToken;
 
+    const friendlyName = asBackup ? "Backup authenticator" : "MyDoctors360";
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: "totp",
-      friendlyName: "MyDoctors360",
+      friendlyName,
     });
 
-    if (error || !data) {
+    if (error || !data || !("totp" in data) || !data.totp) {
       toast.error(t("error_enroll_failed"));
       return;
     }
@@ -233,136 +198,126 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
   }
 
   async function verifyEnrollment() {
-    if (!enrollData || enrollCode.length !== 6) return;
-
+    if (!enrollData || enrollCode.length !== 6 || busyRef.current) return;
+    busyRef.current = true;
     setEnrolling(true);
     setEnrollError("");
 
-    // Use fetch directly to avoid the Supabase client's internal session save
-    // which hangs due to NavigatorLock contention with @supabase/ssr cookie storage.
-    // The access token was captured during startEnrollment() before any lock issues.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${enrollData.accessToken}`,
-      apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    };
+    const result = await challengeAndVerifyTotp({
+      factorId: enrollData.factorId,
+      accessToken: enrollData.accessToken,
+      code: enrollCode,
+    });
 
-    // Step 1: Create challenge via REST
-    const challengeRes = await fetch(
-      `${supabaseUrl}/auth/v1/factors/${enrollData.factorId}/challenge`,
-      { method: "POST", headers }
-    );
-
-    if (!challengeRes.ok) {
-      setEnrollError(t("error_invalid_code"));
+    if (!result.ok) {
+      setEnrollError(mfaFailureMessage(result.reason, t));
       setEnrolling(false);
+      busyRef.current = false;
       return;
     }
 
-    const challengeData = await challengeRes.json();
-
-    // Step 2: Verify via REST
-    const verifyRes = await fetch(
-      `${supabaseUrl}/auth/v1/factors/${enrollData.factorId}/verify`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          challenge_id: challengeData.id,
-          code: enrollCode,
-        }),
-      }
+    const persisted = await completeMfaLogin(
+      result.accessToken,
+      result.refreshToken
     );
+    if (persisted.success) {
+      accessTokenRef.current = result.accessToken;
+    }
 
-    if (!verifyRes.ok) {
-      setEnrollError(t("error_invalid_code"));
-      setEnrolling(false);
-      return;
+    if (persisted.success) {
+      accessTokenRef.current = result.accessToken;
+    }
+
+    let generatedCodes: string[] | null = null;
+    if (!enrollAsBackup) {
+      try {
+        const { data: codesData, error: codesError } =
+          await supabase.auth.mfa.recoveryCodes.generate({
+            friendlyName: "Backup codes",
+          });
+        if (!codesError && codesData?.codes?.length) {
+          generatedCodes = codesData.codes;
+        }
+      } catch {
+        // Recovery codes may be disabled on the Auth server — TOTP still works.
+      }
     }
 
     setEnrolling(false);
+    busyRef.current = false;
     setEnrollDialogOpen(false);
     setEnrollData(null);
     setEnrollCode("");
-    toast.success(t("success_enabled"));
-    setMfaState("enabled");
-    setFactorId(enrollData.factorId);
+    toast.success(
+      enrollAsBackup ? t("success_backup_enabled") : t("success_enabled")
+    );
+    if (generatedCodes) {
+      setRecoveryCodes(generatedCodes);
+    }
+    await checkMfaStatus();
   }
 
-  // ── Disable Flow ──
   async function handleDisable() {
-    if (!factorId || disableCode.length !== 6) return;
-
+    if (!disableTarget || disableCode.length !== 6 || busyRef.current) return;
+    busyRef.current = true;
     setDisabling(true);
     setDisableError("");
 
-    // Use fetch directly to avoid NavigatorLock hang (same as enrollment)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const token = accessTokenRef.current;
     if (!token) {
-      setDisableError("Session expired. Please log in again.");
+      setDisableError(t("error_session_expired"));
       setDisabling(false);
+      busyRef.current = false;
       return;
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    };
+    const verified = await challengeAndVerifyTotp({
+      factorId: disableTarget.id,
+      accessToken: token,
+      code: disableCode,
+    });
 
-    // Verify code to confirm identity
-    const challengeRes = await fetch(
-      `${supabaseUrl}/auth/v1/factors/${factorId}/challenge`,
-      { method: "POST", headers }
-    );
-
-    if (!challengeRes.ok) {
-      setDisableError(t("error_invalid_code"));
+    if (!verified.ok) {
+      setDisableError(mfaFailureMessage(verified.reason, t));
       setDisabling(false);
+      busyRef.current = false;
       return;
     }
 
-    const challengeData = await challengeRes.json();
+    accessTokenRef.current = verified.accessToken;
+    await completeMfaLogin(verified.accessToken, verified.refreshToken);
 
-    const verifyRes = await fetch(
-      `${supabaseUrl}/auth/v1/factors/${factorId}/verify`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          challenge_id: challengeData.id,
-          code: disableCode,
-        }),
+    const unenrolled = await unenrollMfaFactor({
+      factorId: disableTarget.id,
+      accessToken: verified.accessToken,
+    });
+
+    if (!unenrolled.ok) {
+      setDisableError(mfaFailureMessage(unenrolled.reason, t));
+      setDisabling(false);
+      busyRef.current = false;
+      return;
+    }
+
+    if (factors.length <= 1) {
+      try {
+        await supabase.auth.mfa.recoveryCodes.unenroll();
+      } catch {
+        /* optional cleanup when disabling last TOTP factor */
       }
-    );
-
-    if (!verifyRes.ok) {
-      setDisableError(t("error_invalid_code"));
-      setDisabling(false);
-      return;
-    }
-
-    // Now unenroll
-    const unenrollRes = await fetch(
-      `${supabaseUrl}/auth/v1/factors/${factorId}`,
-      { method: "DELETE", headers }
-    );
-
-    if (!unenrollRes.ok) {
-      const err = await unenrollRes.json().catch(() => ({ message: "Failed to disable" }));
-      setDisableError(err.message || "Failed to disable");
-      setDisabling(false);
-      return;
+      setRecoveryStatus(null);
+      setRecoveryCodes(null);
     }
 
     setDisabling(false);
+    busyRef.current = false;
     setDisableDialogOpen(false);
     setDisableCode("");
-    toast.success(t("success_disabled"));
-    setMfaState("disabled");
-    setFactorId(null);
+    setDisableTarget(null);
+    toast.success(
+      factors.length <= 1 ? t("success_disabled") : t("success_factor_removed")
+    );
+    await checkMfaStatus();
   }
 
   function copySecret() {
@@ -371,6 +326,13 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
       setSecretCopied(true);
       setTimeout(() => setSecretCopied(false), 2000);
     }
+  }
+
+  function openDisable(factor: TotpFactor) {
+    setDisableTarget(factor);
+    setDisableCode("");
+    setDisableError("");
+    setDisableDialogOpen(true);
   }
 
   if (mfaState === "loading") {
@@ -391,7 +353,6 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
 
   return (
     <>
-      {/* Security recommendation banner for doctors */}
       {showRecommendation && mfaState === "disabled" && (
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
           <CardContent className="flex items-start gap-3 p-4">
@@ -422,75 +383,156 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
         </CardHeader>
         <CardContent className="space-y-4">
           {mfaState === "enabled" ? (
-            <div className="flex items-center justify-between">
+            <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium text-green-700 dark:text-green-400">
                   {t("enabled_status")}
                 </span>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setDisableCode("");
-                  setDisableError("");
-                  setDisableDialogOpen(true);
-                }}
-              >
-                {t("disable")}
-              </Button>
+              <ul className="space-y-2">
+                {factors.map((factor, index) => (
+                  <li
+                    key={factor.id}
+                    className="flex items-center justify-between rounded-md border px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {factor.friendlyName || t("authenticator_app")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {index === 0 ? t("factor_primary") : t("factor_backup")}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDisable(factor)}
+                    >
+                      {factors.length === 1 ? t("disable") : t("remove_factor")}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+              {factors.length < 2 && (
+                <div className="rounded-md border border-dashed p-3">
+                  <p className="text-sm font-medium">{t("backup_title")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("backup_desc")}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => startEnrollment(true)}
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    {t("add_backup")}
+                  </Button>
+                </div>
+              )}
+
+              <div className="rounded-md border p-3">
+                <p className="text-sm font-medium">{t("recovery_title")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("recovery_desc")}
+                </p>
+                {recoveryStatus ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("recovery_remaining", {
+                      remaining: recoveryStatus.remaining,
+                      total: recoveryStatus.total,
+                    })}
+                  </p>
+                ) : (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t("recovery_none")}
+                  </p>
+                )}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="mt-3"
+                  disabled={regenBusy}
+                  onClick={async () => {
+                    setRegenBusy(true);
+                    try {
+                      const api = recoveryStatus
+                        ? supabase.auth.mfa.recoveryCodes.regenerate()
+                        : supabase.auth.mfa.recoveryCodes.generate({
+                            friendlyName: "Backup codes",
+                          });
+                      const { data, error } = await api;
+                      if (error || !data?.codes?.length) {
+                        toast.error(t("error_recovery_generate"));
+                        return;
+                      }
+                      setRecoveryCodes(data.codes);
+                      await checkMfaStatus();
+                    } catch {
+                      toast.error(t("error_recovery_generate"));
+                    } finally {
+                      setRegenBusy(false);
+                    }
+                  }}
+                >
+                  {regenBusy && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {recoveryStatus
+                    ? t("recovery_regenerate")
+                    : t("recovery_generate")}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
                 {t("disabled_status")}
               </span>
-              <Button onClick={startEnrollment}>{t("enable")}</Button>
+              <Button onClick={() => startEnrollment(false)}>{t("enable")}</Button>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Enrollment Dialog */}
-      <Dialog open={enrollDialogOpen} onOpenChange={(open) => {
-        if (!open && enrollData) {
-          // Clean up unverified factor on close
-          supabase.auth.mfa.unenroll({ factorId: enrollData.factorId });
-          setEnrollData(null);
-        }
-        setEnrollDialogOpen(open);
-      }}>
+      <Dialog
+        open={enrollDialogOpen}
+        onOpenChange={(open) => {
+          if (!open && enrollData) {
+            supabase.auth.mfa.unenroll({ factorId: enrollData.factorId });
+            setEnrollData(null);
+          }
+          setEnrollDialogOpen(open);
+        }}
+      >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("enroll_title")}</DialogTitle>
+            <DialogTitle>
+              {enrollAsBackup ? t("backup_enroll_title") : t("enroll_title")}
+            </DialogTitle>
             <DialogDescription>{t("enroll_desc")}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* QR Code */}
             {enrollData && (
               <div className="flex flex-col items-center gap-3">
                 <p className="text-sm font-medium">{t("scan_qr")}</p>
                 <div className="rounded-lg border bg-white p-3">
-                  {/* Supabase returns an SVG data URI */}
                   <img
                     src={enrollData.qrCode}
-                    alt="2FA QR Code"
+                    alt=""
                     className="h-48 w-48"
                   />
                 </div>
               </div>
             )}
 
-            {/* Manual Secret */}
             {enrollData && (
               <div className="space-y-1.5">
-                <p className="text-xs text-muted-foreground">
-                  {t("manual_key")}
-                </p>
+                <p className="text-xs text-muted-foreground">{t("manual_key")}</p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 rounded bg-muted px-2 py-1.5 text-xs font-mono break-all">
+                  <code className="flex-1 break-all rounded bg-muted px-2 py-1.5 font-mono text-xs">
                     {enrollData.secret}
                   </code>
                   <Button
@@ -498,6 +540,7 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
                     size="icon"
                     className="h-8 w-8 shrink-0"
                     onClick={copySecret}
+                    type="button"
                   >
                     {secretCopied ? (
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
@@ -509,9 +552,8 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
               </div>
             )}
 
-            {/* Code Input */}
             <div className="space-y-2">
-              <Label className="text-center block">{t("enter_code")}</Label>
+              <Label className="block text-center">{t("enter_code")}</Label>
               <OtpInput
                 value={enrollCode}
                 onChange={(val) => {
@@ -523,7 +565,7 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
                 autoFocus
               />
               {enrollError && (
-                <p className="text-sm text-destructive flex items-center gap-1 justify-center">
+                <p className="flex items-center justify-center gap-1 text-sm text-destructive">
                   <AlertTriangle className="h-3 w-3" />
                   {enrollError}
                 </p>
@@ -546,16 +588,19 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
         </DialogContent>
       </Dialog>
 
-      {/* Disable Dialog */}
       <Dialog open={disableDialogOpen} onOpenChange={setDisableDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t("disable_title")}</DialogTitle>
-            <DialogDescription>{t("disable_desc")}</DialogDescription>
+            <DialogTitle>
+              {factors.length <= 1 ? t("disable_title") : t("remove_factor_title")}
+            </DialogTitle>
+            <DialogDescription>
+              {factors.length <= 1 ? t("disable_desc") : t("remove_factor_desc")}
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label className="text-center block">{t("enter_code")}</Label>
+            <Label className="block text-center">{t("enter_code")}</Label>
             <OtpInput
               value={disableCode}
               onChange={(val) => {
@@ -567,7 +612,7 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
               autoFocus
             />
             {disableError && (
-              <p className="text-sm text-destructive flex items-center gap-1 justify-center">
+              <p className="flex items-center justify-center gap-1 text-sm text-destructive">
                 <AlertTriangle className="h-3 w-3" />
                 {disableError}
               </p>
@@ -584,7 +629,57 @@ export function TwoFactorSection({ showRecommendation = false }: { showRecommend
               disabled={disableCode.length !== 6 || disabling}
             >
               {disabling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("confirm_disable")}
+              {factors.length <= 1 ? t("confirm_disable") : t("remove_factor")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!recoveryCodes}
+        onOpenChange={(open) => {
+          if (!open) setRecoveryCodes(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("recovery_show_title")}</DialogTitle>
+            <DialogDescription>{t("recovery_show_desc")}</DialogDescription>
+          </DialogHeader>
+          {recoveryCodes && (
+            <div className="space-y-3">
+              <ul className="grid grid-cols-1 gap-1.5 rounded-md border bg-muted/40 p-3 font-mono text-sm sm:grid-cols-2">
+                {recoveryCodes.map((code) => (
+                  <li key={code}>
+                    {code.match(/.{1,4}/g)?.join("-") ?? code}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    recoveryCodes
+                      .map((c) => c.match(/.{1,4}/g)?.join("-") ?? c)
+                      .join("\n")
+                  );
+                  setCodesCopied(true);
+                  setTimeout(() => setCodesCopied(false), 2000);
+                }}
+              >
+                {codesCopied ? (
+                  <CheckCircle2 className="mr-2 h-4 w-4 text-green-600" />
+                ) : (
+                  <Copy className="mr-2 h-4 w-4" />
+                )}
+                {t("recovery_copy")}
+              </Button>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setRecoveryCodes(null)}>
+              {t("recovery_saved")}
             </Button>
           </DialogFooter>
         </DialogContent>
