@@ -33,8 +33,8 @@ const steps = [
   {
     step: "1",
     icon: UserPlus,
-    title: "Register on Founding Free",
-    desc: "Create your doctor account — no card required. Tell us your specialty, qualifications and where you practise.",
+    title: "Register on the founding plan",
+    desc: "Create your doctor account at £99 per month. Tell us your specialty, qualifications and where you practise.",
     bg: "bg-teal-50 dark:bg-teal-950/30",
     text: "text-teal-600",
     ring: "ring-teal-200 dark:ring-teal-800",
@@ -80,7 +80,7 @@ const benefits = [
     icon: CreditCard,
     title: "Transparent pricing",
     description:
-      "Founding Free is a lifetime Solo Professional equivalent (value £299/mo) at £0. Paid Starter £199, Professional £299, Clinic £897 — Clinic is the multi-doctor upgrade.",
+      "The founding plan is £99 per month for the first 100 doctors. Monthly, cancel anytime. Starter stays £199, Professional £299, Clinic £897.",
     color: { bg: "bg-emerald-50", text: "text-emerald-600" },
   },
   {
@@ -96,12 +96,12 @@ const faqs = [
   {
     question: "Can I sign up before patient launch?",
     answer:
-      "Yes. Register today on Founding Free, complete your profile and configure availability. Patient booking is not open yet.",
+      "Yes. Register today on the founding plan, complete your profile and configure availability. Patient booking is not open yet.",
   },
   {
-    question: "What does Founding Free include?",
+    question: "What does the founding plan include?",
     answer:
-      "Lifetime Solo Professional equivalent — value £299/mo, Founding Free £0, no card required. Bookings, video, payments, analytics, CRM, waitlist and priority support. SMS and WhatsApp reminders are coming soon. Soft Launch keeps prescriptions, care plans and public chat disabled.",
+      "£99 per month for the first 100 doctors. Solo Professional features: bookings, video, payments, analytics, CRM, waitlist and priority support. Monthly, cancel anytime. The price stays £99 while you keep the plan. If you cancel, you cannot get £99 again. SMS and WhatsApp reminders are coming soon. Soft Launch keeps prescriptions, care plans and public chat disabled.",
   },
   {
     question: "What is on Professional?",
@@ -130,7 +130,7 @@ export default function HowItWorksPage() {
           </p>
           <div className="mt-5 hidden items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary md:inline-flex">
             <CheckCircle2 className="h-4 w-4" />
-            First 100 founding doctors — lifetime Professional equivalent · £299/mo value · Founding Free £0
+            First 100 founding doctors — £99 per month · Solo Professional features · cancel anytime
           </div>
         </div>
       </section>
@@ -258,8 +258,8 @@ export default function HowItWorksPage() {
             </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            First 100 founding doctors. Lifetime Professional equivalent ·
-            value £299/mo · Founding Free £0.
+            First 100 founding doctors. £99 per month, monthly, cancel anytime.
+            The price stays £99 while you keep the plan.
           </p>
         </div>
       </section>

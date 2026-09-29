@@ -89,10 +89,11 @@ export function formatAnnualEffectiveMonthlyForLocale(
 // ─── Tier Config ───────────────────────────────────────────
 // TODO: If you haven't created these Stripe prices yet in your Stripe Dashboard,
 // you'll need to create products/prices for each paid tier and then add the
-// price IDs (e.g. `price_1Abc...`) to Vercel's environment variables:
+// price IDs (`price_…` from the Stripe Dashboard) to Vercel's environment variables:
 //   STRIPE_PRICE_STARTER      → Starter plan (£199/mo, annual)
 //   STRIPE_PRICE_PROFESSIONAL → Professional plan (£299/mo flat, 1 seat, annual)
 //   STRIPE_PRICE_CLINIC       → Clinic (£897/mo = 3×£299, annual)
+//   STRIPE_PRICE_FOUNDING     → Founding plan (£99/mo, monthly only, first 100)
 // Also add the extra-seat add-on price if you charge for additional seats:
 //   STRIPE_PRICE_EXTRA_SEAT   → Extra seat (£299/mo, annual)
 
@@ -113,6 +114,10 @@ export interface LicenseTierConfig {
   popular?: boolean;
   isCustomPricing?: boolean;
   isFreeTier?: boolean;
+  /** Grandfathered £0 rows. Hidden from pricing and signup. */
+  legacyGrantOnly?: boolean;
+  /** No annual term. Checkout always uses the monthly Price. */
+  monthlyOnly?: boolean;
 }
 
 export const LICENSE_TIERS: LicenseTierConfig[] = [
@@ -130,6 +135,22 @@ export const LICENSE_TIERS: LicenseTierConfig[] = [
     features: PACKAGE_MARKETING.free.features,
     excludedFeatures: PACKAGE_MARKETING.free.excludedFeatures,
     isFreeTier: true,
+    legacyGrantOnly: true,
+  },
+  {
+    id: "founding",
+    name: "Founding",
+    description: "£99/month for the first 100 doctors",
+    priceMonthlyPence: 9900, // £99 — locked while the subscription stays active
+    perUser: false,
+    defaultSeats: 1,
+    maxSeats: 1,
+    includedSeats: 1,
+    extraSeatPricePence: 0,
+    commitmentMonths: 0,
+    features: PACKAGE_MARKETING.founding.features,
+    excludedFeatures: PACKAGE_MARKETING.founding.excludedFeatures,
+    monthlyOnly: true,
   },
   {
     id: "starter",
@@ -252,13 +273,13 @@ export function getModuleConfig(
 /** Get only the paid tiers (excludes free and enterprise) */
 export function getPaidTiers(): LicenseTierConfig[] {
   return LICENSE_TIERS.filter(
-    (t) => !t.isFreeTier && !t.isCustomPricing
+    (t) => !t.isFreeTier && !t.isCustomPricing && !t.legacyGrantOnly
   );
 }
 
-/** Get all displayable tiers (excludes enterprise for checkout) */
+/** Public signup tiers. Hides the grandfathered £0 licence and Enterprise. */
 export function getCheckoutTiers(): LicenseTierConfig[] {
-  return LICENSE_TIERS.filter((t) => !t.isCustomPricing);
+  return LICENSE_TIERS.filter((t) => !t.isCustomPricing && !t.legacyGrantOnly);
 }
 
 /**
@@ -267,6 +288,7 @@ export function getCheckoutTiers(): LicenseTierConfig[] {
  */
 export function getEnvLicensePriceId(tier: string): string | null {
   const map: Record<string, string | undefined> = {
+    founding: process.env.STRIPE_PRICE_FOUNDING,
     starter: process.env.STRIPE_PRICE_STARTER,
     professional: process.env.STRIPE_PRICE_PROFESSIONAL,
     clinic: process.env.STRIPE_PRICE_CLINIC,
@@ -297,11 +319,19 @@ export async function getOrCreateLicensePriceId(
   _tierConfig: LicenseTierConfig,
   billingPeriod: "monthly" | "annual" = "monthly"
 ): Promise<string> {
+  if (tier === "founding" && billingPeriod === "annual") {
+    throw new Error(
+      "Stripe price setup: the founding plan is monthly only (£99, cancel anytime). Set STRIPE_PRICE_FOUNDING to a stable Dashboard Price ID (price_…). Do not use an annual Price."
+    );
+  }
+
   if (billingPeriod === "monthly") {
     const envId = getEnvLicensePriceId(tier);
     if (envId) return envId;
+    const envName =
+      tier === "founding" ? "STRIPE_PRICE_FOUNDING" : `STRIPE_PRICE_${tier.toUpperCase()}`;
     throw new Error(
-      `Stripe price setup: set STRIPE_PRICE_${tier.toUpperCase()} to a stable Dashboard Price ID (price_…). Sandbox vs live must match the Stripe secret key — do not create Prices at runtime.`
+      `Stripe price setup: set ${envName} to a stable Dashboard Price ID (price_…). Sandbox vs live must match the Stripe secret key — do not create Prices at runtime.`
     );
   }
 

@@ -721,46 +721,22 @@ async function createDoctorAccount(formData: FormData): Promise<
     });
   }
 
-  // Founding Doctor Programme — first 100 get founding number + featured priority
-  if (newDoctor) {
-    try {
-      const { claimFoundingMembership } = await import(
-        "@/lib/founding/members"
-      );
-      await claimFoundingMembership(newDoctor.id);
-    } catch (foundingErr) {
-      log.error("[Auth] Founding claim failed:", { err: foundingErr });
-    }
-  }
-
   return { userId: data.user.id, doctorId: newDoctor.id, orgId, email, locale };
 }
 
 // ─── Doctor Registration (Free Tier) ────────────────────────────────
 
 export async function registerDoctor(formData: FormData) {
+  const tier = ((formData.get("tier") as string) || "").trim();
+  if (tier === "free" || tier === "founding" || tier === "") {
+    return {
+      error:
+        "The founding plan is £99 per month for the first 100 doctors. Continue to checkout to claim a spot.",
+    };
+  }
+
   const result = await createDoctorAccount(formData);
   if ("error" in result) return result;
-
-  const tier = (formData.get("tier") as string) || "free";
-
-  // Create free license for free tier
-  if (tier === "free" && result.orgId) {
-    const adminSupabase = createAdminClient();
-    const { foundingFreeLicenseMetadata } = await import(
-      "@/lib/license/tier-lifecycle"
-    );
-    await adminSupabase.from("licenses").insert({
-      organization_id: result.orgId,
-      tier: "free",
-      status: "active",
-      max_seats: 1,
-      used_seats: 1,
-      current_period_start: new Date().toISOString(),
-      current_period_end: "2099-12-31T23:59:59.000Z",
-      metadata: foundingFreeLicenseMetadata(),
-    });
-  }
 
   // Doctor welcome (non-blocking). Patient signup still uses welcomeEmail.
   try {
@@ -790,10 +766,27 @@ export async function registerDoctorWithCheckout(formData: FormData) {
   }
 
   const { getLicenseTier } = await import("@/lib/constants/license-tiers");
+  const { isFoundingOfferTier, foundingCheckoutMetadata } = await import(
+    "@/lib/founding/offer"
+  );
   const tierConfig = getLicenseTier(tier);
   if (!tierConfig) return { error: "Invalid plan selected" };
-  if (tierConfig.isFreeTier) return { error: "Free tier does not require checkout" };
+  if (tierConfig.isFreeTier || tierConfig.legacyGrantOnly) {
+    return {
+      error:
+        "The founding plan is £99 per month for the first 100 doctors. Continue to checkout to claim a spot.",
+    };
+  }
   if (tierConfig.isCustomPricing) return { error: "Please contact us for Enterprise pricing" };
+
+  const foundingOffer = isFoundingOfferTier(tier);
+  if (foundingOffer) {
+    const { claimFoundingOfferForCheckout } = await import(
+      "@/lib/founding/grant"
+    );
+    const gate = await claimFoundingOfferForCheckout(result.doctorId);
+    if (!gate.ok) return { error: gate.error };
+  }
 
   const stripe = getStripe();
   const origin = await getOrigin();
@@ -816,7 +809,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
 
   const billingPeriodRaw = (formData.get("billing_period") as string) || "monthly";
   const billingPeriod =
-    billingPeriodRaw === "annual" ? "annual" : "monthly";
+    foundingOffer || billingPeriodRaw !== "annual" ? "monthly" : "annual";
 
   const {
     getOrCreateLicensePriceId,
@@ -887,6 +880,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
         max_seats: String(maxSeats),
         has_testing_addon: hasTestingAddon ? "1" : "0",
         billing_period: billingPeriod,
+        ...(foundingOffer ? foundingCheckoutMetadata() : {}),
       },
     },
     metadata: {
@@ -896,6 +890,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
       type: "license",
       has_testing_addon: hasTestingAddon ? "1" : "0",
       billing_period: billingPeriod,
+      ...(foundingOffer ? foundingCheckoutMetadata() : {}),
     },
     success_url: `${origin}/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}&checkout=success`,
     cancel_url: `${origin}/${result.locale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
@@ -938,8 +933,21 @@ export async function resumeDoctorLicenseCheckout(
     "@/lib/constants/license-tiers"
   );
   const tierConfig = getLicenseTier(tier);
-  if (!tierConfig || tierConfig.isFreeTier || tierConfig.isCustomPricing) {
+  if (!tierConfig || tierConfig.isFreeTier || tierConfig.isCustomPricing || tierConfig.legacyGrantOnly) {
     return { error: "Invalid plan for checkout." };
+  }
+
+  const { isFoundingOfferTier, foundingCheckoutMetadata } = await import(
+    "@/lib/founding/offer"
+  );
+  const foundingOffer = isFoundingOfferTier(tier);
+  const period = foundingOffer ? "monthly" : billingPeriod;
+  if (foundingOffer) {
+    const { claimFoundingOfferForCheckout } = await import(
+      "@/lib/founding/grant"
+    );
+    const gate = await claimFoundingOfferForCheckout(doctor.id);
+    if (!gate.ok) return { error: gate.error };
   }
 
   // Already licensed on a paid plan?
@@ -987,7 +995,7 @@ export async function resumeDoctorLicenseCheckout(
     priceId = await getOrCreateLicensePriceId(
     tier,
     tierConfig,
-    billingPeriod
+    period
     );
   } catch (err) {
     const setup = stripePriceSetupErrorMessage(err);
@@ -1011,9 +1019,10 @@ export async function resumeDoctorLicenseCheckout(
         doctor_id: doctor.id,
         tier,
         type: "license",
-        billing_period: billingPeriod,
+        billing_period: period,
         seat_count: String(quantity),
         max_seats: String(maxSeats),
+        ...(foundingOffer ? foundingCheckoutMetadata() : {}),
       },
     },
     metadata: {
@@ -1021,7 +1030,8 @@ export async function resumeDoctorLicenseCheckout(
       doctor_id: doctor.id,
       tier,
       type: "license",
-      billing_period: billingPeriod,
+      billing_period: period,
+      ...(foundingOffer ? foundingCheckoutMetadata() : {}),
     },
     success_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=success`,
     cancel_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,

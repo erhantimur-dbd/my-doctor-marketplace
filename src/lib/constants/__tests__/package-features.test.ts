@@ -13,6 +13,7 @@ import {
 
 const TIERS: LicenseTier[] = [
   "free",
+  "founding",
   "starter",
   "professional",
   "clinic",
@@ -75,7 +76,7 @@ describe("public packaging copy does not contradict matrix", () => {
     // Extract starter-reason strings only
     const starterBlock = logic.slice(
       logic.indexOf('if (tierId === "starter")'),
-      logic.indexOf('return "Founding Free')
+      logic.indexOf('return "The founding plan')
     );
     // Soft Launch: do not claim SMS/WhatsApp as a live Starter or upgrade channel
     expect(starterBlock).not.toMatch(/SMS|WhatsApp/i);
@@ -88,7 +89,8 @@ describe("public packaging copy does not contradict matrix", () => {
       join(process.cwd(), "public/coming-soon/index.html"),
       "utf8"
     );
-    expect(html).toMatch(/Founding Free \(£0\)/i);
+    expect(html).toMatch(/Founding \(£99\/mo, first 100\)/i);
+    expect(html).not.toMatch(/Founding Free|£0|no card required|lifetime free/i);
     expect(html).toMatch(/Starter \(£199\/mo\)/i);
     expect(html).toMatch(/Professional \(£299\/mo, 1 doctor\)/i);
     expect(html).toMatch(/Clinic \(£897\/mo\)/i);

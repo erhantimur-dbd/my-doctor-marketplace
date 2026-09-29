@@ -136,7 +136,16 @@ export async function createLicenseCheckout(
   const tierConfig = getLicenseTier(parsed.data.tier);
   if (!tierConfig) return { error: "Invalid tier" };
   if (tierConfig.isCustomPricing) return { error: "Please get in touch for Enterprise pricing" };
-  if (tierConfig.isFreeTier) return { error: "Free tier does not require checkout" };
+  if (tierConfig.isFreeTier || tierConfig.legacyGrantOnly) {
+    return { error: "That plan is no longer offered." };
+  }
+
+  const { isFoundingOfferTier } = await import("@/lib/founding/offer");
+  if (isFoundingOfferTier(parsed.data.tier)) {
+    const { claimFoundingOfferForOrg } = await import("@/lib/founding/grant");
+    const gate = await claimFoundingOfferForOrg(org.id);
+    if (!gate.ok) return { error: gate.error };
+  }
 
   // Free gateway may already have an active free row — that must not block Starter Checkout.
   // Paid→paid upgrades use upgradeLicenseTier (Stripe subscription update).
@@ -190,8 +199,12 @@ export async function createLicenseCheckout(
       .eq("id", org.id);
   }
 
+  const { foundingCheckoutMetadata } = await import("@/lib/founding/offer");
+  const foundingOffer = isFoundingOfferTier(parsed.data.tier);
   const billingPeriod =
-    parsed.data.billing_period === "annual" ? "annual" : "monthly";
+    foundingOffer || parsed.data.billing_period !== "annual"
+      ? "monthly"
+      : "annual";
 
   // Prefer env-backed Stripe Price IDs (same path as registerDoctorWithCheckout)
   const { getOrCreateLicensePriceId } = await import(
@@ -231,6 +244,7 @@ export async function createLicenseCheckout(
       tier: parsed.data.tier,
       type: "license",
       billing_period: billingPeriod,
+      ...(foundingOffer ? foundingCheckoutMetadata() : {}),
     },
     subscription_data: {
       metadata: {
@@ -240,6 +254,7 @@ export async function createLicenseCheckout(
         seat_count: String(quantity),
         max_seats: String(maxSeats),
         billing_period: billingPeriod,
+        ...(foundingOffer ? foundingCheckoutMetadata() : {}),
       },
     },
     success_url: `${origin}/en/doctor-dashboard/organization/billing?success=true`,
@@ -678,8 +693,15 @@ export async function upgradeLicenseTier(
   }
 
   const tierConfig = getLicenseTier(parsed.data.new_tier);
-  if (!tierConfig || tierConfig.isFreeTier || tierConfig.isCustomPricing) {
+  if (!tierConfig || tierConfig.isFreeTier || tierConfig.isCustomPricing || tierConfig.legacyGrantOnly) {
     return { error: "Invalid upgrade target" };
+  }
+
+  const { isFoundingOfferTier } = await import("@/lib/founding/offer");
+  if (isFoundingOfferTier(parsed.data.new_tier)) {
+    const { claimFoundingOfferForOrg } = await import("@/lib/founding/grant");
+    const gate = await claimFoundingOfferForOrg(org.id);
+    if (!gate.ok) return { error: gate.error };
   }
 
   const { data: existingRows } = await supabase
@@ -725,9 +747,10 @@ export async function upgradeLicenseTier(
   }
 
   const billingPeriod =
-    (formData.get("billing_period") as string) === "annual"
-      ? "annual"
-      : "monthly";
+    isFoundingOfferTier(parsed.data.new_tier) ||
+    (formData.get("billing_period") as string) !== "annual"
+      ? "monthly"
+      : "annual";
   const seatCount = formData.get("seat_count")
     ? parseInt(formData.get("seat_count") as string, 10)
     : 1;
@@ -788,6 +811,18 @@ export async function upgradeLicenseTier(
           used_seats: Math.min(quantity, maxSeats),
         })
         .eq("id", current.id);
+    }
+
+    if (
+      current.tier === "founding" &&
+      parsed.data.new_tier !== "founding"
+    ) {
+      const adminSupabase = createAdminClient();
+      await adminSupabase
+        .from("doctors")
+        .update({ founding_offer_forfeited_at: new Date().toISOString() })
+        .eq("organization_id", org.id)
+        .is("founding_offer_forfeited_at", null);
     }
 
     revalidatePath("/doctor-dashboard/organization/billing");
@@ -860,6 +895,12 @@ export async function schedulePlanChange(
     return { error: decision.reason || "Cannot change plan" };
   }
 
+  if (parsed.data.target_tier === "founding") {
+    const { claimFoundingOfferForOrg } = await import("@/lib/founding/grant");
+    const gate = await claimFoundingOfferForOrg(org.id);
+    if (!gate.ok) return { error: gate.error };
+  }
+
   // Upgrades: immediate
   if (decision.mode === "upgrade_now") {
     if (parsed.data.target_tier === "free") {
@@ -901,14 +942,22 @@ export async function schedulePlanChange(
 
   try {
     if (parsed.data.target_tier === "free") {
-      // Cancel at period end — no refund; keep paid features until then
+      // Cancel at period end — no refund; keep paid features until then.
+      // Keep tier on the subscription so a founding cancel can forfeit £99
+      // instead of minting a new free licence.
+      const existingSub = await stripe.subscriptions.retrieve(
+        current.stripe_subscription_id
+      );
       const sub = await stripe.subscriptions.update(
         current.stripe_subscription_id,
         {
           cancel_at_period_end: true,
           metadata: {
+            ...existingSub.metadata,
+            tier: current.tier,
             pending_tier: "free",
             pending_change: "downgrade",
+            ...(current.tier === "founding" ? { founding_offer: "1" } : {}),
           },
         }
       );
@@ -939,7 +988,9 @@ export async function schedulePlanChange(
         targetTier: "free",
         periodEnd: endIso,
         message:
-          "Your plan will switch to Founding Free at the end of the current paid period. No refund for the remaining time — you keep paid features until then.",
+          current.tier === "founding"
+            ? "Your founding plan ends at the close of this billing period. The £99 price ends with it and cannot be started again. You keep these features until then."
+            : "Your paid plan ends at the close of this billing period. No refund for the remaining time — you keep paid features until then.",
       };
     }
 

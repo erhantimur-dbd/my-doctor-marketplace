@@ -67,8 +67,12 @@ describe("getPackageRecommendation (D-simple)", () => {
     ).toBe("starter");
   });
 
-  it("routes light solo usage to Founding Free", () => {
-    expect(getPackageRecommendation(baseSolo)).toBe("free");
+  it("routes light solo usage to the £99 founding plan", () => {
+    expect(getPackageRecommendation(baseSolo)).toBe("founding");
+    const reason = getPackageRecommendationReason("founding", baseSolo);
+    expect(reason).toMatch(/£99/);
+    expect(reason).toMatch(/first 100/i);
+    expect(reason).not.toMatch(/£0|Founding Free|no card|lifetime free/i);
   });
 });
 

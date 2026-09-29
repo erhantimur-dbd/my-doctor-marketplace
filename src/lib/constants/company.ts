@@ -97,12 +97,14 @@ export const FOUNDING_FREE_CLAIM_VALUE_GBP = 299;
 export const FOUNDING_FREE_PRICE_GBP = 0;
 
 /**
- * Doctor-facing Soft Launch Soft CTA perk line (register-doctor H1).
- * Legal-safe: lifetime Founding Free / founding-tier benefits at £0 for life.
- * Features of Solo Professional, not clinical care. Not a lifetime-gratis slogan.
+ * Doctor-facing perk line under the register-doctor heading.
+ * £99/month, first 100, monthly, price locked while the plan stays active.
  */
-export const FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE =
-  "Lifetime Founding Free · Solo Professional features · value £299/mo · Founding Free £0, no card";
+export const FOUNDING_OFFER_VALUE_LINE =
+  "£99 per month · Solo Professional features · monthly, cancel anytime · £99 stays while you keep the plan · first 100 doctors";
+
+/** @deprecated Use FOUNDING_OFFER_VALUE_LINE. Kept so older imports still resolve. */
+export const FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE = FOUNDING_OFFER_VALUE_LINE;
 
 /** Doctor billing / org licence title (lifetime perk, not a dated expiry). */
 export const FOUNDING_FREE_LICENSE_TITLE = "lifetime Founding Free";
@@ -119,6 +121,6 @@ export const FOUNDING_FREE_LICENSE_VALUE_LINE =
  */
 export const SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME = true;
 
-/** Founding Free primary CTA — keep query contract for register-doctor. */
+/** Founding plan primary CTA. Legacy `tier=free` links are mapped to this plan in the wizard. */
 export const FOUNDING_REGISTER_HREF =
-  "/register-doctor?tier=free&founding=1";
+  "/register-doctor?tier=founding&founding=1";

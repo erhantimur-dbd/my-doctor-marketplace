@@ -112,7 +112,8 @@ export const MARKETING_CAPABILITY_CHECKS: {
  * Inheritance is written out so cards read clearly without “see Starter”.
  *
  * Ladder (enforced):
- *   Founding Free → lifetime Solo Professional equivalent (£0; value £299/mo)
+ *   Founding → £99/month Solo Professional equivalent for the first 100 (monthly, cancel anytime)
+ *   Founding Free → grandfathered £0 licences already granted (not offered to new doctors)
  *   Starter → paid bookings, video, email, messaging, AI; testing add-on optional
  *   Professional → paid solo growth: analytics, CRM, waitlist (1 doctor)
  *   Clinic → multi-doctor (3–15), multi-location, team, testing included
@@ -121,9 +122,34 @@ export const MARKETING_CAPABILITY_CHECKS: {
  * Soft Launch copy: do not claim live SMS/WhatsApp or care plans / prescriptions.
  */
 export const PACKAGE_MARKETING: Record<
-  "free" | "starter" | "professional" | "clinic" | "enterprise",
+  "free" | "founding" | "starter" | "professional" | "clinic" | "enterprise",
   PackageMarketing
 > = {
+  founding: {
+    features: [
+      "£99 per month for the first 100 doctors",
+      "Monthly billing — cancel anytime",
+      "£99 stays while you keep the plan",
+      "Online bookings & Stripe payouts",
+      "Video consultations",
+      "Featured profile visibility boost",
+      "Email appointment reminders",
+      "Patient messaging",
+      "AI review summaries & sentiment tags",
+      "Advanced analytics dashboard",
+      "Patient CRM",
+      "Waitlist auto-notify",
+      "Priority support",
+      "Single doctor seat (solo practice)",
+    ],
+    excludedFeatures: [
+      "Multi-doctor seats (Clinic 3–15)",
+      "Multi-location clinic tools",
+      "Team management & practice dashboard",
+      "Medical testing included (optional +£49/mo add-on)",
+      "Custom branding & API (Enterprise)",
+    ],
+  },
   free: {
     features: [
       "Lifetime Solo Professional equivalent (value £299/mo)",
@@ -276,7 +302,24 @@ export function validatePackageMarketingConsistency(
     }
   }
 
-  // Founding Free = lifetime Professional equivalent (Soft Launch product lock)
+  if (tier === "founding") {
+    if (!marketing.features.some((f) => /£99/.test(f))) {
+      errors.push("founding: must list £99 per month");
+    }
+    if (marketing.features.some((f) => /£0|no card|lifetime free|Founding Free/i.test(f))) {
+      errors.push("founding: must not advertise a free or lifetime plan");
+    }
+    if (
+      !marketing.features.some((f) => /online booking|stripe payout/i.test(f))
+    ) {
+      errors.push("founding: must include online bookings (Professional equivalent)");
+    }
+    if (marketing.features.some((f) => /care plan|prescription/i.test(f))) {
+      errors.push("founding: must not claim care plans or prescriptions");
+    }
+  }
+
+  // Grandfathered £0 licences already granted. Not shown on public pricing.
   if (tier === "free") {
     if (
       !marketing.features.some((f) =>

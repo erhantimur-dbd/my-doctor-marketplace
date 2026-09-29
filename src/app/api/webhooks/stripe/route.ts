@@ -746,6 +746,83 @@ export async function POST(request: NextRequest) {
         const effectiveTier =
           subscription.metadata?.tier || priorLic?.tier || "starter";
 
+        if (effectiveTier === "founding") {
+          const { mayGrantFoundingLicence, foundingOfferLicenseMetadata } =
+            await import("@/lib/founding/offer");
+          const doctorIdForClaim = subscription.metadata?.doctor_id || doctorId;
+          let allowed = false;
+          if (doctorIdForClaim) {
+            const { data: foundingDoc } = await supabase
+              .from("doctors")
+              .select(
+                "is_founding_member, founding_member_number, founding_offer_forfeited_at"
+              )
+              .eq("id", doctorIdForClaim)
+              .maybeSingle();
+            allowed =
+              !!foundingDoc &&
+              !foundingDoc.founding_offer_forfeited_at &&
+              mayGrantFoundingLicence({
+                claimed: foundingDoc.is_founding_member === true,
+                foundingNumber: foundingDoc.founding_member_number,
+              });
+          }
+          if (!allowed) {
+            try {
+              await getStripe().subscriptions.cancel(subscription.id);
+            } catch (err) {
+              console.error("Refused founding licence; cancel failed:", err);
+            }
+            break;
+          }
+
+          const licenseRow = {
+            organization_id: orgId,
+            tier: effectiveTier,
+            status: licenseStatus,
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: subscription.customer as string,
+            max_seats: maxSeats,
+            used_seats: Math.min(quantity, maxSeats),
+            current_period_start: newPeriodStartIso,
+            current_period_end: periodEnd
+              ? new Date(periodEnd * 1000).toISOString()
+              : new Date().toISOString(),
+            cancel_at_period_end: subscription.cancel_at_period_end,
+            metadata: {
+              ...((priorLic?.metadata as Record<string, unknown>) || {}),
+              ...foundingOfferLicenseMetadata(),
+            },
+            ...(licenseStatus === "grace_period" && {
+              grace_period_start: new Date().toISOString(),
+            }),
+            ...(licenseStatus === "cancelled" && {
+              cancelled_at: new Date().toISOString(),
+            }),
+          };
+          await supabase.from("licenses").upsert(licenseRow, {
+            onConflict: "stripe_subscription_id",
+          });
+
+          if (
+            doctorIdForClaim &&
+            (licenseStatus === "active" || licenseStatus === "trialing")
+          ) {
+            const { data: redeemed } = await supabase
+              .from("doctors")
+              .select("founding_offer_redeemed_at")
+              .eq("id", doctorIdForClaim)
+              .maybeSingle();
+            if (redeemed && !redeemed.founding_offer_redeemed_at) {
+              await supabase
+                .from("doctors")
+                .update({
+                  founding_offer_redeemed_at: new Date().toISOString(),
+                })
+                .eq("id", doctorIdForClaim);
+            }
+          }
+        } else {
         await supabase.from("licenses").upsert(
           {
             organization_id: orgId,
@@ -769,6 +846,7 @@ export async function POST(request: NextRequest) {
           },
           { onConflict: "stripe_subscription_id" }
         );
+        }
 
         // Paid→paid scheduled downgrade: when period rolls, switch price with no proration
         const pendingTier = subscription.metadata?.pending_tier;
@@ -789,9 +867,10 @@ export async function POST(request: NextRequest) {
             const tierConfig = getLicenseTier(pendingTier);
             if (tierConfig && !tierConfig.isFreeTier) {
               const billingPeriod =
-                subscription.metadata?.billing_period === "annual"
-                  ? "annual"
-                  : "monthly";
+                pendingTier === "founding" ||
+                subscription.metadata?.billing_period !== "annual"
+                  ? "monthly"
+                  : "annual";
               const priceId = await getOrCreateLicensePriceId(
                 pendingTier,
                 tierConfig,
@@ -825,6 +904,21 @@ export async function POST(request: NextRequest) {
                     },
                   })
                   .eq("stripe_subscription_id", subscription.id);
+                if (effectiveTier === "founding" && pendingTier !== "founding") {
+                  const doctorIdMeta = subscription.metadata?.doctor_id;
+                  const forfeitedAt = new Date().toISOString();
+                  if (doctorIdMeta) {
+                    await supabase
+                      .from("doctors")
+                      .update({ founding_offer_forfeited_at: forfeitedAt })
+                      .eq("id", doctorIdMeta);
+                  } else {
+                    await supabase
+                      .from("doctors")
+                      .update({ founding_offer_forfeited_at: forfeitedAt })
+                      .eq("organization_id", orgId);
+                  }
+                }
               }
             }
           } catch (err) {
@@ -990,6 +1084,21 @@ export async function POST(request: NextRequest) {
 
       // Paid period ended (cancel-at-period-end) or sub deleted
       if (orgId) {
+        const { data: endingLic } = await supabase
+          .from("licenses")
+          .select("tier")
+          .eq("stripe_subscription_id", subscription.id)
+          .maybeSingle();
+
+        const { isFoundingOfferSubscription } = await import(
+          "@/lib/founding/offer"
+        );
+        const foundingSub = isFoundingOfferSubscription({
+          metadataTier: subscription.metadata?.tier,
+          metadataFoundingOffer: subscription.metadata?.founding_offer,
+          licenseTier: endingLic?.tier,
+        });
+
         await supabase
           .from("licenses")
           .update({
@@ -999,10 +1108,22 @@ export async function POST(request: NextRequest) {
           })
           .eq("stripe_subscription_id", subscription.id);
 
-        // Restore Founding Free gateway so listing/dashboard remain usable
-        const { buildFreeGatewayLicenseInsert } = await import(
-          "@/lib/license/tier-lifecycle"
-        );
+        if (foundingSub) {
+          const forfeitedAt = new Date().toISOString();
+          const doctorIdMeta = subscription.metadata?.doctor_id;
+          if (doctorIdMeta) {
+            await supabase
+              .from("doctors")
+              .update({ founding_offer_forfeited_at: forfeitedAt })
+              .eq("id", doctorIdMeta);
+          } else {
+            await supabase
+              .from("doctors")
+              .update({ founding_offer_forfeited_at: forfeitedAt })
+              .eq("organization_id", orgId);
+          }
+        } else {
+        // Reactivate a £0 licence that was already granted. Do not mint a new one.
         const { data: freeRows } = await supabase
           .from("licenses")
           .select("id, status")
@@ -1022,10 +1143,7 @@ export async function POST(request: NextRequest) {
               stripe_subscription_id: null,
             })
             .eq("id", freeRow.id);
-        } else {
-          await supabase
-            .from("licenses")
-            .insert(buildFreeGatewayLicenseInsert(orgId));
+        }
         }
 
         // Deactivate paid add-on modules for this org's licences

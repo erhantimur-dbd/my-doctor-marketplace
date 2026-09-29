@@ -31,7 +31,7 @@ export async function getFoundingProgrammeStatus(): Promise<FoundingProgrammeSta
       remainingSpots: FOUNDING_PROGRAMME_MAX_SPOTS,
       isOpen: true,
       pricingNote:
-        "Founding Free is a lifetime Solo Professional equivalent (value £299/mo) at £0 for the first 100 doctors.",
+        "The founding plan is £99 per month for the first 100 doctors. Monthly, cancel anytime. The price stays £99 while you keep the plan.",
     };
   }
 
@@ -46,7 +46,7 @@ export async function getFoundingProgrammeStatus(): Promise<FoundingProgrammeSta
     isOpen: Boolean(data.is_open) && remaining > 0,
     pricingNote:
       data.pricing_note ||
-      "Founding Free is a lifetime Solo Professional equivalent (value £299/mo) at £0 for the first 100 doctors.",
+      "The founding plan is £99 per month for the first 100 doctors. Monthly, cancel anytime. The price stays £99 while you keep the plan.",
   };
 }
 

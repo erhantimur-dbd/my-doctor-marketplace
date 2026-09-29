@@ -21,6 +21,9 @@ describe("feature-flags free gateway", () => {
   it("maps explicit Founding Free to lifetime Professional entitlements", () => {
     expect(FOUNDING_FREE_ENTITLEMENT_TIER).toBe("professional");
     expect(FOUNDING_FREE_CLAIM_VALUE_PENCE).toBe(29900);
+    expect(hasFeature("online_bookings", "founding")).toBe(true);
+    expect(hasFeature("analytics_dashboard", "founding")).toBe(true);
+    expect(hasFeature("multi_location", "founding")).toBe(false);
     expect(getEntitlementTier("free")).toBe("professional");
     expect(getEntitlementTier(null)).toBe("free");
     expect(hasFeature("online_bookings", "free")).toBe(true);

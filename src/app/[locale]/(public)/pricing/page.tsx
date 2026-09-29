@@ -37,7 +37,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Founding Doctor Programme plans. Founding Free is a lifetime Solo Professional equivalent (value £299/mo) at £0 — no card required.",
+    "Founding Doctor Programme plans. The founding plan is £99 per month for the first 100 doctors, monthly, cancel anytime.",
 };
 
 const BENEFITS = [
@@ -102,7 +102,7 @@ const platformFeatures = [
     icon: Bell,
     title: "Automated Reminders",
     description:
-      "Email appointment reminders on Founding Free and paid plans to cut no-shows.",
+      "Email appointment reminders on the founding plan and paid plans to cut no-shows.",
     bg: "bg-amber-50 dark:bg-amber-950/30",
     text: "text-amber-600",
   },
@@ -110,7 +110,7 @@ const platformFeatures = [
     icon: BarChart3,
     title: "Revenue Analytics",
     description:
-      "Track earnings, bookings and growth — advanced dashboard on Founding Free and Professional+.",
+      "Track earnings, bookings and growth — advanced dashboard on the founding plan and Professional+.",
     bg: "bg-cyan-50 dark:bg-cyan-950/30",
     text: "text-cyan-600",
   },
@@ -118,7 +118,7 @@ const platformFeatures = [
     icon: Users,
     title: "Patient CRM",
     description:
-      "Patient records and booking history — included on Founding Free and Professional+.",
+      "Patient records and booking history — included on the founding plan and Professional+.",
     bg: "bg-rose-50 dark:bg-rose-950/30",
     text: "text-rose-600",
   },
@@ -148,9 +148,9 @@ export default async function PricingPage() {
             Build trust, grow your practice with MyDoctors360
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-            Founding Free is a lifetime Solo Professional equivalent — value
-            £299/mo, Founding Free £0, no card required. Clinic is the
-            multi-doctor upgrade.
+            The founding plan is £99 per month for the first 100 doctors.
+            Monthly, cancel anytime, and the price stays £99 while you keep
+            the plan. Clinic is the multi-doctor upgrade.
           </p>
         </div>
       </section>
@@ -357,7 +357,7 @@ export default async function PricingPage() {
                 step: "3",
                 icon: CreditCard,
                 title: "Choose Your Plan",
-                desc: "Pick Founding Free or a paid plan. Monthly is month-to-month with no lock-in; annual is a 12-month term (2 months free).",
+                desc: "The founding plan is £99 per month for the first 100 doctors. Other plans can be monthly or a 12-month term.",
                 bg: "bg-violet-50 dark:bg-violet-950/30",
                 text: "text-violet-600",
                 ring: "ring-violet-200 dark:ring-violet-800",
@@ -366,7 +366,7 @@ export default async function PricingPage() {
                 step: "4",
                 icon: Zap,
                 title: "Go live with us",
-                desc: "When we open to patients, your verified profile is ready — register and build it now on Founding Free.",
+                desc: "When we open to patients, your verified profile is ready — register and build it now on the founding plan.",
                 bg: "bg-amber-50 dark:bg-amber-950/30",
                 text: "text-amber-600",
                 ring: "ring-amber-200 dark:ring-amber-800",
@@ -470,7 +470,7 @@ export default async function PricingPage() {
                   className="mt-10 rounded-full bg-white text-primary font-semibold hover:bg-white/90"
                   asChild
                 >
-                  <Link href="/register-doctor?tier=free&founding=1">
+                  <Link href="/register-doctor?tier=founding&founding=1">
                     Join the Founding Doctor Programme{" "}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>

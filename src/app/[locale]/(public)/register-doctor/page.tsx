@@ -99,7 +99,7 @@ export default function RegisterDoctorPage() {
   const [validatingCode, setValidatingCode] = useState(false);
 
   // Step 5: Plan selection
-  const [selectedTier, setSelectedTier] = useState<LicenseTier>("free");
+  const [selectedTier, setSelectedTier] = useState<LicenseTier>("founding");
   const [seatCount, setSeatCount] = useState(1);
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
 
@@ -125,10 +125,11 @@ export default function RegisterDoctorPage() {
 
     const founding = searchParams.get("founding");
     const tier = searchParams.get("tier");
-    if (founding === "1") {
-      // Soft Launch CTA contract: founding=1 always lands on Founding Free
-      setSelectedTier("free");
-    } else if (tier && LICENSE_TIERS.some((t) => t.id === tier)) {
+    if (founding === "1" || tier === "founding" || tier === "free") {
+      // Legacy tier=free links use the £99 founding plan. They do not grant a free licence.
+      setSelectedTier("founding");
+      setBillingPeriod("monthly");
+    } else if (tier && LICENSE_TIERS.some((t) => t.id === tier && !t.legacyGrantOnly)) {
       setSelectedTier(tier as LicenseTier);
     }
 
@@ -354,14 +355,16 @@ export default function RegisterDoctorPage() {
   function calculateMonthlyTotal(): number {
     const tier = getSelectedTierConfig();
     if (!tier) return 0;
-    if (tier.isFreeTier) return 0;
+    if (tier.isFreeTier || tier.legacyGrantOnly) return 0;
     if (tier.perUser) return tier.priceMonthlyPence * seatCount;
     return tier.priceMonthlyPence;
   }
 
   /** Amount charged per billing cycle (monthly pence or annual total). */
   function calculateBillingTotal(): number {
+    const tier = getSelectedTierConfig();
     const monthly = calculateMonthlyTotal();
+    if (tier?.monthlyOnly) return monthly;
     if (billingPeriod === "annual") return annualTotalPence(monthly);
     return monthly;
   }
@@ -456,10 +459,13 @@ export default function RegisterDoctorPage() {
           )
         : 1;
     formData.set("seat_count", String(seatsToSubmit));
-    formData.set("billing_period", billingPeriod);
+    formData.set(
+      "billing_period",
+      tierCfg?.monthlyOnly ? "monthly" : billingPeriod
+    );
 
     const tierConfig = getSelectedTierConfig();
-    const isFreeTier = !tierConfig || tierConfig.isFreeTier;
+    const isFreeTier = !tierConfig || tierConfig.isFreeTier || tierConfig.legacyGrantOnly;
 
     if (isFreeTier) {
       // Free tier: create account directly, redirect to verify-email
@@ -1238,7 +1244,8 @@ export default function RegisterDoctorPage() {
               {/* Medical Testing: paid add-on on Starter/Pro only; Clinic+ included */}
               {testingAddon &&
                 (selectedTier === "starter" ||
-                  selectedTier === "professional") && (
+                  selectedTier === "professional" ||
+                  selectedTier === "founding") && (
                 <div
                   className={`rounded-lg border p-4 transition-colors ${
                     hasTestingAddon
@@ -1369,7 +1376,7 @@ export default function RegisterDoctorPage() {
               <div>
                 <h3 className="mb-3 text-sm font-semibold text-muted-foreground">Select Your Plan</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {LICENSE_TIERS.filter((t) => !t.isCustomPricing).map((tier) => {
+                  {LICENSE_TIERS.filter((t) => !t.isCustomPricing && !t.legacyGrantOnly).map((tier) => {
                     const isSelected = selectedTier === tier.id;
                     return (
                       <div
@@ -1382,6 +1389,7 @@ export default function RegisterDoctorPage() {
                         onClick={() => {
                           setSelectedTier(tier.id);
                           setSeatCount(tier.defaultSeats || 1);
+                          if (tier.monthlyOnly) setBillingPeriod("monthly");
                         }}
                         role="button"
                         tabIndex={0}
@@ -1390,6 +1398,7 @@ export default function RegisterDoctorPage() {
                             e.preventDefault();
                             setSelectedTier(tier.id);
                             setSeatCount(tier.defaultSeats || 1);
+                            if (tier.monthlyOnly) setBillingPeriod("monthly");
                           }
                         }}
                       >
@@ -1416,9 +1425,24 @@ export default function RegisterDoctorPage() {
                           </div>
                         </div>
                         <div className="mt-3">
-                          {tier.isFreeTier ? (
-                            <span className="text-lg font-bold">Free</span>
-                          ) : billingPeriod === "annual" ? (
+                          {tier.monthlyOnly || billingPeriod !== "annual" ? (
+                            <>
+                              <span className="text-lg font-bold tabular-nums">
+                                {formatPriceForLocale(
+                                  tier.priceMonthlyPence,
+                                  locale
+                                )}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {tier.perUser ? " / user / mo" : " / mo"}
+                              </span>
+                              {tier.monthlyOnly && (
+                                <p className="text-[10px] text-muted-foreground">
+                                  Monthly · cancel anytime · £99 stays while you keep the plan
+                                </p>
+                              )}
+                            </>
+                          ) : (
                             <>
                               <span className="text-lg font-bold tabular-nums">
                                 {formatAnnualEffectiveMonthlyForLocale(
@@ -1438,18 +1462,6 @@ export default function RegisterDoctorPage() {
                                 /yr ·{" "}
                                 <span className="text-emerald-700">2 mo free</span>
                               </p>
-                            </>
-                          ) : (
-                            <>
-                              <span className="text-lg font-bold tabular-nums">
-                                {formatPriceForLocale(
-                                  tier.priceMonthlyPence,
-                                  locale
-                                )}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {tier.perUser ? " / user / mo" : " / mo"}
-                              </span>
                             </>
                           )}
                         </div>
@@ -1525,18 +1537,27 @@ export default function RegisterDoctorPage() {
                 <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">
-                      {billingPeriod === "annual" ? "Annual Total" : "Monthly Total"}
+                      {getSelectedTierConfig()?.monthlyOnly || billingPeriod !== "annual"
+                        ? "Monthly Total"
+                        : "Annual Total"}
                     </span>
                     <div className="text-right">
                       <span className="text-xl font-bold">
                         {formatPriceForLocale(calculateBillingTotal(), locale)}
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {billingPeriod === "annual" ? " / year" : " / month"}
+                        {getSelectedTierConfig()?.monthlyOnly || billingPeriod !== "annual"
+                          ? " / month"
+                          : " / year"}
                       </span>
                     </div>
                   </div>
-                  {billingPeriod === "annual" ? (
+                  {getSelectedTierConfig()?.monthlyOnly ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      £99 per month for the first 100 doctors. Cancel anytime.
+                      If you cancel, this price is gone.
+                    </p>
+                  ) : billingPeriod === "annual" ? (
                     <p className="mt-1 text-xs text-muted-foreground">
                       12-month term · equivalent to{" "}
                       {formatAnnualEffectiveMonthlyForLocale(
@@ -1613,21 +1634,22 @@ export default function RegisterDoctorPage() {
                 )}
               </div>
 
-              {/* Free tier notice */}
-              {selectedTier === "free" && (
+              {selectedTier === "founding" && (
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                     <div className="text-sm text-emerald-800">
                       <p className="font-medium">
-                        You&apos;re starting on Founding Free
+                        You&apos;re starting on the founding plan
                       </p>
                       <p className="mt-1">
-                        Lifetime Solo Professional equivalent — value £299/mo,
-                        Founding Free £0, no card required. Bookings, video,
-                        payments, analytics, CRM and waitlist are included.
-                        SMS and WhatsApp reminders are coming soon. UK doctors:
-                        GMC is verified before go-live.
+                        £99 per month for the first 100 doctors. Solo
+                        Professional features: bookings, video, payments,
+                        analytics, CRM and waitlist. Monthly, cancel anytime.
+                        The price stays £99 while you keep the plan. If you
+                        cancel, you cannot get £99 again. SMS and WhatsApp
+                        reminders are coming soon. UK doctors: GMC is verified
+                        before go-live.
                       </p>
                     </div>
                   </div>
@@ -1637,11 +1659,9 @@ export default function RegisterDoctorPage() {
               {/* Terms */}
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
                 <p className="text-sm text-blue-800">
-                  By clicking &quot;{selectedTier === "free" ? "Create Account" : "Subscribe & Create Account"}&quot;,
+                  By clicking &quot;Subscribe & Create Account&quot;,
                   you agree to our Terms of Service and Privacy Policy.
-                  {selectedTier === "free"
-                    ? " Your account will need email verification before it becomes active."
-                    : " You will be redirected to Stripe to complete payment, then verify your email."}
+                  You will be redirected to Stripe to complete payment, then verify your email.
                 </p>
               </div>
             </div>
@@ -1665,14 +1685,10 @@ export default function RegisterDoctorPage() {
           ) : (
             <Button onClick={handleSubmit} disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {selectedTier === "free" ? (
-                "Create Account"
-              ) : (
-                <>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Subscribe & Create Account
-                </>
-              )}
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Subscribe & Create Account
+              </>
             </Button>
           )}
         </CardFooter>

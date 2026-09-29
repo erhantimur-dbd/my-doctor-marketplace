@@ -22,7 +22,7 @@ export interface PackageRecommenderAnswers {
  *   multi-doctor → Clinic (3–15)
  *   solo + growth tools → Professional (1 seat)
  *   solo + video / high volume → Starter
- *   else → Founding Free
+ *   else → Founding (£99/month, first 100)
  */
 export function getPackageRecommendation(
   answers: PackageRecommenderAnswers
@@ -36,7 +36,7 @@ export function getPackageRecommendation(
   if (practiceSize === "multi") return "clinic";
   if (wantsGrowthTools === "yes") return "professional";
   if (needsVideo === "yes" || patientsPerWeek === "over_30") return "starter";
-  return "free";
+  return "founding";
 }
 
 export function getPackageRecommendationReason(
@@ -44,7 +44,7 @@ export function getPackageRecommendationReason(
   answers: PackageRecommenderAnswers
 ): string {
   if (tierId === "clinic") {
-    return "Clinic is the multi-doctor practice licence (£897/mo): 3 doctor seats included (expand to 15), multi-location, team tools, medical testing included, and everything in Professional. Solo doctors should use Free, Starter or Professional instead.";
+    return "Clinic is the multi-doctor practice licence (£897/mo): 3 doctor seats included (expand to 15), multi-location, team tools, medical testing included, and everything in Professional. Solo doctors should use the founding plan, Starter or Professional instead.";
   }
   if (tierId === "professional") {
     return "Professional is a solo growth plan (£299 flat): Starter plus advanced analytics, patient CRM, waitlist auto-notify, and priority support. Multi-doctor seats (3–15), multi-location and included medical testing are on Clinic.";
@@ -58,5 +58,5 @@ export function getPackageRecommendationReason(
     }
     return "With your patient volume, Starter is the right step for paid bookings, video, email and AI. Analytics, CRM and waitlist unlock on Professional.";
   }
-  return "Founding Free is the Soft Launch thank-you — lifetime Solo Professional equivalent (value £299/mo) at £0. Bookings, video, payments, analytics, CRM and waitlist included. Clinic is the multi-doctor upgrade.";
+  return "The founding plan is £99 per month for the first 100 doctors. Solo Professional features: bookings, video, payments, analytics, CRM and waitlist. Monthly, cancel anytime. The price stays £99 while you keep the plan.";
 }

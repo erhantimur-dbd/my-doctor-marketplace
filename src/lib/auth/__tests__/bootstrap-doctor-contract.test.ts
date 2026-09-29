@@ -6,10 +6,11 @@ const read = (rel: string) =>
   readFileSync(join(process.cwd(), rel), "utf8");
 
 describe("OAuth doctor bootstrap contracts", () => {
-  it("exports bootstrapDoctorShell and sets free license", () => {
+  it("exports bootstrapDoctorShell without a free licence or founding claim", () => {
     const boot = read("src/lib/auth/bootstrap-doctor.ts");
     expect(boot).toMatch(/export async function bootstrapDoctorShell/);
-    expect(boot).toContain('tier: "free"');
+    expect(boot).not.toContain('tier: "free"');
+    expect(boot).not.toContain("claimFoundingMembership");
     expect(boot).toContain('role: "doctor"');
   });
 
