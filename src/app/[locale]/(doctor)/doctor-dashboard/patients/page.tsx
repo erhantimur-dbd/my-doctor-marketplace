@@ -92,8 +92,9 @@ export default async function PatientsPage({
   (bookings || []).forEach((booking: any) => {
     const patient = unwrapBookingPatient(booking.patient);
     const existing = patientMap.get(booking.patient_id);
+    const countsAsVisit = booking.status === "completed";
     if (existing) {
-      existing.total_visits += 1;
+      if (countsAsVisit) existing.total_visits += 1;
       existing.total_revenue += booking.total_amount_cents;
       if (booking.appointment_date > existing.last_visit) {
         existing.last_visit = booking.appointment_date;
@@ -105,7 +106,7 @@ export default async function PatientsPage({
         last_name: patient?.last_name?.trim() || "",
         email: (patient?.email ?? "").trim() || DOCTOR_BOOKING_PATIENT_EMAIL_FALLBACK,
         avatar_url: (patient as { avatar_url?: string | null } | null)?.avatar_url ?? null,
-        total_visits: 1,
+        total_visits: countsAsVisit ? 1 : 0,
         last_visit: booking.appointment_date,
         total_revenue: booking.total_amount_cents,
       });

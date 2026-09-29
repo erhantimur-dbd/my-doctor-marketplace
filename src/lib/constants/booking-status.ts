@@ -9,6 +9,7 @@ export const BOOKING_STATUSES = {
   CANCELLED_DOCTOR: "cancelled_doctor",
   NO_SHOW: "no_show",
   REFUNDED: "refunded",
+  PENDING_RESCHEDULE_PAYMENT: "pending_reschedule_payment",
   EXPIRED: "expired",
 } as const;
 
@@ -19,6 +20,7 @@ export const ACTIVE_BOOKING_STATUSES: BookingStatus[] = [
   "confirmed",
   "pending_approval",
   "approved",
+  "pending_reschedule_payment",
 ];
 
 export const CANCELLATION_POLICIES = {
