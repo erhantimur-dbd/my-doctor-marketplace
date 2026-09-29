@@ -65,8 +65,9 @@ export function AboutUk() {
           <h2>How we verify doctors</h2>
           <ul>
             <li>
-              We check each doctor&rsquo;s GMC registration against the public GMC register
-              before they go live on the platform, and re-check it on a regular cycle.
+              We store each doctor&rsquo;s GMC number, an admin checks it on the public
+              GMC register before the doctor goes live, and a nightly job re-checks
+              CQC and indemnity dates.
             </li>
             <li>
               We ask every UK-practising doctor to evidence their CQC position —

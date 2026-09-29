@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email/client";
-import { welcomeEmail } from "@/lib/email/templates";
+import { doctorWelcomeEmail, welcomeEmail } from "@/lib/email/templates";
 import { passwordSchema } from "@/lib/validators/password";
 import { safeError } from "@/lib/utils/safe-error";
 import { log } from "@/lib/utils/logger";
@@ -762,10 +762,10 @@ export async function registerDoctor(formData: FormData) {
     });
   }
 
-  // Welcome email (non-blocking) — patient path already has this
+  // Doctor welcome (non-blocking). Patient signup still uses welcomeEmail.
   try {
     const firstName = (formData.get("first_name") as string) || "there";
-    const { subject, html } = welcomeEmail({ name: firstName });
+    const { subject, html } = doctorWelcomeEmail({ name: firstName });
     const { sendEmail } = await import("@/lib/email/client");
     sendEmail({ to: result.email, subject, html }).catch(() => {});
   } catch {
@@ -863,10 +863,10 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     lineItems.push({ price: testingPriceId, quantity: 1 });
   }
 
-  // Welcome email (non-blocking) before Checkout
+  // Doctor welcome (non-blocking) before Checkout
   try {
     const firstName = (formData.get("first_name") as string) || "there";
-    const { subject, html } = welcomeEmail({ name: firstName });
+    const { subject, html } = doctorWelcomeEmail({ name: firstName });
     const { sendEmail } = await import("@/lib/email/client");
     sendEmail({ to: result.email, subject, html }).catch(() => {});
   } catch {
