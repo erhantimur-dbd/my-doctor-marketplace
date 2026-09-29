@@ -31,6 +31,8 @@ import type { BookingAuthContext } from "@/lib/auth/booking-context";
 
 import { login, register } from "@/actions/auth";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
+import { PasskeySignInButton } from "@/components/auth/passkey-sign-in-button";
+import { isSafeRelativePath } from "@/lib/auth/return-cookie";
 import {
   FOUNDING_REGISTER_HREF,
   SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME,
@@ -91,7 +93,11 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
 
     const result = await login(formData);
     if (result && "mfaRequired" in result && result.mfaRequired) {
-      router.push(`/${locale}/verify-mfa`);
+      const qs =
+        redirectTo && isSafeRelativePath(redirectTo)
+          ? `?redirect=${encodeURIComponent(redirectTo)}`
+          : "";
+      router.push(`/${locale}/verify-mfa${qs}`);
       return;
     }
     if (result && "needsVerification" in result && result.needsVerification) {
@@ -356,6 +362,13 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
 
           {/* ── Sign In form ── */}
           <TabsContent value="sign-in" className="mt-0">
+            <div className="mb-4 space-y-3">
+              <PasskeySignInButton
+                locale={locale}
+                redirectTo={redirectTo || undefined}
+                onError={setError}
+              />
+            </div>
             <form action={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="login-email">{t("email")}</Label>
