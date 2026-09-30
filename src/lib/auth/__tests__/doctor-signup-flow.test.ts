@@ -60,7 +60,8 @@ describe("doctor signup flow contracts", () => {
     expect(auth).toMatch(/supabase\.auth\.signUp/);
     // New signups do not insert a £0 founding licence.
     expect(auth).not.toMatch(/tier:\s*"free"/);
-    expect(auth).toMatch(/claimFoundingOfferForCheckout/);
+    expect(auth).toMatch(/reserveFoundingSpotForSession/);
+    expect(auth).not.toMatch(/claimFoundingOfferForCheckout/);
     // Paid path creates Stripe Checkout subscription with tier metadata
     expect(auth).toMatch(/mode:\s*"subscription"/);
     expect(auth).toMatch(/checkoutUrl/);

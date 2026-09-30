@@ -38,12 +38,15 @@ describe("doctorWelcomeEmail", () => {
 describe("doctor registration sends the doctor welcome", () => {
   const auth = read("src/actions/auth.ts");
 
-  it("registerDoctor and registerDoctorWithCheckout use doctorWelcomeEmail", () => {
-    for (const name of ["registerDoctor", "registerDoctorWithCheckout"]) {
-      const body = exportBody(auth, name);
-      expect(body).toMatch(/doctorWelcomeEmail\(/);
-      expect(body).not.toMatch(/(?<!doctor)welcomeEmail\(/);
-    }
+  it("registerDoctor sends the doctor welcome; paid checkout waits for payment", () => {
+    const register = exportBody(auth, "registerDoctor");
+    expect(register).toMatch(/doctorWelcomeEmail\(/);
+    expect(register).not.toMatch(/(?<!doctor)welcomeEmail\(/);
+
+    const checkout = exportBody(auth, "registerDoctorWithCheckout");
+    expect(checkout).not.toMatch(/doctorWelcomeEmail\(/);
+    expect(checkout).not.toMatch(/sendEmail\(/);
+    expect(checkout).not.toMatch(/sendDoctorWelcomeOnce\(/);
   });
 
   it("patient register still uses the patient welcome", () => {

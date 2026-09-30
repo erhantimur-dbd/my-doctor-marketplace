@@ -32,6 +32,10 @@ import {
 import { resolveConfirmationLookup } from "@/lib/booking/confirmation-params";
 import { confirmationCopy } from "@/lib/booking/confirmation-copy";
 import {
+  confirmationCancellationNotice,
+  formatConfirmationAppointmentWindow,
+} from "@/lib/booking/confirmation-display";
+import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
   patientBookingDoctorName,
@@ -209,17 +213,17 @@ export default async function BookingConfirmationPage({
     });
   }
 
-  function formatTime(time: string): string {
-    const parts = time.split(":");
-    return `${parts[0]}:${parts[1]}`;
-  }
+  const appointmentWindow = formatConfirmationAppointmentWindow({
+    start: booking.start_time,
+    end: booking.end_time,
+    appointmentDate: booking.appointment_date,
+  });
 
-  const policyKey =
-    doctor?.cancellation_policy === "flexible"
-      ? "flexible_policy"
-      : doctor?.cancellation_policy === "moderate"
-        ? "moderate_policy"
-        : "strict_policy";
+  const cancellation = confirmationCancellationNotice({
+    bookingPolicy: (booking as { cancellation_policy?: string | null })
+      .cancellation_policy,
+    doctorPolicy: doctor?.cancellation_policy,
+  });
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -304,8 +308,7 @@ export default async function BookingConfirmationPage({
                   <span className="text-muted-foreground">Time</span>
                 </div>
                 <p className="text-sm font-medium">
-                  {formatTime(booking.start_time)} -{" "}
-                  {formatTime(booking.end_time)}
+                  {appointmentWindow}
                 </p>
               </div>
 
@@ -384,11 +387,16 @@ export default async function BookingConfirmationPage({
                   </>
                 )}
 
-              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50">
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  {t(policyKey)}
-                </p>
-              </div>
+              {cancellation ? (
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 dark:border-blue-900 dark:bg-blue-950/50">
+                  <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
+                    {cancellation.label}
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    {t(cancellation.detailKey)}
+                  </p>
+                </div>
+              ) : null}
             </CardContent>
 
             <CardFooter className="flex flex-col gap-3">

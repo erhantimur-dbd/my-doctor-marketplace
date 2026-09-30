@@ -78,13 +78,14 @@ describe("founding + signup go-live contracts", () => {
     expect(mig).toMatch(/max_spots.*100|DEFAULT 100/);
   });
 
-  it("createDoctorAccount enforces UK GMC + city/country and claims founding", () => {
+  it("createDoctorAccount enforces UK GMC + city/country and reserves founding at checkout", () => {
     const auth = read("src/actions/auth.ts");
     expect(auth).toContain("isValidGmcNumber");
     expect(auth).toContain("7-digit GMC");
     expect(auth).toContain("Please select the country where you practise");
     expect(auth).toContain("Please enter your practice city");
-    expect(auth).toContain("claimFoundingOfferForCheckout");
+    expect(auth).toContain("reserveFoundingSpotForSession");
+    expect(auth).not.toContain("claimFoundingOfferForCheckout");
     expect(auth).toContain("terms_accepted_at");
     expect(auth).not.toContain("foundingFreeLicenseMetadata");
   });

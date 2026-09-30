@@ -9,6 +9,7 @@ import { cookies, headers } from "next/headers";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email/client";
 import { doctorWelcomeEmail, welcomeEmail } from "@/lib/email/templates";
+import { currencyForCountry } from "@/lib/billing/currency-for-country";
 import { passwordSchema } from "@/lib/validators/password";
 import { safeError } from "@/lib/utils/safe-error";
 import { log } from "@/lib/utils/logger";
@@ -674,12 +675,14 @@ async function createDoctorAccount(formData: FormData): Promise<
         "-" +
         Math.random().toString(36).substring(2, 6);
 
+      const signupCurrency = currencyForCountry(countryCode);
       const { data: newOrg } = await adminSupabase
         .from("organizations")
         .insert({
           name: `Dr. ${firstName} ${lastName}'s Practice`,
           slug: orgSlug,
           email,
+          ...(signupCurrency ? { base_currency: signupCurrency } : {}),
         })
         .select("id")
         .single();
@@ -781,10 +784,10 @@ export async function registerDoctorWithCheckout(formData: FormData) {
 
   const foundingOffer = isFoundingOfferTier(tier);
   if (foundingOffer) {
-    const { claimFoundingOfferForCheckout } = await import(
+    const { assertFoundingCheckoutAllowed } = await import(
       "@/lib/founding/grant"
     );
-    const gate = await claimFoundingOfferForCheckout(result.doctorId);
+    const gate = await assertFoundingCheckoutAllowed(result.doctorId);
     if (!gate.ok) return { error: gate.error };
   }
 
@@ -856,19 +859,11 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     lineItems.push({ price: testingPriceId, quantity: 1 });
   }
 
-  // Doctor welcome (non-blocking) before Checkout
-  try {
-    const firstName = (formData.get("first_name") as string) || "there";
-    const { subject, html } = doctorWelcomeEmail({ name: firstName });
-    const { sendEmail } = await import("@/lib/email/client");
-    sendEmail({ to: result.email, subject, html }).catch(() => {});
-  } catch {
-    /* ignore */
-  }
-
   const session = await stripe.checkout.sessions.create({
     customer: customer.id,
     mode: "subscription",
+    // Keep the charge in the Price currency. Adaptive Pricing would convert it.
+    adaptive_pricing: { enabled: false },
     line_items: lineItems,
     subscription_data: {
       metadata: {
@@ -895,6 +890,24 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     success_url: `${origin}/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}&checkout=success`,
     cancel_url: `${origin}/${result.locale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
   });
+
+  if (foundingOffer) {
+    const { reserveFoundingSpotForSession } = await import(
+      "@/lib/founding/grant"
+    );
+    const reserved = await reserveFoundingSpotForSession(
+      result.doctorId,
+      session.id
+    );
+    if (!reserved.ok) {
+      try {
+        await stripe.checkout.sessions.expire(session.id);
+      } catch {
+        /* session may already be closed */
+      }
+      return { error: reserved.error };
+    }
+  }
 
   return { checkoutUrl: session.url };
 }
@@ -943,10 +956,10 @@ export async function resumeDoctorLicenseCheckout(
   const foundingOffer = isFoundingOfferTier(tier);
   const period = foundingOffer ? "monthly" : billingPeriod;
   if (foundingOffer) {
-    const { claimFoundingOfferForCheckout } = await import(
+    const { assertFoundingCheckoutAllowed } = await import(
       "@/lib/founding/grant"
     );
-    const gate = await claimFoundingOfferForCheckout(doctor.id);
+    const gate = await assertFoundingCheckoutAllowed(doctor.id);
     if (!gate.ok) return { error: gate.error };
   }
 
@@ -1012,6 +1025,7 @@ export async function resumeDoctorLicenseCheckout(
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
+    adaptive_pricing: { enabled: false },
     line_items: [{ price: priceId, quantity }],
     subscription_data: {
       metadata: {
@@ -1036,6 +1050,21 @@ export async function resumeDoctorLicenseCheckout(
     success_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=success`,
     cancel_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
   });
+
+  if (foundingOffer) {
+    const { reserveFoundingSpotForSession } = await import(
+      "@/lib/founding/grant"
+    );
+    const reserved = await reserveFoundingSpotForSession(doctor.id, session.id);
+    if (!reserved.ok) {
+      try {
+        await stripe.checkout.sessions.expire(session.id);
+      } catch {
+        /* session may already be closed */
+      }
+      return { error: reserved.error };
+    }
+  }
 
   return { checkoutUrl: session.url };
 }

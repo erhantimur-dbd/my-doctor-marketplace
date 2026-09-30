@@ -331,6 +331,8 @@ describe("consult charges are card-only", () => {
     expect(bookingCalls[0]).toContain('payment_mode: isDeposit ? "deposit" : "full"');
     expect(bookingCalls[0]).toContain('is_guest: isGuest ? "1" : "0"');
     expect(bookingCalls[0]).toContain("customer_email: guestEmail || undefined");
+    expect(bookingCalls[0]).toContain("adaptive_pricing:");
+    expect(bookingCalls[0]).toContain("enabled: false");
     expect(bookingCalls[0]).not.toContain("automatic_payment_methods");
 
     const followUpSrc = read("src/actions/follow-up.ts");
@@ -340,6 +342,8 @@ describe("consult charges are card-only", () => {
     expect(enclosingFunction(followUpSrc, followUpAt)).toBe("createInvitationCheckout");
     expect(followUpCalls[0]).toMatch(cardOnly);
     expect(followUpCalls[0]).toContain(behalf);
+    expect(followUpCalls[0]).toContain("adaptive_pricing:");
+    expect(followUpCalls[0]).toContain("enabled: false");
     expect(followUpCalls[0]).not.toContain("automatic_payment_methods");
 
     const adminSrc = read("src/actions/admin.ts");
@@ -352,6 +356,8 @@ describe("consult charges are card-only", () => {
     for (const arg of adminCalls) {
       expect(arg).toMatch(cardOnly);
       expect(arg).toContain(behalf);
+      expect(arg).toContain("adaptive_pricing:");
+      expect(arg).toContain("enabled: false");
       expect(arg).not.toContain("automatic_payment_methods");
     }
 
