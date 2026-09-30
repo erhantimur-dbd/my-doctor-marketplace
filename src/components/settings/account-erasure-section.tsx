@@ -49,7 +49,7 @@ export function AccountErasureSection() {
         // The auth user is banned or deleted either way.
       }
 
-      toast.success("Your account has been erased. You will be redirected shortly.");
+      toast.success("Your account is closed. You will be redirected shortly.");
       setDeleteDialogOpen(false);
 
       setTimeout(() => {
@@ -63,8 +63,9 @@ export function AccountErasureSection() {
       <div className="space-y-1">
         <h4 className="text-sm font-medium text-destructive">Delete Account</h4>
         <p className="text-xs text-muted-foreground">
-          Removes your sign-in and personal details. Prescriptions and their
-          audit history are kept as clinical records. This cannot be undone.
+          Removes your sign-in and personal details. If a record has to
+          stay, the account is restricted and you can still request access
+          to it. This cannot be undone.
         </p>
       </div>
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -82,16 +83,19 @@ export function AccountErasureSection() {
             </DialogTitle>
             <DialogDescription className="space-y-2 pt-2">
               <span className="block">
-                Your profile, contact details, and sign-in will be removed.
-                Cancel active bookings first.
+                Your sign-in, contact details, and marketing preferences
+                are removed. Cancel active bookings first.
               </span>
               <span className="block text-sm">
                 If nothing has to be kept, the account is deleted.
               </span>
               <span className="block text-sm">
-                Prescriptions, medical details, reviews, and bookings stay
-                linked to this account with personal details removed. A
-                doctor listing is unpublished.
+                If a record has to stay, the account is restricted.
+                Prescriptions and bookings stay linked. Medical details stay
+                only when they were shared with a doctor for a booking.
+                Review ratings stay and the written review is removed unless
+                a dispute is still open. A doctor listing is unpublished.
+                You can still request access to what stays.
               </span>
               <span className="mt-2 block font-medium text-destructive">
                 This action cannot be undone.

@@ -11,6 +11,9 @@ const AUDIT = "55555555-5555-4555-8555-555555555555";
 const CLEAN = "66666666-6666-4666-8666-666666666666";
 const REVIEWER = "77777777-7777-4777-8777-777777777777";
 const CLINICAL = "88888888-8888-4888-8888-888888888888";
+const SHARED = "99999999-9999-4999-8999-999999999999";
+const DISPUTE = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const STRIPE_DISPUTE = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
 const SCHEMA = `
 CREATE SCHEMA IF NOT EXISTS auth;
@@ -158,7 +161,8 @@ CREATE TABLE public.dependent_medical_profiles (
   current_medications text[] DEFAULT '{}',
   emergency_contact_name text,
   emergency_contact_phone text,
-  notes text
+  notes text,
+  sharing_consent boolean NOT NULL DEFAULT false
 );
 
 CREATE TABLE public.medical_profiles (
@@ -170,15 +174,18 @@ CREATE TABLE public.medical_profiles (
   current_medications text[] DEFAULT '{}',
   emergency_contact_name text,
   emergency_contact_phone text,
-  notes text
+  notes text,
+  sharing_consent boolean NOT NULL DEFAULT false
 );
 
 CREATE TABLE public.bookings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id uuid NOT NULL,
   doctor_id uuid NOT NULL,
+  dependent_id uuid,
   status text NOT NULL,
-  patient_notes text
+  patient_notes text,
+  stripe_dispute_status text
 );
 
 CREATE TABLE public.reviews (
@@ -187,7 +194,42 @@ CREATE TABLE public.reviews (
   patient_id uuid NOT NULL,
   doctor_id uuid NOT NULL,
   rating int NOT NULL,
-  comment text
+  title text,
+  comment text,
+  doctor_response text
+);
+
+CREATE TABLE public.payment_corrections (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_id uuid,
+  patient_id uuid,
+  disputed_at timestamptz,
+  dispute_resolved_at timestamptz,
+  status text
+);
+
+CREATE TABLE public.availability_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id uuid,
+  doctor_id uuid NOT NULL,
+  guest_email text
+);
+
+CREATE TABLE public.specialty_waitlist (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  specialty_slug text NOT NULL,
+  patient_id uuid,
+  guest_email text
+);
+
+CREATE TABLE public.doctor_waitlist (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email text NOT NULL
+);
+
+CREATE TABLE public.launch_notifications (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email text NOT NULL
 );
 
 CREATE TABLE public.prescriptions (
@@ -280,7 +322,7 @@ CREATE TRIGGER trg_lock_doctor_privileged_columns
   FOR EACH ROW EXECUTE FUNCTION public.prevent_doctor_privileged_column_update();
 `;
 
-type ModeRow = { mode: string; email: string | null; erased_at: string | null };
+type ModeRow = { mode: string; email: string | null; restricted_at: string | null };
 
 describe("erase_account keeps audited prescriptions", () => {
   let db: PGlite;
@@ -301,7 +343,10 @@ describe("erase_account keeps audited prescriptions", () => {
         ('${DOCTOR_USER}', 'pip.doctor@example.com', '+447700900002', '{"role":"doctor","first_name":"Pip","last_name":"Doctor"}'),
         ('${CLEAN}', 'pip.clean@example.com', '+447700900003', '{"role":"patient","first_name":"Clean","last_name":"User"}'),
         ('${REVIEWER}', 'pip.reviewer@example.com', '+447700900004', '{"role":"patient","first_name":"Rita","last_name":"Reviewer"}'),
-        ('${CLINICAL}', 'pip.clinical@example.com', '+447700900005', '{"role":"patient","first_name":"Cara","last_name":"Clinical"}');
+        ('${CLINICAL}', 'pip.clinical@example.com', '+447700900005', '{"role":"patient","first_name":"Cara","last_name":"Clinical"}'),
+        ('${SHARED}', 'pip.shared@example.com', '+447700900006', '{"role":"patient","first_name":"Sam","last_name":"Shared"}'),
+        ('${DISPUTE}', 'pip.dispute@example.com', '+447700900007', '{"role":"patient","first_name":"Dee","last_name":"Dispute"}'),
+        ('${STRIPE_DISPUTE}', 'pip.stripe@example.com', '+447700900008', '{"role":"patient","first_name":"Sid","last_name":"Stripe"}');
 
       INSERT INTO public.profiles (
         id, role, first_name, last_name, email, phone, avatar_url,
@@ -311,19 +356,24 @@ describe("erase_account keeps audited prescriptions", () => {
         ('${DOCTOR_USER}', 'doctor', 'Pip', 'Doctor', 'pip.doctor@example.com', '+447700900002', 'https://cdn.example/dr.jpg', '2 Clinic Road', 'Manchester', 'M1 1AE', 'GB', '1980-01-01'),
         ('${CLEAN}', 'patient', 'Clean', 'User', 'pip.clean@example.com', '+447700900003', 'https://cdn.example/clean.jpg', '3 Plain Road', 'Leeds', 'LS1 1AA', 'GB', NULL),
         ('${REVIEWER}', 'patient', 'Rita', 'Reviewer', 'pip.reviewer@example.com', '+447700900004', NULL, '4 Review Road', 'Bristol', 'BS1 1AA', 'GB', '1992-02-02'),
-        ('${CLINICAL}', 'patient', 'Cara', 'Clinical', 'pip.clinical@example.com', '+447700900005', NULL, '5 Clinic Road', 'Oxford', 'OX1 1AA', 'GB', '1985-05-05');
+        ('${CLINICAL}', 'patient', 'Cara', 'Clinical', 'pip.clinical@example.com', '+447700900005', NULL, '5 Clinic Road', 'Oxford', 'OX1 1AA', 'GB', '1985-05-05'),
+        ('${SHARED}', 'patient', 'Sam', 'Shared', 'pip.shared@example.com', '+447700900006', NULL, '6 Share Road', 'Bath', 'BA1 1AA', 'GB', '1991-01-01'),
+        ('${DISPUTE}', 'patient', 'Dee', 'Dispute', 'pip.dispute@example.com', '+447700900007', NULL, '7 Dispute Road', 'York', 'YO1 1AA', 'GB', NULL),
+        ('${STRIPE_DISPUTE}', 'patient', 'Sid', 'Stripe', 'pip.stripe@example.com', '+447700900008', NULL, '8 Stripe Road', 'York', 'YO1 2AA', 'GB', NULL);
 
       INSERT INTO public.doctors (
         id, profile_id, slug, bio, address, city, postal_code, clinic_name,
         clinic_latitude, clinic_longitude, education, certifications,
-        meta_title, meta_description, profile_video_path, gender,
+        meta_title, meta_description,
+        profile_video_path, profile_video_status, profile_video_uploaded_at,
+        profile_video_reviewed_at, profile_video_rejection_reason, gender,
         is_active, is_featured, verification_status, referral_code, ics_feed_token,
         gmc_number, stripe_account_id
       ) VALUES (
         '${DOCTOR_ROW}', '${DOCTOR_USER}', 'dr-pip', 'Secret biography', '2 Clinic Road',
         'Manchester', 'M1 1AE', 'Secret Clinic', 53.48, -2.24,
         '[{"institution":"Secret College"}]'::jsonb, '[{"name":"Secret Cert"}]'::jsonb,
-        'Dr Pip', 'A secret description', 'videos/secret.mp4', 'female',
+        'Dr Pip', 'A secret description', 'videos/secret.mp4', 'pending', now(), now(), 'too blurry', 'female',
         true, true, 'verified', 'PIPDOCTOR', 'ics-secret-token',
         '7654321', 'acct_secret'
       );
@@ -339,36 +389,75 @@ describe("erase_account keeps audited prescriptions", () => {
 
       INSERT INTO public.dependents (parent_id, first_name, last_name, date_of_birth, notes)
       VALUES ('${PATIENT}', 'Ada', 'Patient', '2018-06-01', 'child note');
-      INSERT INTO public.dependent_medical_profiles (dependent_id, emergency_contact_name, emergency_contact_phone, notes, blood_type)
-      SELECT id, 'Gran Secret', '+447700900011', 'dependent note', 'A+'
+      INSERT INTO public.dependent_medical_profiles (
+        dependent_id, emergency_contact_name, emergency_contact_phone, notes, blood_type, sharing_consent
+      )
+      SELECT id, 'Gran Secret', '+447700900011', 'dependent note', 'A+', true
       FROM public.dependents WHERE parent_id = '${PATIENT}';
-      INSERT INTO public.medical_profiles (patient_id, emergency_contact_name, emergency_contact_phone, notes, blood_type, allergies)
-      VALUES ('${PATIENT}', 'Mum Secret', '+447700900012', 'private note', 'O+', ARRAY['peanuts']);
+      INSERT INTO public.medical_profiles (
+        patient_id, emergency_contact_name, emergency_contact_phone, notes, blood_type, allergies, sharing_consent
+      ) VALUES
+        ('${PATIENT}', 'Mum Secret', '+447700900012', 'private note', 'O+', ARRAY['peanuts'], true),
+        ('${REVIEWER}', 'Review Contact', '+447700900014', 'unshared note', 'B+', ARRAY['dust'], false),
+        ('${CLINICAL}', 'Nurse Secret', '+447700900013', 'keep-clinical-note', 'AB+', ARRAY['latex'], false),
+        ('${SHARED}', 'Share Contact', '+447700900015', 'shared-clinical-note', 'A-', ARRAY['none'], true);
 
+      INSERT INTO public.bookings (patient_id, doctor_id, dependent_id, status, patient_notes)
+      VALUES (
+        '${PATIENT}', '${DOCTOR_ROW}',
+        (SELECT id FROM public.dependents WHERE parent_id = '${PATIENT}' LIMIT 1),
+        'completed', 'secret patient note'
+      );
       INSERT INTO public.bookings (patient_id, doctor_id, status, patient_notes)
       VALUES
-        ('${PATIENT}', '${DOCTOR_ROW}', 'completed', 'secret patient note'),
-        ('${REVIEWER}', '${DOCTOR_ROW}', 'completed', NULL);
-      INSERT INTO public.reviews (booking_id, patient_id, doctor_id, rating, comment)
-      SELECT id, '${REVIEWER}', '${DOCTOR_ROW}', 5, 'keep-this-review'
-      FROM public.bookings WHERE patient_id = '${REVIEWER}';
-      INSERT INTO public.medical_profiles (patient_id, emergency_contact_name, emergency_contact_phone, notes, blood_type, allergies)
-      VALUES ('${CLINICAL}', 'Nurse Secret', '+447700900013', 'keep-clinical-note', 'AB+', ARRAY['latex']);
+        ('${REVIEWER}', '${DOCTOR_ROW}', 'completed', NULL),
+        ('${SHARED}', '${DOCTOR_ROW}', 'completed', NULL),
+        ('${DISPUTE}', '${DOCTOR_ROW}', 'completed', NULL),
+        ('${STRIPE_DISPUTE}', '${DOCTOR_ROW}', 'completed', NULL);
+      UPDATE public.bookings
+      SET stripe_dispute_status = 'needs_response'
+      WHERE patient_id = '${STRIPE_DISPUTE}';
+      INSERT INTO public.reviews (booking_id, patient_id, doctor_id, rating, title, comment)
+      SELECT id, patient_id, '${DOCTOR_ROW}', 5, 'Review title',
+        CASE patient_id::text
+          WHEN '${REVIEWER}' THEN 'keep-this-review'
+          WHEN '${DISPUTE}' THEN 'keep-under-dispute'
+          WHEN '${STRIPE_DISPUTE}' THEN 'keep-under-stripe'
+          ELSE 'other'
+        END
+      FROM public.bookings
+      WHERE patient_id IN ('${REVIEWER}', '${DISPUTE}', '${STRIPE_DISPUTE}');
+      INSERT INTO public.payment_corrections (booking_id, patient_id, disputed_at, status)
+      SELECT id, '${DISPUTE}', now(), 'disputed'
+      FROM public.bookings WHERE patient_id = '${DISPUTE}';
 
       INSERT INTO public.prescriptions (id, doctor_id, patient_id, diagnosis, notes)
       VALUES ('${RX}', '${DOCTOR_ROW}', '${PATIENT}', 'keep-this-diagnosis', 'clinical note');
       INSERT INTO public.prescription_audit_log (id, prescription_id, event_type, actor_profile_id, snapshot)
       VALUES ('${AUDIT}', '${RX}', 'issued', '${DOCTOR_USER}', '{"marker":"keep-audit"}'::jsonb);
 
-      INSERT INTO public.push_subscriptions (user_id) VALUES ('${PATIENT}'), ('${DOCTOR_USER}');
-      INSERT INTO public.cookie_consents (user_id) VALUES ('${PATIENT}');
+      INSERT INTO public.push_subscriptions (user_id) VALUES ('${PATIENT}'), ('${DOCTOR_USER}'), ('${CLEAN}');
+      INSERT INTO public.cookie_consents (user_id) VALUES ('${PATIENT}'), ('${CLEAN}');
+      INSERT INTO public.availability_alerts (patient_id, doctor_id, guest_email)
+      VALUES
+        ('${PATIENT}', '${DOCTOR_ROW}', NULL),
+        ('${CLEAN}', '${DOCTOR_ROW}', NULL),
+        (NULL, '${DOCTOR_ROW}', 'pip.patient@example.com');
+      INSERT INTO public.specialty_waitlist (specialty_slug, patient_id, guest_email)
+      VALUES ('dermatology', '${PATIENT}', NULL), ('cardiology', NULL, 'pip.patient@example.com');
+      INSERT INTO public.doctor_waitlist (email) VALUES ('pip.doctor@example.com');
+      INSERT INTO public.launch_notifications (email) VALUES ('pip.patient@example.com');
 
       INSERT INTO auth.identities (id, user_id, provider, provider_id, email, identity_data)
       VALUES
         ('${PATIENT}', '${PATIENT}', 'email', 'pip.patient@example.com', 'pip.patient@example.com', '{"email":"pip.patient@example.com"}'),
         ('${DOCTOR_USER}', '${DOCTOR_USER}', 'email', 'pip.doctor@example.com', 'pip.doctor@example.com', '{"email":"pip.doctor@example.com"}');
-      INSERT INTO auth.sessions (id, user_id) VALUES ('${PATIENT}', '${PATIENT}'), ('${DOCTOR_USER}', '${DOCTOR_USER}');
-      INSERT INTO auth.refresh_tokens (id, user_id) VALUES ('${PATIENT}', '${PATIENT}'), ('${DOCTOR_USER}', '${DOCTOR_USER}');
+      INSERT INTO auth.sessions (id, user_id)
+      VALUES ('${PATIENT}', '${PATIENT}'), ('${DOCTOR_USER}', '${DOCTOR_USER}'), ('${CLEAN}', '${CLEAN}');
+      INSERT INTO auth.refresh_tokens (id, user_id)
+      VALUES ('${PATIENT}', '${PATIENT}'), ('${DOCTOR_USER}', '${DOCTOR_USER}'), ('${CLEAN}', '${CLEAN}');
+      INSERT INTO auth.identities (id, user_id, provider, provider_id, email, identity_data)
+      VALUES ('${CLEAN}', '${CLEAN}', 'email', 'pip.clean@example.com', 'pip.clean@example.com', '{"email":"pip.clean@example.com"}');
     `);
   }, 120000);
 
@@ -392,23 +481,23 @@ describe("erase_account keeps audited prescriptions", () => {
     expect(doctor).toMatch(/23503|foreign key/i);
   });
 
-  it("anonymises the patient and keeps the prescription and audit row", async () => {
+  it("restricts the patient and keeps the prescription and audit row", async () => {
     const result = await db.query<ModeRow>(
-      `SELECT result->>'mode' AS mode, result->>'email' AS email, result->>'erased_at' AS erased_at
+      `SELECT result->>'mode' AS mode, result->>'email' AS email, result->>'restricted_at' AS restricted_at
        FROM (SELECT public.erase_account($1::uuid) AS result) AS erased`,
       [PATIENT]
     );
-    expect(result.rows[0]?.mode).toBe("anonymised");
+    expect(result.rows[0]?.mode).toBe("restricted");
 
     const profile = await db.query<Record<string, string | null>>(
       `SELECT first_name, last_name, email, phone, avatar_url, address_line1, city, postal_code, country,
-              date_of_birth::text AS date_of_birth, erased_at::text AS erased_at
+              date_of_birth::text AS date_of_birth, restricted_at::text AS restricted_at
        FROM public.profiles WHERE id = $1`,
       [PATIENT]
     );
     const row = profile.rows[0];
-    expect(row?.first_name).toBe("Erased");
-    expect(row?.last_name).toBe("Account");
+    expect(row?.first_name).toBe("");
+    expect(row?.last_name).toBe("");
     expect(row?.email).toBe(`erased+${PATIENT}@users.invalid`);
     expect(row?.phone).toBeNull();
     expect(row?.avatar_url).toBeNull();
@@ -417,7 +506,7 @@ describe("erase_account keeps audited prescriptions", () => {
     expect(row?.postal_code).toBeNull();
     expect(row?.country).toBeNull();
     expect(row?.date_of_birth).toBeNull();
-    expect(row?.erased_at).toBeTruthy();
+    expect(row?.restricted_at).toBeTruthy();
     expect(JSON.stringify(row)).not.toMatch(/Pip|Secret|London|pip\.patient/);
 
     const auth = await db.query<{ email: string; phone: string | null; banned_until: string | null }>(
@@ -428,12 +517,11 @@ describe("erase_account keeps audited prescriptions", () => {
     expect(auth.rows[0]?.phone).toBeNull();
     expect(auth.rows[0]?.banned_until).toBeTruthy();
 
-    const identity = await db.query<{ email: string; provider_id: string; identity_email: string }>(
-      "SELECT email, provider_id, identity_data->>'email' AS identity_email FROM auth.identities WHERE user_id = $1",
+    const identity = await db.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM auth.identities WHERE user_id = $1",
       [PATIENT]
     );
-    expect(identity.rows[0]?.identity_email).toBe(`erased+${PATIENT}@users.invalid`);
-    expect(identity.rows[0]?.provider_id).toBe(`erased+${PATIENT}@users.invalid`);
+    expect(identity.rows[0]?.count).toBe("0");
 
     const sessions = await db.query<{ count: string }>(
       "SELECT count(*)::text AS count FROM auth.sessions WHERE user_id = $1",
@@ -470,7 +558,7 @@ describe("erase_account keeps audited prescriptions", () => {
       "SELECT first_name, date_of_birth::text, notes FROM public.dependents WHERE parent_id = $1",
       [PATIENT]
     );
-    expect(dependent.rows[0]?.first_name).toBe("Erased");
+    expect(dependent.rows[0]?.first_name).toBe("");
     expect(dependent.rows[0]?.date_of_birth).toBeNull();
     expect(dependent.rows[0]?.notes).toBeNull();
 
@@ -511,30 +599,47 @@ describe("erase_account keeps audited prescriptions", () => {
       [PATIENT]
     );
     expect(pushes.rows[0]?.count).toBe("0");
+    const alerts = await db.query<{ count: string }>(
+      `SELECT (
+         (SELECT count(*) FROM public.availability_alerts WHERE patient_id = $1 OR lower(guest_email) = 'pip.patient@example.com')
+         + (SELECT count(*) FROM public.specialty_waitlist WHERE patient_id = $1 OR lower(guest_email) = 'pip.patient@example.com')
+         + (SELECT count(*) FROM public.launch_notifications WHERE lower(email) = 'pip.patient@example.com')
+       )::text AS count`,
+      [PATIENT]
+    );
+    expect(alerts.rows[0]?.count).toBe("0");
+    const videoStillThere = await db.query<{ profile_video_path: string | null; gender: string | null }>(
+      "SELECT profile_video_path, gender FROM public.doctors WHERE id = $1",
+      [DOCTOR_ROW]
+    );
+    expect(videoStillThere.rows[0]?.profile_video_path).toBe("videos/secret.mp4");
+    expect(videoStillThere.rows[0]?.gender).toBe("female");
 
     const stillBlocked = await deleteUser(PATIENT);
     expect(stillBlocked).toMatch(/23503|foreign key/i);
   });
 
-  it("anonymises the doctor who authored the audit row and unpublishes the listing", async () => {
+  it("restricts the doctor and scrubs profile video and gender when those columns exist", async () => {
     const result = await db.query<ModeRow>(
       "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
       [DOCTOR_USER]
     );
-    expect(result.rows[0]?.mode).toBe("anonymised");
+    expect(result.rows[0]?.mode).toBe("restricted");
 
-    const profile = await db.query<{ first_name: string; email: string; phone: string | null; erased_at: string | null }>(
-      "SELECT first_name, email, phone, erased_at::text AS erased_at FROM public.profiles WHERE id = $1",
+    const profile = await db.query<{ first_name: string; email: string; phone: string | null; restricted_at: string | null }>(
+      "SELECT first_name, email, phone, restricted_at::text AS restricted_at FROM public.profiles WHERE id = $1",
       [DOCTOR_USER]
     );
-    expect(profile.rows[0]?.first_name).toBe("Erased");
+    expect(profile.rows[0]?.first_name).toBe("");
     expect(profile.rows[0]?.email).toBe(`erased+${DOCTOR_USER}@users.invalid`);
     expect(profile.rows[0]?.phone).toBeNull();
-    expect(profile.rows[0]?.erased_at).toBeTruthy();
+    expect(profile.rows[0]?.restricted_at).toBeTruthy();
 
     const doctor = await db.query<Record<string, string | null | boolean>>(
       `SELECT is_active, verification_status, bio, address, clinic_name, slug, gmc_number, stripe_account_id,
-              profile_video_path, gender, ics_feed_token
+              profile_video_path, profile_video_status, profile_video_uploaded_at::text AS profile_video_uploaded_at,
+              profile_video_reviewed_at::text AS profile_video_reviewed_at, profile_video_rejection_reason,
+              gender, ics_feed_token
        FROM public.doctors WHERE id = $1`,
       [DOCTOR_ROW]
     );
@@ -546,6 +651,10 @@ describe("erase_account keeps audited prescriptions", () => {
     expect(listing?.clinic_name).toBeNull();
     expect(listing?.slug).toBe(`erased-${DOCTOR_ROW}`);
     expect(listing?.profile_video_path).toBeNull();
+    expect(listing?.profile_video_status).toBeNull();
+    expect(listing?.profile_video_uploaded_at).toBeNull();
+    expect(listing?.profile_video_reviewed_at).toBeNull();
+    expect(listing?.profile_video_rejection_reason).toBeNull();
     expect(listing?.gender).toBeNull();
     expect(listing?.ics_feed_token).toBeNull();
     expect(listing?.gmc_number).toBe("7654321");
@@ -571,10 +680,14 @@ describe("erase_account keeps audited prescriptions", () => {
       "SELECT name, address, phone, is_active FROM public.doctor_testing_locations WHERE doctor_id = $1",
       [DOCTOR_ROW]
     );
-    expect(labs.rows[0]?.name).toBe("Erased location");
+    expect(labs.rows[0]?.name).toBe("");
     expect(labs.rows[0]?.address).toBe("");
     expect(labs.rows[0]?.phone).toBeNull();
     expect(labs.rows[0]?.is_active).toBe(false);
+    const waitlist = await db.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM public.doctor_waitlist WHERE lower(email) = 'pip.doctor@example.com'"
+    );
+    expect(waitlist.rows[0]?.count).toBe("0");
 
     const rx = await db.query<{ id: string; doctor_id: string }>(
       "SELECT id::text, doctor_id::text FROM public.prescriptions WHERE id = $1",
@@ -598,7 +711,7 @@ describe("erase_account keeps audited prescriptions", () => {
     expect(stillBlocked).toMatch(/23503|foreign key/i);
   });
 
-  it("anonymises a patient who has a review and no prescription", async () => {
+  it("removes review text, keeps the rating, and shows no author name", async () => {
     const before = await deleteUser(REVIEWER);
     expect(before).toMatch(/23503|foreign key/i);
 
@@ -606,25 +719,32 @@ describe("erase_account keeps audited prescriptions", () => {
       "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
       [REVIEWER]
     );
-    expect(result.rows[0]?.mode).toBe("anonymised");
+    expect(result.rows[0]?.mode).toBe("restricted");
 
     const profile = await db.query<{ first_name: string; last_name: string; email: string; phone: string | null }>(
       "SELECT first_name, last_name, email, phone FROM public.profiles WHERE id = $1",
       [REVIEWER]
     );
-    expect(profile.rows[0]?.first_name).toBe("Erased");
-    expect(profile.rows[0]?.last_name).toBe("Account");
+    expect(profile.rows[0]?.first_name).toBe("");
+    expect(profile.rows[0]?.last_name).toBe("");
     expect(profile.rows[0]?.email).toBe(`erased+${REVIEWER}@users.invalid`);
     expect(profile.rows[0]?.phone).toBeNull();
 
-    const review = await db.query<{ patient_id: string; comment: string }>(
-      "SELECT patient_id::text, comment FROM public.reviews WHERE patient_id = $1",
+    const review = await db.query<{ patient_id: string; comment: string | null; title: string | null; rating: number }>(
+      "SELECT patient_id::text, comment, title, rating FROM public.reviews WHERE patient_id = $1",
       [REVIEWER]
     );
     expect(review.rows[0]).toMatchObject({
       patient_id: REVIEWER,
-      comment: "keep-this-review",
+      comment: null,
+      title: null,
+      rating: 5,
     });
+    const unshared = await db.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM public.medical_profiles WHERE patient_id = $1",
+      [REVIEWER]
+    );
+    expect(unshared.rows[0]?.count).toBe("0");
 
     const rx = await db.query<{ count: string }>(
       "SELECT count(*)::text AS count FROM public.prescriptions WHERE patient_id = $1",
@@ -636,40 +756,78 @@ describe("erase_account keeps audited prescriptions", () => {
     expect(stillBlocked).toMatch(/23503|foreign key/i);
   });
 
-  it("anonymises a patient who only has a medical profile and keeps the clinical fields", async () => {
+  it("hard-deletes a medical profile that was never shared", async () => {
     const result = await db.query<ModeRow>(
       "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
       [CLINICAL]
     );
-    expect(result.rows[0]?.mode).toBe("anonymised");
+    expect(result.rows[0]?.mode).toBe("hard_delete");
 
-    const profile = await db.query<{ first_name: string; address_line1: string | null; erased_at: string | null }>(
-      "SELECT first_name, address_line1, erased_at::text AS erased_at FROM public.profiles WHERE id = $1",
+    const profile = await db.query<{ first_name: string; restricted_at: string | null }>(
+      "SELECT first_name, restricted_at::text AS restricted_at FROM public.profiles WHERE id = $1",
       [CLINICAL]
     );
-    expect(profile.rows[0]?.first_name).toBe("Erased");
-    expect(profile.rows[0]?.address_line1).toBeNull();
-    expect(profile.rows[0]?.erased_at).toBeTruthy();
+    expect(profile.rows[0]?.first_name).toBe("Cara");
+    expect(profile.rows[0]?.restricted_at).toBeNull();
+
+    const medical = await db.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM public.medical_profiles WHERE patient_id = $1",
+      [CLINICAL]
+    );
+    expect(medical.rows[0]?.count).toBe("0");
+
+    const deleted = await deleteUser(CLINICAL);
+    expect(deleted).toBeNull();
+  });
+
+  it("keeps a medical profile that was shared with a doctor for a completed booking", async () => {
+    const result = await db.query<ModeRow>(
+      "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
+      [SHARED]
+    );
+    expect(result.rows[0]?.mode).toBe("restricted");
 
     const medical = await db.query<{
       patient_id: string;
       blood_type: string | null;
       notes: string | null;
-      allergies: string[] | null;
       emergency_contact_name: string | null;
-      emergency_contact_phone: string | null;
     }>(
-      `SELECT patient_id::text, blood_type, notes, allergies, emergency_contact_name, emergency_contact_phone
+      `SELECT patient_id::text, blood_type, notes, emergency_contact_name
        FROM public.medical_profiles WHERE patient_id = $1`,
-      [CLINICAL]
+      [SHARED]
     );
     expect(medical.rows).toHaveLength(1);
-    expect(medical.rows[0]?.patient_id).toBe(CLINICAL);
-    expect(medical.rows[0]?.blood_type).toBe("AB+");
-    expect(medical.rows[0]?.notes).toBe("keep-clinical-note");
-    expect(medical.rows[0]?.allergies).toEqual(["latex"]);
+    expect(medical.rows[0]?.patient_id).toBe(SHARED);
+    expect(medical.rows[0]?.blood_type).toBe("A-");
+    expect(medical.rows[0]?.notes).toBe("shared-clinical-note");
     expect(medical.rows[0]?.emergency_contact_name).toBeNull();
-    expect(medical.rows[0]?.emergency_contact_phone).toBeNull();
+  });
+
+  it("keeps review text while a payment correction dispute on that booking is open", async () => {
+    const result = await db.query<ModeRow>(
+      "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
+      [DISPUTE]
+    );
+    expect(result.rows[0]?.mode).toBe("restricted");
+    const review = await db.query<{ comment: string | null; rating: number }>(
+      "SELECT comment, rating FROM public.reviews WHERE patient_id = $1",
+      [DISPUTE]
+    );
+    expect(review.rows[0]).toMatchObject({ comment: "keep-under-dispute", rating: 5 });
+  });
+
+  it("keeps review text while the booking has an open Stripe dispute", async () => {
+    const result = await db.query<ModeRow>(
+      "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
+      [STRIPE_DISPUTE]
+    );
+    expect(result.rows[0]?.mode).toBe("restricted");
+    const review = await db.query<{ comment: string | null; rating: number }>(
+      "SELECT comment, rating FROM public.reviews WHERE patient_id = $1",
+      [STRIPE_DISPUTE]
+    );
+    expect(review.rows[0]).toMatchObject({ comment: "keep-under-stripe", rating: 5 });
   });
 
   it("returns hard_delete and still allows deleting a user with no prescriptions", async () => {
@@ -680,12 +838,12 @@ describe("erase_account keeps audited prescriptions", () => {
     await expect(db.query("SELECT public.erase_account($1::uuid)", [CLEAN])).rejects.toThrow(
       /active_bookings/
     );
-    const unchanged = await db.query<{ first_name: string; erased_at: string | null }>(
-      "SELECT first_name, erased_at::text AS erased_at FROM public.profiles WHERE id = $1",
+    const unchanged = await db.query<{ first_name: string; restricted_at: string | null }>(
+      "SELECT first_name, restricted_at::text AS restricted_at FROM public.profiles WHERE id = $1",
       [CLEAN]
     );
     expect(unchanged.rows[0]?.first_name).toBe("Clean");
-    expect(unchanged.rows[0]?.erased_at).toBeNull();
+    expect(unchanged.rows[0]?.restricted_at).toBeNull();
 
     await db.query("DELETE FROM public.bookings WHERE patient_id = $1 AND status = 'confirmed'", [CLEAN]);
 
@@ -694,6 +852,18 @@ describe("erase_account keeps audited prescriptions", () => {
       [CLEAN]
     );
     expect(result.rows[0]?.mode).toBe("hard_delete");
+    const ephemera = await db.query<{ count: string }>(
+      `SELECT (
+         (SELECT count(*) FROM auth.sessions WHERE user_id = $1)
+         + (SELECT count(*) FROM auth.identities WHERE user_id = $1)
+         + (SELECT count(*) FROM auth.refresh_tokens WHERE user_id::text = $1::text)
+         + (SELECT count(*) FROM public.push_subscriptions WHERE user_id = $1)
+         + (SELECT count(*) FROM public.cookie_consents WHERE user_id = $1)
+         + (SELECT count(*) FROM public.availability_alerts WHERE patient_id = $1)
+       )::text AS count`,
+      [CLEAN]
+    );
+    expect(ephemera.rows[0]?.count).toBe("0");
     const stillNamed = await db.query<{ first_name: string; email: string }>(
       "SELECT first_name, email FROM public.profiles WHERE id = $1",
       [CLEAN]
@@ -728,5 +898,84 @@ describe("erase_account keeps audited prescriptions", () => {
         await db.exec("ROLLBACK");
       }
     }
+  });
+});
+
+describe("erase_account when prod is missing doctor video and gender columns", () => {
+  let db: PGlite;
+  const bareSchema = SCHEMA.replace(
+    /\s*profile_video_path text,\n\s*profile_video_status text,\n\s*profile_video_uploaded_at timestamptz,\n\s*profile_video_reviewed_at timestamptz,\n\s*profile_video_rejection_reason text,\n\s*gender text,\n/,
+    "\n"
+  );
+
+  beforeAll(async () => {
+    db = new PGlite();
+    await db.exec(bareSchema);
+    const missing = await db.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = 'doctors'
+         AND column_name IN (
+           'profile_video_path', 'profile_video_status', 'profile_video_uploaded_at',
+           'profile_video_reviewed_at', 'profile_video_rejection_reason', 'gender'
+         )`
+    );
+    expect(missing.rows).toEqual([]);
+    await db.exec(readFileSync(join(process.cwd(), "supabase/migrations/00135_account_erasure.sql"), "utf8"));
+    await db.exec(`
+      SELECT set_config('request.jwt.claim.role', 'service_role', false);
+      SELECT set_config('request.jwt.claim.sub', '', false);
+      INSERT INTO auth.users (id, email, raw_user_meta_data) VALUES
+        ('${PATIENT}', 'pip.patient@example.com', '{"role":"patient"}'),
+        ('${DOCTOR_USER}', 'pip.doctor@example.com', '{"role":"doctor"}');
+      INSERT INTO public.profiles (id, role, first_name, last_name, email) VALUES
+        ('${PATIENT}', 'patient', 'Pip', 'Patient', 'pip.patient@example.com'),
+        ('${DOCTOR_USER}', 'doctor', 'Pip', 'Doctor', 'pip.doctor@example.com');
+      INSERT INTO public.doctors (
+        id, profile_id, slug, bio, is_active, verification_status, referral_code, gmc_number
+      ) VALUES (
+        '${DOCTOR_ROW}', '${DOCTOR_USER}', 'dr-pip', 'Secret biography', true, 'verified', 'PIPDOCTOR', '7654321'
+      );
+      INSERT INTO public.prescriptions (id, doctor_id, patient_id, diagnosis)
+      VALUES ('${RX}', '${DOCTOR_ROW}', '${PATIENT}', 'keep-this-diagnosis');
+      INSERT INTO public.prescription_audit_log (id, prescription_id, event_type, actor_profile_id, snapshot)
+      VALUES ('${AUDIT}', '${RX}', 'issued', '${DOCTOR_USER}', '{"marker":"keep-audit"}');
+    `);
+  }, 120000);
+
+  afterAll(async () => {
+    await db?.close();
+  });
+
+  it("restricts a patient even though the doctors update names columns that are absent", async () => {
+    const result = await db.query<{ mode: string }>(
+      "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
+      [PATIENT]
+    );
+    expect(result.rows[0]?.mode).toBe("restricted");
+    const profile = await db.query<{ first_name: string }>(
+      "SELECT first_name FROM public.profiles WHERE id = $1",
+      [PATIENT]
+    );
+    expect(profile.rows[0]?.first_name).toBe("");
+    const doctor = await db.query<{ bio: string | null }>(
+      "SELECT bio FROM public.doctors WHERE id = $1",
+      [DOCTOR_ROW]
+    );
+    expect(doctor.rows[0]?.bio).toBe("Secret biography");
+  });
+
+  it("restricts the doctor without those columns and still clears bio", async () => {
+    const result = await db.query<{ mode: string }>(
+      "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
+      [DOCTOR_USER]
+    );
+    expect(result.rows[0]?.mode).toBe("restricted");
+    const doctor = await db.query<{ bio: string | null; is_active: boolean; gmc_number: string }>(
+      "SELECT bio, is_active, gmc_number FROM public.doctors WHERE id = $1",
+      [DOCTOR_ROW]
+    );
+    expect(doctor.rows[0]?.bio).toBeNull();
+    expect(doctor.rows[0]?.is_active).toBe(false);
+    expect(doctor.rows[0]?.gmc_number).toBe("7654321");
   });
 });

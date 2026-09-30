@@ -170,8 +170,9 @@ export async function exportPatientData() {
 // ---------------------------------------------------------------------------
 // Account Deletion (Article 17 — Right to Erasure)
 // ---------------------------------------------------------------------------
-// Patients and doctors both call this. eraseAccount anonymises when
-// prescriptions or audit rows must be kept, and hard-deletes otherwise.
+// Patients and doctors both call this. eraseAccount restricts the
+// account when prescriptions or other retained rows must be kept, and
+// hard-deletes otherwise.
 export async function requestAccountDeletion() {
   const supabase = await createClient();
   const {

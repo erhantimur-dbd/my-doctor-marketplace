@@ -144,12 +144,12 @@ describe("eraseAccount routing", () => {
     expect(updateUserById).not.toHaveBeenCalled();
   });
 
-  it("anonymises a patient with an audited prescription and does not deleteUser", async () => {
+  it("restricts a patient with an audited prescription and does not deleteUser", async () => {
     const { admin, deleteUser, updateUserById } = createAdmin({
       rpc: {
         data: {
-          mode: "anonymised",
-          erased_at: "2026-09-30T12:00:00.000Z",
+          mode: "restricted",
+          restricted_at: "2026-09-30T12:00:00.000Z",
           email: `erased+${USER_ID}@users.invalid`,
         },
         error: null,
@@ -158,7 +158,7 @@ describe("eraseAccount routing", () => {
 
     const result = await eraseAccount(USER_ID, admin);
 
-    expect(result).toEqual({ success: true, mode: "anonymised" });
+    expect(result).toEqual({ success: true, mode: "restricted" });
     expect(deleteUser).not.toHaveBeenCalled();
     expect(updateUserById).toHaveBeenCalledWith(USER_ID, erasedAuthAdminAttributes(USER_ID));
     expect(erasedAuthAdminAttributes(USER_ID).email).toBe(
@@ -167,12 +167,12 @@ describe("eraseAccount routing", () => {
     expect(erasedAuthAdminAttributes(USER_ID).ban_duration).toBe("876000h");
   });
 
-  it("anonymises a doctor who authored audit rows when deleteUser hits 23503", async () => {
+  it("restricts a doctor who authored audit rows when deleteUser hits 23503", async () => {
     const { admin, deleteUser, updateUserById } = createAdmin({
       rpcSequence: [
         { data: { mode: "hard_delete" }, error: null },
         {
-          data: { mode: "anonymised", email: `erased+${USER_ID}@users.invalid` },
+          data: { mode: "restricted", email: `erased+${USER_ID}@users.invalid` },
           error: null,
         },
       ],
@@ -181,7 +181,7 @@ describe("eraseAccount routing", () => {
 
     const result = await eraseAccount(USER_ID, admin);
 
-    expect(result).toEqual({ success: true, mode: "anonymised" });
+    expect(result).toEqual({ success: true, mode: "restricted" });
     expect(deleteUser).toHaveBeenCalledTimes(1);
     expect(updateUserById).toHaveBeenCalledTimes(1);
   });
@@ -221,10 +221,28 @@ describe("eraseAccount routing", () => {
     expect(updates.some((update) => update.table === "reviews")).toBe(false);
   });
 
-  it("does not deleteUser when the user has a medical profile and the helper is missing", async () => {
+  it("hard-deletes an unshared medical profile when the helper is missing", async () => {
     const { admin, deleteUser } = createAdmin({
       tables: {
-        medical_profiles: [{ id: "med-1", patient_id: USER_ID, blood_type: "O+" }],
+        medical_profiles: [{ id: "med-1", patient_id: USER_ID, blood_type: "O+", sharing_consent: false }],
+      },
+      rpc: {
+        data: null,
+        error: { code: "PGRST202", message: "Could not find the function public.erase_account" },
+      },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ success: true, mode: "hard_deleted" });
+    expect(deleteUser).toHaveBeenCalledWith(USER_ID);
+  });
+
+  it("does not deleteUser when a medical profile was shared and the helper is missing", async () => {
+    const { admin, deleteUser } = createAdmin({
+      tables: {
+        medical_profiles: [{ id: "med-1", patient_id: USER_ID, blood_type: "O+", sharing_consent: true }],
+        bookings: [{ id: "bk-shared", patient_id: USER_ID, status: "completed" }],
       },
       rpc: {
         data: null,

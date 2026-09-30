@@ -4,10 +4,11 @@ import { log } from "@/lib/utils/logger";
 /**
  * Single account-erasure entry point.
  *
- * erase_account anonymises when deleteUser would fail with 23503, and
- * when prescriptions, medical profiles, or dependent clinical rows must
- * stay. Reviews stay linked and the author name becomes "Erased Account".
- * Otherwise the historical deleteUser path is unchanged.
+ * erase_account restricts the account when deleteUser would fail with
+ * 23503, and when a prescription, a shared medical profile, a review, or
+ * another non-cascading row must stay. Review text is removed and the
+ * rating stays. The author name is cleared. Otherwise the historical
+ * deleteUser path is unchanged.
  *
  * Callers today:
  *   * requestAccountDeletion (patient settings and doctor settings)
@@ -47,7 +48,7 @@ export function erasedAuthAdminAttributes(userId: string) {
     email_confirm: true,
     ban_duration: ERASED_BAN_DURATION,
     user_metadata: {
-      erased: true,
+      restricted: true,
       first_name: "",
       last_name: "",
       avatar_url: "",
@@ -89,7 +90,7 @@ export interface EraseAdmin {
 }
 
 export type EraseAccountResult =
-  | { success: true; mode: "anonymised" | "hard_deleted" }
+  | { success: true; mode: "restricted" | "hard_deleted" }
   | { error: string };
 
 function isForeignKeyViolation(error: { message?: string; code?: string }): boolean {
@@ -112,7 +113,7 @@ function isActiveBookingsError(error: { message?: string }): boolean {
   return (error.message ?? "").includes("active_bookings");
 }
 
-export function readEraseMode(data: unknown): "anonymised" | "hard_delete" | null {
+export function readEraseMode(data: unknown): "restricted" | "hard_delete" | null {
   let value = data;
   if (typeof value === "string") {
     try {
@@ -123,7 +124,7 @@ export function readEraseMode(data: unknown): "anonymised" | "hard_delete" | nul
   }
   if (!value || typeof value !== "object" || !("mode" in value)) return null;
   const mode = (value as { mode: unknown }).mode;
-  if (mode === "anonymised" || mode === "hard_delete") return mode;
+  if (mode === "restricted" || mode === "hard_delete") return mode;
   return null;
 }
 
@@ -160,7 +161,6 @@ const PROFILE_RETAINED_TABLES = [
   ["prescription_audit_log", "actor_profile_id"],
   ["reviews", "patient_id"],
   ["bookings", "patient_id"],
-  ["medical_profiles", "patient_id"],
   ["wallet_transactions", "patient_id"],
   ["follow_up_invitations", "patient_id"],
   ["reschedule_requests", "requested_by"],
@@ -191,10 +191,31 @@ async function hasMatchingRow(
   return Boolean(result.data && result.data.length > 0);
 }
 
+async function hasSharedMedicalProfile(admin: EraseAdmin, userId: string): Promise<boolean> {
+  const profile = await admin
+    .from("medical_profiles")
+    .select("id")
+    .eq("patient_id", userId)
+    .limit(1);
+  if (profile.error) throw new Error(profile.error.message);
+  const row = profile.data?.[0] as { sharing_consent?: boolean } | undefined;
+  if (!row || row.sharing_consent !== true) return false;
+
+  const booking = await admin
+    .from("bookings")
+    .select("id")
+    .eq("patient_id", userId)
+    .eq("status", "completed")
+    .limit(1);
+  if (booking.error) throw new Error(booking.error.message);
+  return Boolean(booking.data && booking.data.length > 0);
+}
+
 async function hasRetainedRecords(admin: EraseAdmin, userId: string): Promise<boolean> {
   for (const [table, column] of PROFILE_RETAINED_TABLES) {
     if (await hasMatchingRow(admin, table, column, userId)) return true;
   }
+  if (await hasSharedMedicalProfile(admin, userId)) return true;
 
   const doctor = await admin.from("doctors").select("id").eq("profile_id", userId).maybeSingle();
   if (doctor.error) throw new Error(doctor.error.message);
@@ -210,6 +231,8 @@ function clearEphemeraForHardDelete(admin: EraseAdmin, userId: string): Promise<
   return Promise.allSettled([
     admin.from("push_subscriptions").delete().eq("user_id", userId),
     admin.from("cookie_consents").delete().eq("user_id", userId),
+    admin.from("availability_alerts").delete().eq("patient_id", userId),
+    admin.from("specialty_waitlist").delete().eq("patient_id", userId),
     admin
       .from("bookings")
       .update({ patient_notes: null })
@@ -225,19 +248,19 @@ async function banErasedAuthUser(
   return admin.auth.admin.updateUserById(userId, erasedAuthAdminAttributes(userId));
 }
 
-async function finishAnonymised(
+async function finishRestricted(
   admin: EraseAdmin,
   userId: string
 ): Promise<EraseAccountResult> {
   const banned = await banErasedAuthUser(admin, userId);
   if (banned.error) {
-    log.error("Erased account but failed to ban the auth user", {
+    log.error("Restricted account but failed to ban the auth user", {
       userId,
       err: banned.error.message,
     });
     return { error: ERASE_FAILED_ERROR };
   }
-  return { success: true, mode: "anonymised" };
+  return { success: true, mode: "restricted" };
 }
 
 async function hardDelete(admin: EraseAdmin, userId: string): Promise<EraseAccountResult> {
@@ -247,8 +270,8 @@ async function hardDelete(admin: EraseAdmin, userId: string): Promise<EraseAccou
 
   if (isForeignKeyViolation(error)) {
     const retry = await admin.rpc("erase_account", { p_user_id: userId });
-    if (!retry.error && readEraseMode(retry.data) === "anonymised") {
-      return finishAnonymised(admin, userId);
+    if (!retry.error && readEraseMode(retry.data) === "restricted") {
+      return finishRestricted(admin, userId);
     }
   }
 
@@ -291,7 +314,7 @@ export async function eraseAccount(
   }
 
   const mode = readEraseMode(rpc.data);
-  if (mode === "anonymised") return finishAnonymised(admin, userId);
+  if (mode === "restricted") return finishRestricted(admin, userId);
   if (mode === "hard_delete") return hardDelete(admin, userId);
 
   log.error("erase_account returned an unknown mode", { userId });
