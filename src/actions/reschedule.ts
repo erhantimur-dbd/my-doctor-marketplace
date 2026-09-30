@@ -22,7 +22,7 @@ import { sendSoftsmokeDoctorDiaryChange } from "@/lib/email/softsmoke-send";
 import { log } from "@/lib/utils/logger";
 import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
-// ── Patient requests a reschedule ─────────────────────────────────────
+// ── Patient requests a reschedule ───────────────────────────────────
 
 export async function requestReschedule(input: RequestRescheduleInput) {
   const parsed = requestRescheduleSchema.safeParse(input);
@@ -152,7 +152,7 @@ export async function requestReschedule(input: RequestRescheduleInput) {
   return { success: true };
 }
 
-// ── Doctor approves or rejects a reschedule ───────────────────────
+// ── Doctor approves or rejects a reschedule ─────────────────────────
 
 export async function respondToReschedule(input: RespondRescheduleInput) {
   const parsed = respondRescheduleSchema.safeParse(input);
