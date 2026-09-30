@@ -5,6 +5,26 @@ import { describe, expect, it } from "vitest";
 const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
 const FROM_MIGRATION = 124;
 
+/**
+ * Prod history imported under its real `schema_migrations` version
+ * (`20260302155748_…`). Those files sort after `00126` but they are already
+ * applied, and they are outside the 00124+ EXECUTE-revoke rule.
+ */
+function isProdTimestampMigration(filename: string): boolean {
+  return /^20\d{12}_.*\.sql$/.test(filename);
+}
+
+/**
+ * SECURITY DEFINER functions in the prod timestamp files. They have no
+ * EXECUTE revoke in those files. `get_available_dates_in_range` stays
+ * callable; `nextval_invoice_number` is locked down in #90's 00127.
+ * The 5-arg `get_available_slots` is not defined in this import.
+ */
+const HISTORICAL_PROD_DEFINER_ALLOWLIST = new Set([
+  "get_available_dates_in_range",
+  "nextval_invoice_number",
+]);
+
 const OFFSET_RPCS = [
   "reserve_correction_offset",
   "release_reserved_offset_holds",
@@ -131,6 +151,7 @@ function functionsMissingExecuteRevoke(migrations: MigrationSource[]): string[] 
 function migrationsFrom(minNumber: number): MigrationSource[] {
   return readdirSync(MIGRATIONS_DIR)
     .filter((filename) => /^\d+_.*\.sql$/.test(filename))
+    .filter((filename) => !isProdTimestampMigration(filename))
     .map((filename) => ({
       filename,
       number: Number(filename.slice(0, filename.indexOf("_"))),
@@ -138,6 +159,16 @@ function migrationsFrom(minNumber: number): MigrationSource[] {
     .filter((row) => row.number >= minNumber)
     .sort((a, b) => a.filename.localeCompare(b.filename))
     .map(({ filename }) => ({
+      filename,
+      sql: readFileSync(join(MIGRATIONS_DIR, filename), "utf8"),
+    }));
+}
+
+function prodTimestampMigrations(): MigrationSource[] {
+  return readdirSync(MIGRATIONS_DIR)
+    .filter((filename) => isProdTimestampMigration(filename))
+    .sort((a, b) => a.localeCompare(b))
+    .map((filename) => ({
       filename,
       sql: readFileSync(join(MIGRATIONS_DIR, filename), "utf8"),
     }));
@@ -227,6 +258,22 @@ describe("SECURITY DEFINER functions revoke EXECUTE from anon and authenticated"
         { filename: "00126_revoke.sql", sql: revoked },
       ])
     ).toEqual([]);
+  });
+
+  it("allowlists historical prod definers and keeps them out of the 00124 scope", () => {
+    const historical = prodTimestampMigrations();
+    const names = historical.flatMap((migration) =>
+      securityDefinerFunctions(migration.sql)
+    );
+    expect(names).toEqual([...HISTORICAL_PROD_DEFINER_ALLOWLIST]);
+
+    const tripped = functionsMissingExecuteRevoke(historical);
+    expect(tripped).toEqual([...HISTORICAL_PROD_DEFINER_ALLOWLIST]);
+
+    const scoped = new Set(migrationsFrom(FROM_MIGRATION).map((migration) => migration.filename));
+    for (const migration of historical) {
+      expect(scoped.has(migration.filename)).toBe(false);
+    }
   });
 
   it("does not let an earlier revoke cover a function defined later", () => {
