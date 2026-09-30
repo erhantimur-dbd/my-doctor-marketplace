@@ -52,7 +52,9 @@ export const nlSearchSchema = z.object({
   location: z
     .string()
     .nullable()
-    .describe("Location slug from the available locations list (e.g. 'istanbul-turkey', 'berlin-germany')"),
+    .describe(
+      "City or place name the user explicitly wrote (e.g. 'Birmingham'), or null. Not a guessed slug."
+    ),
   language: z
     .string()
     .nullable()
