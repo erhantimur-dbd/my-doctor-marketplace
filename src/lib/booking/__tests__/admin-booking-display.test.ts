@@ -27,6 +27,15 @@ describe("formatAdminBookingTime", () => {
       formatAdminBookingTime("10:30:00", "11:00:00", "2026-09-27")
     ).toBe("Sunday 27 September, 10:30 to 11:00 (UK time)");
   });
+
+  it("keeps a winter UTC slot in GMT", () => {
+    expect(
+      formatAdminBookingTime(
+        "2026-01-15T09:30:00Z",
+        "2026-01-15T10:00:00Z"
+      )
+    ).toBe("Thursday 15 January, 09:30 to 10:00 (UK time)");
+  });
 });
 
 describe("admin platform fee", () => {
