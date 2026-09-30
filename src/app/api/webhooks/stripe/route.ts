@@ -37,6 +37,14 @@ import {
 } from "@/lib/stripe/destination-charge";
 import { createNotification } from "@/lib/notifications";
 import { earnPoints } from "@/lib/points";
+import {
+  handleChargeDisputeCreated,
+  handleTransferReversed,
+} from "@/lib/stripe/connect-event-handlers";
+import {
+  stripeWebhookSecretCandidates,
+  verifyStripeWebhookSignature,
+} from "@/lib/stripe/webhook-signature";
 import Stripe from "stripe";
 
 
@@ -48,17 +56,32 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
+  const webhookSecrets = stripeWebhookSecretCandidates();
+  if (webhookSecrets.length === 0) {
+    console.error(
+      "Webhook signature verification failed: no webhook secrets configured"
+    );
+    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  }
+
   const stripe = getStripe();
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
+    const verified = verifyStripeWebhookSignature({
+      payload: body,
+      signature: sig,
+      secrets: webhookSecrets,
+      constructEvent: (payload, signature, secret) =>
+        stripe.webhooks.constructEvent(payload, signature, secret),
+    });
+    event = verified.event;
+    console.info(`[Stripe] Webhook signature matched ${verified.kind} secret`);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+    console.error(
+      "Webhook signature verification failed:",
+      err instanceof Error ? err.name : "invalid signature"
+    );
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -1539,6 +1562,21 @@ export async function POST(request: NextRequest) {
 
     // Tester-path consult-fee settlement. Other Connect accounts no-op inside
     // sendSoftsmokeTransferNotice before any email is built.
+    // Platform endpoint. Destination-charge transfers are created on the
+    // platform, so event.account is usually unset. Connect copies are
+    // accepted and cross-checked when event.account is present.
+    case "transfer.reversed": {
+      await handleTransferReversed(supabase, event);
+      break;
+    }
+
+    // Platform endpoint. Destination-charge disputes are on the platform
+    // charge (with or without on_behalf_of). No refund and no reversal.
+    case "charge.dispute.created": {
+      await handleChargeDisputeCreated(supabase, event);
+      break;
+    }
+
     case "transfer.created": {
       const transfer = event.data.object as Stripe.Transfer;
       await sendSoftsmokeTransferNotice(supabase, transfer, {
