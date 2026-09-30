@@ -94,10 +94,35 @@ describe("coming-soon page copy", () => {
     expect(html).not.toMatch(/coupon|promotion code/i);
   });
 
-  it("says prices exclude VAT in the pricing paragraph and the cost FAQ only", () => {
-    const line =
+  it("shows Prices exclude VAT beside every £99, £199 and £299", () => {
+    const legal =
       "Prices exclude VAT. VAT will only be added if we become VAT-registered.";
-    expect(html.split(line).length - 1).toBe(2);
+    expect(html.split(legal).length - 1).toBe(2);
+
+    const body = html.slice(html.indexOf("<body"));
+    const prices = [...body.matchAll(/£(?:99|199|299)\b/g)];
+    expect(prices.length).toBeGreaterThan(0);
+
+    const visibleTail = (index: number, maxChars: number) => {
+      let out = "";
+      let i = index;
+      while (i < body.length && out.length < maxChars) {
+        if (body[i] === "<") {
+          const end = body.indexOf(">", i);
+          if (end === -1) break;
+          i = end + 1;
+          continue;
+        }
+        out += body[i];
+        i += 1;
+      }
+      return out;
+    };
+
+    for (const match of prices) {
+      const tail = visibleTail(match.index ?? 0, 80);
+      expect(tail, tail).toContain("Prices exclude VAT");
+    }
   });
 
   it("waitlist form has empty, success, and error states and only asks for name and email", () => {
