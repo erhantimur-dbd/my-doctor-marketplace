@@ -46,10 +46,7 @@ export async function resolveInviteToken(token: string) {
 
   const { data: invite, error } = await adminSupabase
     .from("clinic_invitations")
-    .select(`
-      *,
-      organization:organizations(id, name, slug, logo_url, description)
-    `)
+    .select("*")
     .eq("token", token)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
@@ -57,11 +54,14 @@ export async function resolveInviteToken(token: string) {
 
   if (error || !invite) return { error: "Invitation not found or has expired", invite: null };
 
-  const org: any = Array.isArray(invite.organization)
-    ? invite.organization[0]
-    : invite.organization;
+  const supabase = await createClient();
+  const { data: organization } = await supabase
+    .from("public_organizations")
+    .select("id, name, slug, logo_url")
+    .eq("id", invite.organization_id)
+    .maybeSingle();
 
-  return { error: null, invite: { ...invite, organization: org } };
+  return { error: null, invite: { ...invite, organization } };
 }
 
 /** Check if an email already has an account */

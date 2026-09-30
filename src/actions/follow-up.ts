@@ -36,6 +36,7 @@ import {
   CARE_PLANS_DISABLED_MESSAGE,
   isCarePlansEnabled,
 } from "@/lib/launch/soft-launch";
+import { loadPublicFollowUpInvitation } from "@/lib/invitations/load-public-invitation";
 
 // ─── helpers ───────────────────────────────────────────────────
 
@@ -178,8 +179,12 @@ export async function createFollowUpInvitation(
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 14); // 14 days from now
 
-    // Insert invitation
-    const { data: invitation, error: insertError } = await supabase
+    // The doctor session above already checked the caller, the booking, and
+    // the patient. Fees are the values computed in this action. The service
+    // role writes the row: the final policy set has no doctor INSERT. Until
+    // 00130 the old insert policy may still exist; this path does not use it.
+    const admin = createAdminClient();
+    const { data: invitation, error: insertError } = await admin
       .from("follow_up_invitations")
       .insert({
         token,
@@ -275,42 +280,22 @@ export async function getFollowUpInvitationByToken(token: string) {
   }
 
   try {
-    // Use admin client to bypass RLS — access is gated by the secret token
-    const supabase = createAdminClient();
+    // Token lookup goes through the public RPC, which returns only the
+    // columns the invitation page renders. Expiry is still written with the
+    // service role so an anonymous visitor can retire a stale invitation.
+    const supabase = await createClient();
+    const invitation = await loadPublicFollowUpInvitation(supabase, token);
 
-    const { data: invitation, error } = await supabase
-      .from("follow_up_invitations")
-      .select(
-        `
-        *,
-        doctor:doctors!inner(
-          id,
-          slug,
-          clinic_name,
-          address,
-          consultation_types,
-          profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
-          location:locations(city, country_code),
-          specialties:doctor_specialties(
-            specialty:specialties(name_key),
-            is_primary
-          )
-        )
-      `
-      )
-      .eq("token", token)
-      .single();
-
-    if (error || !invitation) {
+    if (!invitation) {
       return { invitation: null, error: "Invitation not found." };
     }
 
-    // Lazy expiry: if pending and past expiration, mark as expired
     if (
       invitation.status === "pending" &&
       new Date(invitation.expires_at) < new Date()
     ) {
-      await supabase
+      const admin = createAdminClient();
+      await admin
         .from("follow_up_invitations")
         .update({ status: "expired" })
         .eq("id", invitation.id);
@@ -364,7 +349,8 @@ export async function createInvitationCheckout(
     }
 
     if (new Date(invitation.expires_at) < new Date()) {
-      await supabase
+      const adminSupabase = createAdminClient();
+      await adminSupabase
         .from("follow_up_invitations")
         .update({ status: "expired" })
         .eq("id", invitation.id);
@@ -570,11 +556,14 @@ export async function bookFollowUpSession(
       return { error: "Failed to book session. Please try again." };
     }
 
-    // Increment sessions_booked
-    await supabase
+    // sessions_booked is not a patient-writable column. The service role
+    // applies the increment after the ownership check above.
+    const adminSupabase = createAdminClient();
+    await adminSupabase
       .from("follow_up_invitations")
       .update({ sessions_booked: invitation.sessions_booked + 1 })
-      .eq("id", invitation.id);
+      .eq("id", invitation.id)
+      .eq("patient_id", user.id);
 
     // Create video room if video consultation
     if (booking.consultation_type === "video") {
