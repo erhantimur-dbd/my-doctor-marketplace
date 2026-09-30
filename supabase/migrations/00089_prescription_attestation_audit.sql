@@ -40,6 +40,11 @@
 -- Guards below make a second apply, or a partial earlier attempt, safe.
 -- The deny function is SECURITY INVOKER (it only raises). It is not a
 -- definer, so it is not granted to service_role only.
+--
+-- prescription_id is ON DELETE RESTRICT. A prescription that already has
+-- an audit row cannot be deleted: the delete fails with 23503 and the
+-- append-only trigger never runs. CREATE TABLE IF NOT EXISTS does not
+-- change an existing foreign key, so a CASCADE constraint is replaced.
 
 -- ===================== prescriptions: attestation columns =====================
 DO $cols$
@@ -115,7 +120,7 @@ ALTER TABLE public.prescriptions
 CREATE TABLE IF NOT EXISTS public.prescription_audit_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   prescription_id UUID NOT NULL
-    REFERENCES public.prescriptions(id) ON DELETE CASCADE,
+    REFERENCES public.prescriptions(id) ON DELETE RESTRICT,
   event_type TEXT NOT NULL
     CHECK (event_type IN ('issued', 'updated', 'cancelled')),
   actor_profile_id UUID NOT NULL REFERENCES public.profiles(id),
@@ -131,6 +136,48 @@ CREATE INDEX IF NOT EXISTS idx_prescription_audit_log_prescription
 
 CREATE INDEX IF NOT EXISTS idx_prescription_audit_log_actor
   ON public.prescription_audit_log (actor_profile_id, created_at);
+
+-- Replace a non-RESTRICT foreign key on prescription_id. A fresh CREATE
+-- above already adds RESTRICT, and this block leaves that constraint in
+-- place. CASCADE (or SET NULL / SET DEFAULT) is dropped and re-added.
+DO $fk$
+DECLARE
+  rec record;
+  v_has_restrict boolean := false;
+BEGIN
+  FOR rec IN
+    SELECT c.conname, c.confdeltype
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    JOIN pg_attribute a
+      ON a.attrelid = t.oid
+     AND a.attnum = ANY (c.conkey)
+     AND NOT a.attisdropped
+    WHERE n.nspname = 'public'
+      AND t.relname = 'prescription_audit_log'
+      AND c.contype = 'f'
+      AND a.attname = 'prescription_id'
+  LOOP
+    IF rec.confdeltype = 'r' THEN
+      v_has_restrict := true;
+    ELSE
+      EXECUTE format(
+        'ALTER TABLE public.prescription_audit_log DROP CONSTRAINT %I',
+        rec.conname
+      );
+    END IF;
+  END LOOP;
+
+  IF NOT v_has_restrict THEN
+    ALTER TABLE public.prescription_audit_log
+      ADD CONSTRAINT prescription_audit_log_prescription_id_fkey
+      FOREIGN KEY (prescription_id)
+      REFERENCES public.prescriptions(id)
+      ON DELETE RESTRICT;
+  END IF;
+END
+$fk$;
 
 -- Immutability: block UPDATE and DELETE for every role including the
 -- service role. The only way to alter the audit log is to drop and
@@ -164,12 +211,16 @@ CREATE TRIGGER prescription_audit_log_block_delete
   FOR EACH ROW
   EXECUTE FUNCTION public.prescription_audit_log_deny_mutation();
 
--- RLS: authenticated doctors can read audit rows for prescriptions they
--- wrote, and can insert a row only as themselves. Patients cannot (the
--- audit log is a doctor-facing governance artefact; patient-facing history
--- is the prescriptions row itself). No UPDATE or DELETE policy.
+-- RLS: authenticated doctors can read and insert audit rows only for
+-- prescriptions they wrote. Ownership matches prescriptions policies:
+-- prescriptions.doctor_id -> doctors.id, doctors.profile_id = auth.uid().
+-- Patients cannot (the audit log is a doctor-facing governance artefact;
+-- patient-facing history is the prescriptions row itself). No UPDATE or
+-- DELETE policy.
 -- service_role policies cover a role that does not bypass RLS. The
 -- append-only trigger still rejects UPDATE and DELETE for that role.
+-- Default privileges grant the table to anon and authenticated. Those
+-- grants are replaced below: authenticated may SELECT and INSERT only.
 ALTER TABLE public.prescription_audit_log ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS prescription_audit_log_doctor_select
@@ -191,7 +242,15 @@ DROP POLICY IF EXISTS prescription_audit_log_doctor_insert
 CREATE POLICY prescription_audit_log_doctor_insert
   ON public.prescription_audit_log
   FOR INSERT TO authenticated
-  WITH CHECK (actor_profile_id = (SELECT auth.uid()));
+  WITH CHECK (
+    actor_profile_id = (SELECT auth.uid())
+    AND prescription_id IN (
+      SELECT p.id
+      FROM public.prescriptions p
+      JOIN public.doctors d ON d.id = p.doctor_id
+      WHERE d.profile_id = (SELECT auth.uid())
+    )
+  );
 
 DROP POLICY IF EXISTS prescription_audit_log_service_select
   ON public.prescription_audit_log;
@@ -206,3 +265,7 @@ CREATE POLICY prescription_audit_log_service_insert
   ON public.prescription_audit_log
   FOR INSERT TO service_role
   WITH CHECK (true);
+
+REVOKE ALL ON TABLE public.prescription_audit_log FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT ON TABLE public.prescription_audit_log TO authenticated;
+GRANT ALL ON TABLE public.prescription_audit_log TO service_role;

@@ -3,171 +3,52 @@
 -- UK CQC compliance workstream 3.4 requires that the specialty finder
 -- treats requests and responses as ephemeral: no raw user input is
 -- stored, because storing it would turn this feature into a medical
--- record. The cache row still exists (keyed by a sha256 hash of the
--- input) so repeat queries are fast, but the plaintext input is gone.
+-- record. The cache is regenerable (keyed by a sha256 hash of the
+-- input), so this file deletes every row and then drops the plaintext
+-- columns so a later write cannot store raw text again.
 --
--- Prod still has ai_symptom_cache.input_text (about 56 rows). The imported
--- prod migrations enable RLS on this table and do not drop the column.
--- 00034 creates input_text, so a fresh replay still has it when this file
--- runs. DROP COLUMN IF EXISTS covers both.
+-- Prod still has ai_symptom_cache.input_text. The imported prod
+-- migrations enable RLS on this table and do not drop the column.
+-- 00034 creates input_text, so a fresh replay still has it when this
+-- file runs. DROP COLUMN IF EXISTS covers both. A second apply deletes
+-- zero rows and the column drops are no-ops.
 --
--- This file does not copy the plaintext into another table or a backup
--- column. Before the drop it:
---   * nulls free-text jsonb keys (urgencyReason and the other names below)
---   * nulls any jsonb string equal to input_text, containing it, or longer
---     than 80 characters (specialty slugs and enums are shorter)
---   * drops input_text and leftover rename/backup column names
--- ai_search_cache.input_text is a different cache. 00120 drops that column.
--- This file does not read or write ai_search_cache.
+-- This file does not scrub jsonb and does not create a helper function.
+-- Any earlier copy of public._md360_scrub_symptom_json is dropped and
+-- not replaced. ai_search_cache.input_text is a different cache. 00120
+-- drops that column. This file does not read or write ai_search_cache.
 --
--- The helper below is dropped in this same migration.
+-- Access is service_role only. 00070 grants authenticated a SELECT
+-- policy, and prod's 20260308011124 adds a service_role policy under a
+-- different name. Every policy is dropped here, then one service_role
+-- policy is created. anon and authenticated lose table privileges.
+-- On a fresh replay, 20260308011124 runs after the numbered files and
+-- adds "Service role manages ai_symptom_cache" again. That policy is
+-- also FOR ALL TO service_role. It does not grant anon or authenticated.
 
 DROP FUNCTION IF EXISTS public._md360_scrub_symptom_json(jsonb, text);
 
-CREATE FUNCTION public._md360_scrub_symptom_json(payload jsonb, raw text)
-RETURNS jsonb
-LANGUAGE plpgsql
-STABLE
-SET search_path = ''
-AS $fn$
-DECLARE
-  key text;
-  val jsonb;
-  scrubbed jsonb;
-  out jsonb;
-  raw_text text;
-  string_value text;
-  denylist text[] := ARRAY[
-    'urgencyreason',
-    'urgency_reason',
-    'input',
-    'input_text',
-    'inputtext',
-    'raw',
-    'raw_input',
-    'query',
-    'prompt',
-    'description',
-    'text',
-    'user_input',
-    'userinput',
-    'symptom',
-    'symptoms',
-    'patient_input',
-    'message'
-  ];
-BEGIN
-  IF payload IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  raw_text := btrim(coalesce(raw, ''));
-
-  IF jsonb_typeof(payload) = 'object' THEN
-    out := '{}'::jsonb;
-    FOR key, val IN
-      SELECT entry.key, entry.value
-      FROM jsonb_each(payload) AS entry(key, value)
-    LOOP
-      IF lower(key) = ANY (denylist) THEN
-        scrubbed := 'null'::jsonb;
-      ELSE
-        scrubbed := public._md360_scrub_symptom_json(val, raw);
-      END IF;
-      out := jsonb_set(out, ARRAY[key], coalesce(scrubbed, 'null'::jsonb), true);
-    END LOOP;
-    RETURN out;
-  END IF;
-
-  IF jsonb_typeof(payload) = 'array' THEN
-    SELECT coalesce(
-      jsonb_agg(public._md360_scrub_symptom_json(elem, raw)),
-      '[]'::jsonb
-    )
-    INTO out
-    FROM jsonb_array_elements(payload) AS elem;
-    RETURN out;
-  END IF;
-
-  IF jsonb_typeof(payload) = 'string' THEN
-    string_value := payload #>> '{}';
-    IF raw_text <> '' AND (
-      string_value = raw_text
-      OR (
-        char_length(raw_text) >= 8
-        AND position(raw_text IN string_value) > 0
-      )
-    ) THEN
-      RETURN 'null'::jsonb;
-    END IF;
-    IF char_length(string_value) > 80 THEN
-      RETURN 'null'::jsonb;
-    END IF;
-    RETURN payload;
-  END IF;
-
-  RETURN payload;
-END;
-$fn$;
-
 DO $purge$
 DECLARE
-  source_col text;
-  jsonb_col text;
-  candidate text;
-  leftover bigint;
+  v_before bigint;
+  v_after bigint;
 BEGIN
-  source_col := NULL;
-  FOREACH candidate IN ARRAY ARRAY[
-    'input_text',
-    'input_text_backup',
-    'input_text_old',
-    'raw_input',
-    'symptom_text'
-  ]
-  LOOP
-    IF EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_schema = 'public'
-        AND table_name = 'ai_symptom_cache'
-        AND column_name = candidate
-    ) THEN
-      source_col := candidate;
-      EXIT;
-    END IF;
-  END LOOP;
+  IF to_regclass('public.ai_symptom_cache') IS NULL THEN
+    RAISE EXCEPTION 'public.ai_symptom_cache does not exist';
+  END IF;
 
-  FOR jsonb_col IN
-    SELECT column_name
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = 'ai_symptom_cache'
-      AND udt_name = 'jsonb'
-  LOOP
-    IF source_col IS NOT NULL THEN
-      EXECUTE format(
-        'UPDATE public.ai_symptom_cache SET %1$I = public._md360_scrub_symptom_json(%1$I, %2$I)',
-        jsonb_col,
-        source_col
-      );
-      EXECUTE format(
-        'SELECT count(*) FROM public.ai_symptom_cache WHERE char_length(btrim(%1$I)) >= 8 AND strpos(%2$I::text, to_jsonb(%1$I)::text) > 0',
-        source_col,
-        jsonb_col
-      ) INTO leftover;
-      IF leftover > 0 THEN
-        RAISE EXCEPTION
-          'ai_symptom_cache.% still contains raw symptom text after scrub (% rows)',
-          jsonb_col, leftover;
-      END IF;
-    ELSE
-      EXECUTE format(
-        'UPDATE public.ai_symptom_cache SET %1$I = public._md360_scrub_symptom_json(%1$I, NULL::text)',
-        jsonb_col
-      );
-    END IF;
-  END LOOP;
+  SELECT count(*) INTO v_before FROM public.ai_symptom_cache;
+  RAISE NOTICE 'ai_symptom_cache row count before delete: %', v_before;
+
+  DELETE FROM public.ai_symptom_cache;
+
+  SELECT count(*) INTO v_after FROM public.ai_symptom_cache;
+  RAISE NOTICE 'ai_symptom_cache row count after delete: %', v_after;
+
+  IF v_after <> 0 THEN
+    RAISE EXCEPTION
+      'ai_symptom_cache still has % rows after delete', v_after;
+  END IF;
 END
 $purge$;
 
@@ -177,4 +58,34 @@ ALTER TABLE public.ai_symptom_cache DROP COLUMN IF EXISTS input_text_old;
 ALTER TABLE public.ai_symptom_cache DROP COLUMN IF EXISTS raw_input;
 ALTER TABLE public.ai_symptom_cache DROP COLUMN IF EXISTS symptom_text;
 
-DROP FUNCTION IF EXISTS public._md360_scrub_symptom_json(jsonb, text);
+-- ===================== service_role only =====================
+ALTER TABLE public.ai_symptom_cache ENABLE ROW LEVEL SECURITY;
+
+DO $policies$
+DECLARE
+  pol record;
+BEGIN
+  FOR pol IN
+    SELECT policyname
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'ai_symptom_cache'
+  LOOP
+    EXECUTE format(
+      'DROP POLICY IF EXISTS %I ON public.ai_symptom_cache',
+      pol.policyname
+    );
+  END LOOP;
+END
+$policies$;
+
+DROP POLICY IF EXISTS ai_symptom_cache_service_role ON public.ai_symptom_cache;
+CREATE POLICY ai_symptom_cache_service_role
+  ON public.ai_symptom_cache
+  FOR ALL
+  TO service_role
+  USING (true)
+  WITH CHECK (true);
+
+REVOKE ALL ON TABLE public.ai_symptom_cache FROM PUBLIC, anon, authenticated;
+GRANT ALL ON TABLE public.ai_symptom_cache TO service_role;

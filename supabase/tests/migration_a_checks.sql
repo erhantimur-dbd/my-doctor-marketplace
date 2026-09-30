@@ -20,9 +20,19 @@
 --       the trigger error
 --   (d) the doctor owner updates bio — must succeed
 --   raw_symptom_text_rows — rows still holding raw symptom text — expected 0
+--   cross_doctor_audit_insert — doctor A cannot insert an audit row for
+--       doctor B's prescription. SKIP (NOTICE, not a failure) when fewer
+--       than two doctors exist.
+--   anon_prescription_audit_log_privileges — anon has no table privileges
+--   prescription_delete_with_audit_rows — deleting a prescription that has
+--       audit rows fails with 23503, not the append-only error
+--   ai_symptom_cache_authenticated_denied — authenticated is permission
+--       denied (42501) and receives no rows
+--   ai_symptom_cache_service_role_read — service_role can read a row
 --
 -- Each case is RAISE NOTICE'd and stored in migration_a_check_results.
--- A failing case raises at the end, after the SELECT results.
+-- SKIP is allowed only for the cross-doctor case. Any other outcome that
+-- is not PASS raises at the end, after the SELECT results.
 
 DROP TABLE IF EXISTS migration_a_check_results;
 CREATE TEMP TABLE migration_a_check_results (
@@ -75,7 +85,14 @@ DO $checks$
 DECLARE
   v_doctor uuid;
   v_doctor_profile uuid;
+  v_doctor_b uuid;
+  v_doctor_b_profile uuid;
   v_admin uuid;
+  v_rx uuid;
+  v_hash text;
+  v_err text;
+  v_sqlstate text;
+  v_anon_priv boolean;
   v_rows integer;
   v_part bigint;
   v_raw bigint := 0;
@@ -109,6 +126,15 @@ BEGIN
   FROM public.doctors d
   JOIN public.profiles p ON p.id = d.profile_id
   WHERE p.role = 'doctor'
+  ORDER BY d.created_at NULLS LAST, d.id
+  LIMIT 1;
+
+  SELECT d.id, d.profile_id
+  INTO v_doctor_b, v_doctor_b_profile
+  FROM public.doctors d
+  JOIN public.profiles p ON p.id = d.profile_id
+  WHERE p.role = 'doctor'
+    AND d.id IS DISTINCT FROM v_doctor
   ORDER BY d.created_at NULLS LAST, d.id
   LIMIT 1;
 
@@ -404,6 +430,301 @@ BEGIN
     END;
   END IF;
 
+  -- anon must not hold any privilege on the audit log, including a
+  -- privilege inherited from PUBLIC.
+  IF to_regclass('public.prescription_audit_log') IS NULL THEN
+    PERFORM pg_temp.record_case(
+      'anon_prescription_audit_log_privileges',
+      'FAIL',
+      'public.prescription_audit_log does not exist'
+    );
+  ELSE
+    v_anon_priv :=
+      has_table_privilege('anon', 'public.prescription_audit_log', 'SELECT')
+      OR has_table_privilege('anon', 'public.prescription_audit_log', 'INSERT')
+      OR has_table_privilege('anon', 'public.prescription_audit_log', 'UPDATE')
+      OR has_table_privilege('anon', 'public.prescription_audit_log', 'DELETE')
+      OR has_table_privilege('anon', 'public.prescription_audit_log', 'TRUNCATE')
+      OR has_table_privilege('anon', 'public.prescription_audit_log', 'REFERENCES')
+      OR has_table_privilege('anon', 'public.prescription_audit_log', 'TRIGGER');
+    IF v_anon_priv THEN
+      PERFORM pg_temp.record_case(
+        'anon_prescription_audit_log_privileges',
+        'FAIL',
+        'anon still has a privilege on prescription_audit_log'
+      );
+    ELSE
+      PERFORM pg_temp.record_case(
+        'anon_prescription_audit_log_privileges',
+        'PASS',
+        'anon has no privileges on prescription_audit_log'
+      );
+    END IF;
+  END IF;
+
+  -- Doctor A must not insert an audit row for doctor B's prescription.
+  -- One doctor is not a failure: the case is skipped.
+  IF v_doctor IS NULL THEN
+    PERFORM pg_temp.record_case(
+      'cross_doctor_audit_insert',
+      'FAIL',
+      'no doctors row whose profile role is doctor'
+    );
+  ELSIF v_doctor_b IS NULL THEN
+    RAISE NOTICE
+      'skipping cross-doctor audit insert: only one doctor whose profile role is doctor';
+    PERFORM pg_temp.record_case(
+      'cross_doctor_audit_insert',
+      'SKIP',
+      'only one doctor; cross-doctor insert not exercised'
+    );
+  ELSE
+    BEGIN
+      EXECUTE 'RESET ROLE';
+      INSERT INTO public.prescriptions (doctor_id, patient_id)
+      VALUES (v_doctor_b, v_doctor_b_profile)
+      RETURNING id INTO v_rx;
+
+      PERFORM pg_temp.set_jwt(v_doctor_profile, 'authenticated');
+      EXECUTE 'SET LOCAL ROLE authenticated';
+      INSERT INTO public.prescription_audit_log (
+        prescription_id, event_type, actor_profile_id, snapshot
+      ) VALUES (
+        v_rx, 'issued', v_doctor_profile, '{"source":"migration_a_checks"}'::jsonb
+      );
+      EXECUTE 'RESET ROLE';
+      PERFORM pg_temp.record_case(
+        'cross_doctor_audit_insert',
+        'FAIL',
+        format(
+          'doctor %s inserted an audit row on doctor %s prescription %s',
+          v_doctor_profile, v_doctor_b_profile, v_rx
+        )
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_sqlstate := SQLSTATE;
+      v_err := SQLERRM;
+      BEGIN
+        EXECUTE 'RESET ROLE';
+      EXCEPTION WHEN OTHERS THEN
+        NULL;
+      END;
+      IF position('row-level security' IN v_err) > 0 THEN
+        PERFORM pg_temp.record_case(
+          'cross_doctor_audit_insert',
+          'PASS',
+          format(
+            'doctor %s blocked on doctor %s prescription (%s %s)',
+            v_doctor_profile, v_doctor_b_profile, v_sqlstate, v_err
+          )
+        );
+      ELSE
+        PERFORM pg_temp.record_case(
+          'cross_doctor_audit_insert',
+          'FAIL',
+          format('%s %s', v_sqlstate, v_err)
+        );
+      END IF;
+    END;
+  END IF;
+
+  -- Deleting a prescription that has audit rows is a foreign-key
+  -- violation (23503). The append-only trigger must not be the error.
+  IF v_doctor IS NULL THEN
+    PERFORM pg_temp.record_case(
+      'prescription_delete_with_audit_rows',
+      'FAIL',
+      'no doctors row whose profile role is doctor'
+    );
+  ELSE
+    BEGIN
+      EXECUTE 'RESET ROLE';
+      INSERT INTO public.prescriptions (doctor_id, patient_id)
+      VALUES (v_doctor, v_doctor_profile)
+      RETURNING id INTO v_rx;
+
+      INSERT INTO public.prescription_audit_log (
+        prescription_id, event_type, actor_profile_id, snapshot
+      ) VALUES (
+        v_rx, 'issued', v_doctor_profile, '{"source":"migration_a_checks"}'::jsonb
+      );
+
+      DELETE FROM public.prescriptions WHERE id = v_rx;
+
+      PERFORM pg_temp.record_case(
+        'prescription_delete_with_audit_rows',
+        'FAIL',
+        format('delete of prescription %s succeeded; expected 23503', v_rx)
+      );
+    EXCEPTION
+      WHEN foreign_key_violation THEN
+        v_sqlstate := SQLSTATE;
+        v_err := SQLERRM;
+        BEGIN
+          EXECUTE 'RESET ROLE';
+        EXCEPTION WHEN OTHERS THEN
+          NULL;
+        END;
+        IF v_sqlstate = '23503'
+           AND position('append-only' IN v_err) = 0
+           AND position('prescription_audit_log' IN v_err) > 0 THEN
+          PERFORM pg_temp.record_case(
+            'prescription_delete_with_audit_rows',
+            'PASS',
+            format('%s %s', v_sqlstate, v_err)
+          );
+        ELSE
+          PERFORM pg_temp.record_case(
+            'prescription_delete_with_audit_rows',
+            'FAIL',
+            format('%s %s', v_sqlstate, v_err)
+          );
+        END IF;
+      WHEN OTHERS THEN
+        v_sqlstate := SQLSTATE;
+        v_err := SQLERRM;
+        BEGIN
+          EXECUTE 'RESET ROLE';
+        EXCEPTION WHEN OTHERS THEN
+          NULL;
+        END;
+        PERFORM pg_temp.record_case(
+          'prescription_delete_with_audit_rows',
+          'FAIL',
+          format('%s %s', v_sqlstate, v_err)
+        );
+    END;
+  END IF;
+
+  -- ai_symptom_cache: authenticated is denied; service_role can read.
+  IF to_regclass('public.ai_symptom_cache') IS NULL THEN
+    PERFORM pg_temp.record_case(
+      'ai_symptom_cache_authenticated_denied',
+      'FAIL',
+      'public.ai_symptom_cache does not exist'
+    );
+    PERFORM pg_temp.record_case(
+      'ai_symptom_cache_service_role_read',
+      'FAIL',
+      'public.ai_symptom_cache does not exist'
+    );
+  ELSE
+    BEGIN
+      EXECUTE 'RESET ROLE';
+      v_hash := 'migration-a-' || replace(gen_random_uuid()::text, '-', '');
+      INSERT INTO public.ai_symptom_cache (input_hash, locale, result, expires_at)
+      VALUES (
+        v_hash,
+        'en',
+        '{"primarySpecialty":"general-practice"}'::jsonb,
+        now() + interval '1 day'
+      );
+    EXCEPTION WHEN OTHERS THEN
+      v_sqlstate := SQLSTATE;
+      v_err := SQLERRM;
+      v_hash := NULL;
+      PERFORM pg_temp.record_case(
+        'ai_symptom_cache_authenticated_denied',
+        'FAIL',
+        format('could not seed a cache row: %s %s', v_sqlstate, v_err)
+      );
+      PERFORM pg_temp.record_case(
+        'ai_symptom_cache_service_role_read',
+        'FAIL',
+        format('could not seed a cache row: %s %s', v_sqlstate, v_err)
+      );
+    END;
+
+    IF v_hash IS NOT NULL THEN
+      BEGIN
+        PERFORM pg_temp.set_jwt(NULL, 'authenticated');
+        EXECUTE 'SET LOCAL ROLE authenticated';
+        SELECT count(*) INTO v_part FROM public.ai_symptom_cache;
+        EXECUTE 'RESET ROLE';
+        PERFORM pg_temp.record_case(
+          'ai_symptom_cache_authenticated_denied',
+          'FAIL',
+          format(
+            'authenticated read %s rows without permission denied',
+            v_part
+          )
+        );
+      EXCEPTION WHEN insufficient_privilege THEN
+        v_sqlstate := SQLSTATE;
+        v_err := SQLERRM;
+        BEGIN
+          EXECUTE 'RESET ROLE';
+        EXCEPTION WHEN OTHERS THEN
+          NULL;
+        END;
+        IF v_sqlstate = '42501' THEN
+          PERFORM pg_temp.record_case(
+            'ai_symptom_cache_authenticated_denied',
+            'PASS',
+            format(
+              'authenticated permission denied (%s); 0 rows returned (%s)',
+              v_sqlstate, v_err
+            )
+          );
+        ELSE
+          PERFORM pg_temp.record_case(
+            'ai_symptom_cache_authenticated_denied',
+            'FAIL',
+            format('%s %s', v_sqlstate, v_err)
+          );
+        END IF;
+      WHEN OTHERS THEN
+        v_sqlstate := SQLSTATE;
+        v_err := SQLERRM;
+        BEGIN
+          EXECUTE 'RESET ROLE';
+        EXCEPTION WHEN OTHERS THEN
+          NULL;
+        END;
+        PERFORM pg_temp.record_case(
+          'ai_symptom_cache_authenticated_denied',
+          'FAIL',
+          format('%s %s', v_sqlstate, v_err)
+        );
+      END;
+
+      BEGIN
+        PERFORM pg_temp.set_jwt(NULL, 'service_role');
+        EXECUTE 'SET LOCAL ROLE service_role';
+        SELECT count(*) INTO v_part
+        FROM public.ai_symptom_cache
+        WHERE input_hash = v_hash;
+        EXECUTE 'RESET ROLE';
+        IF v_part = 1 THEN
+          PERFORM pg_temp.record_case(
+            'ai_symptom_cache_service_role_read',
+            'PASS',
+            format('service_role read the seeded cache row %s', v_hash)
+          );
+        ELSE
+          PERFORM pg_temp.record_case(
+            'ai_symptom_cache_service_role_read',
+            'FAIL',
+            format('service_role read %s rows for %s', v_part, v_hash)
+          );
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        v_sqlstate := SQLSTATE;
+        v_err := SQLERRM;
+        BEGIN
+          EXECUTE 'RESET ROLE';
+        EXCEPTION WHEN OTHERS THEN
+          NULL;
+        END;
+        PERFORM pg_temp.record_case(
+          'ai_symptom_cache_service_role_read',
+          'FAIL',
+          format('%s %s', v_sqlstate, v_err)
+        );
+      END;
+    END IF;
+  END IF;
+
   -- Raw symptom text still stored after 00090. Expected 0.
   -- Counts plaintext columns on ai_symptom_cache (except the hash and locale),
   -- jsonb strings longer than 80 characters, denylist keys that still hold a
@@ -571,7 +892,7 @@ DECLARE
 BEGIN
   SELECT count(*) INTO v_failed
   FROM migration_a_check_results
-  WHERE outcome <> 'PASS';
+  WHERE outcome NOT IN ('PASS', 'SKIP');
 
   IF v_failed > 0 THEN
     RAISE EXCEPTION 'migration A checks failed (% case(s))', v_failed;
