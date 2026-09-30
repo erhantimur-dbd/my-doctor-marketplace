@@ -15,7 +15,8 @@ import {
 import {
   refundAdminBookingPayment,
   refundConsultSplit,
-  storedConsultPaidParts,
+  bookingRefundSettlementPatch,
+  remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
@@ -737,11 +738,7 @@ export async function adminRefundBooking(
 
   const { error: updateError } = await supabase
     .from("bookings")
-    .update({
-      status: "refunded",
-      refunded_at: new Date().toISOString(),
-      refund_amount_cents: refundAmount,
-    })
+    .update(settled.settlementPatch)
     .eq("id", bookingId);
 
   if (updateError) return { error: safeError(updateError) };
@@ -2185,7 +2182,8 @@ export async function adminCancelBooking(
   // Same split as a patient cancel: credit back to the wallet, card to the card.
   let refundAmountCents = 0;
   let refundRef: string | null = null;
-  const paidParts = storedConsultPaidParts(booking);
+  let refundSettlementPatch: Record<string, unknown> | null = null;
+  const paidParts = remainingConsultPaidParts(booking);
   if (
     refundPercent > 0 &&
     booking.paid_at &&
@@ -2202,10 +2200,12 @@ export async function adminCancelBooking(
         cardPaidCents: paidParts.cardPaidCents,
         creditPaidCents: paidParts.creditPaidCents,
         refundPercent,
+        alreadyRefundedCents: Number(booking.refund_amount_cents || 0),
         sourceType: "refund",
       });
       refundAmountCents = settled.cardRefundedToCardCents + settled.walletCreditCents;
       refundRef = settled.cardRefundId;
+      refundSettlementPatch = bookingRefundSettlementPatch(booking, settled);
     } catch (err: any) {
       log.error("Admin cancel refund error:", { err: err });
       return { error: safeError(err) };
@@ -2217,11 +2217,8 @@ export async function adminCancelBooking(
     status: BOOKING_STATUSES.CANCELLED_DOCTOR,
     cancelled_at: new Date().toISOString(),
     cancellation_reason: reason || "Cancelled by admin",
+    ...(refundSettlementPatch || {}),
   };
-  if (refundAmountCents > 0) {
-    updateData.refund_amount_cents = refundAmountCents;
-    updateData.refunded_at = new Date().toISOString();
-  }
 
   await adminSupabase
     .from("bookings")

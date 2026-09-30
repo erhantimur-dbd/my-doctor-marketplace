@@ -62,6 +62,8 @@ import {
 } from "@/lib/stripe/wallet-credit-share";
 import {
   refundConsultSplit,
+  bookingRefundSettlementPatch,
+  remainingConsultPaidParts,
   storedConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import {
@@ -848,16 +850,17 @@ export async function cancelBooking(input: CancelBookingInput) {
       );
 
     // Credit always returns to the wallet. Card returns to the card unless
-    // the patient chose wallet. Amounts come from the stored card and credit
-    // parts, not a single percentage of the consultation total.
-    const paidParts = storedConsultPaidParts(booking);
+    // the patient chose wallet. Amounts come from remaining unsettled parts.
+    const originalPaid = storedConsultPaidParts(booking);
+    const paidParts = remainingConsultPaidParts(booking);
     const stripeChargedAmount =
-      paidParts.cardPaidCents + paidParts.creditPaidCents;
+      originalPaid.cardPaidCents + originalPaid.creditPaidCents;
 
     let walletCreditCents = 0;
     let cardRefundedToCardCents = 0;
     let refundRef: string | null = null;
     const refundDestination = parsed.data.refund_destination || "bank";
+    let refundSettlementPatch: Record<string, unknown> | null = null;
 
     if (
       refundPercent > 0 &&
@@ -873,11 +876,13 @@ export async function cancelBooking(input: CancelBookingInput) {
         cardPaidCents: paidParts.cardPaidCents,
         creditPaidCents: paidParts.creditPaidCents,
         refundPercent,
+        alreadyRefundedCents: Number(booking.refund_amount_cents || 0),
         sourceType: "refund",
       });
       walletCreditCents = settled.walletCreditCents;
       cardRefundedToCardCents = settled.cardRefundedToCardCents;
       refundRef = settled.cardRefundId;
+      refundSettlementPatch = bookingRefundSettlementPatch(booking, settled);
     }
 
     // Update booking status
@@ -887,6 +892,7 @@ export async function cancelBooking(input: CancelBookingInput) {
         status: BOOKING_STATUSES.CANCELLED_PATIENT,
         cancelled_at: new Date().toISOString(),
         cancellation_reason: parsed.data.reason || null,
+        ...(refundSettlementPatch || {}),
       })
       .eq("id", booking.id);
 
@@ -1125,8 +1131,9 @@ export async function cancelAndRebook(input: {
       doctor.cancellation_policy
     );
 
-    const paidParts = storedConsultPaidParts(oldBooking);
+    const paidParts = remainingConsultPaidParts(oldBooking);
     let walletCreditCents = 0;
+    let refundSettlementPatch: Record<string, unknown> | null = null;
 
     // 3. Credit always returns to the wallet. Cancel-and-rebook puts the card
     // part there too, and claws the doctor's card transfer back once.
@@ -1144,9 +1151,11 @@ export async function cancelAndRebook(input: {
         cardPaidCents: paidParts.cardPaidCents,
         creditPaidCents: paidParts.creditPaidCents,
         refundPercent,
+        alreadyRefundedCents: Number(oldBooking.refund_amount_cents || 0),
         sourceType: "cancel_rebook",
       });
       walletCreditCents = settled.walletCreditCents;
+      refundSettlementPatch = bookingRefundSettlementPatch(oldBooking, settled);
     }
 
     // 4. Cancel old booking
@@ -1156,6 +1165,7 @@ export async function cancelAndRebook(input: {
         status: BOOKING_STATUSES.CANCELLED_PATIENT,
         cancelled_at: new Date().toISOString(),
         cancellation_reason: "Cancelled and rebooked by patient",
+        ...(refundSettlementPatch || {}),
       })
       .eq("id", oldBooking.id);
 

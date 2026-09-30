@@ -245,7 +245,11 @@
     "booking_type_video": "Vidéo",
     "booking_type_in_person": "En cabinet",
     "booking_from": "À partir de",
-    "booking_verified": "Vérifié"
+    "booking_verified": "Vérifié",
+    "signup_terms_prefix": "J’accepte les",
+    "terms_link": "Conditions d’utilisation",
+    "privacy_link": "Politique de confidentialité",
+    "and": "et"
   },
   "doctor": {
     "verified": "Medecin Verifie",

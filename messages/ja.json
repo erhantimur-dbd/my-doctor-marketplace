@@ -489,7 +489,11 @@
     "booking_type_video": "ビデオ",
     "booking_type_in_person": "対面",
     "booking_from": "〜から",
-    "booking_verified": "認証済み"
+    "booking_verified": "認証済み",
+    "signup_terms_prefix": "以下に同意します：",
+    "terms_link": "利用規約",
+    "privacy_link": "プライバシーポリシー",
+    "and": "および"
   },
   "dashboard": {
     "welcome": "おかえりなさい、{name}さん",

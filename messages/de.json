@@ -245,7 +245,11 @@
     "booking_type_video": "Video",
     "booking_type_in_person": "Vor Ort",
     "booking_from": "Ab",
-    "booking_verified": "Verifiziert"
+    "booking_verified": "Verifiziert",
+    "signup_terms_prefix": "Ich stimme den",
+    "terms_link": "Nutzungsbedingungen",
+    "privacy_link": "Datenschutzrichtlinie",
+    "and": "und"
   },
   "footer": {
     "brand_description": "Entdecken Sie verifizierte Fachärzte in ganz Europa mit transparenten Preisen und sofortiger Online-Buchung.",

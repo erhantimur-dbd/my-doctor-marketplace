@@ -297,9 +297,14 @@ describe("consult charges set on_behalf_of", () => {
       "src/actions/treatment-plan.ts",
     ]) {
       const src = read(rel);
+      // Capability-gated card checkout must not also debit/settle wallet credit
+      // on the same charge path. Reading wallet_credit_applied_cents for refund
+      // rebase (clinic cheaper reschedule) is fine.
       const combinesWalletAndGate =
         src.includes("doctorCanAcceptConsultCardPayment") &&
-        (src.includes("debitWallet") || src.includes("wallet_credit_applied_cents"));
+        (src.includes("debitWallet") ||
+          src.includes("runFullCreditSettlement") ||
+          src.includes("settlePartCreditAfterCardPayment"));
       expect(combinesWalletAndGate, rel).toBe(false);
     }
   });

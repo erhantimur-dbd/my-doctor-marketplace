@@ -245,7 +245,11 @@
     "booking_type_video": "Görüntülü",
     "booking_type_in_person": "Yüz yüze",
     "booking_from": "Başlangıç",
-    "booking_verified": "Onaylı"
+    "booking_verified": "Onaylı",
+    "signup_terms_prefix": "Şunları kabul ediyorum:",
+    "terms_link": "Hizmet Şartları",
+    "privacy_link": "Gizlilik Politikası",
+    "and": "ve"
   },
   "doctor": {
     "verified": "Dogrulanmis Doktor",
