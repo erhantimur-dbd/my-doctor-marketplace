@@ -5,9 +5,10 @@ import { describe, expect, it } from "vitest";
 const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
 
 /**
- * Availability RPCs stay executable by anon. Everything else that is still
- * anon-executable is flagged: RLS helpers, autocomplete called by the user
- * client, and the auth.users signup trigger.
+ * Availability RPCs stay executable by anon.
+ * RLS helpers stay executable by anon because policies invoke them as the
+ * caller (anon included). Autocomplete RPCs stay executable because the
+ * user/anon client calls them.
  */
 const AVAILABILITY_ALLOWLIST = new Set([
   "get_available_slots",
@@ -18,6 +19,11 @@ const AVAILABILITY_ALLOWLIST = new Set([
   "get_multi_day_available_slots_batch",
 ]);
 
+/**
+ * rls_* and get_user_org_ids are called from RLS policies as the invoker.
+ * Revoking anon EXECUTE would break those policies. search_* stays because
+ * the anon/user client calls it directly.
+ */
 const FLAGGED_ANON_KEEP = new Set([
   "rls_is_admin",
   "rls_is_own_doctor",
@@ -28,7 +34,6 @@ const FLAGGED_ANON_KEEP = new Set([
   "get_user_org_ids",
   "search_allergies",
   "search_chronic_conditions",
-  "handle_new_user",
 ]);
 
 type FnState = {
@@ -406,6 +411,92 @@ describe("public SECURITY DEFINER final state", () => {
     }
     const claims = fns.filter((fn) => fn.name === "claim_founding_member");
     expect(claims.map((fn) => fn.signature)).toEqual(["uuid,timestamptz"]);
+
+    const nextval = fns.find((fn) => fn.name === "nextval_invoice_number");
+    expect(nextval).toBeTruthy();
+    expect(anonExecutable(nextval!)).toBe(false);
+    expect(nextval!.authenticated).toBe(true);
+
+    for (const name of [
+      "handle_new_user",
+      "update_doctor_rating",
+      "update_ticket_updated_at",
+      "generate_booking_number",
+    ]) {
+      const fn = fns.find((item) => item.name === name);
+      expect(fn, name).toBeTruthy();
+      expect(anonExecutable(fn!), name).toBe(false);
+    }
+  });
+});
+
+type TriggerState = {
+  name: string;
+  table: string;
+  timing: string;
+  functionName: string;
+};
+
+function attachedTriggers(): Map<string, TriggerState> {
+  const files = readdirSync(MIGRATIONS_DIR)
+    .filter((filename) => /^\d+_.*\.sql$/.test(filename))
+    .sort();
+  const triggers = new Map<string, TriggerState>();
+  for (const filename of files) {
+    const sql = readFileSync(join(MIGRATIONS_DIR, filename), "utf8");
+    for (const statement of statementsOf(sql)) {
+      const shell = shellOf(statement);
+      const drop = shell.match(
+        /\bdrop\s+trigger\s+(?:if\s+exists\s+)?([A-Za-z_][\w$]*)\s+on\s+((?:auth|public)\.[A-Za-z_][\w$]*)/i
+      );
+      if (drop) {
+        triggers.delete(drop[1].toLowerCase());
+        continue;
+      }
+      const create = shell.match(
+        /\bcreate\s+trigger\s+([A-Za-z_][\w$]*)\s+([\s\S]*?)\s+on\s+((?:auth|public)\.[A-Za-z_][\w$]*)\s+([\s\S]*?)\bexecute\s+(?:function|procedure)\s+(?:public\.)?([A-Za-z_][\w$]*)\s*\(/i
+      );
+      if (!create) continue;
+      triggers.set(create[1].toLowerCase(), {
+        name: create[1].toLowerCase(),
+        timing: `${create[2]} ${create[4]}`.replace(/\s+/g, " ").trim().toLowerCase(),
+        table: create[3].toLowerCase(),
+        functionName: create[5].toLowerCase(),
+      });
+    }
+  }
+  return triggers;
+}
+
+describe("trigger functions stay attached", () => {
+  const triggers = attachedTriggers();
+
+  it("still fires handle_new_user, rating, ticket, and booking-number triggers", () => {
+    expect(triggers.get("on_auth_user_created")).toMatchObject({
+      table: "auth.users",
+      functionName: "handle_new_user",
+    });
+    expect(triggers.get("on_auth_user_created")?.timing).toContain("after insert");
+    expect(triggers.get("on_auth_user_created")?.timing).toContain("for each row");
+
+    expect(triggers.get("trg_update_doctor_rating")).toMatchObject({
+      table: "public.reviews",
+      functionName: "update_doctor_rating",
+    });
+    expect(triggers.get("trg_update_doctor_rating")?.timing).toContain("for each row");
+
+    expect(triggers.get("trigger_update_ticket_on_message")).toMatchObject({
+      table: "public.support_messages",
+      functionName: "update_ticket_updated_at",
+    });
+    expect(triggers.get("trigger_update_ticket_on_message")?.timing).toContain("for each row");
+
+    expect(triggers.get("trg_generate_booking_number")).toMatchObject({
+      table: "public.bookings",
+      functionName: "generate_booking_number",
+    });
+    expect(triggers.get("trg_generate_booking_number")?.timing).toContain("before insert");
+    expect(triggers.get("trg_generate_booking_number")?.timing).toContain("for each row");
   });
 });
 
@@ -414,8 +505,8 @@ describe("get_org_bookings rejects a non-member", () => {
     join(MIGRATIONS_DIR, "00127_definer_hardening.sql"),
     "utf8"
   );
-  const start = sql.indexOf("FUNCTION public.get_org_bookings");
-  const end = sql.indexOf("REVOKE EXECUTE ON FUNCTION public.get_org_bookings");
+  const start = sql.indexOf("-- BEGIN pending match: guard_get_org_bookings");
+  const end = sql.indexOf("-- END pending match: guard_get_org_bookings");
   const body = sql.slice(start, end);
 
   it("raises unless the caller is service_role or an active owner or admin", () => {

@@ -1,58 +1,53 @@
 -- SECURITY DEFINER hardening.
+-- Merges after the prod drift-import PR. There is no pg_cron on this project.
 --
--- Supabase default privileges grant EXECUTE on new public functions to anon
--- and authenticated. REVOKE ... FROM PUBLIC does not remove those role
--- grants. REVOKE is a no-op when the grant is already gone.
---
--- Section 1 is pending match with prod hotfix SQL.
+-- The two prod scripts below are copied byte for byte from the live
+-- migrations revoke_definer_service_only_grants (20260930155956) and
+-- revoke_get_org_bookings_anon.
 
--- ---------------------------------------------------------------------------
--- 1. Pending match with prod hotfix SQL.
---    Lock wallet, founding, seat, and clinic RPCs to service_role.
--- ---------------------------------------------------------------------------
+-- revoke_definer_service_only_grants: SECURITY DEFINER functions without auth.uid() checks become service_role only.
+-- nextval_invoice_number(): anon loses access (it also had a PUBLIC grant, so PUBLIC is revoked); authenticated and service_role keep it.
 
-REVOKE EXECUTE ON FUNCTION public.credit_wallet_atomic(uuid, text, int, text, uuid, uuid, text, timestamptz) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.credit_wallet_atomic(uuid, text, int, text, uuid, uuid, text, timestamptz) TO service_role;
-
-REVOKE EXECUTE ON FUNCTION public.debit_wallet_atomic(uuid, text, int, text, uuid, uuid, text) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.debit_wallet_atomic(uuid, text, int, text, uuid, uuid, text) TO service_role;
-
+REVOKE EXECUTE ON FUNCTION public.claim_founding_member(uuid, timestamp with time zone) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.claim_founding_member(uuid, timestamp with time zone) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.credit_wallet_atomic(uuid, text, integer, text, uuid, uuid, text, timestamp with time zone) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.credit_wallet_atomic(uuid, text, integer, text, uuid, uuid, text, timestamp with time zone) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.debit_wallet_atomic(uuid, text, integer, text, uuid, uuid, text) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.debit_wallet_atomic(uuid, text, integer, text, uuid, uuid, text) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.decrement_used_seats(uuid) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.decrement_used_seats(uuid) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.decrement_used_seats(uuid, text) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.decrement_used_seats(uuid, text) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.expire_clinic_invitations() FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.expire_clinic_invitations() TO service_role;
+REVOKE EXECUTE ON FUNCTION public.get_clinic_location_doctors(uuid) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_clinic_location_doctors(uuid) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.increment_used_seats(uuid) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.increment_used_seats(uuid) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.increment_used_seats(uuid, text) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.increment_used_seats(uuid, text) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.redeem_gift_card_atomic(text, uuid) FROM anon, authenticated, PUBLIC;
 GRANT EXECUTE ON FUNCTION public.redeem_gift_card_atomic(text, uuid) TO service_role;
-
-REVOKE EXECUTE ON FUNCTION public.claim_founding_member(uuid, timestamptz) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.claim_founding_member(uuid, timestamptz) TO service_role;
-
+REVOKE EXECUTE ON FUNCTION public.release_founding_spot_reservation(text, uuid) FROM anon, authenticated, PUBLIC;
+GRANT EXECUTE ON FUNCTION public.release_founding_spot_reservation(text, uuid) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.reserve_founding_spot(uuid, text) FROM anon, authenticated, PUBLIC;
 GRANT EXECUTE ON FUNCTION public.reserve_founding_spot(uuid, text) TO service_role;
 
-REVOKE EXECUTE ON FUNCTION public.release_founding_spot_reservation(text, uuid) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.release_founding_spot_reservation(text, uuid) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.nextval_invoice_number() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.nextval_invoice_number() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.nextval_invoice_number() TO authenticated, service_role;
 
-REVOKE EXECUTE ON FUNCTION public.increment_used_seats(uuid) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.increment_used_seats(uuid) TO service_role;
+-- Hotfix 2026-09-30: get_org_bookings is SECURITY DEFINER and returned any org's bookings to anon.
+-- App calls it only from the signed-in user client (requireOrgMember).
+REVOKE EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) TO service_role;
 
-REVOKE EXECUTE ON FUNCTION public.increment_used_seats(uuid, text) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.increment_used_seats(uuid, text) TO service_role;
-
-REVOKE EXECUTE ON FUNCTION public.decrement_used_seats(uuid) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.decrement_used_seats(uuid) TO service_role;
-
-REVOKE EXECUTE ON FUNCTION public.decrement_used_seats(uuid, text) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.decrement_used_seats(uuid, text) TO service_role;
-
-REVOKE EXECUTE ON FUNCTION public.expire_clinic_invitations() FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.expire_clinic_invitations() TO service_role;
-
-REVOKE EXECUTE ON FUNCTION public.get_clinic_location_doctors(uuid) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_clinic_location_doctors(uuid) TO service_role;
-
--- ---------------------------------------------------------------------------
--- 2. get_org_bookings: owner/admin of p_org_id, service_role bypass.
---    Called by the signed-in clinic client, so authenticated keeps EXECUTE.
---    Body is schema-qualified. search_path is empty.
--- ---------------------------------------------------------------------------
-
+-- BEGIN pending match: guard_get_org_bookings
+-- Pending match with prod SQL recorded as guard_get_org_bookings.
+-- Replace this section with that statement when it arrives. The anon revoke
+-- above stays as applied on prod.
 CREATE OR REPLACE FUNCTION public.get_org_bookings(
   p_org_id UUID,
   p_status TEXT DEFAULT NULL,
@@ -154,13 +149,7 @@ BEGIN
   OFFSET p_offset;
 END;
 $$;
-
-REVOKE EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, int, int) FROM anon, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, int, int) TO authenticated;
-
--- ---------------------------------------------------------------------------
--- 3. nextval_invoice_number: anon loses EXECUTE, authenticated keeps it.
--- ---------------------------------------------------------------------------
+-- END pending match: guard_get_org_bookings
 
 CREATE OR REPLACE FUNCTION public.nextval_invoice_number()
 RETURNS BIGINT
@@ -169,14 +158,12 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$ SELECT pg_catalog.nextval('public.invoice_number_seq'::regclass); $$;
 
-REVOKE EXECUTE ON FUNCTION public.nextval_invoice_number() FROM anon, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.nextval_invoice_number() TO authenticated;
-
 -- ---------------------------------------------------------------------------
--- 4. Empty search_path on definers whose bodies are already schema-qualified.
---    Availability RPCs keep anon and authenticated EXECUTE.
---    get_available_dates_in_range and the 5-arg get_available_slots overload
---    are not defined in this repo's migrations.
+-- search_path on every in-repo SECURITY DEFINER function that did not set one.
+-- Availability RPCs keep anon and authenticated EXECUTE.
+-- get_available_dates_in_range and the 5-arg get_available_slots overload
+-- are not in this repo (they are part of the prod drift import).
+-- nextval_invoice_number grants are in the prod script above; this only pins search_path.
 -- ---------------------------------------------------------------------------
 
 ALTER FUNCTION public.get_available_slots(uuid, date, text) SET search_path = '';
@@ -442,13 +429,17 @@ BEGIN
 END;
 $$;
 
--- ---------------------------------------------------------------------------
--- Other definers that are not availability RPCs and are not called by anon.
--- Trigger functions keep authenticated EXECUTE so user writes still fire them.
--- Offset RPCs are service-role only (00124 granted service_role; PUBLIC is
--- not enough to remove the anon grant).
--- ---------------------------------------------------------------------------
+-- Trigger functions do not consult the caller's EXECUTE privilege.
+-- Revoke anon and PUBLIC. Do not revoke rls_* or get_user_org_ids: policies
+-- call those as the invoker.
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_doctor_rating() FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.update_ticket_updated_at() FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.generate_booking_number() FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.prevent_doctor_privileged_column_update() FROM anon, PUBLIC;
 
+-- Offset RPCs are service-role only. 00124 granted service_role; PUBLIC does
+-- not remove the anon grant from Supabase default privileges.
 REVOKE EXECUTE ON FUNCTION public.reserve_correction_offset(uuid, uuid, int) FROM anon, authenticated, PUBLIC;
 GRANT EXECUTE ON FUNCTION public.reserve_correction_offset(uuid, uuid, int) TO service_role;
 
@@ -463,8 +454,3 @@ GRANT EXECUTE ON FUNCTION public.restore_offset_for_refund(uuid, text, int, int)
 
 REVOKE EXECUTE ON FUNCTION public.increment_coupon_uses(uuid) FROM anon, authenticated, PUBLIC;
 GRANT EXECUTE ON FUNCTION public.increment_coupon_uses(uuid) TO service_role;
-
-REVOKE EXECUTE ON FUNCTION public.update_doctor_rating() FROM anon, PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.update_ticket_updated_at() FROM anon, PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.prevent_doctor_privileged_column_update() FROM anon, PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.generate_booking_number() FROM anon, PUBLIC;
