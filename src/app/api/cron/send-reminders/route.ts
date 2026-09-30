@@ -22,6 +22,7 @@ import {
   BOOKING_DOCTOR_PROFILE_EMBED,
 } from "@/lib/patient/booking-doctor-embed";
 import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
+import { consultJoinPageUrl } from "@/lib/video/guest-join-link";
 
 // Default reminders used when a doctor hasn't configured their own
 const DEFAULT_REMINDERS = [
@@ -54,7 +55,6 @@ export async function GET(request: NextRequest) {
       start_time,
       end_time,
       consultation_type,
-      video_room_url,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
@@ -178,6 +178,14 @@ export async function GET(request: NextRequest) {
               : "In-Person Consultation";
 
         if (patient?.email && !sentSet.has(key)) {
+        const joinPageUrl =
+          booking.consultation_type === "video"
+            ? consultJoinPageUrl({
+                bookingId: booking.id,
+                bookingNumber: booking.booking_number,
+                source: "email",
+              })
+            : null;
         const { subject, html } = softsmokeDoctor
           ? softsmokePatientReminderEmail({
               patientFirstName: patient.first_name || "there",
@@ -186,7 +194,7 @@ export async function GET(request: NextRequest) {
               appointmentTime: booking.start_time,
               bookingRef: booking.booking_number,
               appointmentType: booking.consultation_type,
-              joinUrl: booking.video_room_url,
+              joinUrl: joinPageUrl,
               manageUrl: manageBookingUrl(booking.id),
             })
           : bookingReminderEmail({
@@ -196,7 +204,7 @@ export async function GET(request: NextRequest) {
               time: booking.start_time,
               consultationType: consultationLabel,
               bookingNumber: booking.booking_number,
-              videoRoomUrl: booking.video_room_url,
+              videoRoomUrl: joinPageUrl,
               minutesBefore: pref.minutes_before,
               clinicName: doctor.clinic_name,
               address: doctor.address,
@@ -251,11 +259,18 @@ export async function GET(request: NextRequest) {
           user_id: booking.patient_id,
           type: "booking_reminder",
           title: `Appointment ${timeLabel}`,
-          body: `Your appointment with Dr. ${doctorProfile?.first_name || ""} ${doctorProfile?.last_name || ""} is ${timeLabel}.${booking.video_room_url ? " Click to join the video call." : ""}`,
+          body: `Your appointment with Dr. ${doctorProfile?.first_name || ""} ${doctorProfile?.last_name || ""} is ${timeLabel}.${booking.consultation_type === "video" ? " Open your booking to join the video call." : ""}`,
           channel: "in_app",
           data: {
             booking_id: booking.id,
-            video_room_url: booking.video_room_url,
+            join_url:
+              booking.consultation_type === "video"
+                ? consultJoinPageUrl({
+                    bookingId: booking.id,
+                    bookingNumber: booking.booking_number,
+                    source: "email",
+                  })
+                : null,
           },
         });
         if (!notifError) {

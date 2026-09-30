@@ -31,6 +31,8 @@ export const COMING_SOON_ALLOWED_PREFIXES = [
   // Checkout success and wallet/booking_id confirmation (not a marketplace listing).
   "/dashboard",
   "/booking-confirmation",
+  // Video consult join. Tokens are minted on this page, never emailed.
+  "/join",
   "/verify-email",
   "/verify-mfa",
   "/forgot-password",

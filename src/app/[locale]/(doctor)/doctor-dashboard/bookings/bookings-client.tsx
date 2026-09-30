@@ -43,7 +43,8 @@ import {
   doctorBookingPatientName,
 } from "@/lib/doctor/booking-patient";
 import { formatCurrency } from "@/lib/utils/currency";
-import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
+import { JoinConsultButton } from "@/components/booking/join-consult-button";
+import { isWithinConsultJoinWindow } from "@/lib/video/meeting-window";
 import { respondToReschedule } from "@/actions/reschedule";
 import { saveVisitSummary } from "@/actions/booking";
 import { doctorCantMakeGpAppointment } from "@/actions/gp-reassignment";
@@ -290,15 +291,13 @@ function BookingsContent({ initial }: { initial?: DoctorBookingsInitial }) {
 
   function isVideoJoinEnabled(booking: BookingRow): boolean {
     if (booking.consultation_type !== "video" || !booking.video_room_url) return false;
-    const now = new Date();
-    const start = resolveBookingInstant(
-      booking.appointment_date,
-      booking.start_time
-    );
-    if (!Number.isFinite(start.getTime())) return false;
-    const minsBefore = (start.getTime() - now.getTime()) / 60000;
-    // Enabled from 10 min before start to 60 min after start
-    return minsBefore <= 10 && minsBefore >= -60;
+    if (!["confirmed", "approved"].includes(booking.status)) return false;
+    return isWithinConsultJoinWindow({
+      now: new Date(),
+      appointmentDate: booking.appointment_date,
+      startTime: booking.start_time,
+      endTime: booking.end_time,
+    });
   }
 
   async function handleGpCantMakeIt(bookingId: string) {
@@ -410,15 +409,13 @@ function BookingsContent({ initial }: { initial?: DoctorBookingsInitial }) {
               {showVideoButton && (
                 <TableCell>
                   {booking.consultation_type === "video" && booking.video_room_url ? (
-                    <Button
-                      size="sm"
-                      className="gap-1.5"
+                    <JoinConsultButton
+                      bookingId={booking.id}
+                      source="doctor_dashboard"
+                      label="Start Appointment"
                       disabled={!isVideoJoinEnabled(booking)}
-                      onClick={() => window.open(booking.video_room_url, "_blank")}
-                    >
-                      <Video className="h-3.5 w-3.5" />
-                      Start Appointment
-                    </Button>
+                      size="sm"
+                    />
                   ) : booking.consultation_type === "video" ? (
                     <span className="text-xs text-muted-foreground">Setting up...</span>
                   ) : null}

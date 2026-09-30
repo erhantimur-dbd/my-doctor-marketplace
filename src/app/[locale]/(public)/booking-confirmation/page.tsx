@@ -41,6 +41,7 @@ import {
   patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
 import { getTranslations } from "next-intl/server";
+import { consultJoinPagePath } from "@/lib/video/guest-join-link";
 
 export const metadata: Metadata = {
   title: "Booking Confirmed",
@@ -400,6 +401,21 @@ export default async function BookingConfirmationPage({
             </CardContent>
 
             <CardFooter className="flex flex-col gap-3">
+              {booking.consultation_type === "video" &&
+              (booking.status === "confirmed" || booking.status === "approved") ? (
+                <Button className="w-full" asChild>
+                  <Link
+                    href={consultJoinPagePath({
+                      bookingId: booking.id,
+                      bookingNumber: booking.booking_number,
+                      source: "confirm",
+                    })}
+                  >
+                    <Video className="mr-2 h-4 w-4" />
+                    Join video appointment
+                  </Link>
+                </Button>
+              ) : null}
               {isGuestBooking && !user ? (
                 <>
                   <Button className="w-full" asChild>

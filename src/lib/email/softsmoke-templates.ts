@@ -10,6 +10,7 @@ import {
   SOFT_LAUNCH_SOFTSMOKE_DOCTOR,
   isSoftLaunchSoftsmokeDoctor,
 } from "@/lib/soft-launch/softsmoke-connect-bypass";
+import { safeConsultEmailHref } from "@/lib/video/email-link";
 import {
   formatAppointmentWhen,
   formatEmailDateTime,
@@ -279,7 +280,7 @@ export function softsmokePatientConfirmEmail(
   );
   const patient = firstNameOnly(fields.patientFirstName, "there");
   const manage = fields.manageUrl || manageBookingUrl();
-  const join = fields.joinUrl?.trim();
+  const join = safeConsultEmailHref(fields.joinUrl);
   const html = softsmokeLayout(`
     ${heading("Your booking is confirmed")}
     ${intro(`Hi ${escapeHtml(patient)}, your appointment is confirmed. Here are your booking details.`)}
@@ -306,7 +307,7 @@ export function softsmokePatientReminderEmail(
   };
   const { when, card } = bookingDetails(named, "patient");
   const manage = fields.manageUrl || manageBookingUrl();
-  const join = fields.joinUrl?.trim();
+  const join = safeConsultEmailHref(fields.joinUrl);
   const html = softsmokeLayout(`
     ${heading("Friendly reminder — your appointment is coming up")}
     ${intro(`Hi ${escapeHtml(named.patientFirstName)}, this is a friendly reminder that your appointment with ${escapeHtml(named.doctorDisplayName || "your doctor")} is coming up.`)}

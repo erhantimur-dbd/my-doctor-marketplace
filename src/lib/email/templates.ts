@@ -2,6 +2,7 @@
 // No external React Email dependency needed - uses inline CSS for compatibility
 
 import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
+import { safeConsultEmailHref } from "@/lib/video/email-link";
 
 function consultWindow(
   date: string,
@@ -112,8 +113,15 @@ function infoRow(label: string, value: string): string {
     </tr>`;
 }
 
+function escapeHtmlAttr(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
+}
+
 function button(text: string, url?: string): string {
-  const href = url || "#";
+  const href = escapeHtmlAttr(url || "#");
   return `
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
       <tr>
@@ -174,7 +182,8 @@ export function bookingConfirmationEmail({
   const subject = `Booking Confirmed - ${bookingNumber}`;
   const when = consultWindow(date, time, end, durationMinutes);
 
-  const videoBlock = videoRoomUrl
+  const joinHref = safeConsultEmailHref(videoRoomUrl);
+  const videoBlock = joinHref
     ? `
     <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
       <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #1e40af;">
@@ -183,9 +192,16 @@ export function bookingConfirmationEmail({
       <p style="margin: 0 0 12px; font-size: 13px; color: #1e40af; line-height: 1.5;">
         Your appointment will take place via video call. Click the button below to join when your appointment begins.
       </p>
-      ${button("Join Video Call", videoRoomUrl)}
+      ${button("Join Video Call", joinHref)}
       <p style="margin: 8px 0 0; font-size: 11px; color: #6b7280; line-height: 1.5; word-break: break-all;">
-        Or copy this link: ${videoRoomUrl}
+        Or copy this link: ${escapeHtmlAttr(joinHref)}
+      </p>
+    </div>`
+    : videoRoomUrl
+    ? `
+    <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
+      <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
+        Open your booking on ${BRAND_NAME} to join the video call. This email does not include a meeting link.
       </p>
     </div>`
     : `
@@ -234,7 +250,7 @@ export function bookingConfirmationEmail({
             ${infoRow("Doctor", `Dr. ${doctorName}`)}
             ${when ? infoRow("Appointment", when) : `${infoRow("Date", date)}${infoRow("Time", time)}`}
             ${infoRow("Consultation", consultationType)}
-            ${!videoRoomUrl && clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
+            ${!joinHref && clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
             ${infoRow(paymentLabel, paymentAmount)}
             ${isDeposit && remainderDue != null ? infoRow("Due on the Day", `${currency} ${remainderDue.toFixed(2)}`) : ""}
           </table>
@@ -580,7 +596,8 @@ export function bookingReminderEmail({
   }
   const subject = `Appointment Reminder - ${timeLabel} with Dr. ${doctorName}`;
 
-  const videoBlock = videoRoomUrl
+  const joinHref = safeConsultEmailHref(videoRoomUrl);
+  const videoBlock = joinHref
     ? `
     <div style="background-color: #eff6ff; border-left: 4px solid ${BRAND_COLOR}; padding: 16px; border-radius: 0 6px 6px 0; margin-bottom: 16px;">
       <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #1e40af;">
@@ -589,9 +606,9 @@ export function bookingReminderEmail({
       <p style="margin: 0 0 12px; font-size: 13px; color: #1e40af; line-height: 1.5;">
         Your appointment is via video call. Click below to join when it's time.
       </p>
-      ${button("Join Video Call", videoRoomUrl)}
+      ${button("Join Video Call", joinHref)}
       <p style="margin: 8px 0 0; font-size: 11px; color: #6b7280; line-height: 1.5; word-break: break-all;">
-        Or copy this link: ${videoRoomUrl}
+        Or copy this link: ${escapeHtmlAttr(joinHref)}
       </p>
     </div>`
     : "";
@@ -611,7 +628,7 @@ export function bookingReminderEmail({
             ${infoRow("Date", date)}
             ${infoRow("Time", time)}
             ${infoRow("Consultation", consultationType)}
-            ${!videoRoomUrl && clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
+            ${!joinHref && clinicName ? infoRow("Location", `${clinicName}${address ? `, ${address}` : ""}`) : ""}
           </table>
         </td>
       </tr>
@@ -624,7 +641,7 @@ export function bookingReminderEmail({
         <strong>Preparation Tips:</strong><br />
         &bull; Have your medical records or previous reports ready if applicable.<br />
         &bull; Prepare a list of questions or symptoms you want to discuss.<br />
-        ${videoRoomUrl ? "&bull; Ensure you have a stable internet connection and a working camera/microphone." : `&bull; Please arrive 5 minutes before your scheduled time.${address ? ` Your appointment is at ${address}.` : ""}`}
+        ${joinHref ? "&bull; Ensure you have a stable internet connection and a working camera/microphone." : `&bull; Please arrive 5 minutes before your scheduled time.${address ? ` Your appointment is at ${address}.` : ""}`}
       </p>
     </div>
 

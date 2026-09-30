@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Video, Clock, User } from "lucide-react";
 import { DeviceCheck } from "./device-check";
+import { JoinConsultButton } from "./join-consult-button";
+import { consultMeetingBounds } from "@/lib/video/meeting-window";
+import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
 
 interface VideoWaitingRoomProps {
-  videoRoomUrl: string;
+  bookingId: string;
   appointmentDate: string;
   startTime: string;
   endTime: string;
@@ -18,7 +20,7 @@ interface VideoWaitingRoomProps {
 }
 
 export function VideoWaitingRoom({
-  videoRoomUrl,
+  bookingId,
   appointmentDate,
   startTime,
   endTime,
@@ -29,20 +31,30 @@ export function VideoWaitingRoom({
   const [deviceReady, setDeviceReady] = useState(false);
   const [countdown, setCountdown] = useState("");
   const [canJoin, setCanJoin] = useState(false);
+  const [ended, setEnded] = useState(false);
 
   useEffect(() => {
     function updateCountdown() {
       const now = new Date();
-      const start = new Date(`${appointmentDate}T${startTime}`);
+      const start = resolveBookingInstant(appointmentDate, startTime);
       const diffMs = start.getTime() - now.getTime();
       const diffMins = Math.floor(diffMs / 60000);
       const diffSecs = Math.floor((diffMs % 60000) / 1000);
 
-      // Can join from 10 min before to 60 min after
-      const joinEnabled = diffMins <= 10 && diffMins >= -60;
-      setCanJoin(joinEnabled);
+      const bounds = consultMeetingBounds({
+        appointmentDate,
+        startTime,
+        endTime,
+      });
+      const nowSec = Math.floor(now.getTime() / 1000);
+      const open = Boolean(bounds && nowSec >= bounds.nbf && nowSec < bounds.exp);
+      const closed = Boolean(bounds && nowSec >= bounds.exp);
+      setCanJoin(open);
+      setEnded(closed);
 
-      if (diffMs <= 0) {
+      if (closed) {
+        setCountdown("This video appointment has ended");
+      } else if (diffMs <= 0) {
         setCountdown("Your appointment has started");
       } else if (diffMins > 60) {
         const hours = Math.floor(diffMins / 60);
@@ -60,11 +72,7 @@ export function VideoWaitingRoom({
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [appointmentDate, startTime]);
-
-  function joinCall() {
-    window.open(videoRoomUrl, "_blank");
-  }
+  }, [appointmentDate, startTime, endTime]);
 
   const formattedDate = new Date(
     `${appointmentDate}T00:00:00`
@@ -112,7 +120,9 @@ export function VideoWaitingRoom({
             <p className="text-2xl font-bold text-primary">{countdown}</p>
             {!canJoin && (
               <p className="mt-1 text-sm text-muted-foreground">
-                You can join the call 10 minutes before the start time
+                {ended
+                  ? "This video appointment has ended."
+                  : "You can join the call 10 minutes before the start time"}
               </p>
             )}
           </div>
@@ -132,15 +142,20 @@ export function VideoWaitingRoom({
               <Video className="h-5 w-5" />
               <span className="font-medium">Devices ready</span>
             </div>
-            <Button
-              size="lg"
-              className="w-full gap-2"
-              onClick={joinCall}
+            <JoinConsultButton
+              bookingId={bookingId}
+              source="patient_dashboard"
+              label={
+                canJoin
+                  ? "Join Video Call"
+                  : ended
+                    ? "Appointment ended"
+                    : "Waiting for start time..."
+              }
               disabled={!canJoin}
-            >
-              <Video className="h-5 w-5" />
-              {canJoin ? "Join Video Call" : "Waiting for start time..."}
-            </Button>
+              size="lg"
+              className="w-full"
+            />
             {canJoin && (
               <p className="text-xs text-muted-foreground">
                 The call will open in a new tab

@@ -27,7 +27,7 @@ const SAMPLE_DATA = {
       bookingNumber: BOOKING_NUMBER_EXAMPLE,
       amount: 120,
       currency: "GBP",
-      videoRoomUrl: `${APP_URL}/room/test-room`,
+      videoRoomUrl: `${APP_URL}/en/join/preview?src=email`,
     }),
   bookingCancellation: () =>
     templates.bookingCancellationEmail({
@@ -47,7 +47,7 @@ const SAMPLE_DATA = {
       time: "10:00",
       consultationType: "Video Consultation",
       bookingNumber: BOOKING_NUMBER_EXAMPLE,
-      videoRoomUrl: `${APP_URL}/room/test-room`,
+      videoRoomUrl: `${APP_URL}/en/join/preview?src=email`,
     }),
   doctorNewBooking: () =>
     templates.doctorNewBookingEmail({

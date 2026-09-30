@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
+import { confirmationVideoHref, consultJoinPageUrl } from "@/lib/video/guest-join-link";
 import { log } from "@/lib/utils/logger";
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
@@ -45,8 +46,15 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
   subject: string;
   html: string;
 } {
+  const videoHref = confirmationVideoHref({
+    consultationType: params.consultationType,
+    videoRoomUrl: params.videoRoomUrl,
+    bookingId: params.bookingId,
+    bookingNumber: params.bookingNumber,
+  });
+  const next = { ...params, videoRoomUrl: videoHref };
   if (!isSoftsmokeTransactionalDoctor(params.doctor)) {
-    return bookingConfirmationEmail(params);
+    return bookingConfirmationEmail(next);
   }
   return softsmokePatientConfirmEmail({
     patientFirstName: firstNameOnly(params.patientName, "there"),
@@ -56,7 +64,7 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
     timeZone: params.timeZone,
     bookingRef: params.bookingNumber,
     appointmentType: params.consultationType,
-    joinUrl: params.videoRoomUrl,
+    joinUrl: videoHref,
     manageUrl: params.manageUrl || manageBookingUrl(params.bookingId),
   });
 }
@@ -64,7 +72,7 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
 export async function sendSoftsmokeChargeSkipPatientConfirmation(
   supabase: SupabaseClient,
   bookingId: string,
-  videoRoomUrl: string | null
+  _videoRoomUrl: string | null
 ): Promise<void> {
   const { data, error } = await supabase
     .from("bookings")
@@ -150,7 +158,14 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     appointmentTime: row.start_time,
     bookingRef: row.booking_number,
     appointmentType: row.consultation_type,
-    joinUrl: videoRoomUrl,
+    joinUrl:
+      row.consultation_type === "video"
+        ? consultJoinPageUrl({
+            bookingId: row.id,
+            bookingNumber: row.booking_number,
+            source: "email",
+          })
+        : null,
     manageUrl: manageBookingUrl(row.id),
   });
 
