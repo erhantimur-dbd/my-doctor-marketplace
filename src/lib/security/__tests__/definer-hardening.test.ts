@@ -364,7 +364,7 @@ describe("public SECURITY DEFINER final state", () => {
     expect(missing, missing.join("\n")).toEqual([]);
   });
 
-  it("keeps anon EXECUTE only for availability RPCs and RLS invokers", () => {
+  it("keeps anon EXECUTE only for availability RPCs, RLS invokers, and the public invitation lookup", () => {
     const unexpected = fns
       .filter((fn) => anonExecutable(fn))
       .filter((fn) => !mayKeepAnonExecute(fn.name))

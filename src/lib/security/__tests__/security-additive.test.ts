@@ -21,7 +21,7 @@ describe("00128 security additive", () => {
   it("does not drop policies, indexes, or grants on existing tables", () => {
     expect(additive).not.toMatch(/^\s*DROP\b/m);
     const revokes = additive.split("\n").filter((line) => /^\s*REVOKE\b/.test(line));
-    expect(revokes.length).toBe(3);
+    expect(revokes.length).toBe(4);
     for (const line of revokes) {
       expect(line).toMatch(
         /get_follow_up_invitation_by_token|patient_transition_follow_up_invitation|public_organizations/

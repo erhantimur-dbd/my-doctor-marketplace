@@ -114,6 +114,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) TO authenticated;
 
 -- ─── fee lock ────────────────────────────────────────────────
