@@ -1,0 +1,28 @@
+-- Drop the open SELECT on public.organizations.
+--
+-- "Public can read org basics" is FOR SELECT USING (true). anon and
+-- authenticated still hold SELECT on the table, so that policy returns every
+-- column (email, phone, address, metadata, onboarding_step, owner_role,
+-- timezone, base_currency, stripe_customer_id, and the rest).
+-- public.public_organizations from 00128 is the public read path. It exposes
+-- only the 16 public columns and does not depend on this policy.
+--
+-- This file drops that one policy and nothing else. It does not revoke
+-- column grants. It does not recreate or alter:
+--   "Members can read own organization"
+--   "Owners can update own organization"
+--   "Admins can manage all organizations"
+-- and it does not change any membership policy.
+--
+-- DROP POLICY IF EXISTS is a no-op when the policy is already gone, so this
+-- is safe to run twice.
+--
+-- Apply only after the app no longer selects organizations as anon or as a
+-- signed-in user who is not a member of that org. That code is PR #91
+-- (clinic page, clinic-invite token lookup, invitation banner). Until #91
+-- is deployed, the public clinic page and the invited-member banner still
+-- read organizations through the user client and this drop would hide those
+-- rows. Service-role reads (doctor profile, booking, search, invite-token
+-- row load, sitemap) bypass RLS and are unaffected.
+
+DROP POLICY IF EXISTS "Public can read org basics" ON public.organizations;
