@@ -13,6 +13,7 @@ import {
   refundAdminBookingPayment,
   refundClinicCancellation,
   refundConsultSplit,
+  rescheduleBalanceOwnCardPaidCents,
   splitConsultRefund,
   storedConsultPaidParts,
   type ConsultRefundDeps,
@@ -1151,6 +1152,215 @@ describe("wallet destination never refunds the card", () => {
       reverse_transfer: true,
       refund_application_fee: true,
     });
+  });
+});
+
+describe("dearer-slot balance row refund cap", () => {
+  const originalId = "22222222-2222-2222-2222-222222222222";
+
+  function balanceRow(overrides: Record<string, unknown> = {}) {
+    return {
+      id: BOOKING_ID,
+      booking_number: "BK-20260926-1126",
+      patient_id: "pat-1",
+      currency: "GBP",
+      stripe_payment_intent_id: "pi_balance_10",
+      stripe_charge_id: "ch_3UK31MPhJvj3ftQe19YquLhR",
+      total_amount_cents: 5000,
+      reschedule_price_diff_cents: 1000,
+      reschedule_payment_status: "paid",
+      rescheduled_from_booking_id: originalId,
+      wallet_credit_applied_cents: 0,
+      paid_at: "2026-09-26T12:00:00.000Z",
+      refunded_at: null,
+      refund_amount_cents: 0,
+      card_refunded_to_card_cents: 0,
+      card_credited_to_wallet_cents: 0,
+      credit_refunded_cents: 0,
+      status: "confirmed",
+      ...overrides,
+    };
+  }
+
+  it("refunds 4000 on the original charge and 1000 on the balance charge, not 5000", () => {
+    const original = {
+      total_amount_cents: 4000,
+      wallet_credit_applied_cents: 0,
+      stripe_charge_id: "ch_3UK31LPhJvj3ftQe0hz1JiDw",
+      reschedule_price_diff_cents: 0,
+    };
+    const balance = balanceRow();
+
+    expect(rescheduleBalanceOwnCardPaidCents(original)).toBeNull();
+    expect(rescheduleBalanceOwnCardPaidCents(balance)).toBe(1000);
+    expect(storedConsultPaidParts(original)).toEqual({
+      cardPaidCents: 4000,
+      creditPaidCents: 0,
+    });
+    expect(storedConsultPaidParts(balance)).toEqual({
+      cardPaidCents: 1000,
+      creditPaidCents: 0,
+    });
+    expect(remainingConsultPaidParts(original).remainingPaidCents).toBe(4000);
+    expect(remainingConsultPaidParts(balance).remainingPaidCents).toBe(1000);
+    expect(remainingConsultPaidParts(balance).remainingPaidCents).not.toBe(5000);
+  });
+
+  it("keeps deposit and wallet credit on a normal booking", () => {
+    const booking = {
+      payment_mode: "deposit",
+      deposit_amount_cents: 3000,
+      total_amount_cents: 10000,
+      wallet_credit_applied_cents: 1000,
+      reschedule_price_diff_cents: 0,
+      reschedule_payment_status: "not_required",
+      rescheduled_from_booking_id: null,
+    };
+    expect(storedConsultPaidParts(booking)).toEqual({
+      cardPaidCents: 2000,
+      creditPaidCents: 1000,
+    });
+    expect(remainingConsultPaidParts(booking).remainingPaidCents).toBe(3000);
+
+    const cardAndCredit = {
+      total_amount_cents: 10000,
+      wallet_credit_applied_cents: 4000,
+    };
+    expect(storedConsultPaidParts(cardAndCredit)).toEqual({
+      cardPaidCents: 6000,
+      creditPaidCents: 4000,
+    });
+    expect(
+      remainingConsultPaidParts({
+        ...cardAndCredit,
+        card_refunded_to_card_cents: 1000,
+        credit_refunded_cents: 500,
+      }).remainingPaidCents
+    ).toBe(8500);
+  });
+
+  it("does not treat a cheaper rebase as a balance charge", () => {
+    const rebase = cheaperReschedulePaidRebasePatch({
+      originalTotalCents: 10000,
+      refundCents: 2000,
+      walletCreditAppliedCents: 4000,
+      settled: {
+        cardRefundedToCardCents: 1200,
+        creditRefundCents: 800,
+        walletCreditCents: 800,
+      },
+    });
+    const remaining = remainingConsultPaidParts({
+      total_amount_cents: rebase.total_amount_cents as number,
+      wallet_credit_applied_cents: rebase.wallet_credit_applied_cents as number,
+      rescheduled_from_booking_id: BOOKING_ID,
+      reschedule_price_diff_cents: -2000,
+      reschedule_payment_status: "not_required",
+      card_refunded_to_card_cents: 0,
+      card_credited_to_wallet_cents: 0,
+      credit_refunded_cents: 0,
+    });
+    expect(rescheduleBalanceOwnCardPaidCents({
+      rescheduled_from_booking_id: BOOKING_ID,
+      reschedule_price_diff_cents: -2000,
+      reschedule_payment_status: "not_required",
+    })).toBeNull();
+    expect(remaining.remainingPaidCents).toBe(8000);
+    expect(remaining.cardPaidCents).toBe(4800);
+    expect(remaining.creditPaidCents).toBe(3200);
+  });
+
+  it("rejects an amount above the balance row's own remaining charge", async () => {
+    const store = memoryStore();
+    const { stripe, deps } = harness(store);
+    const booking = balanceRow();
+
+    const overTotal = await refundAdminBookingPayment(booking, 5000, deps);
+    expect(overTotal).toEqual({ error: "Invalid refund amount" });
+
+    const overCharge = await refundAdminBookingPayment(booking, 1001, deps);
+    expect(overCharge).toEqual({ error: "Invalid refund amount" });
+    expect(stripe.refunds).toHaveLength(0);
+  });
+
+  it("partial refunds on the balance row step the cap down to the £10 charge", async () => {
+    const store = memoryStore();
+    const { stripe, deps } = harness(store);
+    const booking = balanceRow();
+
+    const first = await refundAdminBookingPayment(booking, 400, deps);
+    expect("error" in first).toBe(false);
+    if ("error" in first) return;
+    expect(first.settlementPatch).toMatchObject({
+      card_refunded_to_card_cents: 400,
+      refund_amount_cents: 400,
+    });
+    expect(first.settlementPatch).not.toHaveProperty("refunded_at");
+
+    const afterFirst = { ...booking, ...first.settlementPatch };
+    expect(remainingConsultPaidParts(afterFirst).remainingPaidCents).toBe(600);
+
+    const tooMuch = await refundAdminBookingPayment(afterFirst, 601, deps);
+    expect(tooMuch).toEqual({ error: "Invalid refund amount" });
+
+    const second = await refundAdminBookingPayment(afterFirst, 600, deps);
+    expect("error" in second).toBe(false);
+    if ("error" in second) return;
+    expect(second.settlementPatch).toMatchObject({
+      card_refunded_to_card_cents: 1000,
+      refund_amount_cents: 1000,
+      status: "refunded",
+    });
+    expect(second.settlementPatch.refunded_at).toEqual(expect.any(String));
+    expect(
+      remainingConsultPaidParts({ ...afterFirst, ...second.settlementPatch })
+        .remainingPaidCents
+    ).toBe(0);
+    expect(stripe.refunds.map((row) => row.params.amount)).toEqual([400, 600]);
+  });
+
+  it("a full refund of the balance sets refunded_at and leaves nothing refundable", async () => {
+    const store = memoryStore();
+    const { stripe, deps } = harness(store);
+    const booking = balanceRow();
+
+    const result = await refundAdminBookingPayment(booking, undefined, deps);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.refundAmountCents).toBe(1000);
+    expect(result.settlementPatch).toMatchObject({
+      card_refunded_to_card_cents: 1000,
+      refund_amount_cents: 1000,
+      status: "refunded",
+    });
+    expect(result.settlementPatch.refunded_at).toEqual(expect.any(String));
+    expect(stripe.refunds[0]?.params).toEqual({
+      charge: "ch_3UK31MPhJvj3ftQe19YquLhR",
+      amount: 1000,
+      reverse_transfer: true,
+      refund_application_fee: true,
+    });
+
+    const after = { ...booking, ...result.settlementPatch };
+    expect(remainingConsultPaidParts(after).remainingPaidCents).toBe(0);
+
+    const again = await refundAdminBookingPayment(after, undefined, deps);
+    expect(again).toEqual({ error: "Booking has already been refunded" });
+    expect(stripe.refunds).toHaveLength(1);
+  });
+
+  it("a clinic cancel refunds only the balance row's own charge", async () => {
+    const store = memoryStore();
+    const { stripe, deps } = harness(store);
+
+    const settled = await refundClinicCancellation(balanceRow(), deps);
+    expect(settled.refundAmountCents).toBe(1000);
+    expect(settled.settlementPatch).toMatchObject({
+      card_refunded_to_card_cents: 1000,
+      refund_amount_cents: 1000,
+    });
+    expect(settled.settlementPatch?.refunded_at).toEqual(expect.any(String));
+    expect(stripe.refunds.map((row) => row.params.amount)).toEqual([1000]);
   });
 });
 
