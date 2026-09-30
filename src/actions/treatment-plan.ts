@@ -719,6 +719,7 @@ export async function bookTreatmentPlanSession(
           doctorName: `${docProfile.first_name} ${docProfile.last_name}`,
           date: booking.appointment_date,
           time: booking.start_time,
+          end: booking.end_time,
           consultationType:
             booking.consultation_type === "video"
               ? "Video Consultation"

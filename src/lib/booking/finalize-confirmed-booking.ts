@@ -292,6 +292,7 @@ export async function finalizeConfirmedBooking(
           patientLastName: input.patientLastName,
           appointmentDate: input.appointmentDate,
           startTime: input.startTime,
+          endTime: input.endTime,
           consultationType: input.consultationType,
           bookingNumber: input.bookingNumber,
           totalAmountCents: input.totalAmountCents,

@@ -19,6 +19,7 @@ import {
   remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import { getCommissionCents } from "@/lib/utils/currency";
+import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { computeCancellationRefundPercent } from "@/lib/booking/cancellation-refund";
 import { sendEmail } from "@/lib/email/client";
@@ -1886,7 +1887,11 @@ export async function adminCreateBookingOnBehalf(input: {
           currency: doctor.base_currency.toLowerCase(),
           product_data: {
             name: `${consultationLabel} with Dr. ${doctorName}`,
-            description: `${input.appointment_date} at ${input.start_time}`,
+            description: formatAppointmentWindow(
+              input.start_time,
+              input.end_time,
+              { appointmentDate: input.appointment_date }
+            ),
           },
           unit_amount: totalAmountCents,
         },
@@ -2046,7 +2051,11 @@ export async function adminResendPaymentLink(bookingId: string) {
           currency: booking.currency.toLowerCase(),
           product_data: {
             name: `${consultationLabel} with Dr. ${doctorName}`,
-            description: `${booking.appointment_date} at ${booking.start_time}`,
+            description: formatAppointmentWindow(
+              booking.start_time,
+              booking.end_time,
+              { appointmentDate: booking.appointment_date }
+            ),
           },
           unit_amount: booking.total_amount_cents,
         },
