@@ -17,6 +17,7 @@ import {
   cheaperReschedulePaidRebasePatch,
   remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
+import { recordConsultRefundOnBooking } from "@/lib/stripe/record-consult-refund";
 import { sendEmail } from "@/lib/email/client";
 import { buildPatientCalendarEvent } from "@/lib/booking/patient-calendar";
 import {
@@ -122,29 +123,30 @@ export async function adminCancelBooking(formData: FormData) {
   // Clinic cancellations: full refund. Card returns to the card, credit
   // returns to the wallet, and the doctor's credit transfer is reversed.
   let refundAmountCents = 0;
-  let refundSettlementPatch: Record<string, unknown> | null = null;
+  let settledRefund: Awaited<ReturnType<typeof refundClinicCancellation>> | null =
+    null;
   try {
     const settled = await refundClinicCancellation(booking);
     refundAmountCents = settled.refundAmountCents;
-    refundSettlementPatch = settled.settlementPatch;
+    settledRefund = settled.refundAmountCents > 0 ? settled : null;
   } catch (err) {
     log.error("Stripe refund failed during admin cancellation:", { err, bookingId: booking.id });
     return { error: "Failed to process refund. Please try again or contact support." };
   }
 
   const cancelledAt = new Date().toISOString();
-
-  // Update booking status
-  await adminSupabase
-    .from("bookings")
-    .update({
+  const recorded = await recordConsultRefundOnBooking({
+    bookingId: booking.id,
+    booking,
+    settled: settledRefund,
+    extra: {
       status: "cancelled_doctor",
       cancelled_at: cancelledAt,
       cancellation_reason: parsed.data.reason || "Cancelled by clinic administrator",
       rescheduled_by: membership.user_id,
-      ...(refundSettlementPatch || {}),
-    })
-    .eq("id", booking.id);
+    },
+  });
+  if ("error" in recorded) return { error: recorded.error };
 
   // Notify patient
   const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
@@ -257,7 +259,23 @@ export async function adminRescheduleBooking(formData: FormData) {
   // Case 1: Same price or cheaper → reschedule immediately, issue partial refund if applicable
   if (priceDiffCents <= 0) {
     const refundCents = Math.abs(priceDiffCents);
-    let refundSettlementPatch: Record<string, unknown> | null = null;
+    const rescheduledAt = new Date().toISOString();
+    const rescheduleFields = {
+      doctor_id: parsed.data.new_doctor_id,
+      appointment_date: parsed.data.new_appointment_date,
+      start_time: parsed.data.new_start_time,
+      end_time: parsed.data.new_end_time,
+      clinic_location_id: parsed.data.new_clinic_location_id ?? booking.clinic_location_id,
+      consultation_fee_cents: newFee,
+      total_amount_cents: originalAmountPaid - refundCents,
+      rescheduled_from_booking_id: booking.id,
+      reschedule_price_diff_cents: priceDiffCents,
+      reschedule_payment_status: "not_required",
+      rescheduled_by: membership.user_id,
+      rescheduled_at: rescheduledAt,
+      cancellation_reason: parsed.data.reason || null,
+    };
+    let recordedReschedule = false;
 
     if (refundCents > 0 && booking.paid_at) {
       const remaining = remainingConsultPaidParts(booking);
@@ -280,15 +298,23 @@ export async function adminRescheduleBooking(formData: FormData) {
           });
           // Rebase paid parts to the new fee so later refunds don't subtract
           // original-payment counters from the reduced total.
-          refundSettlementPatch = cheaperReschedulePaidRebasePatch({
-            originalTotalCents: originalAmountPaid,
-            refundCents,
-            walletCreditAppliedCents: Number(
-              booking.wallet_credit_applied_cents || 0
-            ),
+          const recorded = await recordConsultRefundOnBooking({
+            bookingId: booking.id,
+            booking,
             settled,
-            priorRefundAmountCents: Number(booking.refund_amount_cents || 0),
+            patchOverride: cheaperReschedulePaidRebasePatch({
+              originalTotalCents: originalAmountPaid,
+              refundCents,
+              walletCreditAppliedCents: Number(
+                booking.wallet_credit_applied_cents || 0
+              ),
+              settled,
+              priorRefundAmountCents: Number(booking.refund_amount_cents || 0),
+            }),
+            extra: rescheduleFields,
           });
+          if ("error" in recorded) return { error: recorded.error };
+          recordedReschedule = true;
         } catch (err) {
           log.error("Partial refund failed during reschedule:", { err });
           // Non-fatal — proceed with reschedule, flag in metadata
@@ -296,27 +322,12 @@ export async function adminRescheduleBooking(formData: FormData) {
       }
     }
 
-    const rescheduledAt = new Date().toISOString();
-
-    await adminSupabase
-      .from("bookings")
-      .update({
-        doctor_id: parsed.data.new_doctor_id,
-        appointment_date: parsed.data.new_appointment_date,
-        start_time: parsed.data.new_start_time,
-        end_time: parsed.data.new_end_time,
-        clinic_location_id: parsed.data.new_clinic_location_id ?? booking.clinic_location_id,
-        consultation_fee_cents: newFee,
-        total_amount_cents: originalAmountPaid - refundCents,
-        rescheduled_from_booking_id: booking.id,
-        reschedule_price_diff_cents: priceDiffCents,
-        reschedule_payment_status: "not_required",
-        rescheduled_by: membership.user_id,
-        rescheduled_at: rescheduledAt,
-        cancellation_reason: parsed.data.reason || null,
-        ...(refundSettlementPatch || {}),
-      })
-      .eq("id", booking.id);
+    if (!recordedReschedule) {
+      await adminSupabase
+        .from("bookings")
+        .update(rescheduleFields)
+        .eq("id", booking.id);
+    }
 
     // Notify patient
     if (patient?.email) {

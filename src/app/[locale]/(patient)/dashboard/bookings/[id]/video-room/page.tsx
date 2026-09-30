@@ -82,7 +82,7 @@ export default async function VideoRoomPage({ params }: VideoRoomPageProps) {
   return (
     <div className="py-6">
       <VideoWaitingRoom
-        videoRoomUrl={booking.video_room_url}
+        bookingId={booking.id}
         appointmentDate={booking.appointment_date}
         startTime={startTime}
         endTime={endTime}

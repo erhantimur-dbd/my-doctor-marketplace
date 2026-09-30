@@ -20,6 +20,12 @@ import {
   Stethoscope,
   Shield,
 } from "lucide-react";
+import {
+  adminDoctorPayoutCents,
+  formatAdminBookingTime,
+  resolveAdminPlatformFeeCents,
+  sumRecordedPlatformFees,
+} from "@/lib/booking/admin-booking-display";
 import { formatCurrency } from "@/lib/utils/currency";
 import { remainingConsultPaidParts } from "@/lib/stripe/consult-refund";
 import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
@@ -75,6 +81,26 @@ export default async function AdminBookingDetailPage({
 
   const booking: any = bookingData;
   const refundableAmountCents = remainingConsultPaidParts(booking).remainingPaidCents;
+  const feeFromColumns = resolveAdminPlatformFeeCents({
+    commissionCents: booking.commission_cents,
+    platformFeeCents: booking.platform_fee_cents,
+  });
+  let platformFeeCents = feeFromColumns;
+  if (feeFromColumns === 0) {
+    const { data: feeRows } = await supabase
+      .from("platform_fees")
+      .select("amount_cents")
+      .eq("booking_id", booking.id);
+    platformFeeCents = resolveAdminPlatformFeeCents({
+      commissionCents: booking.commission_cents,
+      platformFeeCents: booking.platform_fee_cents,
+      recordedFeeCents: sumRecordedPlatformFees(feeRows),
+    });
+  }
+  const doctorPayoutCents = adminDoctorPayoutCents(
+    booking.total_amount_cents,
+    platformFeeCents
+  );
 
   return (
     <div className="space-y-6">
@@ -139,7 +165,11 @@ export default async function AdminBookingDetailPage({
               <span className="text-muted-foreground">Time</span>
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
-                {booking.start_time?.slice(0, 5)} - {booking.end_time?.slice(0, 5)}
+                {formatAdminBookingTime(
+                  booking.start_time,
+                  booking.end_time,
+                  booking.appointment_date
+                )}
               </span>
             </div>
             <Separator />
@@ -216,17 +246,14 @@ export default async function AdminBookingDetailPage({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Platform Fee</span>
               <span className="text-green-600">
-                {formatCurrency(booking.platform_fee_cents, booking.currency)}
+                {formatCurrency(platformFeeCents, booking.currency)}
               </span>
             </div>
             <Separator />
             <div className="flex justify-between">
               <span className="text-muted-foreground">Doctor Payout</span>
               <span>
-                {formatCurrency(
-                  booking.total_amount_cents - booking.platform_fee_cents,
-                  booking.currency
-                )}
+                {formatCurrency(doctorPayoutCents, booking.currency)}
               </span>
             </div>
             <Separator />

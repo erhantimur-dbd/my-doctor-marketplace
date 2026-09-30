@@ -6,12 +6,18 @@
  *   DAILY_API_KEY  — API key from Daily.co dashboard
  */
 
-const DAILY_API_BASE = "https://api.daily.co/v1";
+import "server-only";
+
+export const DAILY_API_BASE = "https://api.daily.co/v1";
 
 function getApiKey(): string {
   const key = process.env.DAILY_API_KEY;
   if (!key) throw new Error("DAILY_API_KEY environment variable is not set");
   return key;
+}
+
+export function dailyAuthorizationHeader(): string {
+  return `Bearer ${getApiKey()}`;
 }
 
 export interface CreateRoomOptions {
@@ -43,12 +49,13 @@ export async function createRoom(options: CreateRoomOptions): Promise<DailyRoom>
     },
     body: JSON.stringify({
       name: options.name,
-      privacy: "public", // Link-based access, no tokens needed
+      privacy: "private",
       properties: {
         exp: options.expiresAt,
         max_participants: options.maxParticipants ?? 2,
         enable_chat: true,
-        enable_knocking: true,
+        // Knocking would let anyone with the URL ask to enter without a token.
+        enable_knocking: false,
         enable_prejoin_ui: true,
         enable_screenshare: true,
       },
@@ -83,6 +90,37 @@ export async function getRoom(name: string): Promise<DailyRoom> {
   }
 
   return response.json();
+}
+
+/**
+ * Lock an existing room so the URL alone cannot admit anyone.
+ *
+ * Daily's set-room-config operation is POST /v1/rooms/:name. The REST API
+ * does not implement PATCH for room privacy. Sending privacy "private" again
+ * is idempotent.
+ *
+ * Knocking is turned off in the same call so a previously public room cannot
+ * still be entered by requesting access.
+ */
+export async function setRoomPrivate(roomName: string): Promise<void> {
+  const response = await fetch(
+    `${DAILY_API_BASE}/rooms/${encodeURIComponent(roomName)}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: dailyAuthorizationHeader(),
+      },
+      body: JSON.stringify({
+        privacy: "private",
+        properties: { enable_knocking: false },
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Daily.co setRoomPrivate failed (${response.status})`);
+  }
 }
 
 /**

@@ -44,23 +44,42 @@ describe("patient waitlist details", () => {
 
 describe("coming-soon page copy", () => {
   const html = read("public/coming-soon/index.html");
+  const visible = html
+    .replace(/&apos;|&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+  const foundingBox =
+    "£99 a month for our first 100 doctors. No minimum term, cancel any time. The £99 price stays as long as you keep the plan. If you cancel, it can't be reclaimed. A 15% platform fee applies to consultations. Prices exclude VAT.";
 
   it("says coming soon and keeps the £99 doctor offer without a patient 15% offer", () => {
     expect(html).toMatch(/Coming soon/);
-    expect(html).toMatch(/£99 per month for the first 100 doctors/);
-    expect(html).toMatch(/No minimum term, cancel anytime/);
-    expect(html).toMatch(
-      /The price stays £99 per month for as long as you keep the plan/
+    expect(visible).toContain(
+      "Patients are searching for private doctors. Make sure they find you."
     );
-    expect(html).toMatch(
-      /If you cancel, you lose the £99 price and cannot rejoin at £99/
+    expect(visible).toContain("Where Patients Meet the Right Doctor");
+    expect(visible).toContain("Claim your founding spot");
+    expect(visible).toContain("I'm a patient, tell me when it opens");
+    expect(visible).toContain(foundingBox);
+    expect(visible).toContain(
+      "Still juggling calls, emails and chasing payments? That's time you're not paid for."
     );
-    expect(html).toMatch(
-      /The 15% platform fee on consultations still applies and is not discounted/
+    expect(visible).toContain(
+      "Every missed enquiry is a patient booking with someone else."
     );
+    expect(visible).toContain(
+      "With MyDoctors360, patients find you, book a slot, see you by video and pay upfront."
+    );
+    expect(visible).toContain(
+      "Patient booking opens soon. Join the waitlist and we'll let you know."
+    );
+    expect(html).not.toMatch(/Patient search is closed/i);
+    expect(visible).not.toMatch(/Patient search is closed/i);
     expect(html).toMatch(/£199/);
     expect(html).toMatch(/£299/);
-    expect(html).toMatch(/Patient search is closed/);
+    expect(html).not.toMatch(/£897/);
+    expect(visible).toContain("Starter stays £199 and Professional £299.");
+    expect(visible).toContain(
+      "Clinic:</strong> for multi-doctor practices. Get in touch for pricing."
+    );
     expect(html).toMatch(/video consultation/i);
     expect(html).toMatch(/in-person/i);
     expect(html).toMatch(/register-doctor\?tier=founding&founding=1/);
@@ -94,35 +113,21 @@ describe("coming-soon page copy", () => {
     expect(html).not.toMatch(/coupon|promotion code/i);
   });
 
-  it("shows Prices exclude VAT beside every £99, £199 and £299", () => {
-    const legal =
-      "Prices exclude VAT. VAT will only be added if we become VAT-registered.";
-    expect(html.split(legal).length - 1).toBe(2);
+  it("shows Prices exclude VAT once outside the FAQ, in the founding box", () => {
+    const faqAt = visible.indexOf('class="faq-list"');
+    expect(faqAt).toBeGreaterThan(-1);
+    const outside = visible.slice(0, faqAt);
+    const faq = visible.slice(faqAt);
+    const count = (text: string, needle: string) =>
+      text.split(needle).length - 1;
 
-    const body = html.slice(html.indexOf("<body"));
-    const prices = [...body.matchAll(/£(?:99|199|299)\b/g)];
-    expect(prices.length).toBeGreaterThan(0);
-
-    const visibleTail = (index: number, maxChars: number) => {
-      let out = "";
-      let i = index;
-      while (i < body.length && out.length < maxChars) {
-        if (body[i] === "<") {
-          const end = body.indexOf(">", i);
-          if (end === -1) break;
-          i = end + 1;
-          continue;
-        }
-        out += body[i];
-        i += 1;
-      }
-      return out;
-    };
-
-    for (const match of prices) {
-      const tail = visibleTail(match.index ?? 0, 80);
-      expect(tail, tail).toContain("Prices exclude VAT");
-    }
+    expect(count(outside, "Prices exclude VAT")).toBe(1);
+    expect(outside).toContain(foundingBox);
+    expect(count(faq, "Prices exclude VAT")).toBe(1);
+    expect(faq).toContain(
+      "Prices exclude VAT. VAT will only be added if we become VAT-registered."
+    );
+    expect(html).not.toMatch(/class="vat-note"/);
   });
 
   it("waitlist form has empty, success, and error states and only asks for name and email", () => {

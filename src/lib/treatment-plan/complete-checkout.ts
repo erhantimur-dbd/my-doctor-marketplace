@@ -281,6 +281,8 @@ export async function applyTreatmentPlanCheckoutPayment(
       doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
       date: booking.appointment_date,
       time: booking.start_time,
+      end: booking.end_time,
+      locale: patient.preferred_locale,
       consultationType: consultationLabel,
       bookingNumber: booking.booking_number,
       amount: booking.total_amount_cents / 100,

@@ -15,9 +15,9 @@ import {
 import {
   refundAdminBookingPayment,
   refundConsultSplit,
-  bookingRefundSettlementPatch,
   remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
+import { recordConsultRefundOnBooking } from "@/lib/stripe/record-consult-refund";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
@@ -739,12 +739,15 @@ export async function adminRefundBooking(
   const refundAmount = settled.refundAmountCents;
   let refundRef = settled.cardRefundId || `refund-${bookingId}`;
 
-  const { error: updateError } = await supabase
-    .from("bookings")
-    .update(settled.settlementPatch)
-    .eq("id", bookingId);
-
-  if (updateError) return { error: safeError(updateError) };
+  // Service-role write, zero rows are an error, and the Stripe refund id is
+  // claimed once so a retry cannot add the same cents again.
+  const recorded = await recordConsultRefundOnBooking({
+    bookingId,
+    booking,
+    settled,
+    markStatusRefunded: true,
+  });
+  if ("error" in recorded) return { error: recorded.error };
 
   await logAdminAction(supabase, user.id, "booking_refunded", "booking", bookingId, {
     amount_cents: refundAmount,
@@ -2196,7 +2199,7 @@ export async function adminCancelBooking(
   // Same split as a patient cancel: credit back to the wallet, card to the card.
   let refundAmountCents = 0;
   let refundRef: string | null = null;
-  let refundSettlementPatch: Record<string, unknown> | null = null;
+  let settledRefund: Awaited<ReturnType<typeof refundConsultSplit>> | null = null;
   const paidParts = remainingConsultPaidParts(booking);
   if (
     refundPercent > 0 &&
@@ -2221,7 +2224,7 @@ export async function adminCancelBooking(
       });
       refundAmountCents = settled.cardRefundedToCardCents + settled.walletCreditCents;
       refundRef = settled.cardRefundId;
-      refundSettlementPatch = bookingRefundSettlementPatch(booking, settled);
+      settledRefund = settled;
     } catch (err: any) {
       log.error("Admin cancel refund error:", { err: err });
       return { error: safeError(err) };
@@ -2229,19 +2232,17 @@ export async function adminCancelBooking(
   }
 
   const cancelledAt = new Date().toISOString();
-
-  // Update booking status
-  const updateData: Record<string, unknown> = {
-    status: BOOKING_STATUSES.CANCELLED_DOCTOR,
-    cancelled_at: cancelledAt,
-    cancellation_reason: reason || "Cancelled by admin",
-    ...(refundSettlementPatch || {}),
-  };
-
-  await adminSupabase
-    .from("bookings")
-    .update(updateData)
-    .eq("id", bookingId);
+  const recorded = await recordConsultRefundOnBooking({
+    bookingId,
+    booking,
+    settled: settledRefund,
+    extra: {
+      status: BOOKING_STATUSES.CANCELLED_DOCTOR,
+      cancelled_at: cancelledAt,
+      cancellation_reason: reason || "Cancelled by admin",
+    },
+  });
+  if ("error" in recorded) return { error: recorded.error };
 
   // Remove from calendars (non-blocking)
   removeBookingFromGoogleCalendar(bookingId).catch((err) =>

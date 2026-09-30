@@ -47,6 +47,9 @@ describe("isAllowedOnComingSoon", () => {
   it("allows locale-aware Checkout booking-confirmation", () => {
     expect(isAllowedOnComingSoon("/en/booking-confirmation")).toBe(true);
     expect(
+      isAllowedOnComingSoon("/en/join/11111111-1111-4111-8111-111111111111")
+    ).toBe(true);
+    expect(
       isAllowedOnComingSoon(
         "/en/booking-confirmation?session_id=cs_test_softsmoke"
       )
@@ -118,7 +121,9 @@ describe("isAllowedOnComingSoon", () => {
     const source = comingSoon!.source;
     // Prod custom hosts use this rewrite before middleware. Must include
     // dashboard as its own token, not only doctor-dashboard.
-    expect(source).toMatch(/accept-terms\|dashboard\|booking-confirmation\|doctor-dashboard/);
+    expect(source).toMatch(
+      /accept-terms\|dashboard\|booking-confirmation\|join\|doctor-dashboard/
+    );
     // Book deep-link only — a bare `|doctors|` token would open the directory.
     expect(source).toMatch(/doctors\/\[\^\/\]\+\/book/);
     expect(source).not.toMatch(/\|doctors\|/);
@@ -127,6 +132,10 @@ describe("isAllowedOnComingSoon", () => {
     // slash (the locale separator) cannot satisfy the negative lookahead.
     const rewrite = new RegExp(`^${source}$`);
     expect(rewrite.test("/en/booking-confirmation")).toBe(false);
+    expect(
+      rewrite.test("/en/join/11111111-1111-4111-8111-111111111111")
+    ).toBe(false);
+    expect(rewrite.test("/en/join")).toBe(false);
     expect(rewrite.test("/de/booking-confirmation/")).toBe(false);
     expect(rewrite.test("/en/doctors/dr-vera-softsmoke-i6jv/book")).toBe(false);
     expect(rewrite.test("/en/dashboard/bookings")).toBe(false);

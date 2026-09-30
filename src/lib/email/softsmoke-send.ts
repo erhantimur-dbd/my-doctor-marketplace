@@ -10,6 +10,7 @@ import {
   buildPatientCalendarEvent,
   type PatientCalendarAttachment,
 } from "@/lib/booking/patient-calendar";
+import { confirmationVideoHref, consultJoinPageUrl } from "@/lib/video/guest-join-link";
 import { log } from "@/lib/utils/logger";
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
@@ -38,6 +39,7 @@ type ConfirmationParams = Parameters<typeof bookingConfirmationEmail>[0] & {
   timeZone?: string;
   manageUrl?: string;
   bookingId?: string;
+  locale?: string | null;
 };
 
 function unwrap<T>(value: T | T[] | null | undefined): T | null {
@@ -70,8 +72,19 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
   html: string;
   attachments?: PatientCalendarAttachment[];
 } {
+  const videoHref = confirmationVideoHref({
+    consultationType: params.consultationType,
+    videoRoomUrl: params.videoRoomUrl,
+    bookingId: params.bookingId,
+    bookingNumber: params.bookingNumber,
+    appointmentDate: params.date,
+    startTime: params.time,
+    endTime: params.end,
+    locale: params.locale,
+  });
+  const next = { ...params, videoRoomUrl: videoHref };
   if (!isSoftsmokeTransactionalDoctor(params.doctor)) {
-    return bookingConfirmationEmail(params);
+    return bookingConfirmationEmail(next);
   }
   const calendar = confirmationCalendar(params);
   const mail = softsmokePatientConfirmEmail({
@@ -82,7 +95,7 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
     timeZone: params.timeZone,
     bookingRef: params.bookingNumber,
     appointmentType: params.consultationType,
-    joinUrl: params.videoRoomUrl,
+    joinUrl: videoHref,
     manageUrl: params.manageUrl || manageBookingUrl(params.bookingId),
     calendarHtml: calendar?.linksHtml,
   });
@@ -95,7 +108,7 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
 export async function sendSoftsmokeChargeSkipPatientConfirmation(
   supabase: SupabaseClient,
   bookingId: string,
-  videoRoomUrl: string | null
+  _videoRoomUrl: string | null
 ): Promise<void> {
   const { data, error } = await supabase
     .from("bookings")
@@ -110,7 +123,7 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
       consultation_type,
       created_at,
       updated_at,
-      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, preferred_locale),
       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         slug,
@@ -142,8 +155,18 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     created_at?: string | null;
     updated_at?: string | null;
     patient:
-      | { first_name: string | null; last_name: string | null; email: string | null }
-      | { first_name: string | null; last_name: string | null; email: string | null }[]
+      | {
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          preferred_locale: string | null;
+        }
+      | {
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          preferred_locale: string | null;
+        }[]
       | null;
     doctor:
       | {
@@ -206,7 +229,22 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     appointmentTime: row.start_time,
     bookingRef: row.booking_number,
     appointmentType: row.consultation_type,
-    joinUrl: videoRoomUrl,
+    joinUrl:
+      row.consultation_type === "video"
+        ? consultJoinPageUrl({
+            bookingId: row.id,
+            bookingNumber: row.booking_number,
+            source: "email",
+            locale: patient.preferred_locale,
+            times: row.end_time
+              ? {
+                  appointmentDate: row.appointment_date,
+                  startTime: row.start_time,
+                  endTime: row.end_time,
+                }
+              : undefined,
+          })
+        : null,
     manageUrl: manageBookingUrl(row.id),
     calendarHtml: calendar?.linksHtml,
   });

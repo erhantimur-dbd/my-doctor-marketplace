@@ -89,7 +89,7 @@ describe("Softsmoke transactional bodies", () => {
     appointmentTime: ISO,
     bookingRef: "BK-20260926-TEST",
     appointmentType: "video",
-    joinUrl: "https://example.daily.co/room",
+    joinUrl: "https://mydoctors360.com/en/join/1?src=email",
     manageUrl: "https://mydoctors360.com/en/dashboard/bookings/1",
   };
 
