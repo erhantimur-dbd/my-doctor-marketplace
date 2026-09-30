@@ -52,9 +52,9 @@ async function fullRefundBooking(booking: {
   deposit_amount_cents?: number | null;
   total_amount_cents: number;
   wallet_credit_applied_cents?: number | null;
-  rescheduled_from_booking_id?: string | null;
-  reschedule_price_diff_cents?: number | null;
-  reschedule_payment_status?: string | null;
+  rescheduled_from_booking_id: string | null;
+  reschedule_price_diff_cents: number | null;
+  reschedule_payment_status: string | null;
   currency?: string | null;
   paid_at?: string | null;
   refund_amount_cents?: number | null;
