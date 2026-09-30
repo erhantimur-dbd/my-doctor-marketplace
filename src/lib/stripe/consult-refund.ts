@@ -37,6 +37,38 @@ export interface ConsultPaidParts {
 const PAID_RESCHEDULE_BALANCE_STATUSES = new Set(["paid", "refunded"]);
 
 /**
+ * These three columns decide whether this row's own card charge is the
+ * balance PaymentIntent. They may be null. They must be present: a narrow
+ * select that omits them would otherwise fall through to `total_amount_cents`
+ * (the new full fee, 5000 on a £10 balance row).
+ */
+export type ConsultReschedulePaidFields = {
+  rescheduled_from_booking_id: string | null;
+  reschedule_price_diff_cents: number | null;
+  reschedule_payment_status: string | null;
+};
+
+export const MISSING_CONSULT_RESCHEDULE_PAID_FIELDS =
+  "rescheduled_from_booking_id, reschedule_price_diff_cents, and reschedule_payment_status are required. Omitting them would treat total_amount_cents as this booking's card charge.";
+
+const CONSULT_RESCHEDULE_PAID_KEYS = [
+  "rescheduled_from_booking_id",
+  "reschedule_price_diff_cents",
+  "reschedule_payment_status",
+] as const satisfies readonly (keyof ConsultReschedulePaidFields)[];
+
+export function assertConsultReschedulePaidFields(
+  booking: object
+): asserts booking is ConsultReschedulePaidFields {
+  const row = booking as Record<string, unknown>;
+  for (const key of CONSULT_RESCHEDULE_PAID_KEYS) {
+    if (!Object.prototype.hasOwnProperty.call(row, key) || row[key] === undefined) {
+      throw new Error(MISSING_CONSULT_RESCHEDULE_PAID_FIELDS);
+    }
+  }
+}
+
+/**
  * Dearer-slot reschedule successor. `total_amount_cents` is the new full fee.
  * This row's own card charge is `reschedule_price_diff_cents` (the balance
  * PaymentIntent). Cheaper reschedules store a non-positive diff, mark
@@ -45,11 +77,10 @@ const PAID_RESCHEDULE_BALANCE_STATUSES = new Set(["paid", "refunded"]);
  * Returns null when this row is not a paid balance booking, so callers keep
  * the deposit / consultation-total basis.
  */
-export function rescheduleBalanceOwnCardPaidCents(booking: {
-  rescheduled_from_booking_id?: string | null;
-  reschedule_price_diff_cents?: number | null;
-  reschedule_payment_status?: string | null;
-}): number | null {
+export function rescheduleBalanceOwnCardPaidCents(
+  booking: ConsultReschedulePaidFields
+): number | null {
+  assertConsultReschedulePaidFields(booking);
   const diff = Number(booking.reschedule_price_diff_cents || 0);
   if (diff <= 0) return null;
   if (!booking.rescheduled_from_booking_id) return null;
@@ -65,15 +96,15 @@ export function rescheduleBalanceOwnCardPaidCents(booking: {
  * price-diff charge, not `total_amount_cents` (that column is the new full fee;
  * the rest was charged on the paired original booking).
  */
-export function storedConsultPaidParts(booking: {
-  payment_mode?: string | null;
-  deposit_amount_cents?: number | null;
-  total_amount_cents?: number | null;
-  wallet_credit_applied_cents?: number | null;
-  rescheduled_from_booking_id?: string | null;
-  reschedule_price_diff_cents?: number | null;
-  reschedule_payment_status?: string | null;
-}): ConsultPaidParts {
+export function storedConsultPaidParts(
+  booking: {
+    payment_mode?: string | null;
+    deposit_amount_cents?: number | null;
+    total_amount_cents?: number | null;
+    wallet_credit_applied_cents?: number | null;
+  } & ConsultReschedulePaidFields
+): ConsultPaidParts {
+  assertConsultReschedulePaidFields(booking);
   const balanceCardPaidCents = rescheduleBalanceOwnCardPaidCents(booking);
   if (balanceCardPaidCents != null) {
     // The balance PaymentIntent is the full price difference. Wallet credit
@@ -632,15 +663,12 @@ export async function refundClinicCancellation(
     deposit_amount_cents?: number | null;
     total_amount_cents?: number | null;
     wallet_credit_applied_cents?: number | null;
-    rescheduled_from_booking_id?: string | null;
-    reschedule_price_diff_cents?: number | null;
-    reschedule_payment_status?: string | null;
     paid_at?: string | null;
     refund_amount_cents?: number | null;
     card_refunded_to_card_cents?: number | null;
     card_credited_to_wallet_cents?: number | null;
     credit_refunded_cents?: number | null;
-  },
+  } & ConsultReschedulePaidFields,
   deps?: ConsultRefundDeps
 ): Promise<
   ConsultRefundResult & {
@@ -701,16 +729,13 @@ export async function refundAdminBookingPayment(
     deposit_amount_cents?: number | null;
     total_amount_cents?: number | null;
     wallet_credit_applied_cents?: number | null;
-    rescheduled_from_booking_id?: string | null;
-    reschedule_price_diff_cents?: number | null;
-    reschedule_payment_status?: string | null;
     paid_at?: string | null;
     refunded_at?: string | null;
     refund_amount_cents?: number | null;
     card_refunded_to_card_cents?: number | null;
     card_credited_to_wallet_cents?: number | null;
     credit_refunded_cents?: number | null;
-  },
+  } & ConsultReschedulePaidFields,
   amountCents?: number,
   deps?: ConsultRefundDeps
 ): Promise<

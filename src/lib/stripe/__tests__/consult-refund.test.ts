@@ -12,6 +12,7 @@ import {
   proportionalCardTransferClawbackCents,
   refundAdminBookingPayment,
   refundClinicCancellation,
+  MISSING_CONSULT_RESCHEDULE_PAID_FIELDS,
   refundConsultSplit,
   rescheduleBalanceOwnCardPaidCents,
   splitConsultRefund,
@@ -26,6 +27,39 @@ import {
   type WalletCreditTransferRecord,
   type WalletCreditTransferStore,
 } from "@/lib/stripe/wallet-credit-share";
+import { recordConsultRefundOnBooking } from "@/lib/stripe/record-consult-refund";
+
+const NO_RESCHEDULE = {
+  rescheduled_from_booking_id: null,
+  reschedule_price_diff_cents: null,
+  reschedule_payment_status: null,
+} as const;
+
+type ReschedulePaid = {
+  rescheduled_from_booking_id: string | null;
+  reschedule_price_diff_cents: number | null;
+  reschedule_payment_status: string | null;
+};
+type KeysPresent<T extends ReschedulePaid> = [
+  undefined extends T["rescheduled_from_booking_id"] ? never : true,
+  undefined extends T["reschedule_price_diff_cents"] ? never : true,
+  undefined extends T["reschedule_payment_status"] ? never : true,
+];
+const _rescheduleKeysRequired: [
+  KeysPresent<Parameters<typeof storedConsultPaidParts>[0]>,
+  KeysPresent<Parameters<typeof remainingConsultPaidParts>[0]>,
+  KeysPresent<Parameters<typeof rescheduleBalanceOwnCardPaidCents>[0]>,
+  KeysPresent<Parameters<typeof refundClinicCancellation>[0]>,
+  KeysPresent<Parameters<typeof refundAdminBookingPayment>[0]>,
+  KeysPresent<Parameters<typeof recordConsultRefundOnBooking>[0]["booking"]>,
+] = [
+  [true, true, true],
+  [true, true, true],
+  [true, true, true],
+  [true, true, true],
+  [true, true, true],
+  [true, true, true],
+];
 
 function read(rel: string) {
   return readFileSync(join(process.cwd(), rel), "utf8");
@@ -194,6 +228,7 @@ function harness(store: WalletCreditTransferStore) {
 describe("stored card and credit amounts", () => {
   it("splits a percentage across each stored part, not the consultation total", () => {
     const parts = storedConsultPaidParts({
+      ...NO_RESCHEDULE,
       payment_mode: "deposit",
       deposit_amount_cents: 3000,
       total_amount_cents: 10000,
@@ -429,6 +464,7 @@ describe("clinic cancel and admin refund", () => {
 
     const result = await refundClinicCancellation(
       {
+        ...NO_RESCHEDULE,
         id: BOOKING_ID,
         booking_number: "MD-200",
         patient_id: "pat-1",
@@ -464,6 +500,7 @@ describe("clinic cancel and admin refund", () => {
 
     const result = await refundAdminBookingPayment(
       {
+        ...NO_RESCHEDULE,
         id: BOOKING_ID,
         booking_number: "MD-100",
         patient_id: "pat-1",
@@ -848,6 +885,7 @@ describe("wallet destination never refunds the card", () => {
     );
     const patch = bookingRefundSettlementPatch(
       {
+        ...NO_RESCHEDULE,
         total_amount_cents: 10000,
         wallet_credit_applied_cents: 4000,
       },
@@ -862,6 +900,7 @@ describe("wallet destination never refunds the card", () => {
 
     const admin = await refundAdminBookingPayment(
       {
+        ...NO_RESCHEDULE,
         id: BOOKING_ID,
         booking_number: "MD-WLT",
         patient_id: "pat-1",
@@ -910,6 +949,7 @@ describe("wallet destination never refunds the card", () => {
     );
     const patch = bookingRefundSettlementPatch(
       {
+        ...NO_RESCHEDULE,
         total_amount_cents: 10000,
         wallet_credit_applied_cents: 4000,
       },
@@ -918,6 +958,7 @@ describe("wallet destination never refunds the card", () => {
 
     const admin = await refundAdminBookingPayment(
       {
+        ...NO_RESCHEDULE,
         id: BOOKING_ID,
         booking_number: "MD-PART",
         patient_id: "pat-1",
@@ -953,6 +994,7 @@ describe("wallet destination never refunds the card", () => {
   it("alreadyApplied still persists counters when the booking update never landed", () => {
     const patch = bookingRefundSettlementPatch(
       {
+        ...NO_RESCHEDULE,
         total_amount_cents: 10000,
         wallet_credit_applied_cents: 4000,
       },
@@ -973,6 +1015,7 @@ describe("wallet destination never refunds the card", () => {
 
     const second = bookingRefundSettlementPatch(
       {
+        ...NO_RESCHEDULE,
         total_amount_cents: 10000,
         wallet_credit_applied_cents: 4000,
         card_credited_to_wallet_cents: 6000,
@@ -994,6 +1037,7 @@ describe("wallet destination never refunds the card", () => {
     const store = memoryStore();
     const { stripe, deps } = harness(store);
     const base = {
+      ...NO_RESCHEDULE,
       id: BOOKING_ID,
       booking_number: "MD-40",
       patient_id: "pat-1",
@@ -1043,6 +1087,7 @@ describe("wallet destination never refunds the card", () => {
     const store = memoryStore();
     const { deps } = harness(store);
     const booking = {
+      ...NO_RESCHEDULE,
       id: BOOKING_ID,
       booking_number: "MD-FULL",
       patient_id: "pat-1",
@@ -1095,6 +1140,7 @@ describe("wallet destination never refunds the card", () => {
       refund_amount_cents: 2000,
     });
     const remaining = remainingConsultPaidParts({
+      ...NO_RESCHEDULE,
       total_amount_cents: rebase.total_amount_cents as number,
       wallet_credit_applied_cents: rebase.wallet_credit_applied_cents as number,
       card_refunded_to_card_cents: 0,
@@ -1110,6 +1156,7 @@ describe("wallet destination never refunds the card", () => {
     const store = memoryStore();
     const { stripe, deps } = harness(store);
     const booking = {
+      ...NO_RESCHEDULE,
       id: BOOKING_ID,
       booking_number: "MD-CAP",
       patient_id: "pat-1",
@@ -1182,8 +1229,22 @@ describe("dearer-slot balance row refund cap", () => {
     };
   }
 
+  it("throws when a balance row is missing the reschedule fields", () => {
+    const narrow = {
+      total_amount_cents: 5000,
+      wallet_credit_applied_cents: 0,
+    };
+    expect(() => storedConsultPaidParts(narrow as never)).toThrow(
+      MISSING_CONSULT_RESCHEDULE_PAID_FIELDS
+    );
+    expect(() => remainingConsultPaidParts(narrow as never)).toThrow(
+      MISSING_CONSULT_RESCHEDULE_PAID_FIELDS
+    );
+  });
+
   it("refunds 4000 on the original charge and 1000 on the balance charge, not 5000", () => {
     const original = {
+      ...NO_RESCHEDULE,
       total_amount_cents: 4000,
       wallet_credit_applied_cents: 0,
       stripe_charge_id: "ch_3UK31LPhJvj3ftQe0hz1JiDw",
@@ -1223,6 +1284,7 @@ describe("dearer-slot balance row refund cap", () => {
     expect(remainingConsultPaidParts(booking).remainingPaidCents).toBe(3000);
 
     const cardAndCredit = {
+      ...NO_RESCHEDULE,
       total_amount_cents: 10000,
       wallet_credit_applied_cents: 4000,
     };
