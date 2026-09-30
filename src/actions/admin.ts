@@ -1880,6 +1880,7 @@ export async function adminCreateBookingOnBehalf(input: {
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    adaptive_pricing: { enabled: false },
     payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
     customer_email: patient.email,
     line_items: [
@@ -2044,6 +2045,7 @@ export async function adminResendPaymentLink(bookingId: string) {
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
+    adaptive_pricing: { enabled: false },
     payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
     customer_email: patient.email,
     line_items: [

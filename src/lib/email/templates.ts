@@ -703,8 +703,8 @@ export function welcomeEmail({
 
 // ---------------------------------------------------------------------------
 // Doctor Welcome Email
-// Sent from registerDoctor and registerDoctorWithCheckout. Patient signup
-// keeps welcomeEmail above.
+// Sent from registerDoctor immediately, and from the licence payment
+// webhook after Checkout succeeds. Patient signup keeps welcomeEmail.
 // ---------------------------------------------------------------------------
 
 export function doctorWelcomeEmail({

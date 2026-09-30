@@ -2,16 +2,24 @@ import type { InventoryRankDoctor } from "@/lib/search/types";
 
 export type EarliestSlotFn = (doctorId: string) => number;
 
-/** Active paid Featured boost (unexpired featured_until or null until). */
+/**
+ * Active paid Featured boost (unexpired featured_until, or a null end for a
+ * paid boost). A founding member with a null featured_until is not featured:
+ * search must not read that null as forever.
+ */
 export function isActivelyFeatured(
-  doctor: Pick<InventoryRankDoctor, "is_featured" | "featured_until">,
+  doctor: Pick<InventoryRankDoctor, "is_featured" | "featured_until"> & {
+    is_founding_member?: boolean | null;
+  },
   now: Date = new Date()
 ): boolean {
   const raw = doctor.is_featured as unknown;
   const featured =
     raw === true || raw === "true" || raw === 1 || raw === "1";
   if (!featured) return false;
-  if (doctor.featured_until == null || doctor.featured_until === "") return true;
+  if (doctor.featured_until == null || doctor.featured_until === "") {
+    return doctor.is_founding_member !== true;
+  }
   // Normalize Postgres timestamps that may lack a timezone designator
   let untilRaw = String(doctor.featured_until).trim();
   if (

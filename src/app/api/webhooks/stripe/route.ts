@@ -96,6 +96,16 @@ export async function POST(request: NextRequest) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
 
+      if (
+        session.mode === "subscription" &&
+        session.metadata?.type === "license"
+      ) {
+        const { onLicenseCheckoutCompleted } = await import(
+          "@/lib/founding/checkout-events"
+        );
+        await onLicenseCheckoutCompleted(supabase, session);
+      }
+
       // ── Wallet Top-Up ──
       // Prefer Stripe-charged amount over client-set metadata (money integrity).
       if (session.metadata?.type === "wallet_top_up") {
@@ -766,7 +776,32 @@ export async function POST(request: NextRequest) {
         if (effectiveTier === "founding") {
           const { mayGrantFoundingLicence, foundingOfferLicenseMetadata } =
             await import("@/lib/founding/offer");
-          const doctorIdForClaim = subscription.metadata?.doctor_id || doctorId;
+          const { claimFoundingSpotOnPayment, unixToIso } = await import(
+            "@/lib/founding/spots"
+          );
+          const { futureFeaturedUntil } = await import(
+            "@/lib/founding/spot-lifecycle"
+          );
+          const { sendDoctorWelcomeOnce } = await import(
+            "@/lib/email/doctor-welcome-once"
+          );
+          let doctorIdForClaim: string | null =
+            subscription.metadata?.doctor_id || doctorId || null;
+          if (!doctorIdForClaim && orgId) {
+            const { data: orgDoctor } = await supabase
+              .from("doctors")
+              .select("id")
+              .eq("organization_id", orgId)
+              .limit(1)
+              .maybeSingle();
+            doctorIdForClaim = orgDoctor?.id ?? null;
+          }
+          const itemPeriodEnd = (
+            subscription.items?.data?.[0] as { current_period_end?: number } | undefined
+          )?.current_period_end;
+          const periodEndUnix =
+            typeof periodEnd === "number" ? periodEnd : itemPeriodEnd;
+          const periodEndIso = futureFeaturedUntil(unixToIso(periodEndUnix));
           let allowed = false;
           if (doctorIdForClaim) {
             const { data: foundingDoc } = await supabase
@@ -776,13 +811,26 @@ export async function POST(request: NextRequest) {
               )
               .eq("id", doctorIdForClaim)
               .maybeSingle();
-            allowed =
-              !!foundingDoc &&
-              !foundingDoc.founding_offer_forfeited_at &&
-              mayGrantFoundingLicence({
-                claimed: foundingDoc.is_founding_member === true,
-                foundingNumber: foundingDoc.founding_member_number,
+            const forfeited = !!foundingDoc?.founding_offer_forfeited_at;
+            const wasMember = foundingDoc?.is_founding_member === true;
+            if (
+              !forfeited &&
+              (licenseStatus === "active" || licenseStatus === "trialing")
+            ) {
+              const claim = await claimFoundingSpotOnPayment(supabase, {
+                doctorId: doctorIdForClaim,
+                featuredUntil: periodEndIso,
               });
+              allowed = mayGrantFoundingLicence(claim);
+              if (allowed && claim.claimed && !wasMember) {
+                await sendDoctorWelcomeOnce(doctorIdForClaim);
+              }
+            } else if (!forfeited) {
+              allowed = mayGrantFoundingLicence({
+                claimed: wasMember,
+                foundingNumber: foundingDoc?.founding_member_number ?? null,
+              });
+            }
           }
           if (!allowed) {
             try {
@@ -1103,7 +1151,7 @@ export async function POST(request: NextRequest) {
       if (orgId) {
         const { data: endingLic } = await supabase
           .from("licenses")
-          .select("tier")
+          .select("tier, status")
           .eq("stripe_subscription_id", subscription.id)
           .maybeSingle();
 
@@ -1126,18 +1174,46 @@ export async function POST(request: NextRequest) {
           .eq("stripe_subscription_id", subscription.id);
 
         if (foundingSub) {
-          const forfeitedAt = new Date().toISOString();
+          const subRaw = subscription as unknown as Record<string, unknown>;
+          const endedUnix =
+            (typeof subRaw.ended_at === "number" ? subRaw.ended_at : null) ||
+            (typeof subRaw.canceled_at === "number" ? subRaw.canceled_at : null) ||
+            (typeof subRaw.current_period_end === "number"
+              ? subRaw.current_period_end
+              : null);
+          const featuredUntil = endedUnix
+            ? new Date(endedUnix * 1000).toISOString()
+            : new Date().toISOString();
+          const wasLive = ["active", "trialing", "past_due", "grace_period"].includes(
+            endingLic?.status ?? ""
+          );
           const doctorIdMeta = subscription.metadata?.doctor_id;
-          if (doctorIdMeta) {
-            await supabase
-              .from("doctors")
-              .update({ founding_offer_forfeited_at: forfeitedAt })
-              .eq("id", doctorIdMeta);
+          if (wasLive) {
+            const forfeitedAt = new Date().toISOString();
+            if (doctorIdMeta) {
+              await supabase
+                .from("doctors")
+                .update({ founding_offer_forfeited_at: forfeitedAt })
+                .eq("id", doctorIdMeta);
+            } else {
+              await supabase
+                .from("doctors")
+                .update({ founding_offer_forfeited_at: forfeitedAt })
+                .eq("organization_id", orgId);
+            }
+            const { endFoundingFeatured } = await import("@/lib/founding/spots");
+            await endFoundingFeatured(supabase, {
+              doctorId: doctorIdMeta,
+              organizationId: doctorIdMeta ? null : orgId,
+              featuredUntil,
+            });
           } else {
-            await supabase
-              .from("doctors")
-              .update({ founding_offer_forfeited_at: forfeitedAt })
-              .eq("organization_id", orgId);
+            const { releaseFoundingSpotReservation } = await import(
+              "@/lib/founding/spots"
+            );
+            await releaseFoundingSpotReservation(supabase, {
+              doctorId: doctorIdMeta,
+            });
           }
         } else {
         // Reactivate a £0 licence that was already granted. Do not mint a new one.
@@ -1195,6 +1271,20 @@ export async function POST(request: NextRequest) {
             err
           );
         }
+      }
+      break;
+    }
+
+    case "checkout.session.expired": {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (
+        session.mode === "subscription" &&
+        session.metadata?.type === "license"
+      ) {
+        const { onLicenseCheckoutExpired } = await import(
+          "@/lib/founding/checkout-events"
+        );
+        await onLicenseCheckoutExpired(supabase, session);
       }
       break;
     }

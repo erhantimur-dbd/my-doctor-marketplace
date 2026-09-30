@@ -141,10 +141,14 @@ export async function createLicenseCheckout(
   }
 
   const { isFoundingOfferTier } = await import("@/lib/founding/offer");
+  let foundingDoctorId: string | null = null;
   if (isFoundingOfferTier(parsed.data.tier)) {
-    const { claimFoundingOfferForOrg } = await import("@/lib/founding/grant");
-    const gate = await claimFoundingOfferForOrg(org.id);
+    const { assertFoundingCheckoutAllowedForOrg } = await import(
+      "@/lib/founding/grant"
+    );
+    const gate = await assertFoundingCheckoutAllowedForOrg(org.id);
     if (!gate.ok) return { error: gate.error };
+    foundingDoctorId = gate.doctorId;
   }
 
   // Free gateway may already have an active free row — that must not block Starter Checkout.
@@ -238,12 +242,14 @@ export async function createLicenseCheckout(
   const sessionOptions: Record<string, unknown> = {
     customer: customerId,
     mode: "subscription",
+    adaptive_pricing: { enabled: false },
     line_items: [{ price: priceId, quantity }],
     metadata: {
       organization_id: org.id,
       tier: parsed.data.tier,
       type: "license",
       billing_period: billingPeriod,
+      ...(foundingDoctorId ? { doctor_id: foundingDoctorId } : {}),
       ...(foundingOffer ? foundingCheckoutMetadata() : {}),
     },
     subscription_data: {
@@ -254,6 +260,7 @@ export async function createLicenseCheckout(
         seat_count: String(quantity),
         max_seats: String(maxSeats),
         billing_period: billingPeriod,
+        ...(foundingDoctorId ? { doctor_id: foundingDoctorId } : {}),
         ...(foundingOffer ? foundingCheckoutMetadata() : {}),
       },
     },
@@ -276,6 +283,24 @@ export async function createLicenseCheckout(
   const session = await stripe.checkout.sessions.create(
     sessionOptions as any
   );
+
+  if (foundingOffer && foundingDoctorId) {
+    const { reserveFoundingSpotForSession } = await import(
+      "@/lib/founding/grant"
+    );
+    const reserved = await reserveFoundingSpotForSession(
+      foundingDoctorId,
+      session.id
+    );
+    if (!reserved.ok) {
+      try {
+        await stripe.checkout.sessions.expire(session.id);
+      } catch {
+        /* session may already be closed */
+      }
+      return { error: reserved.error };
+    }
+  }
 
   return { url: session.url };
 }
@@ -698,10 +723,14 @@ export async function upgradeLicenseTier(
   }
 
   const { isFoundingOfferTier } = await import("@/lib/founding/offer");
+  let foundingDoctorId: string | null = null;
   if (isFoundingOfferTier(parsed.data.new_tier)) {
-    const { claimFoundingOfferForOrg } = await import("@/lib/founding/grant");
-    const gate = await claimFoundingOfferForOrg(org.id);
+    const { assertFoundingCheckoutAllowedForOrg } = await import(
+      "@/lib/founding/grant"
+    );
+    const gate = await assertFoundingCheckoutAllowedForOrg(org.id);
     if (!gate.ok) return { error: gate.error };
+    foundingDoctorId = gate.doctorId;
   }
 
   const { data: existingRows } = await supabase
@@ -779,15 +808,34 @@ export async function upgradeLicenseTier(
     : tierConfig.includedSeats || 1;
 
   const stripe = getStripe();
+  if (foundingDoctorId && current.stripe_subscription_id) {
+    const { reserveFoundingSpotForSession } = await import(
+      "@/lib/founding/grant"
+    );
+    const reserved = await reserveFoundingSpotForSession(
+      foundingDoctorId,
+      `upgrade:${current.stripe_subscription_id}`
+    );
+    if (!reserved.ok) return { error: reserved.error };
+  }
   try {
     const subscription = await stripe.subscriptions.retrieve(
       current.stripe_subscription_id
     );
     const itemId = subscription.items.data[0]?.id;
     if (!itemId) {
+      if (foundingDoctorId) {
+        const { releaseFoundingSpotReservation } = await import(
+          "@/lib/founding/spots"
+        );
+        await releaseFoundingSpotReservation(createAdminClient(), {
+          doctorId: foundingDoctorId,
+        });
+      }
       return { error: "Subscription has no line items to upgrade" };
     }
 
+    const { foundingCheckoutMetadata } = await import("@/lib/founding/offer");
     await stripe.subscriptions.update(current.stripe_subscription_id, {
       items: [{ id: itemId, price: priceId, quantity }],
       proration_behavior: "create_prorations",
@@ -799,6 +847,8 @@ export async function upgradeLicenseTier(
         seat_count: String(quantity),
         max_seats: String(maxSeats),
         billing_period: billingPeriod,
+        ...(foundingDoctorId ? { doctor_id: foundingDoctorId } : {}),
+        ...(foundingDoctorId ? foundingCheckoutMetadata() : {}),
       },
     });
 
@@ -828,6 +878,14 @@ export async function upgradeLicenseTier(
     revalidatePath("/doctor-dashboard/organization/billing");
     return { error: null, upgraded: true as const, tier: parsed.data.new_tier };
   } catch (err) {
+    if (foundingDoctorId) {
+      const { releaseFoundingSpotReservation } = await import(
+        "@/lib/founding/spots"
+      );
+      await releaseFoundingSpotReservation(createAdminClient(), {
+        doctorId: foundingDoctorId,
+      });
+    }
     log.error("upgradeLicenseTier failed", { err });
     return {
       error:
@@ -896,8 +954,10 @@ export async function schedulePlanChange(
   }
 
   if (parsed.data.target_tier === "founding") {
-    const { claimFoundingOfferForOrg } = await import("@/lib/founding/grant");
-    const gate = await claimFoundingOfferForOrg(org.id);
+    const { assertFoundingCheckoutAllowedForOrg } = await import(
+      "@/lib/founding/grant"
+    );
+    const gate = await assertFoundingCheckoutAllowedForOrg(org.id);
     if (!gate.ok) return { error: gate.error };
   }
 

@@ -5,6 +5,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { FOUNDING_PROGRAMME_MAX_SPOTS } from "@/lib/constants/company";
+import { FOUNDING_PRICING_NOTE } from "@/lib/founding/pricing-note";
 import { log } from "@/lib/utils/logger";
 
 export interface FoundingProgrammeStatus {
@@ -30,8 +31,7 @@ export async function getFoundingProgrammeStatus(): Promise<FoundingProgrammeSta
       claimedSpots: 0,
       remainingSpots: FOUNDING_PROGRAMME_MAX_SPOTS,
       isOpen: true,
-      pricingNote:
-        "The founding plan is £99 per month for the first 100 doctors. Monthly, cancel anytime. The price stays £99 while you keep the plan.",
+      pricingNote: FOUNDING_PRICING_NOTE,
     };
   }
 
@@ -44,9 +44,7 @@ export async function getFoundingProgrammeStatus(): Promise<FoundingProgrammeSta
     claimedSpots,
     remainingSpots: remaining,
     isOpen: Boolean(data.is_open) && remaining > 0,
-    pricingNote:
-      data.pricing_note ||
-      "The founding plan is £99 per month for the first 100 doctors. Monthly, cancel anytime. The price stays £99 while you keep the plan.",
+    pricingNote: data.pricing_note || FOUNDING_PRICING_NOTE,
   };
 }
 

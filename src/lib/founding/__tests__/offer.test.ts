@@ -36,23 +36,30 @@ describe("founding offer cap", () => {
     );
   });
 
-  it("requires a successful claim in signup before checkout", () => {
+  it("does not claim a founding spot when signup checkout is created", () => {
     const auth = read("src/actions/auth.ts");
     const checkout = auth.slice(
       auth.indexOf("export async function registerDoctorWithCheckout"),
       auth.indexOf("export async function resumeDoctorLicenseCheckout")
     );
-    const claimAt = checkout.indexOf("claimFoundingOfferForCheckout");
-    const stripeAt = checkout.indexOf("stripe.customers.create");
-    expect(claimAt).toBeGreaterThan(-1);
-    expect(stripeAt).toBeGreaterThan(claimAt);
+    const stripeAt = checkout.indexOf("stripe.checkout.sessions.create");
+    const reserveAt = checkout.indexOf("reserveFoundingSpotForSession");
+    expect(checkout).not.toContain("claimFoundingOfferForCheckout");
+    expect(checkout).not.toContain("claimFoundingMembership");
+    expect(checkout).not.toContain("claimFoundingSpotOnPayment");
+    expect(reserveAt).toBeGreaterThan(stripeAt);
+    expect(checkout).toContain("assertFoundingCheckoutAllowed");
     expect(auth).not.toMatch(/tier:\s*"free"/);
     expect(checkout).toContain("if (!gate.ok) return { error: gate.error }");
+    expect(checkout).toContain("if (!reserved.ok)");
   });
 
   it("webhook refuses a founding licence without a claimed spot", () => {
     const webhook = read("src/app/api/webhooks/stripe/route.ts");
     expect(webhook).toContain("mayGrantFoundingLicence");
+    expect(webhook).toContain("claimFoundingSpotOnPayment");
+    expect(webhook).toContain("checkout.session.expired");
+    expect(webhook).toContain("endFoundingFeatured");
     expect(webhook).toContain("subscriptions.cancel");
     expect(webhook).toContain("founding_offer_forfeited_at");
     expect(webhook).toContain("founding_offer_redeemed_at");
@@ -112,7 +119,8 @@ describe("price lock versus cancel forfeit", () => {
     ).toBe(false);
     const grant = read("src/lib/founding/grant.ts");
     expect(grant).toContain("canResubscribeFoundingOffer");
-    expect(grant).toContain("mayGrantFoundingLicence");
+    expect(grant).not.toContain("claimFoundingMembership");
+    expect(read("src/lib/founding/spots.ts")).toContain("mayGrantFoundingLicence");
   });
 
   it("does not rewrite licences already granted", () => {

@@ -444,6 +444,7 @@ export async function createInvitationCheckout(
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
+      adaptive_pricing: { enabled: false },
       payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
       line_items: [
         {

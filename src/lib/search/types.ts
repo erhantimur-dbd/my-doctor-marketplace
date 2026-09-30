@@ -58,7 +58,11 @@ export type InventoryRankDoctor = {
   id: string;
   avg_rating?: number | null;
   is_featured?: boolean | null;
-  /** ISO timestamp; null/undefined = no expiry while is_featured is true */
+  /**
+   * ISO timestamp. Null means no expiry for a paid boost. For a founding
+   * member, null is not featured (see isActivelyFeatured).
+   */
   featured_until?: string | null;
+  is_founding_member?: boolean | null;
   [key: string]: unknown;
 };

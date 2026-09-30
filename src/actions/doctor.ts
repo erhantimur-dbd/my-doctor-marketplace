@@ -461,6 +461,7 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
   const sessionOptions: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     mode: "subscription",
+    adaptive_pricing: { enabled: false },
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { doctor_id: doctor.id },
     success_url: `${origin}/en/doctor-dashboard/organization/billing?success=true`,

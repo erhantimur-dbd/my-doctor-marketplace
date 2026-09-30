@@ -732,6 +732,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
+      adaptive_pricing: { enabled: false },
       payment_method_types: CONSULT_PAYMENT_METHOD_TYPES,
       customer_email: guestEmail || undefined,
       line_items: [
