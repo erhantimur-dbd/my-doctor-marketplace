@@ -21,6 +21,7 @@ import { BookingFilters } from "./booking-filters";
 import { ExportCSVButton } from "../components/export-csv-button";
 import { exportBookingsCSV } from "@/actions/admin";
 import { bookingListMatchesQuery } from "@/lib/booking/booking-number";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
 const statusColors: Record<string, string> = {
   pending_payment: "bg-gray-100 text-gray-700",
@@ -96,7 +97,7 @@ export default async function AdminBookingsPage({
       `id, booking_number, appointment_date, start_time, end_time, status, consultation_type,
        total_amount_cents, platform_fee_cents, currency,
        patient:profiles!bookings_patient_id_fkey(first_name, last_name),
-       doctor:doctors!inner(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
     )
     .limit(100);
 

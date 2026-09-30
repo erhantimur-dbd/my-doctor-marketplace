@@ -8,6 +8,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureDailyVideoRoom } from "@/lib/booking/finalize-confirmed-booking";
+import { persistBookingDestinationChargeIds } from "@/lib/stripe/destination-charge";
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
@@ -94,6 +95,12 @@ export async function applyTreatmentPlanCheckoutPayment(
       })
       .eq("id", bookingId)
       .eq("status", "pending_payment");
+
+    await persistBookingDestinationChargeIds({
+      bookingId,
+      paymentIntentId: piId,
+      supabase,
+    });
   }
 
   // Idempotent progress: count confirmed/active linked bookings.

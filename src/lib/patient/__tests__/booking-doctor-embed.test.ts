@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -11,6 +11,19 @@ import {
 
 function read(rel: string): string {
   return readFileSync(join(process.cwd(), rel), "utf8");
+}
+
+function parenStillOpen(source: string, openParen: number, index: number): boolean {
+  let depth = 1;
+  for (let i = openParen + 1; i < index; i++) {
+    const char = source[i];
+    if (char === "(") depth += 1;
+    else if (char === ")") {
+      depth -= 1;
+      if (depth === 0) return false;
+    }
+  }
+  return depth > 0;
 }
 
 describe("patient bookings doctor embed", () => {
@@ -97,6 +110,50 @@ describe("patient bookings doctor embed", () => {
       expect(source).toContain("doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(");
       expect(source).not.toMatch(/doctor:doctors!inner\(/);
     }
+  });
+
+  it("names bookings_doctor_id_fkey on every bookings to doctors embed", () => {
+    const root = join(process.cwd(), "src");
+    const ambiguous = /doctor:doctors(?:!inner)?\(/g;
+    const fromRe = /\.from\(\s*["']([^"']+)["']\s*\)/g;
+    const embedRe = /booking:bookings[^\n(]*\(/g;
+    const hits: string[] = [];
+
+    function walk(dir: string) {
+      for (const entry of readdirSync(dir)) {
+        const path = join(dir, entry);
+        if (statSync(path).isDirectory()) {
+          if (entry === "__tests__" || entry === "node_modules") continue;
+          walk(path);
+          continue;
+        }
+        if (!entry.endsWith(".ts") && !entry.endsWith(".tsx")) continue;
+        const source = readFileSync(path, "utf8");
+        for (const match of source.matchAll(ambiguous)) {
+          const index = match.index ?? 0;
+          const before = source.slice(0, index);
+          let lastFrom: { name: string; index: number } | null = null;
+          for (const fromMatch of before.matchAll(fromRe)) {
+            lastFrom = {
+              name: fromMatch[1],
+              index: fromMatch.index ?? 0,
+            };
+          }
+          let nested = false;
+          for (const embedMatch of before.matchAll(embedRe)) {
+            const open = (embedMatch.index ?? 0) + embedMatch[0].length - 1;
+            if (parenStillOpen(source, open, index)) nested = true;
+          }
+          if (lastFrom?.name === "bookings" || nested) {
+            const line = source.slice(0, index).split("\n").length;
+            hits.push(`${path}:${line}`);
+          }
+        }
+      }
+    }
+
+    walk(root);
+    expect(hits).toEqual([]);
   });
 
   it("still shows a booking when the doctor row is hidden", () => {

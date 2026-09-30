@@ -21,6 +21,8 @@ import {
   Shield,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/currency";
+import { remainingConsultPaidParts } from "@/lib/stripe/consult-refund";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 import { RefundDialog } from "./refund-dialog";
 import { BookingActions } from "./booking-actions";
 import { ResendPaymentLinkButton } from "./resend-payment-link-button";
@@ -61,7 +63,7 @@ export default async function AdminBookingDetailPage({
     .select(
       `*,
        patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone),
-       doctor:doctors!inner(
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
          slug, clinic_name,
          profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
        )`
@@ -72,6 +74,7 @@ export default async function AdminBookingDetailPage({
   if (!bookingData) redirect("/en/admin/bookings");
 
   const booking: any = bookingData;
+  const refundableAmountCents = remainingConsultPaidParts(booking).remainingPaidCents;
 
   return (
     <div className="space-y-6">
@@ -365,10 +368,10 @@ export default async function AdminBookingDetailPage({
           {booking.status === "pending_payment" && booking.created_by_admin_id && (
             <AdminCancelButton bookingId={booking.id} />
           )}
-          {booking.paid_at && !booking.refunded_at && (
+          {booking.paid_at && !booking.refunded_at && refundableAmountCents > 0 && (
             <RefundDialog
               bookingId={booking.id}
-              totalAmountCents={booking.total_amount_cents}
+              refundableAmountCents={refundableAmountCents}
               currency={booking.currency}
             />
           )}

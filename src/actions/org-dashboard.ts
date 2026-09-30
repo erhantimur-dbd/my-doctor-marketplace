@@ -3,6 +3,7 @@
 import { requireOrgMember } from "@/actions/organization";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { log } from "@/lib/utils/logger";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
 /**
  * Get all bookings across the organization (for org admin/owner view).
@@ -24,7 +25,7 @@ export async function getOrgBookings(filters?: {
        consultation_type, total_amount_cents, platform_fee_cents, currency,
        doctor_id, paid_at, stripe_payment_intent_id,
        patient:profiles!bookings_patient_id_fkey(first_name, last_name),
-       doctor:doctors!inner(
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
          id,
          profile:profiles!doctors_profile_id_fkey(first_name, last_name)
        )`
@@ -96,7 +97,7 @@ export async function getOrgAnalytics() {
       .from("bookings")
       .select(
         `doctor_id, status,
-         doctor:doctors!inner(
+         doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
            profile:profiles!doctors_profile_id_fkey(first_name, last_name)
          )`
       )

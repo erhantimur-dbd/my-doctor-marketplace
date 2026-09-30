@@ -107,6 +107,8 @@ export interface TransferHandoffInput {
   currency: string;
   bookingId: string;
   idempotencyKey?: string;
+  /** bookings.stripe_destination_transfer_id when payment confirmation stored it. */
+  storedTransferId?: string | null;
 }
 
 export interface TransferHandoffResult {
@@ -189,6 +191,79 @@ export async function findDestinationTransfer(
   };
 }
 
+export interface DestinationTransferRef {
+  transferId: string;
+  amount: number;
+  currency: string;
+}
+
+/**
+ * Prefer the transfer id stored on the booking. Fall back to searching the
+ * PaymentIntent charge when it was never saved (bookings confirmed before
+ * this column was filled).
+ */
+export async function resolveDestinationTransfer(input: {
+  paymentIntentId?: string | null;
+  storedTransferId?: string | null;
+  expectedDestination?: string;
+  retrieveTransfer?: (
+    id: string
+  ) => Promise<{
+    id: string;
+    amount: number;
+    currency: string;
+    reversed?: boolean;
+    destination?: string | null;
+  } | null>;
+  findTransfer?: typeof findDestinationTransfer;
+}): Promise<DestinationTransferRef | null> {
+  if (input.storedTransferId) {
+    try {
+      const retrieve = input.retrieveTransfer ?? retrieveDestinationTransfer;
+      const transfer = await retrieve(input.storedTransferId);
+      const destinationOk =
+        !input.expectedDestination ||
+        !transfer?.destination ||
+        transfer.destination === input.expectedDestination;
+      if (transfer?.id && transfer.amount > 0 && !transfer.reversed && destinationOk) {
+        return {
+          transferId: transfer.id,
+          amount: transfer.amount,
+          currency: transfer.currency,
+        };
+      }
+    } catch (err) {
+      log.error("[Transfer] stored destination transfer retrieve failed", {
+        err,
+        transferId: input.storedTransferId,
+      });
+    }
+  }
+
+  if (!input.paymentIntentId) return null;
+  const find = input.findTransfer ?? findDestinationTransfer;
+  return find(input.paymentIntentId, input.expectedDestination);
+}
+
+async function retrieveDestinationTransfer(id: string): Promise<{
+  id: string;
+  amount: number;
+  currency: string;
+  reversed: boolean;
+  destination: string | null;
+}> {
+  const stripe = getStripe();
+  const transfer = await stripe.transfers.retrieve(id);
+  const destination = transfer.destination;
+  return {
+    id: transfer.id,
+    amount: transfer.amount,
+    currency: transfer.currency,
+    reversed: Boolean(transfer.reversed),
+    destination: typeof destination === "string" ? destination : destination?.id ?? null,
+  };
+}
+
 /**
  * Reverse old doctor transfer and create transfer to new doctor.
  * Does NOT refund the patient.
@@ -204,6 +279,7 @@ export async function handoffConnectTransfer(
     currency,
     bookingId,
     idempotencyKey,
+    storedTransferId,
   } = input;
 
   if (amountCents <= 0) {
@@ -218,10 +294,11 @@ export async function handoffConnectTransfer(
     idempotencyKey || `gp-reassign-${bookingId}-${toAccountId}`;
 
   try {
-    const found = await findDestinationTransfer(
+    const found = await resolveDestinationTransfer({
       paymentIntentId,
-      fromAccountId
-    );
+      storedTransferId,
+      expectedDestination: fromAccountId,
+    });
 
     if (!found) {
       // No transfer found — try moving full amount as new transfer only if platform holds funds

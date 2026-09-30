@@ -72,6 +72,7 @@ import {
   finalizeConfirmedBookingById,
 } from "@/lib/booking/finalize-confirmed-booking";
 import { computeCancellationRefundPercent } from "@/lib/booking/cancellation-refund";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
 /** Derive origin + locale from incoming request headers. */
 async function getOriginAndLocale() {
@@ -824,7 +825,7 @@ export async function cancelBooking(input: CancelBookingInput) {
         `
         *,
         patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone, notification_sms, notification_whatsapp, preferred_locale),
-        doctor:doctors!inner(
+        doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
           id,
           slug,
           cancellation_policy,
@@ -883,6 +884,8 @@ export async function cancelBooking(input: CancelBookingInput) {
         currency: booking.currency,
         destination: refundDestination,
         paymentIntentId: booking.stripe_payment_intent_id,
+        stripeChargeId: booking.stripe_charge_id,
+        stripeDestinationTransferId: booking.stripe_destination_transfer_id,
         cardPaidCents: paidParts.cardPaidCents,
         creditPaidCents: paidParts.creditPaidCents,
         refundPercent,
@@ -1119,7 +1122,7 @@ export async function cancelAndRebook(input: {
     const { data: oldBooking } = await supabase
       .from("bookings")
       .select(
-        `*, doctor:doctors!inner(
+        `*, doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
           cancellation_policy, stripe_account_id,
           profile:profiles!doctors_profile_id_fkey(first_name, last_name)
         )`
@@ -1158,6 +1161,8 @@ export async function cancelAndRebook(input: {
         currency: oldBooking.currency,
         destination: "wallet",
         paymentIntentId: oldBooking.stripe_payment_intent_id,
+        stripeChargeId: oldBooking.stripe_charge_id,
+        stripeDestinationTransferId: oldBooking.stripe_destination_transfer_id,
         cardPaidCents: paidParts.cardPaidCents,
         creditPaidCents: paidParts.creditPaidCents,
         refundPercent,
@@ -1229,7 +1234,7 @@ export async function getBookingDetails(bookingId: string) {
         patient:profiles!bookings_patient_id_fkey(
           id, first_name, last_name, email, avatar_url, phone
         ),
-        doctor:doctors!inner(
+        doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
           id, slug, title, base_currency, cancellation_policy,
           clinic_name, address,
           profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url, email),

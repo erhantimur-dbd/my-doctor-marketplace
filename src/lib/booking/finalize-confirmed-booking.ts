@@ -21,6 +21,10 @@ import {
   BOOKING_DOCTOR_PROFILE_EMBED,
 } from "@/lib/patient/booking-doctor-embed";
 import { log } from "@/lib/utils/logger";
+import {
+  persistBookingDestinationChargeIds,
+  type PaymentIntentChargeClient,
+} from "@/lib/stripe/destination-charge";
 
 export interface ConfirmedBookingFinalizeInput {
   id: string;
@@ -44,6 +48,11 @@ export interface ConfirmedBookingFinalizeInput {
    * missing. Charge-skip defaults this to true once those joins load.
    */
   notifyDoctor?: boolean;
+  /**
+   * Paid Checkout / reschedule balance. Charge-skip and £0 confirms omit this
+   * so we do not look up a charge that does not exist.
+   */
+  paymentIntentId?: string | null;
 }
 
 export interface FinalizeConfirmedBookingResult {
@@ -66,6 +75,7 @@ interface BookingFinalizeRow {
   currency: string;
   video_room_url: string | null;
   daily_room_name: string | null;
+  stripe_payment_intent_id?: string | null;
   patient:
     | { first_name: string | null; last_name: string | null }
     | { first_name: string | null; last_name: string | null }[]
@@ -103,6 +113,7 @@ const BOOKING_FINALIZE_SELECT = `
   currency,
   video_room_url,
   daily_room_name,
+  stripe_payment_intent_id,
   patient:profiles!bookings_patient_id_fkey(first_name, last_name),
   doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
     clinic_name,
@@ -253,9 +264,15 @@ async function doctorAlreadyNotified(
 
 export async function finalizeConfirmedBooking(
   input: ConfirmedBookingFinalizeInput,
-  options?: { supabase?: SupabaseClient }
+  options?: { supabase?: SupabaseClient; stripe?: PaymentIntentChargeClient }
 ): Promise<FinalizeConfirmedBookingResult> {
   const supabase = options?.supabase ?? createAdminClient();
+  await persistBookingDestinationChargeIds({
+    bookingId: input.id,
+    paymentIntentId: input.paymentIntentId,
+    supabase,
+    stripe: options?.stripe,
+  });
   let videoRoomUrl: string | null = input.videoRoomUrl ?? null;
 
   try {
@@ -320,7 +337,7 @@ export async function finalizeConfirmedBooking(
 
 export async function finalizeConfirmedBookingById(
   bookingId: string,
-  options?: { supabase?: SupabaseClient }
+  options?: { supabase?: SupabaseClient; stripe?: PaymentIntentChargeClient }
 ): Promise<FinalizeConfirmedBookingResult> {
   try {
     const supabase = options?.supabase ?? createAdminClient();
@@ -354,13 +371,14 @@ export async function finalizeConfirmedBookingById(
         currency: row.currency,
         videoRoomUrl: row.video_room_url,
         dailyRoomName: row.daily_room_name,
+        paymentIntentId: row.stripe_payment_intent_id,
         patientFirstName: patient?.first_name ?? null,
         patientLastName: patient?.last_name ?? null,
         clinicName: doctor?.clinic_name ?? null,
         address: doctor?.address ?? null,
         notifyDoctor: Boolean(patient && doctorProfile),
       },
-      { supabase }
+      { supabase, stripe: options?.stripe }
     );
   } catch (err) {
     log.error("[FinalizeBooking] Unexpected error", { err, bookingId });

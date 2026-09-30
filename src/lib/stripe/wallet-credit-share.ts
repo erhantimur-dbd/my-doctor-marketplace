@@ -238,7 +238,8 @@ export interface WalletCreditDeps {
     refunds?: {
       create(
         params: {
-          payment_intent: string;
+          payment_intent?: string;
+          charge?: string;
           amount: number;
           reverse_transfer: boolean;
           refund_application_fee: boolean;
@@ -250,6 +251,30 @@ export interface WalletCreditDeps {
   store?: WalletCreditTransferStore;
   alreadyDebited?: (bookingId: string) => Promise<boolean>;
   debit?: () => Promise<void>;
+}
+
+/** Prefer the stored charge. Fall back to the PaymentIntent. */
+export function consultCardRefundCreateParams(input: {
+  paymentIntentId?: string | null;
+  stripeChargeId?: string | null;
+  amountCents: number;
+}): {
+  payment_intent?: string;
+  charge?: string;
+  amount: number;
+  reverse_transfer: true;
+  refund_application_fee: true;
+} {
+  const shared = {
+    amount: input.amountCents,
+    reverse_transfer: true as const,
+    refund_application_fee: true as const,
+  };
+  if (input.stripeChargeId) return { ...shared, charge: input.stripeChargeId };
+  if (input.paymentIntentId) {
+    return { ...shared, payment_intent: input.paymentIntentId };
+  }
+  throw new Error("This card payment has no payment intent to refund");
 }
 
 export function consultCardRefundIdempotencyKey(
@@ -713,6 +738,7 @@ export async function loadWalletCreditTransfer(
 export async function refundConsultCardAndCreditShare(
   input: {
     paymentIntentId: string | null;
+    stripeChargeId?: string | null;
     cardRefundCents: number;
     bookingId: string;
     /** Credit cents this refund returns. */
@@ -724,7 +750,10 @@ export async function refundConsultCardAndCreditShare(
   deps?: WalletCreditDeps
 ): Promise<{ cardRefundId: string | null; reversedCents: number }> {
   let cardRefundId: string | null = null;
-  if (input.paymentIntentId && input.cardRefundCents > 0) {
+  if (
+    input.cardRefundCents > 0 &&
+    (input.stripeChargeId || input.paymentIntentId)
+  ) {
     const stripe =
       deps?.stripe ??
       (getStripe() as unknown as NonNullable<WalletCreditDeps["stripe"]>);
@@ -732,12 +761,11 @@ export async function refundConsultCardAndCreditShare(
       throw new Error("Stripe refunds client is not available");
     }
     const refund = await stripe.refunds.create(
-      {
-        payment_intent: input.paymentIntentId,
-        amount: input.cardRefundCents,
-        reverse_transfer: true,
-        refund_application_fee: true,
-      },
+      consultCardRefundCreateParams({
+        paymentIntentId: input.paymentIntentId,
+        stripeChargeId: input.stripeChargeId,
+        amountCents: input.cardRefundCents,
+      }),
       {
         idempotencyKey: consultCardRefundIdempotencyKey(
           input.bookingId,

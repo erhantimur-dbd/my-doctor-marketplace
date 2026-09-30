@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { log } from "@/lib/utils/logger";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
 /**
  * Submit a satisfaction survey (token-based, no auth required).
@@ -69,7 +70,7 @@ export async function getSurveyByToken(token: string) {
       `id, token, submitted_at, nps_score,
        booking:bookings!satisfaction_surveys_booking_id_fkey(
          appointment_date,
-         doctor:doctors!inner(
+         doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
            profile:profiles!doctors_profile_id_fkey(first_name, last_name)
          )
        )`

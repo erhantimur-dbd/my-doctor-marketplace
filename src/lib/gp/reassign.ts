@@ -30,6 +30,7 @@ import {
 import { notifyDoctorOfNewBooking } from "@/lib/notifications/doctor-new-booking";
 import { createNotification } from "@/lib/notifications";
 import { log } from "@/lib/utils/logger";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
 
@@ -44,6 +45,8 @@ async function fullRefundBooking(booking: {
   booking_number?: string | null;
   patient_id?: string | null;
   stripe_payment_intent_id: string | null;
+  stripe_charge_id?: string | null;
+  stripe_destination_transfer_id?: string | null;
   payment_mode?: string | null;
   deposit_amount_cents?: number | null;
   total_amount_cents: number;
@@ -81,6 +84,8 @@ async function fullRefundBooking(booking: {
       currency: booking.currency,
       destination: "bank",
       paymentIntentId: booking.stripe_payment_intent_id,
+      stripeChargeId: booking.stripe_charge_id,
+      stripeDestinationTransferId: booking.stripe_destination_transfer_id,
       cardPaidCents: parts.cardPaidCents,
       creditPaidCents: parts.creditPaidCents,
       refundPercent: 100,
@@ -103,6 +108,7 @@ async function applyDoctorHandoff(
   booking: {
     id: string;
     stripe_payment_intent_id: string | null;
+    stripe_destination_transfer_id?: string | null;
     payment_mode?: string | null;
     deposit_amount_cents?: number | null;
     total_amount_cents: number;
@@ -124,6 +130,7 @@ async function applyDoctorHandoff(
   const net = doctorNetFromBooking(booking);
   const result = await handoffConnectTransfer({
     paymentIntentId: booking.stripe_payment_intent_id,
+    storedTransferId: booking.stripe_destination_transfer_id,
     fromAccountId,
     toAccountId,
     amountCents: net,
@@ -155,7 +162,7 @@ export async function executeGpReassignmentRequest(params: {
       patient:profiles!bookings_patient_id_fkey(
         first_name, last_name, email, phone, notification_sms
       ),
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id, profile_id, stripe_account_id, slug, organization_id, clinic_name, address,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name, email, phone)
       )

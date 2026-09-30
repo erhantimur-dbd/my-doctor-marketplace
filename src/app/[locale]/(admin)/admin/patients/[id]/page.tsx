@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 import { redirect } from "next/navigation";
 import {
   Card,
@@ -84,7 +85,7 @@ export default async function AdminPatientDetailPage({
       .select(
         `id, booking_number, appointment_date, start_time, status, consultation_type,
          total_amount_cents, currency,
-         doctor:doctors!inner(slug, profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+         doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(slug, profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
       )
       .eq("patient_id", id)
       .order("appointment_date", { ascending: false })

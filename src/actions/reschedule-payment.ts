@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getStripe } from "@/lib/stripe/client";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
 /**
  * Returns the PaymentIntent client secret for a pending reschedule-balance booking.
@@ -50,7 +51,7 @@ export async function getReschedulePaymentIntent(bookingId: string): Promise<{
       rescheduled_from_booking_id,
       currency,
       status,
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
       )
     `)
@@ -117,7 +118,7 @@ export async function getReschedulePaymentIntent(bookingId: string): Promise<{
       .select(`
         appointment_date,
         start_time,
-        doctor:doctors!inner(
+        doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
           profile:profiles!doctors_profile_id_fkey(first_name, last_name)
         )
       `)

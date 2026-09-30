@@ -16,6 +16,7 @@ import {
   type MicrosoftTokens,
 } from "./calendar";
 import { log } from "@/lib/utils/logger";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
 const SYNC_DAYS_AHEAD = 30;
 
@@ -181,7 +182,7 @@ export async function exportBookingToMicrosoftCalendar(
       microsoft_event_id,
       doctor_id,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name),
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name),
         location:locations(timezone)
