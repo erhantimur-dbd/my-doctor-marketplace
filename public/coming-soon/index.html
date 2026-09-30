@@ -156,10 +156,13 @@
     }
     .btn-secondary:hover { background: var(--muted); }
     .hero-meta {
-      display: inline-flex; align-items: center; gap: 0.5rem;
+      display: inline-flex; align-items: flex-start; gap: 0.5rem;
+      max-width: 100%;
       font-size: 0.8125rem; color: var(--muted-foreground);
       margin-top: 0.5rem;
+      text-align: left;
     }
+    .hero-meta svg { margin-top: 0.2rem; flex-shrink: 0; }
     .hero-meta strong { color: var(--foreground); }
 
     /* ---- About strip ---- */
@@ -469,7 +472,7 @@
       </div>
       <p class="hero-meta">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="#10b981"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-        <strong>£99 per month for the first 100 doctors.</strong><span class="vat-note">Prices exclude VAT</span> No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted.&nbsp;<a href="/en/login" style="color: var(--foreground); text-decoration: underline; font-weight: 600;">Sign in →</a>
+        <span><strong>£99 per month for the first 100 doctors.</strong><span class="vat-note">Prices exclude VAT</span> No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted.&nbsp;<a href="/en/login" style="color: var(--foreground); text-decoration: underline; font-weight: 600;">Sign in →</a></span>
       </p>
     </div>
   </section>
