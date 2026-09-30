@@ -1,16 +1,16 @@
 -- Account erasure checks. Not a migration.
 --
--- Dry run, after 00132 is applied in the same transaction:
+-- Dry run, after 00135 is applied in the same transaction:
 --
 --   BEGIN;
---   \i supabase/migrations/00132_account_erasure.sql
+--   \i supabase/migrations/00135_account_erasure.sql
 --   \i supabase/tests/account_erasure_checks.sql
 --   ROLLBACK;
 --
 -- The script inserts fixture auth users. It always raises at the end so
 -- those rows cannot be committed. A successful dry run ends with:
 --   account erasure dry run PASSED
--- That exception is the rollback. Apply 00132 on its own after review.
+-- That exception is the rollback. Apply 00135 on its own after review.
 -- Do not COMMIT this transaction.
 
 DROP TABLE IF EXISTS account_erasure_check_results;
@@ -38,6 +38,9 @@ DECLARE
   v_doctor_row uuid := gen_random_uuid();
   v_clean uuid := gen_random_uuid();
   v_busy uuid := gen_random_uuid();
+  v_reviewer uuid := gen_random_uuid();
+  v_clinical uuid := gen_random_uuid();
+  v_review_booking uuid := gen_random_uuid();
   v_rx uuid := gen_random_uuid();
   v_audit uuid := gen_random_uuid();
   v_ready boolean := false;
@@ -122,6 +125,20 @@ BEGIN
         '{"provider":"email","providers":["email"]}'::jsonb,
         jsonb_build_object('first_name', 'Busy', 'last_name', 'User', 'role', 'patient'),
         now(), now(), '', '', '', '', '', 0, '', '', '', false
+      ),
+      (
+        v_reviewer, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+        'pip-reviewer-' || v_reviewer::text || '@example.com', '', now(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        jsonb_build_object('first_name', 'Rita', 'last_name', 'Reviewer', 'role', 'patient'),
+        now(), now(), '', '', '', '', '', 0, '', '', '', false
+      ),
+      (
+        v_clinical, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+        'pip-clinical-' || v_clinical::text || '@example.com', '', now(),
+        '{"provider":"email","providers":["email"]}'::jsonb,
+        jsonb_build_object('first_name', 'Cara', 'last_name', 'Clinical', 'role', 'patient'),
+        now(), now(), '', '', '', '', '', 0, '', '', '', false
       );
 
     UPDATE public.profiles
@@ -185,6 +202,24 @@ BEGIN
     ) VALUES (
       v_patient, v_doctor_row, CURRENT_DATE, now(), now() + interval '30 minutes',
       'video', 'completed', 'GBP', 1000, 100, 1100, 'secret patient note'
+    );
+
+    INSERT INTO public.bookings (
+      id, patient_id, doctor_id, appointment_date, start_time, end_time,
+      consultation_type, status, currency,
+      consultation_fee_cents, platform_fee_cents, total_amount_cents
+    ) VALUES (
+      v_review_booking, v_reviewer, v_doctor_row, CURRENT_DATE, now(), now() + interval '30 minutes',
+      'video', 'completed', 'GBP', 1000, 100, 1100
+    );
+
+    INSERT INTO public.reviews (booking_id, patient_id, doctor_id, rating, comment)
+    VALUES (v_review_booking, v_reviewer, v_doctor_row, 5, 'keep-this-review');
+
+    INSERT INTO public.medical_profiles (
+      patient_id, emergency_contact_name, emergency_contact_phone, notes, blood_type, allergies
+    ) VALUES (
+      v_clinical, 'Clinic Contact', '+447700900777', 'keep-clinical-note', 'AB+', ARRAY['latex']
     );
 
     INSERT INTO public.prescriptions (id, doctor_id, patient_id, diagnosis, notes)
@@ -281,9 +316,14 @@ BEGIN
     IF v_text = '' AND EXISTS (
       SELECT 1 FROM public.medical_profiles m
       WHERE m.patient_id = v_patient
-        AND (m.emergency_contact_name IS NOT NULL OR m.notes IS NOT NULL)
+        AND (
+          m.emergency_contact_name IS NOT NULL
+          OR m.emergency_contact_phone IS NOT NULL
+          OR m.notes IS DISTINCT FROM 'private note'
+          OR m.blood_type IS DISTINCT FROM 'O+'
+        )
     ) THEN
-      v_text := 'medical profile pii';
+      v_text := 'medical profile';
     END IF;
     IF v_text = '' AND EXISTS (SELECT 1 FROM public.push_subscriptions s WHERE s.user_id = v_patient) THEN
       v_text := 'push subscription';
@@ -349,6 +389,58 @@ BEGIN
       WHEN OTHERS THEN
         PERFORM pg_temp.record_case('doctor_still_blocked', 'FAIL', SQLSTATE || ' ' || SQLERRM);
     END;
+
+    v_result := public.erase_account(v_reviewer);
+    SELECT
+      CASE
+        WHEN v_result->>'mode' IS DISTINCT FROM 'anonymised' THEN 'mode=' || COALESCE(v_result->>'mode', 'null')
+        WHEN p.first_name IS DISTINCT FROM 'Erased' OR p.last_name IS DISTINCT FROM 'Account' THEN 'name'
+        WHEN r.comment IS DISTINCT FROM 'keep-this-review' THEN 'review text'
+        WHEN r.patient_id IS DISTINCT FROM v_reviewer THEN 'review link'
+        WHEN EXISTS (SELECT 1 FROM public.prescriptions rx WHERE rx.patient_id = v_reviewer) THEN 'unexpected prescription'
+        ELSE ''
+      END
+    INTO v_text
+    FROM public.profiles p
+    JOIN public.reviews r ON r.patient_id = p.id
+    WHERE p.id = v_reviewer;
+    PERFORM pg_temp.record_case(
+      'review_without_prescription',
+      CASE WHEN COALESCE(v_text, 'missing') = '' THEN 'PASS' ELSE 'FAIL' END,
+      CASE WHEN COALESCE(v_text, 'missing') = '' THEN 'review kept, author shown as Erased Account' ELSE COALESCE(v_text, 'missing') END
+    );
+
+    BEGIN
+      DELETE FROM auth.users WHERE id = v_reviewer;
+      PERFORM pg_temp.record_case('review_still_blocked', 'FAIL', 'delete succeeded');
+    EXCEPTION
+      WHEN foreign_key_violation THEN
+        PERFORM pg_temp.record_case('review_still_blocked', 'PASS', SQLERRM);
+      WHEN OTHERS THEN
+        PERFORM pg_temp.record_case('review_still_blocked', 'FAIL', SQLSTATE || ' ' || SQLERRM);
+    END;
+
+    v_result := public.erase_account(v_clinical);
+    SELECT
+      CASE
+        WHEN v_result->>'mode' IS DISTINCT FROM 'anonymised' THEN 'mode=' || COALESCE(v_result->>'mode', 'null')
+        WHEN p.first_name IS DISTINCT FROM 'Erased' THEN 'name'
+        WHEN p.phone IS NOT NULL OR p.address_line1 IS NOT NULL THEN 'profile pii'
+        WHEN m.patient_id IS DISTINCT FROM v_clinical THEN 'medical link'
+        WHEN m.notes IS DISTINCT FROM 'keep-clinical-note' OR m.blood_type IS DISTINCT FROM 'AB+' THEN 'clinical fields'
+        WHEN m.emergency_contact_name IS NOT NULL OR m.emergency_contact_phone IS NOT NULL THEN 'emergency contact'
+        WHEN NOT ('latex' = ANY (m.allergies)) THEN 'allergies'
+        ELSE ''
+      END
+    INTO v_text
+    FROM public.profiles p
+    JOIN public.medical_profiles m ON m.patient_id = p.id
+    WHERE p.id = v_clinical;
+    PERFORM pg_temp.record_case(
+      'medical_profile_retained',
+      CASE WHEN COALESCE(v_text, 'missing') = '' THEN 'PASS' ELSE 'FAIL' END,
+      CASE WHEN COALESCE(v_text, 'missing') = '' THEN 'clinical row kept, contact scrubbed' ELSE COALESCE(v_text, 'missing') END
+    );
 
     v_result := public.erase_account(v_clean);
     SELECT p.first_name INTO v_text FROM public.profiles p WHERE p.id = v_clean;
@@ -423,7 +515,7 @@ BEGIN
       v_failed, v_summary;
   END IF;
 
-  RAISE EXCEPTION E'account erasure dry run PASSED\n%\nThis exception aborts the transaction so fixture users are not kept. Apply 00132 on its own after review. Do not COMMIT.',
+  RAISE EXCEPTION E'account erasure dry run PASSED\n%\nThis exception aborts the transaction so fixture users are not kept. Apply 00135 on its own after review. Do not COMMIT.',
     v_summary;
 END
 $checks$;

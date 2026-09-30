@@ -203,6 +203,41 @@ describe("eraseAccount routing", () => {
     expect(deleteUser).not.toHaveBeenCalled();
   });
 
+  it("does not deleteUser when the user has a review and the helper is missing", async () => {
+    const { admin, deleteUser, updates } = createAdmin({
+      tables: {
+        reviews: [{ id: "rev-1", patient_id: USER_ID, comment: "keep-this-review" }],
+      },
+      rpc: {
+        data: null,
+        error: { code: "PGRST202", message: "Could not find the function public.erase_account" },
+      },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ error: ERASE_FAILED_ERROR });
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(updates.some((update) => update.table === "reviews")).toBe(false);
+  });
+
+  it("does not deleteUser when the user has a medical profile and the helper is missing", async () => {
+    const { admin, deleteUser } = createAdmin({
+      tables: {
+        medical_profiles: [{ id: "med-1", patient_id: USER_ID, blood_type: "O+" }],
+      },
+      rpc: {
+        data: null,
+        error: { code: "PGRST202", message: "Could not find the function public.erase_account" },
+      },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ error: ERASE_FAILED_ERROR });
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
   it("still hard-deletes when the SQL helper is missing and nothing is retained", async () => {
     const { admin, deleteUser } = createAdmin({
       rpc: {

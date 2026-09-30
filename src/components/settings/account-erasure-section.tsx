@@ -86,12 +86,12 @@ export function AccountErasureSection() {
                 Cancel active bookings first.
               </span>
               <span className="block text-sm">
-                If you have no prescriptions, the account is deleted.
+                If nothing has to be kept, the account is deleted.
               </span>
               <span className="block text-sm">
-                If you have prescriptions or audit history, those clinical
-                records stay linked to this account with the personal details
-                removed. A doctor listing is unpublished.
+                Prescriptions, medical details, reviews, and bookings stay
+                linked to this account with personal details removed. A
+                doctor listing is unpublished.
               </span>
               <span className="mt-2 block font-medium text-destructive">
                 This action cannot be undone.

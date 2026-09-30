@@ -22,10 +22,19 @@
 -- Profiles have no date_of_birth column in this repo. Dependents do.
 -- If a date_of_birth column exists on profiles, it is cleared too.
 --
--- Kept on purpose, for a retention decision: prescription and audit
--- payloads, booking rows (finished patient_notes are cleared), review
--- text, messages, GMC / CQC / indemnity / Stripe identifiers, and
--- objects already stored in buckets. See the PR for the list.
+-- Kept on purpose: prescription and audit payloads, medical_profiles
+-- and dependent_medical_profiles (clinical fields stay; only emergency
+-- contact identity is cleared), booking rows (finished patient_notes
+-- are cleared), review text, messages, wallet and payment rows, GMC /
+-- CQC / indemnity / Stripe identifiers, and objects already stored in
+-- buckets.
+--
+-- Any row that would make auth.admin.deleteUser fail with 23503 is
+-- retained: a NOT NULL or populated foreign key to profiles, auth.users,
+-- or this user's doctors row whose ON DELETE action is NO ACTION or
+-- RESTRICT. Prescriptions are retained even though their own FKs
+-- cascade, because an audit row is ON DELETE RESTRICT. medical_profiles
+-- and dependent clinical rows are retained even though they cascade.
 --
 -- Idempotent. SECURITY DEFINER, search_path empty, EXECUTE only for
 -- service_role. Safe inside BEGIN ... ROLLBACK (no CONCURRENTLY).
@@ -45,7 +54,9 @@ AS $fn$
 DECLARE
   v_email text;
   v_erased_at timestamptz;
-  v_retain boolean;
+  v_retain boolean := false;
+  v_hit boolean;
+  v_fk record;
 BEGIN
   IF coalesce((SELECT auth.role()), ''::text) IS DISTINCT FROM 'service_role'
      AND (SELECT auth.uid()) IS NOT NULL THEN
@@ -82,6 +93,79 @@ BEGIN
     FROM public.prescription_audit_log AS a
     WHERE a.actor_profile_id = p_user_id
   );
+
+  IF NOT v_retain AND pg_catalog.to_regclass('public.medical_profiles') IS NOT NULL THEN
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM public.medical_profiles WHERE patient_id = $1)'
+      INTO v_hit
+      USING p_user_id;
+    v_retain := v_hit;
+  END IF;
+
+  IF NOT v_retain
+     AND pg_catalog.to_regclass('public.dependent_medical_profiles') IS NOT NULL
+     AND pg_catalog.to_regclass('public.dependents') IS NOT NULL THEN
+    EXECUTE $clinical$
+      SELECT EXISTS (
+        SELECT 1
+        FROM public.dependent_medical_profiles AS dmp
+        JOIN public.dependents AS dep ON dep.id = dmp.dependent_id
+        WHERE dep.parent_id = $1
+      )
+    $clinical$
+      INTO v_hit
+      USING p_user_id;
+    v_retain := v_hit;
+  END IF;
+
+  -- NO ACTION / RESTRICT foreign keys to profiles, auth.users, or this
+  -- user's doctor row. Nullable keys count only when a row points here.
+  IF NOT v_retain THEN
+    FOR v_fk IN
+      SELECT
+        n.nspname AS schema_name,
+        c.relname AS table_name,
+        a.attname AS column_name,
+        ref.relname AS ref_table
+      FROM pg_catalog.pg_constraint AS con
+      JOIN pg_catalog.pg_class AS c ON c.oid = con.conrelid
+      JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+      JOIN pg_catalog.pg_class AS ref ON ref.oid = con.confrelid
+      JOIN pg_catalog.pg_namespace AS rn ON rn.oid = ref.relnamespace
+      JOIN pg_catalog.pg_attribute AS a
+        ON a.attrelid = c.oid
+       AND a.attnum = con.conkey[1]
+       AND NOT a.attisdropped
+      JOIN pg_catalog.pg_attribute AS ra
+        ON ra.attrelid = ref.oid
+       AND ra.attnum = con.confkey[1]
+       AND NOT ra.attisdropped
+      WHERE con.contype = 'f'
+        AND con.confdeltype IN ('a', 'r')
+        AND pg_catalog.array_length(con.conkey, 1) = 1
+        AND n.nspname = 'public'
+        AND ra.attname = 'id'
+        AND (
+          (rn.nspname = 'public' AND ref.relname IN ('profiles', 'doctors'))
+          OR (rn.nspname = 'auth' AND ref.relname = 'users')
+        )
+    LOOP
+      IF v_fk.ref_table = 'doctors' THEN
+        EXECUTE pg_catalog.format(
+          'SELECT EXISTS (SELECT 1 FROM %I.%I AS t WHERE t.%I IN (SELECT d.id FROM public.doctors AS d WHERE d.profile_id = $1))',
+          v_fk.schema_name, v_fk.table_name, v_fk.column_name
+        ) INTO v_hit USING p_user_id;
+      ELSE
+        EXECUTE pg_catalog.format(
+          'SELECT EXISTS (SELECT 1 FROM %I.%I AS t WHERE t.%I = $1)',
+          v_fk.schema_name, v_fk.table_name, v_fk.column_name
+        ) INTO v_hit USING p_user_id;
+      END IF;
+      IF v_hit THEN
+        v_retain := true;
+        EXIT;
+      END IF;
+    END LOOP;
+  END IF;
 
   IF NOT v_retain THEN
     RETURN pg_catalog.jsonb_build_object('mode', 'hard_delete');
@@ -197,13 +281,8 @@ BEGIN
      AND pg_catalog.to_regclass('public.dependents') IS NOT NULL THEN
     UPDATE public.dependent_medical_profiles
     SET
-      blood_type = NULL,
-      allergies = '{}'::text[],
-      chronic_conditions = '{}'::text[],
-      current_medications = '{}'::text[],
       emergency_contact_name = NULL,
-      emergency_contact_phone = NULL,
-      notes = NULL
+      emergency_contact_phone = NULL
     WHERE dependent_id IN (
       SELECT dep.id FROM public.dependents AS dep WHERE dep.parent_id = p_user_id
     );
@@ -212,13 +291,8 @@ BEGIN
   IF pg_catalog.to_regclass('public.medical_profiles') IS NOT NULL THEN
     UPDATE public.medical_profiles
     SET
-      blood_type = NULL,
-      allergies = '{}'::text[],
-      chronic_conditions = '{}'::text[],
-      current_medications = '{}'::text[],
       emergency_contact_name = NULL,
-      emergency_contact_phone = NULL,
-      notes = NULL
+      emergency_contact_phone = NULL
     WHERE patient_id = p_user_id;
   END IF;
 

@@ -4,11 +4,10 @@ import { log } from "@/lib/utils/logger";
 /**
  * Single account-erasure entry point.
  *
- * Prescriptions and prescription_audit_log rows are clinical records.
- * auth.admin.deleteUser cascades into them and then fails with 23503
- * once an audit row exists. When any such row exists (patient, prescribing
- * doctor, or audit actor), erase_account anonymises instead. Otherwise
- * the historical deleteUser path is unchanged.
+ * erase_account anonymises when deleteUser would fail with 23503, and
+ * when prescriptions, medical profiles, or dependent clinical rows must
+ * stay. Reviews stay linked and the author name becomes "Erased Account".
+ * Otherwise the historical deleteUser path is unchanged.
  *
  * Callers today:
  *   * requestAccountDeletion (patient settings and doctor settings)
@@ -156,46 +155,59 @@ async function hasActiveBookings(admin: EraseAdmin, userId: string): Promise<boo
   return Boolean(asDoctor.data && asDoctor.data.length > 0);
 }
 
-async function hasRetainedPrescriptionRecords(
+const PROFILE_RETAINED_TABLES = [
+  ["prescriptions", "patient_id"],
+  ["prescription_audit_log", "actor_profile_id"],
+  ["reviews", "patient_id"],
+  ["bookings", "patient_id"],
+  ["medical_profiles", "patient_id"],
+  ["wallet_transactions", "patient_id"],
+  ["follow_up_invitations", "patient_id"],
+  ["reschedule_requests", "requested_by"],
+  ["clinic_invitations", "invited_by"],
+  ["audit_log", "actor_id"],
+  ["payment_correction_approvals", "approver_id"],
+  ["payment_correction_approvers", "profile_id"],
+  ["doctor_approval_checklist", "reviewer_id"],
+] as const;
+
+const DOCTOR_RETAINED_TABLES = [
+  ["prescriptions", "doctor_id"],
+  ["reviews", "doctor_id"],
+  ["bookings", "doctor_id"],
+  ["platform_fees", "doctor_id"],
+  ["doctor_wallet_credit_transfers", "doctor_id"],
+  ["gp_slot_offers", "doctor_id"],
+] as const;
+
+async function hasMatchingRow(
   admin: EraseAdmin,
-  userId: string
+  table: string,
+  column: string,
+  value: string
 ): Promise<boolean> {
-  const asPatient = await admin
-    .from("prescriptions")
-    .select("id")
-    .eq("patient_id", userId)
-    .limit(1);
-  if (asPatient.error) throw new Error(asPatient.error.message);
-  if (asPatient.data && asPatient.data.length > 0) return true;
+  const result = await admin.from(table).select(column).eq(column, value).limit(1);
+  if (result.error) throw new Error(result.error.message);
+  return Boolean(result.data && result.data.length > 0);
+}
 
-  const asActor = await admin
-    .from("prescription_audit_log")
-    .select("id")
-    .eq("actor_profile_id", userId)
-    .limit(1);
-  if (asActor.error) throw new Error(asActor.error.message);
-  if (asActor.data && asActor.data.length > 0) return true;
+async function hasRetainedRecords(admin: EraseAdmin, userId: string): Promise<boolean> {
+  for (const [table, column] of PROFILE_RETAINED_TABLES) {
+    if (await hasMatchingRow(admin, table, column, userId)) return true;
+  }
 
-  const doctor = await admin
-    .from("doctors")
-    .select("id")
-    .eq("profile_id", userId)
-    .maybeSingle();
+  const doctor = await admin.from("doctors").select("id").eq("profile_id", userId).maybeSingle();
   if (doctor.error) throw new Error(doctor.error.message);
   if (!doctor.data?.id) return false;
 
-  const asDoctor = await admin
-    .from("prescriptions")
-    .select("id")
-    .eq("doctor_id", doctor.data.id)
-    .limit(1);
-  if (asDoctor.error) throw new Error(asDoctor.error.message);
-  return Boolean(asDoctor.data && asDoctor.data.length > 0);
+  for (const [table, column] of DOCTOR_RETAINED_TABLES) {
+    if (await hasMatchingRow(admin, table, column, doctor.data.id)) return true;
+  }
+  return false;
 }
 
 function clearEphemeraForHardDelete(admin: EraseAdmin, userId: string): Promise<unknown> {
   return Promise.allSettled([
-    admin.from("reviews").update({ patient_id: null }).eq("patient_id", userId),
     admin.from("push_subscriptions").delete().eq("user_id", userId),
     admin.from("cookie_consents").delete().eq("user_id", userId),
     admin
@@ -262,8 +274,8 @@ export async function eraseAccount(
     if (isActiveBookingsError(rpc.error)) return { error: ACTIVE_BOOKINGS_ERROR };
     if (isMissingEraseRpc(rpc.error)) {
       try {
-        if (await hasRetainedPrescriptionRecords(admin, userId)) {
-          log.error("erase_account is missing and retained prescription rows exist", {
+        if (await hasRetainedRecords(admin, userId)) {
+          log.error("erase_account is missing and retained rows exist", {
             userId,
           });
           return { error: ERASE_FAILED_ERROR };

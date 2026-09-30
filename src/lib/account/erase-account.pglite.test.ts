@@ -9,6 +9,8 @@ const DOCTOR_ROW = "33333333-3333-4333-8333-333333333333";
 const RX = "44444444-4444-4444-8444-444444444444";
 const AUDIT = "55555555-5555-4555-8555-555555555555";
 const CLEAN = "66666666-6666-4666-8666-666666666666";
+const REVIEWER = "77777777-7777-4777-8777-777777777777";
+const CLINICAL = "88888888-8888-4888-8888-888888888888";
 
 const SCHEMA = `
 CREATE SCHEMA IF NOT EXISTS auth;
@@ -179,6 +181,15 @@ CREATE TABLE public.bookings (
   patient_notes text
 );
 
+CREATE TABLE public.reviews (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  booking_id uuid NOT NULL,
+  patient_id uuid NOT NULL,
+  doctor_id uuid NOT NULL,
+  rating int NOT NULL,
+  comment text
+);
+
 CREATE TABLE public.prescriptions (
   id uuid PRIMARY KEY,
   doctor_id uuid NOT NULL,
@@ -217,6 +228,20 @@ ALTER TABLE public.prescription_audit_log
   ADD CONSTRAINT audit_rx_fkey FOREIGN KEY (prescription_id) REFERENCES public.prescriptions(id) ON DELETE RESTRICT;
 ALTER TABLE public.prescription_audit_log
   ADD CONSTRAINT audit_actor_fkey FOREIGN KEY (actor_profile_id) REFERENCES public.profiles(id);
+ALTER TABLE public.bookings
+  ADD CONSTRAINT bookings_patient_fkey FOREIGN KEY (patient_id) REFERENCES public.profiles(id);
+ALTER TABLE public.bookings
+  ADD CONSTRAINT bookings_doctor_fkey FOREIGN KEY (doctor_id) REFERENCES public.doctors(id);
+ALTER TABLE public.reviews
+  ADD CONSTRAINT reviews_patient_fkey FOREIGN KEY (patient_id) REFERENCES public.profiles(id);
+ALTER TABLE public.reviews
+  ADD CONSTRAINT reviews_doctor_fkey FOREIGN KEY (doctor_id) REFERENCES public.doctors(id);
+ALTER TABLE public.medical_profiles
+  ADD CONSTRAINT medical_profiles_patient_fkey FOREIGN KEY (patient_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.dependents
+  ADD CONSTRAINT dependents_parent_fkey FOREIGN KEY (parent_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.dependent_medical_profiles
+  ADD CONSTRAINT dependent_medical_fkey FOREIGN KEY (dependent_id) REFERENCES public.dependents(id) ON DELETE CASCADE;
 
 CREATE OR REPLACE FUNCTION public.prescription_audit_log_deny_mutation()
 RETURNS trigger
@@ -263,7 +288,7 @@ describe("erase_account keeps audited prescriptions", () => {
   beforeAll(async () => {
     db = new PGlite();
     await db.exec(SCHEMA);
-    await db.exec(readFileSync(join(process.cwd(), "supabase/migrations/00132_account_erasure.sql"), "utf8"));
+    await db.exec(readFileSync(join(process.cwd(), "supabase/migrations/00135_account_erasure.sql"), "utf8"));
     await db.exec(`
       SELECT set_config('request.jwt.claim.role', 'service_role', false);
       SELECT set_config('request.jwt.claim.sub', '', false);
@@ -274,7 +299,9 @@ describe("erase_account keeps audited prescriptions", () => {
       VALUES
         ('${PATIENT}', 'pip.patient@example.com', '+447700900001', '{"role":"patient","first_name":"Pip","last_name":"Patient"}'),
         ('${DOCTOR_USER}', 'pip.doctor@example.com', '+447700900002', '{"role":"doctor","first_name":"Pip","last_name":"Doctor"}'),
-        ('${CLEAN}', 'pip.clean@example.com', '+447700900003', '{"role":"patient","first_name":"Clean","last_name":"User"}');
+        ('${CLEAN}', 'pip.clean@example.com', '+447700900003', '{"role":"patient","first_name":"Clean","last_name":"User"}'),
+        ('${REVIEWER}', 'pip.reviewer@example.com', '+447700900004', '{"role":"patient","first_name":"Rita","last_name":"Reviewer"}'),
+        ('${CLINICAL}', 'pip.clinical@example.com', '+447700900005', '{"role":"patient","first_name":"Cara","last_name":"Clinical"}');
 
       INSERT INTO public.profiles (
         id, role, first_name, last_name, email, phone, avatar_url,
@@ -282,7 +309,9 @@ describe("erase_account keeps audited prescriptions", () => {
       ) VALUES
         ('${PATIENT}', 'patient', 'Pip', 'Patient', 'pip.patient@example.com', '+447700900001', 'https://cdn.example/pip.jpg', '1 Secret Street', 'London', 'SW1A 1AA', 'GB', '1990-04-05'),
         ('${DOCTOR_USER}', 'doctor', 'Pip', 'Doctor', 'pip.doctor@example.com', '+447700900002', 'https://cdn.example/dr.jpg', '2 Clinic Road', 'Manchester', 'M1 1AE', 'GB', '1980-01-01'),
-        ('${CLEAN}', 'patient', 'Clean', 'User', 'pip.clean@example.com', '+447700900003', 'https://cdn.example/clean.jpg', '3 Plain Road', 'Leeds', 'LS1 1AA', 'GB', NULL);
+        ('${CLEAN}', 'patient', 'Clean', 'User', 'pip.clean@example.com', '+447700900003', 'https://cdn.example/clean.jpg', '3 Plain Road', 'Leeds', 'LS1 1AA', 'GB', NULL),
+        ('${REVIEWER}', 'patient', 'Rita', 'Reviewer', 'pip.reviewer@example.com', '+447700900004', NULL, '4 Review Road', 'Bristol', 'BS1 1AA', 'GB', '1992-02-02'),
+        ('${CLINICAL}', 'patient', 'Cara', 'Clinical', 'pip.clinical@example.com', '+447700900005', NULL, '5 Clinic Road', 'Oxford', 'OX1 1AA', 'GB', '1985-05-05');
 
       INSERT INTO public.doctors (
         id, profile_id, slug, bio, address, city, postal_code, clinic_name,
@@ -317,7 +346,14 @@ describe("erase_account keeps audited prescriptions", () => {
       VALUES ('${PATIENT}', 'Mum Secret', '+447700900012', 'private note', 'O+', ARRAY['peanuts']);
 
       INSERT INTO public.bookings (patient_id, doctor_id, status, patient_notes)
-      VALUES ('${PATIENT}', '${DOCTOR_ROW}', 'completed', 'secret patient note');
+      VALUES
+        ('${PATIENT}', '${DOCTOR_ROW}', 'completed', 'secret patient note'),
+        ('${REVIEWER}', '${DOCTOR_ROW}', 'completed', NULL);
+      INSERT INTO public.reviews (booking_id, patient_id, doctor_id, rating, comment)
+      SELECT id, '${REVIEWER}', '${DOCTOR_ROW}', 5, 'keep-this-review'
+      FROM public.bookings WHERE patient_id = '${REVIEWER}';
+      INSERT INTO public.medical_profiles (patient_id, emergency_contact_name, emergency_contact_phone, notes, blood_type, allergies)
+      VALUES ('${CLINICAL}', 'Nurse Secret', '+447700900013', 'keep-clinical-note', 'AB+', ARRAY['latex']);
 
       INSERT INTO public.prescriptions (id, doctor_id, patient_id, diagnosis, notes)
       VALUES ('${RX}', '${DOCTOR_ROW}', '${PATIENT}', 'keep-this-diagnosis', 'clinical note');
@@ -438,12 +474,37 @@ describe("erase_account keeps audited prescriptions", () => {
     expect(dependent.rows[0]?.date_of_birth).toBeNull();
     expect(dependent.rows[0]?.notes).toBeNull();
 
-    const medical = await db.query<{ emergency_contact_name: string | null; notes: string | null }>(
-      "SELECT emergency_contact_name, notes FROM public.medical_profiles WHERE patient_id = $1",
+    const medical = await db.query<{
+      emergency_contact_name: string | null;
+      emergency_contact_phone: string | null;
+      notes: string | null;
+      blood_type: string | null;
+      allergies: string[] | null;
+    }>(
+      `SELECT emergency_contact_name, emergency_contact_phone, notes, blood_type, allergies
+       FROM public.medical_profiles WHERE patient_id = $1`,
       [PATIENT]
     );
     expect(medical.rows[0]?.emergency_contact_name).toBeNull();
-    expect(medical.rows[0]?.notes).toBeNull();
+    expect(medical.rows[0]?.emergency_contact_phone).toBeNull();
+    expect(medical.rows[0]?.notes).toBe("private note");
+    expect(medical.rows[0]?.blood_type).toBe("O+");
+    expect(medical.rows[0]?.allergies).toEqual(["peanuts"]);
+
+    const dependentClinical = await db.query<{
+      emergency_contact_name: string | null;
+      notes: string | null;
+      blood_type: string | null;
+    }>(
+      `SELECT dmp.emergency_contact_name, dmp.notes, dmp.blood_type
+       FROM public.dependent_medical_profiles dmp
+       JOIN public.dependents dep ON dep.id = dmp.dependent_id
+       WHERE dep.parent_id = $1`,
+      [PATIENT]
+    );
+    expect(dependentClinical.rows[0]?.emergency_contact_name).toBeNull();
+    expect(dependentClinical.rows[0]?.notes).toBe("dependent note");
+    expect(dependentClinical.rows[0]?.blood_type).toBe("A+");
 
     const pushes = await db.query<{ count: string }>(
       "SELECT count(*)::text AS count FROM public.push_subscriptions WHERE user_id = $1",
@@ -535,6 +596,80 @@ describe("erase_account keeps audited prescriptions", () => {
 
     const stillBlocked = await deleteUser(DOCTOR_USER);
     expect(stillBlocked).toMatch(/23503|foreign key/i);
+  });
+
+  it("anonymises a patient who has a review and no prescription", async () => {
+    const before = await deleteUser(REVIEWER);
+    expect(before).toMatch(/23503|foreign key/i);
+
+    const result = await db.query<ModeRow>(
+      "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
+      [REVIEWER]
+    );
+    expect(result.rows[0]?.mode).toBe("anonymised");
+
+    const profile = await db.query<{ first_name: string; last_name: string; email: string; phone: string | null }>(
+      "SELECT first_name, last_name, email, phone FROM public.profiles WHERE id = $1",
+      [REVIEWER]
+    );
+    expect(profile.rows[0]?.first_name).toBe("Erased");
+    expect(profile.rows[0]?.last_name).toBe("Account");
+    expect(profile.rows[0]?.email).toBe(`erased+${REVIEWER}@users.invalid`);
+    expect(profile.rows[0]?.phone).toBeNull();
+
+    const review = await db.query<{ patient_id: string; comment: string }>(
+      "SELECT patient_id::text, comment FROM public.reviews WHERE patient_id = $1",
+      [REVIEWER]
+    );
+    expect(review.rows[0]).toMatchObject({
+      patient_id: REVIEWER,
+      comment: "keep-this-review",
+    });
+
+    const rx = await db.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM public.prescriptions WHERE patient_id = $1",
+      [REVIEWER]
+    );
+    expect(rx.rows[0]?.count).toBe("0");
+
+    const stillBlocked = await deleteUser(REVIEWER);
+    expect(stillBlocked).toMatch(/23503|foreign key/i);
+  });
+
+  it("anonymises a patient who only has a medical profile and keeps the clinical fields", async () => {
+    const result = await db.query<ModeRow>(
+      "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
+      [CLINICAL]
+    );
+    expect(result.rows[0]?.mode).toBe("anonymised");
+
+    const profile = await db.query<{ first_name: string; address_line1: string | null; erased_at: string | null }>(
+      "SELECT first_name, address_line1, erased_at::text AS erased_at FROM public.profiles WHERE id = $1",
+      [CLINICAL]
+    );
+    expect(profile.rows[0]?.first_name).toBe("Erased");
+    expect(profile.rows[0]?.address_line1).toBeNull();
+    expect(profile.rows[0]?.erased_at).toBeTruthy();
+
+    const medical = await db.query<{
+      patient_id: string;
+      blood_type: string | null;
+      notes: string | null;
+      allergies: string[] | null;
+      emergency_contact_name: string | null;
+      emergency_contact_phone: string | null;
+    }>(
+      `SELECT patient_id::text, blood_type, notes, allergies, emergency_contact_name, emergency_contact_phone
+       FROM public.medical_profiles WHERE patient_id = $1`,
+      [CLINICAL]
+    );
+    expect(medical.rows).toHaveLength(1);
+    expect(medical.rows[0]?.patient_id).toBe(CLINICAL);
+    expect(medical.rows[0]?.blood_type).toBe("AB+");
+    expect(medical.rows[0]?.notes).toBe("keep-clinical-note");
+    expect(medical.rows[0]?.allergies).toEqual(["latex"]);
+    expect(medical.rows[0]?.emergency_contact_name).toBeNull();
+    expect(medical.rows[0]?.emergency_contact_phone).toBeNull();
   });
 
   it("returns hard_delete and still allows deleting a user with no prescriptions", async () => {
