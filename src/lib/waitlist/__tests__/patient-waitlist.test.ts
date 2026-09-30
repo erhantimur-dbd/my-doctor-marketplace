@@ -45,21 +45,35 @@ describe("patient waitlist details", () => {
 describe("coming-soon page copy", () => {
   const html = read("public/coming-soon/index.html");
 
-  it("says coming soon, keeps the £99 doctor offer, and promises patients 15% off at launch", () => {
+  it("says coming soon and keeps the £99 doctor offer without a patient 15% offer", () => {
     expect(html).toMatch(/Coming soon/);
     expect(html).toMatch(/£99 per month for the first 100 doctors/);
-    expect(html).toMatch(/cancel anytime/i);
+    expect(html).toMatch(/No minimum term, cancel anytime/);
     expect(html).toMatch(/If you cancel, you lose this price/);
-    expect(html).toMatch(/15% off at launch/);
-    expect(html).toMatch(/not the 15% platform commission/i);
+    expect(html).toMatch(/£199/);
+    expect(html).toMatch(/£299/);
     expect(html).toMatch(/Patient search is closed/);
     expect(html).toMatch(/video consultation/i);
     expect(html).toMatch(/in-person/i);
     expect(html).toMatch(/register-doctor\?tier=founding&founding=1/);
+    expect(html).toMatch(/href="\/en\/privacy"/);
+    expect(html).toMatch(/We'll only email you about the launch and this offer/);
+    expect(html).toMatch(/Every email has an unsubscribe link/);
+    expect(html).toMatch(/activity statements/);
+    expect(html).toMatch(/United Kingdom/);
+    expect(html).not.toMatch(/15%\s*off/i);
+    expect(html).not.toMatch(/patient discount/i);
+    expect(html).not.toMatch(/not the 15% platform commission/i);
+    expect(html).not.toMatch(/medical testing/i);
+    expect(html).not.toMatch(/No contract/i);
+    expect(html).not.toMatch(/Priority placement/i);
+    expect(html).not.toMatch(/messaging and AI/i);
+    expect(html).not.toMatch(/invoices handled/i);
+    expect(html).not.toMatch(/The form is empty/i);
+    expect(html).not.toMatch(/Ireland|Italy|Spain|Germany|France|Portugal|Poland|Turkey/);
     expect(html).not.toMatch(/Founding Free|£0|no card|lifetime free|free forever/i);
     expect(html).not.toMatch(/launch date/i);
     expect(html).not.toMatch(/discount_percent|entitlement_kind|patient_launch_discount/);
-    expect(html).not.toMatch(/we store a 15%|stored 15%/i);
     expect(html).not.toMatch(/coupon|promotion code/i);
   });
 

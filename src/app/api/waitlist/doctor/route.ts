@@ -11,7 +11,9 @@ const doctorWaitlistSchema = z.object({
   name: z.string().min(2, "Name is required"),
   email: z.string().email("Valid email is required"),
   specialty: z.string().min(1, "Specialty is required"),
-  country: z.string().min(2, "Country is required"),
+  country: z.literal("GB", {
+    error: "Doctor sign-up is open in the United Kingdom only.",
+  }),
 });
 
 /**

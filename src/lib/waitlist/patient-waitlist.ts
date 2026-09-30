@@ -4,8 +4,8 @@
  * Reuses launch_notifications (name, email, region). Region "marketplace"
  * is the public-site list, separate from a country launch notification.
  *
- * Details only. The public page promises 15% off at launch.
- * This row does not record that percent.
+ * Details only. Name and email for the launch waitlist.
+ * This row does not record a discount.
  */
 export const PATIENT_WAITLIST_REGION = "marketplace";
 
