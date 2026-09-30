@@ -55,7 +55,7 @@ describe("coming-soon page copy", () => {
     expect(visible).toContain(
       "Patients are searching for private doctors. Make sure they find you."
     );
-    expect(visible).toContain("Your private practice, found and booked online.");
+    expect(visible).toContain("Where Patients Meet the Right Doctor");
     expect(visible).toContain("Claim your founding spot");
     expect(visible).toContain("I'm a patient, tell me when it opens");
     expect(visible).toContain(foundingBox);
