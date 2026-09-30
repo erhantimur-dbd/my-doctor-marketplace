@@ -109,10 +109,10 @@ describe("coming-soon page copy", () => {
   });
 
   it("shows Prices exclude VAT once outside the FAQ, in the founding box", () => {
-    const faqAt = html.indexOf('class="faq-list"');
+    const faqAt = visible.indexOf('class="faq-list"');
     expect(faqAt).toBeGreaterThan(-1);
-    const outside = html.slice(0, faqAt);
-    const faq = html.slice(faqAt);
+    const outside = visible.slice(0, faqAt);
+    const faq = visible.slice(faqAt);
     const count = (text: string, needle: string) =>
       text.split(needle).length - 1;
 
