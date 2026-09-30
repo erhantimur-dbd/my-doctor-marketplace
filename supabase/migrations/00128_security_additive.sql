@@ -74,8 +74,10 @@ AS $$
   LIMIT 1;
 $$;
 
-REVOKE ALL ON FUNCTION public.get_follow_up_invitation_by_token(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.get_follow_up_invitation_by_token(text) TO anon, authenticated;
+-- Default privileges grant anon and authenticated ALL on new public objects.
+-- REVOKE FROM PUBLIC does not remove those role grants.
+REVOKE ALL ON FUNCTION public.get_follow_up_invitation_by_token(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_follow_up_invitation_by_token(text) TO anon, authenticated, service_role;
 
 -- ─── patient status transition ───────────────────────────────
 -- Patients have no dedicated write in the final policy set. This function
@@ -113,9 +115,8 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) TO authenticated, service_role;
 
 -- ─── fee lock ────────────────────────────────────────────────
 -- One BEFORE UPDATE trigger freezes both platform_fee_cents and
@@ -148,6 +149,11 @@ BEGIN
 END;
 $$;
 
+-- EXECUTE on a trigger function is checked when the trigger is created, not
+-- when it fires. postgres creates the trigger below. Anon and authenticated
+-- get no grant.
+REVOKE ALL ON FUNCTION public.enforce_follow_up_invitation_fee_lock() FROM PUBLIC, anon, authenticated;
+
 DO $create_fee_trigger$
 BEGIN
   IF NOT EXISTS (
@@ -166,19 +172,8 @@ $create_fee_trigger$;
 
 -- ─── organizations ───────────────────────────────────────────
 
--- Branding columns exist on Production and were never committed.
--- ADD IF NOT EXISTS converges a repo-only database without touching
--- Production values. brand_custom_css stays on the table and off the view.
-ALTER TABLE public.organizations
-  ADD COLUMN IF NOT EXISTS brand_display_name TEXT,
-  ADD COLUMN IF NOT EXISTS brand_primary_color TEXT DEFAULT '#0ea5e9',
-  ADD COLUMN IF NOT EXISTS brand_secondary_color TEXT DEFAULT '#0f172a',
-  ADD COLUMN IF NOT EXISTS brand_accent_color TEXT DEFAULT '#22c55e',
-  ADD COLUMN IF NOT EXISTS brand_favicon_url TEXT,
-  ADD COLUMN IF NOT EXISTS brand_custom_css TEXT,
-  ADD COLUMN IF NOT EXISTS brand_hide_platform_badge BOOLEAN NOT NULL DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS brand_support_email TEXT,
-  ADD COLUMN IF NOT EXISTS brand_support_phone TEXT;
+-- The nine brand_* columns already exist on organizations. Adding them
+-- again takes ACCESS EXCLUSIVE. This file does not add columns.
 
 -- Owners cannot change billing identity columns. service_role (Stripe
 -- customer writes) and platform admins still can. No JWT + postgres covers
@@ -210,6 +205,8 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.enforce_organization_protected_columns() FROM PUBLIC, anon, authenticated;
+
 DO $create_org_trigger$
 BEGIN
   IF NOT EXISTS (
@@ -235,8 +232,12 @@ $create_org_trigger$;
 -- them, and they are contact details.
 -- Included branding: logo_url, cover_image_url, description, website,
 -- specialties, seo_title, seo_description, and the visual brand_* fields.
+-- security_barrier does not stop an auto-updatable view. The INSTEAD OF
+-- trigger below rejects INSERT, UPDATE and DELETE even if a later grant
+-- adds write privileges. Default privileges grant anon and authenticated
+-- ALL on a new relation; REVOKE FROM PUBLIC leaves those role grants.
 CREATE OR REPLACE VIEW public.public_organizations
-WITH (security_invoker = false) AS
+WITH (security_invoker = false, security_barrier = true) AS
 SELECT
   id,
   name,
@@ -256,8 +257,185 @@ SELECT
   brand_hide_platform_badge
 FROM public.organizations;
 
-ALTER VIEW public.public_organizations OWNER TO postgres;
-ALTER VIEW public.public_organizations SET (security_invoker = false);
+REVOKE ALL ON public.public_organizations FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.public_organizations TO anon, authenticated;
 
-REVOKE ALL ON TABLE public.public_organizations FROM PUBLIC;
-GRANT SELECT ON TABLE public.public_organizations TO anon, authenticated;
+ALTER VIEW public.public_organizations OWNER TO postgres;
+ALTER VIEW public.public_organizations SET (security_invoker = false, security_barrier = true);
+
+CREATE OR REPLACE FUNCTION public.reject_public_organization_write()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  RAISE EXCEPTION 'public_organizations is read-only'
+    USING ERRCODE = '42501';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.reject_public_organization_write() FROM PUBLIC, anon, authenticated;
+
+DO $create_view_write_block$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_trigger
+    WHERE tgname = 'trg_public_organizations_readonly'
+      AND tgrelid = 'public.public_organizations'::pg_catalog.regclass
+  ) THEN
+    CREATE TRIGGER trg_public_organizations_readonly
+      INSTEAD OF INSERT OR UPDATE OR DELETE
+      ON public.public_organizations
+      FOR EACH ROW
+      EXECUTE FUNCTION public.reject_public_organization_write();
+  END IF;
+END
+$create_view_write_block$;
+
+-- Final grants, not the statement text. Fails the migration if anon or
+-- authenticated can write the view, or if a new function still has their
+-- default privileges.
+DO $assert_new_object_grants$
+DECLARE
+  v_bad text;
+BEGIN
+  SELECT pg_catalog.string_agg(
+    pg_catalog.format('%s %s', COALESCE(r.rolname, 'public'), a.privilege_type),
+    ', ' ORDER BY COALESCE(r.rolname, 'public'), a.privilege_type
+  )
+  INTO v_bad
+  FROM pg_catalog.pg_class AS c
+  JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+  CROSS JOIN LATERAL pg_catalog.aclexplode(c.relacl) AS a
+  LEFT JOIN pg_catalog.pg_roles AS r ON r.oid = a.grantee
+  WHERE n.nspname = 'public'
+    AND c.relname = 'public_organizations'
+    AND (
+      a.grantee = 0
+      OR r.rolname IN ('anon', 'authenticated')
+    )
+    AND NOT (
+      r.rolname IN ('anon', 'authenticated')
+      AND a.privilege_type = 'SELECT'
+    );
+
+  IF v_bad IS NOT NULL THEN
+    RAISE EXCEPTION 'public_organizations must be SELECT-only for anon and authenticated, got %', v_bad
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF (
+    SELECT c.relacl IS NULL
+    FROM pg_catalog.pg_class AS c
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname = 'public_organizations'
+  ) THEN
+    RAISE EXCEPTION 'public_organizations has no explicit grants'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF (
+    SELECT count(*)
+    FROM pg_catalog.pg_class AS c
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL pg_catalog.aclexplode(c.relacl) AS a
+    JOIN pg_catalog.pg_roles AS r ON r.oid = a.grantee
+    WHERE n.nspname = 'public'
+      AND c.relname = 'public_organizations'
+      AND r.rolname IN ('anon', 'authenticated')
+      AND a.privilege_type = 'SELECT'
+  ) <> 2 THEN
+    RAISE EXCEPTION 'public_organizations is missing SELECT for anon or authenticated'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class AS c
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+    CROSS JOIN LATERAL pg_catalog.aclexplode(c.relacl) AS a
+    LEFT JOIN pg_catalog.pg_roles AS r ON r.oid = a.grantee
+    WHERE n.nspname = 'public'
+      AND c.relname = 'public_organizations'
+      AND COALESCE(r.rolname, 'public') IN ('anon', 'authenticated', 'public')
+      AND a.privilege_type IN ('INSERT', 'UPDATE', 'DELETE')
+  ) THEN
+    RAISE EXCEPTION 'public_organizations still has INSERT, UPDATE or DELETE for anon or authenticated'
+      USING ERRCODE = '42501';
+  END IF;
+
+  SELECT pg_catalog.string_agg(
+    pg_catalog.format('%s %s %s', p.proname, COALESCE(r.rolname, 'public'), a.privilege_type),
+    ', ' ORDER BY p.proname, COALESCE(r.rolname, 'public'), a.privilege_type
+  )
+  INTO v_bad
+  FROM pg_catalog.pg_proc AS p
+  JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+  CROSS JOIN LATERAL pg_catalog.aclexplode(p.proacl) AS a
+  LEFT JOIN pg_catalog.pg_roles AS r ON r.oid = a.grantee
+  WHERE n.nspname = 'public'
+    AND p.proname IN (
+      'get_follow_up_invitation_by_token',
+      'patient_transition_follow_up_invitation',
+      'enforce_follow_up_invitation_fee_lock',
+      'enforce_organization_protected_columns',
+      'reject_public_organization_write'
+    )
+    AND (
+      a.grantee = 0
+      OR (
+        r.rolname IN ('anon', 'authenticated')
+        AND NOT (
+          a.privilege_type = 'EXECUTE'
+          AND (
+            (p.proname = 'get_follow_up_invitation_by_token' AND r.rolname IN ('anon', 'authenticated'))
+            OR (p.proname = 'patient_transition_follow_up_invitation' AND r.rolname = 'authenticated')
+          )
+        )
+      )
+    );
+
+  IF v_bad IS NOT NULL THEN
+    RAISE EXCEPTION 'new function grants are wrong: %', v_bad
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_proc AS p
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname IN (
+        'get_follow_up_invitation_by_token',
+        'patient_transition_follow_up_invitation',
+        'enforce_follow_up_invitation_fee_lock',
+        'enforce_organization_protected_columns',
+        'reject_public_organization_write'
+      )
+      AND p.proacl IS NULL
+  ) THEN
+    RAISE EXCEPTION 'a new function still has a null ACL, so default privileges apply'
+      USING ERRCODE = '42501';
+  END IF;
+
+  IF (
+    SELECT count(*)
+    FROM pg_catalog.pg_proc AS p
+    JOIN pg_catalog.pg_namespace AS n ON n.oid = p.pronamespace
+    CROSS JOIN LATERAL pg_catalog.aclexplode(p.proacl) AS a
+    JOIN pg_catalog.pg_roles AS r ON r.oid = a.grantee
+    WHERE n.nspname = 'public'
+      AND a.privilege_type = 'EXECUTE'
+      AND r.rolname = 'service_role'
+      AND p.proname IN (
+        'get_follow_up_invitation_by_token',
+        'patient_transition_follow_up_invitation'
+      )
+  ) <> 2 THEN
+    RAISE EXCEPTION 'token lookup and patient_transition must grant EXECUTE to service_role'
+      USING ERRCODE = '42501';
+  END IF;
+END
+$assert_new_object_grants$;

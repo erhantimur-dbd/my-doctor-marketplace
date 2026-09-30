@@ -21,10 +21,11 @@ describe("00128 security additive", () => {
   it("does not drop policies, indexes, or grants on existing tables", () => {
     expect(additive).not.toMatch(/^\s*DROP\b/m);
     const revokes = additive.split("\n").filter((line) => /^\s*REVOKE\b/.test(line));
-    expect(revokes.length).toBe(4);
+    expect(revokes.length).toBe(6);
     for (const line of revokes) {
+      expect(line).toMatch(/FROM PUBLIC, anon, authenticated/);
       expect(line).toMatch(
-        /get_follow_up_invitation_by_token|patient_transition_follow_up_invitation|public_organizations/
+        /get_follow_up_invitation_by_token|patient_transition_follow_up_invitation|enforce_follow_up_invitation_fee_lock|enforce_organization_protected_columns|reject_public_organization_write|public\.public_organizations/
       );
       expect(line).not.toMatch(/follow_up_invitations|public\.organizations\b/);
     }
@@ -49,7 +50,10 @@ describe("00128 security additive", () => {
     expect(fn).toContain("'unit_price_cents'");
     expect(fn).toContain("'sessions_booked'");
     expect(additive).toContain(
-      "GRANT EXECUTE ON FUNCTION public.get_follow_up_invitation_by_token(text) TO anon, authenticated"
+      "REVOKE ALL ON FUNCTION public.get_follow_up_invitation_by_token(text) FROM PUBLIC, anon, authenticated"
+    );
+    expect(additive).toContain(
+      "GRANT EXECUTE ON FUNCTION public.get_follow_up_invitation_by_token(text) TO anon, authenticated, service_role"
     );
   });
 
@@ -68,7 +72,10 @@ describe("00128 security additive", () => {
       /platform_fee_cents|discounted_total_cents|stripe_|sessions_booked|paid_at/
     );
     expect(additive).toContain(
-      "GRANT EXECUTE ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) TO authenticated"
+      "REVOKE ALL ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) FROM PUBLIC, anon, authenticated"
+    );
+    expect(additive).toContain(
+      "GRANT EXECUTE ON FUNCTION public.patient_transition_follow_up_invitation(uuid, text) TO authenticated, service_role"
     );
     expect(additive).not.toMatch(
       /GRANT EXECUTE ON FUNCTION public\.patient_transition_follow_up_invitation\(uuid, text\) TO anon/
@@ -146,16 +153,54 @@ describe("00128 security additive", () => {
     expect(view).not.toMatch(/stripe_customer_id|address_line1|\bemail\b|\bphone\b/);
     expect(additive).toContain("ALTER VIEW public.public_organizations OWNER TO postgres");
     expect(additive).toContain(
-      "ALTER VIEW public.public_organizations SET (security_invoker = false)"
+      "ALTER VIEW public.public_organizations SET (security_invoker = false, security_barrier = true)"
     );
-    expect(additive).toContain(
-      "REVOKE ALL ON TABLE public.public_organizations FROM PUBLIC"
-    );
-    expect(additive).toContain(
-      "GRANT SELECT ON TABLE public.public_organizations TO anon, authenticated"
-    );
-    expect(additive).toContain("ADD COLUMN IF NOT EXISTS brand_custom_css");
+    expect(additive).toContain("security_barrier = true");
+    expect(additive).toContain("INSTEAD OF INSERT OR UPDATE OR DELETE");
+    expect(additive).toContain("trg_public_organizations_readonly");
+    expect(additive).not.toMatch(/ADD COLUMN/);
     expect(additive).not.toContain("idx_organizations_slug");
+  });
+
+  it("revokes anon and authenticated before granting SELECT only on the view", () => {
+    const revokeAt = additive.indexOf(
+      "REVOKE ALL ON public.public_organizations FROM PUBLIC, anon, authenticated;"
+    );
+    const grantAt = additive.indexOf(
+      "GRANT SELECT ON public.public_organizations TO anon, authenticated;"
+    );
+    expect(revokeAt).toBeGreaterThan(
+      additive.indexOf("CREATE OR REPLACE VIEW public.public_organizations")
+    );
+    expect(grantAt).toBeGreaterThan(revokeAt);
+    expect(additive).not.toMatch(
+      /GRANT\s+(INSERT|UPDATE|DELETE|ALL)\s+ON\s+(TABLE\s+)?public\.public_organizations/i
+    );
+    expect(additive).toContain(
+      "public_organizations still has INSERT, UPDATE or DELETE for anon or authenticated"
+    );
+    expect(additive).toContain("a.privilege_type IN ('INSERT', 'UPDATE', 'DELETE')");
+    expect(additive).toContain("public_organizations must be SELECT-only for anon and authenticated");
+  });
+
+  it("revokes anon and authenticated on every new function, then grants EXECUTE only where intended", () => {
+    for (const name of [
+      "public.enforce_follow_up_invitation_fee_lock()",
+      "public.enforce_organization_protected_columns()",
+      "public.reject_public_organization_write()",
+    ]) {
+      expect(additive).toContain(
+        `REVOKE ALL ON FUNCTION ${name} FROM PUBLIC, anon, authenticated`
+      );
+      expect(additive).not.toMatch(
+        new RegExp(`GRANT EXECUTE ON FUNCTION ${name.replace(/[()]/g, "\\$&")}`)
+      );
+    }
+    expect(additive).toContain("a new function still has a null ACL");
+    expect(additive).toContain(
+      "token lookup and patient_transition must grant EXECUTE to service_role"
+    );
+    expect(bucket).not.toMatch(/CREATE\s+(OR\s+REPLACE\s+)?FUNCTION/i);
   });
 });
 
