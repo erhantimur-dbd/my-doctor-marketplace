@@ -16,6 +16,7 @@ import {
 import { sendEmail } from "@/lib/email/client";
 import { organizationInvitationEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
+import { fallbackOrganizationCurrency } from "@/lib/billing/currency-for-country";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ export async function createOrganization(formData: FormData) {
     base_currency: (formData.get("base_currency") as string) || undefined,
     owner_role: ((formData.get("owner_role") as string) || "doctor") as "doctor" | "admin",
   };
+  const country = (formData.get("country") as string) || undefined;
 
   const parsed = createOrganizationSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message || "Invalid input" };
@@ -106,7 +108,8 @@ export async function createOrganization(formData: FormData) {
       phone: parsed.data.phone || null,
       website: parsed.data.website || null,
       timezone: parsed.data.timezone || "Europe/London",
-      base_currency: parsed.data.base_currency || "EUR",
+      base_currency:
+        parsed.data.base_currency || fallbackOrganizationCurrency(country),
       owner_role: (parsed.data as any).owner_role || "doctor",
     })
     .select("id")

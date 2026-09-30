@@ -22,6 +22,7 @@ import { Loader2, Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
 import type { ParsedAddress } from "@/components/shared/address-autocomplete";
 import { getMyOrganization, updateOrganization } from "@/actions/organization";
+import { fallbackOrganizationCurrency } from "@/lib/billing/currency-for-country";
 
 const TIMEZONES = [
   "Europe/London",
@@ -248,7 +249,10 @@ export default function OrganizationSettingsPage() {
               <Label htmlFor="base_currency">Base Currency</Label>
               <Select
                 name="base_currency"
-                defaultValue={org.base_currency || "EUR"}
+                defaultValue={
+                  org.base_currency ||
+                  fallbackOrganizationCurrency(org.country || country)
+                }
               >
                 <SelectTrigger>
                   <SelectValue />

@@ -9,10 +9,13 @@ import {
   ReactNode,
 } from "react";
 import type { ExchangeRates } from "@/app/api/exchange-rates/route";
+import {
+  resolveDisplayCurrency,
+  type DisplayCurrencyCode,
+} from "@/lib/billing/display-currency";
+import { DEFAULT_CURRENCY } from "@/lib/billing/currency-for-country";
 
-export type DisplayCurrency = "GBP" | "EUR" | "USD";
-
-const DISPLAY_CURRENCIES: DisplayCurrency[] = ["GBP", "EUR", "USD"];
+export type DisplayCurrency = DisplayCurrencyCode;
 
 const COOKIE_NAME = "display_currency";
 const COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
@@ -26,7 +29,7 @@ interface CurrencyContextType {
 }
 
 const CurrencyContext = createContext<CurrencyContextType>({
-  currency: "GBP",
+  currency: DEFAULT_CURRENCY,
   setCurrency: () => {},
   rates: { GBP: 1, EUR: 1.15, USD: 1.33 },
   ratesLoaded: false,
@@ -43,19 +46,8 @@ function setCookie(name: string, value: string, maxAge: number) {
   document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax`;
 }
 
-function getDefaultCurrency(locale: string): DisplayCurrency {
-  switch (locale) {
-    case "en":
-      return "GBP";
-    case "de":
-    case "fr":
-    case "it":
-    case "es":
-    case "pt":
-      return "EUR";
-    default:
-      return "USD";
-  }
+function clearCookie(name: string) {
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`;
 }
 
 export function CurrencyProvider({
@@ -66,11 +58,10 @@ export function CurrencyProvider({
   locale: string;
 }) {
   const [currency, setCurrencyState] = useState<DisplayCurrency>(() => {
-    const saved = getCookie(COOKIE_NAME);
-    if (saved && DISPLAY_CURRENCIES.includes(saved as DisplayCurrency)) {
-      return saved as DisplayCurrency;
-    }
-    return getDefaultCurrency(locale);
+    return resolveDisplayCurrency({
+      locale,
+      stored: getCookie(COOKIE_NAME),
+    }).currency;
   });
 
   const [rates, setRates] = useState<ExchangeRates>({
@@ -79,6 +70,16 @@ export function CurrencyProvider({
     USD: 1.33,
   });
   const [ratesLoaded, setRatesLoaded] = useState(false);
+
+  // Drop a stored currency checkout cannot charge, then match the locale.
+  useEffect(() => {
+    const resolved = resolveDisplayCurrency({
+      locale,
+      stored: getCookie(COOKIE_NAME),
+    });
+    if (resolved.clearStored) clearCookie(COOKIE_NAME);
+    setCurrencyState(resolved.currency);
+  }, [locale]);
 
   // Fetch live rates on mount
   useEffect(() => {
@@ -92,9 +93,15 @@ export function CurrencyProvider({
   }, []);
 
   const setCurrency = useCallback((c: DisplayCurrency) => {
-    setCurrencyState(c);
-    setCookie(COOKIE_NAME, c, COOKIE_MAX_AGE);
-  }, []);
+    const resolved = resolveDisplayCurrency({ locale, stored: c });
+    if (resolved.clearStored) {
+      clearCookie(COOKIE_NAME);
+      setCurrencyState(resolved.currency);
+      return;
+    }
+    setCurrencyState(resolved.currency);
+    setCookie(COOKIE_NAME, resolved.currency, COOKIE_MAX_AGE);
+  }, [locale]);
 
   const convert = useCallback(
     (amountCents: number, fromCurrency: string): number => {

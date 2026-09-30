@@ -8,17 +8,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { ChevronDown } from "lucide-react";
-import { useCurrency, type DisplayCurrency } from "@/providers/currency-provider";
-
-const currencies: { code: DisplayCurrency; symbol: string; label: string }[] = [
-  { code: "GBP", symbol: "£", label: "GBP (£)" },
-  { code: "EUR", symbol: "€", label: "EUR (€)" },
-  { code: "USD", symbol: "$", label: "USD ($)" },
-];
+import { useCurrency } from "@/providers/currency-provider";
+import { enabledDisplayCurrencyOptions } from "@/lib/billing/display-currency";
 
 export function CurrencySelector() {
   const { currency, setCurrency } = useCurrency();
-  const current = currencies.find((c) => c.code === currency)!;
+  const options = enabledDisplayCurrencyOptions();
+  if (options.length < 2) return null;
+
+  const current = options.find((c) => c.code === currency) ?? options[0];
 
   return (
     <DropdownMenu>
@@ -29,7 +27,7 @@ export function CurrencySelector() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        {currencies.map((c) => (
+        {options.map((c) => (
           <DropdownMenuItem
             key={c.code}
             onClick={() => setCurrency(c.code)}
