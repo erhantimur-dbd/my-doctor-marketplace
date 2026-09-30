@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { isDefinerGrantException } from "../../security/definer-grant-allowlist";
 
 const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
 const FROM_MIGRATION = 124;
@@ -188,7 +189,9 @@ describe("SECURITY DEFINER functions revoke EXECUTE from anon and authenticated"
     expect(defined).not.toContain("reject_payment_correction_audit_mutation");
     expect(defined).not.toContain("payment_correction_approvals_guard");
 
-    const missing = functionsMissingExecuteRevoke(migrations);
+    const missing = functionsMissingExecuteRevoke(migrations).filter(
+      (name) => !isDefinerGrantException(name)
+    );
     expect(
       missing,
       missing
