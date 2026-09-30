@@ -620,7 +620,7 @@ export async function bookFollowUpSession(
         ? doctorData.profile[0]
         : doctorData.profile;
 
-      const { subject, html } = resolvePatientConfirmationEmail({
+      const { subject, html, attachments } = resolvePatientConfirmationEmail({
         patientName: patient.first_name || "Patient",
         doctorName: `${docProfile.first_name} ${docProfile.last_name}`,
         date: booking.appointment_date,
@@ -640,7 +640,7 @@ export async function bookFollowUpSession(
         doctor: { id: invitation.doctor_id },
       });
 
-      sendEmail({ to: patient.email, subject, html }).catch((err) =>
+      sendEmail({ to: patient.email, subject, html, attachments }).catch((err) =>
         log.error("Confirmation email error:", { err: err })
       );
     }
