@@ -81,12 +81,13 @@
     .nav-inner {
       max-width: 1200px; margin: 0 auto;
       display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
       padding: 0.875rem 1.5rem;
     }
-    .logo-wrap { display: flex; align-items: center; gap: 0.625rem; text-decoration: none; }
+    .logo-wrap { display: flex; align-items: center; gap: 0.625rem; text-decoration: none; flex-shrink: 0; }
     .logo-wrap svg { width: 36px; height: 36px; }
     .logo-text { font-weight: 800; font-size: 1.25rem; color: var(--foreground); letter-spacing: -0.02em; }
-    .nav-actions { display: flex; align-items: center; gap: 1rem; }
+    .nav-actions { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
     .nav-link {
       font-size: 0.875rem; font-weight: 600;
       color: var(--foreground); text-decoration: none;
@@ -98,7 +99,9 @@
       padding: 0.5rem 1.25rem; border-radius: var(--radius);
       font-size: 0.875rem; font-weight: 600; text-decoration: none;
       transition: opacity 0.2s;
+      white-space: nowrap;
     }
+    .nav-cta-short { display: none; }
     .nav-cta:hover { opacity: 0.9; }
 
     /* ---- Hero ---- */
@@ -475,6 +478,10 @@
         padding-bottom: 0;
       }
     }
+    @media (max-width: 479px) {
+      .nav-cta-full { display: none; }
+      .nav-cta-short { display: inline; }
+    }
   </style>
 </head>
 <body>
@@ -495,7 +502,7 @@
         <a href="#patients" class="nav-link">Patients</a>
         <a href="#doctors" class="nav-link">Doctors</a>
         <a href="/en/login" class="nav-link">Sign in</a>
-        <a href="/en/register-doctor?tier=founding&founding=1" class="nav-cta">Claim founding spot</a>
+        <a href="/en/register-doctor?tier=founding&founding=1" class="nav-cta"><span class="nav-cta-full">Claim founding spot</span><span class="nav-cta-short">Claim spot</span></a>
       </div>
     </div>
   </nav>
