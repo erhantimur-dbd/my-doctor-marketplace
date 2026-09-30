@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail } from "@/lib/email/client";
+import { sendEmail, type EmailAttachment } from "@/lib/email/client";
 import { log } from "@/lib/utils/logger";
 
 type NotificationChannel = "in_app" | "email" | "sms" | "whatsapp";
@@ -21,7 +21,12 @@ interface CreateNotificationParams {
   message: string;
   channels?: NotificationChannel[];
   metadata?: Record<string, any>;
-  email?: { to: string; subject: string; html: string };
+  email?: {
+    to: string;
+    subject: string;
+    html: string;
+    attachments?: EmailAttachment[];
+  };
   whatsapp?: WhatsAppNotification;
 }
 
