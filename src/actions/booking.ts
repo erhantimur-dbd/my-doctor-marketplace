@@ -1389,7 +1389,7 @@ export async function getDoctorAvailableSlots(
   }
 }
 
-// ── Post-Visit Summary ────────────────────────────────────────────────────
+// ── Post-Visit Summary ──────────────────────────────────────────────
 
 export async function saveVisitSummary(bookingId: string, summary: string) {
   try {

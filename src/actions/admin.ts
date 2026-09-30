@@ -24,6 +24,7 @@ import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { computeCancellationRefundPercent } from "@/lib/booking/cancellation-refund";
 import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 import { sendEmail } from "@/lib/email/client";
+import { buildPatientCalendarEvent } from "@/lib/booking/patient-calendar";
 import {
   adminBookingPaymentLinkEmail,
   bookingCancellationEmail,
@@ -2136,6 +2137,7 @@ export async function adminCancelBooking(
        ),
        doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
          id, slug, cancellation_policy, cancellation_hours, stripe_account_id,
+         clinic_name, address,
          profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
        )`
     )
@@ -2226,10 +2228,12 @@ export async function adminCancelBooking(
     }
   }
 
+  const cancelledAt = new Date().toISOString();
+
   // Update booking status
   const updateData: Record<string, unknown> = {
     status: BOOKING_STATUSES.CANCELLED_DOCTOR,
-    cancelled_at: new Date().toISOString(),
+    cancelled_at: cancelledAt,
     cancellation_reason: reason || "Cancelled by admin",
     ...(refundSettlementPatch || {}),
   };
@@ -2293,7 +2297,27 @@ export async function adminCancelBooking(
             currency: booking.currency.toUpperCase(),
           });
 
-    sendEmail({ to: patient.email, subject, html }).catch((err) =>
+    const cancelCalendar = buildPatientCalendarEvent({
+      bookingId: booking.id,
+      doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+      consultationType: booking.consultation_type,
+      appointmentDate: booking.appointment_date,
+      startTime: booking.start_time,
+      endTime: booking.end_time,
+      clinicName: doctor?.clinic_name,
+      address: doctor?.address,
+      bookingNumber: booking.booking_number,
+      createdAt: booking.created_at,
+      updatedAt: cancelledAt,
+      method: "CANCEL",
+    });
+
+    sendEmail({
+      to: patient.email,
+      subject,
+      html,
+      attachments: cancelCalendar ? [cancelCalendar.attachment] : undefined,
+    }).catch((err) =>
       log.error("Admin cancellation email error:", { err: err })
     );
 

@@ -11,7 +11,9 @@ import {
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
   BOOKING_DOCTOR_PROFILE_EMBED,
+  patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
+import { buildPatientCalendarEvent } from "@/lib/booking/patient-calendar";
 import { sendEmail } from "@/lib/email/client";
 import {
   resolvePatientConfirmationEmail,
@@ -331,7 +333,7 @@ export async function POST(request: NextRequest) {
                 ? "Video Consultation"
                 : "In-Person Consultation";
 
-              const { subject, html } = resolvePatientConfirmationEmail({
+              const { subject, html, attachments } = resolvePatientConfirmationEmail({
                 patientName: patient.first_name || "Patient",
                 doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
                 date: booking.appointment_date,
@@ -355,7 +357,7 @@ export async function POST(request: NextRequest) {
                 },
               });
 
-              sendEmail({ to: patient.email, subject, html }).catch((err) =>
+              sendEmail({ to: patient.email, subject, html, attachments }).catch((err) =>
                 console.error("Confirmation email error (follow-up):", err)
               );
 
@@ -528,7 +530,7 @@ export async function POST(request: NextRequest) {
                 : "In-Person Consultation";
 
             const isDeposit = booking.payment_mode === "deposit";
-            const { subject, html } = resolvePatientConfirmationEmail({
+            const { subject, html, attachments } = resolvePatientConfirmationEmail({
               patientName: patient.first_name || "Patient",
               doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
               date: booking.appointment_date,
@@ -558,7 +560,7 @@ export async function POST(request: NextRequest) {
               },
             });
 
-            sendEmail({ to: patient.email, subject, html }).catch((err) =>
+            sendEmail({ to: patient.email, subject, html, attachments }).catch((err) =>
               console.error("Confirmation email error:", err)
             );
 
@@ -1449,7 +1451,7 @@ export async function POST(request: NextRequest) {
               ? "Phone Consultation"
               : "In-Person Consultation";
 
-          const { subject, html } = resolvePatientConfirmationEmail({
+          const { subject, html, attachments } = resolvePatientConfirmationEmail({
             patientName: rPatient.first_name || "Patient",
             doctorName: `${rDoctorProfile.first_name} ${rDoctorProfile.last_name}`,
             date: rescheduleBooking.appointment_date,
@@ -1469,7 +1471,63 @@ export async function POST(request: NextRequest) {
             },
           });
 
-          sendEmail({ to: rPatient.email, subject, html }).catch((err) =>
+          const calendarAttachments = [...(attachments ?? [])];
+          if (originalBookingId && originalBookingId !== rescheduleBooking.id) {
+            const { data: originalBooking } = await supabase
+              .from("bookings")
+              .select(
+                `
+                id,
+                booking_number,
+                appointment_date,
+                start_time,
+                end_time,
+                consultation_type,
+                created_at,
+                doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
+                  title,
+                  clinic_name,
+                  address,
+                  profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name)
+                )
+              `
+              )
+              .eq("id", originalBookingId)
+              .maybeSingle();
+            if (originalBooking) {
+              const originalDoctor = Array.isArray(originalBooking.doctor)
+                ? originalBooking.doctor[0]
+                : originalBooking.doctor;
+              const originalProfile = Array.isArray(originalDoctor?.profile)
+                ? originalDoctor.profile[0]
+                : originalDoctor?.profile;
+              const cancelEvent = buildPatientCalendarEvent({
+                bookingId: originalBooking.id,
+                doctorName: patientBookingDoctorName({
+                  ...originalDoctor,
+                  profile: originalProfile,
+                }),
+                consultationType: originalBooking.consultation_type,
+                appointmentDate: originalBooking.appointment_date,
+                startTime: originalBooking.start_time,
+                endTime: originalBooking.end_time,
+                clinicName: originalDoctor?.clinic_name,
+                address: originalDoctor?.address,
+                bookingNumber: originalBooking.booking_number,
+                createdAt: originalBooking.created_at,
+                updatedAt: new Date().toISOString(),
+                method: "CANCEL",
+              });
+              if (cancelEvent) calendarAttachments.unshift(cancelEvent.attachment);
+            }
+          }
+
+          sendEmail({
+            to: rPatient.email,
+            subject,
+            html,
+            attachments: calendarAttachments,
+          }).catch((err) =>
             console.error("Confirmation email error (reschedule balance):", err)
           );
 
