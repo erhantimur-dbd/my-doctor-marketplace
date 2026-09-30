@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MyDoctors360 — Founding Doctor Programme | Private Practice, Reimagined</title>
-  <meta name="description" content="MyDoctors360 is launching soon across the UK and Europe. Join the Founding Doctor Programme — exclusive perks and pricing locked in for the first 100 doctors. Apply today." />
-  <meta property="og:title" content="MyDoctors360 — Founding Doctor Programme" />
-  <meta property="og:description" content="A modern private practice platform for UK and European doctors. First 100 founding doctors — exclusive founding pricing and perks." />
+  <title>MyDoctors360 — Coming soon | Founding Doctor Programme</title>
+  <meta name="description" content="MyDoctors360 is coming soon. Patient search is closed. Join the patient waitlist, or claim the £99 founding doctor plan." />
+  <meta property="og:title" content="MyDoctors360 — Coming soon" />
+  <meta property="og:description" content="Patient search is closed. Patients can join the waitlist. Doctors can claim the £99 founding plan." />
   <meta property="og:type" content="website" />
   <meta name="google-site-verification" content="EdM0owW0expdv2fT1tiUvYx9ibGdw3FW_k7489bQRmE" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -178,6 +178,21 @@
       display: grid; gap: 1.25rem;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     }
+    .audience-grid {
+      display: grid; gap: 1.25rem;
+      grid-template-columns: 1fr 1fr;
+      text-align: left;
+    }
+    .audience-card {
+      background: #fff; border: 1px solid var(--border);
+      border-radius: 1rem; padding: 1.75rem;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+    .audience-card.patients { border-top: 4px solid var(--blue); }
+    .audience-card.doctors { border-top: 4px solid var(--teal); }
+    .audience-card p { color: var(--muted-foreground); font-size: 0.9375rem; }
+    .audience-card .btn-primary,
+    .audience-card .btn-secondary { align-self: flex-start; margin-top: 0.5rem; }
     .benefit-card {
       background: #fff; border: 1px solid var(--border);
       border-radius: 1rem; padding: 1.75rem;
@@ -398,6 +413,7 @@
       .nav-cta { padding: 0.5rem 0.875rem; font-size: 0.8125rem; }
       .form-card { padding: 1.75rem 1.25rem; }
       .form-grid { grid-template-columns: 1fr; }
+      .audience-grid { grid-template-columns: 1fr; }
       .founding { padding: 4rem 1.25rem; }
     }
   </style>
@@ -417,6 +433,8 @@
         <span class="logo-text">MyDoctors360</span>
       </a>
       <div class="nav-actions">
+        <a href="#patients" class="nav-link">Patients</a>
+        <a href="#doctors" class="nav-link">Doctors</a>
         <a href="/en/login" class="nav-link">Sign in</a>
         <a href="/en/register-doctor?tier=founding&founding=1" class="nav-cta">Claim founding spot</a>
       </div>
@@ -428,40 +446,54 @@
     <div class="hero-content">
       <div class="badge">
         <span class="badge-dot"></span>
-        Founding Doctor Programme · Launching soon
+        Coming soon
       </div>
-      <h1>Private practice, <span>reimagined.</span></h1>
-      <p class="hero-sub">A modern booking, billing and patient platform built for independent doctors and clinics across the UK and Europe. Register today, build your profile, and go live on day one.</p>
+      <h1>The marketplace is <span>coming soon.</span></h1>
+      <p class="hero-sub">Patient search is closed. Patients can join the waitlist. Doctors can claim the founding plan and build a profile now.</p>
       <div class="hero-ctas">
+        <a href="#patients" class="btn-secondary">Join the patient waitlist</a>
         <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary">
           Claim My Founding Spot
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
         </a>
-        <a href="#why" class="btn-secondary">See the benefits</a>
       </div>
       <p class="hero-meta">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="#10b981"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-        <strong>£99 per month for the first 100 doctors.</strong>&nbsp;Already have an account? <a href="/en/login" style="color: var(--foreground); text-decoration: underline; font-weight: 600;">Sign in →</a>
+        <strong>£99 per month for the first 100 doctors.</strong> No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan. If you cancel, you lose the £99 price and cannot rejoin at £99. The 15% platform fee on consultations still applies and is not discounted.&nbsp;<a href="/en/login" style="color: var(--foreground); text-decoration: underline; font-weight: 600;">Sign in →</a>
       </p>
     </div>
   </section>
 
   <!-- About strip -->
-  <section class="about">
+  <section class="about" id="audiences">
     <div class="container">
-      <div class="eyebrow">What is MyDoctors360</div>
-      <h2>The private practice platform doctors actually want to use.</h2>
-      <p>We're building a single home for your bookings, video consultations, payments and patient communications — designed with input from working consultants, GPs and clinic owners across the UK and Europe. Launching soon.</p>
+      <div class="eyebrow">Coming soon</div>
+      <h2>One page for patients and doctors.</h2>
+      <p style="margin-bottom: 2rem;">Patient search is closed. The doctor path stays open: founding doctors can sign up today. Patients can join the waitlist.</p>
+      <div class="audience-grid">
+        <article class="audience-card patients">
+          <div class="eyebrow">For patients</div>
+          <h3>Join the waitlist</h3>
+          <p>Join with your name and email. We'll tell you when the marketplace opens.</p>
+          <a href="#patients" class="btn-secondary">Join the patient waitlist</a>
+        </article>
+        <article class="audience-card doctors">
+          <div class="eyebrow">For doctors</div>
+          <h3>£99 per month for the first 100 doctors</h3>
+          <p>No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan. If you cancel, you lose the £99 price and cannot rejoin at £99. The 15% platform fee on consultations still applies and is not discounted. Sign up now and set video or in-person visits before patient search opens.</p>
+          <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary">Claim My Founding Spot</a>
+        </article>
+      </div>
     </div>
   </section>
 
   <!-- Benefits -->
   <section class="section" id="why">
     <div class="container">
-      <div class="benefits-head">
-        <div class="eyebrow">Why doctors are joining</div>
-        <h2>Everything you need to run a modern private practice.</h2>
-        <p style="color: var(--muted-foreground); font-size: 1rem;">Less admin. Fewer no-shows. More of the work you actually trained for.</p>
+      <div class="benefits-head" id="doctors">
+        <div class="eyebrow">For doctors</div>
+        <h2>What founding doctors can set up now.</h2>
+        <p style="color: var(--muted-foreground); font-size: 1rem;">Patient search is closed. Your signup, profile, bookings setup, video and in-person visits are not.</p>
       </div>
 
       <div class="benefits-grid">
@@ -470,31 +502,31 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           </div>
           <h3>Own your schedule</h3>
-          <p>Set your hours, fees and consultation types. Live calendar sync means you're never double-booked.</p>
+          <p>Set your hours, fees and consultation types in the doctor dashboard before patient search opens.</p>
         </div>
 
         <div class="benefit-card">
           <div class="benefit-icon" style="background: var(--emerald-soft);">
             <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h2M12 15h2"/></svg>
           </div>
-          <h3>Keep more of your fee</h3>
-          <p>Transparent pricing, secure card payments and direct payouts. No surprise deductions, no opaque billing.</p>
+          <h3>Card payments and payouts</h3>
+          <p>Patients pay by card. A 15% platform fee applies to consultations and is not discounted.</p>
         </div>
 
         <div class="benefit-card">
           <div class="benefit-icon" style="background: var(--teal-soft);">
             <svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg>
           </div>
-          <h3>A verified patient pipeline</h3>
-          <p>Reach patients across the UK, Ireland and Europe who are searching specifically for private specialists in your field.</p>
+          <h3>Your profile before search opens</h3>
+          <p>List your specialty and fees now. Patient search is closed, so the directory is not taking bookings from the public site yet.</p>
         </div>
 
         <div class="benefit-card">
           <div class="benefit-icon" style="background: var(--violet-soft);">
             <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
           </div>
-          <h3>Integrated secure video</h3>
-          <p>Encrypted video consultations built in. No third-party links, no plug-ins for the patient.</p>
+          <h3>Video and in-person</h3>
+          <p>Offer a video consultation or an in-person visit. Patients choose the type you list when bookings open.</p>
         </div>
 
         <div class="benefit-card">
@@ -502,15 +534,15 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </div>
           <h3>Automated admin</h3>
-          <p>Reminders, follow-ups and invoices handled for you. Reclaim hours every week.</p>
+          <p>Reminders, follow-ups and activity statements. Reclaim hours every week.</p>
         </div>
 
         <div class="benefit-card">
           <div class="benefit-icon" style="background: var(--rose-soft);">
             <svg viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
           </div>
-          <h3>Build your reputation</h3>
-          <p>A verified profile, patient reviews and a multilingual presence — visible across the UK, Ireland and Europe.</p>
+          <h3>Founding doctors</h3>
+          <p>The first 100 doctors join at £99 per month. No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan. If you cancel, you lose the £99 price and cannot rejoin at £99. The 15% platform fee on consultations still applies and is not discounted.</p>
         </div>
       </div>
     </div>
@@ -520,33 +552,33 @@
   <section class="founding" id="founding">
     <div class="founding-inner">
       <div class="eyebrow">The Founding Doctor Programme</div>
-      <h2>Exclusive perks. Founding pricing locked in.</h2>
-      <p>The first 100 doctors who join us help shape the platform — and keep founding-tier benefits permanently. We're keeping the full perks list under wraps until launch, but here's a taste.</p>
+      <h2>£99 per month for the first 100 doctors.</h2>
+      <p>No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan. If you cancel, you lose the £99 price and cannot rejoin at £99. The 15% platform fee on consultations still applies and is not discounted. Solo Professional features cover bookings, video, payments, analytics, patient CRM and waitlist auto-notify.</p>
 
       <div class="founding-perks">
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>Founding pricing locked in</span>
+          <span>The price stays £99 per month for as long as you keep the plan</span>
         </div>
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>Priority profile placement at launch</span>
+          <span>No minimum term, cancel anytime</span>
         </div>
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>Early access to new features</span>
+          <span>If you cancel, you lose the £99 price and cannot rejoin at £99</span>
         </div>
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>Private founding doctor community</span>
+          <span>Bookings, video and in-person visits</span>
         </div>
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>Direct line to the founding team</span>
+          <span>The 15% platform fee on consultations still applies and is not discounted</span>
         </div>
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>And a few more revealed at launch</span>
+          <span>Reminders, follow-ups and activity statements</span>
         </div>
       </div>
 
@@ -562,7 +594,7 @@
         </a>
         <a href="/en/pricing" class="btn-ghost-light">See plans</a>
       </div>
-      <p class="founding-fineprint">The founding plan is £99 per month for the first 100 doctors. It is monthly and you can cancel anytime. The price stays £99 for as long as you keep the plan. If you cancel, you lose this price and cannot subscribe at £99 again. Starter stays £199, Professional £299, and Clinic £897 (3–15 seats).</p>
+      <p class="founding-fineprint">The founding plan is £99 per month for the first 100 doctors. No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan. If you cancel, you lose the £99 price and cannot rejoin at £99. The 15% platform fee on consultations still applies and is not discounted. Starter stays £199, Professional £299, and Clinic £897 (3–15 seats). Prices exclude VAT. VAT will only be added if we become VAT-registered.</p>
     </div>
   </section>
 
@@ -588,7 +620,7 @@
         <div class="step">
           <div class="step-num">3</div>
           <h3>Launch with us</h3>
-          <p>Your profile goes live on day one with priority placement, founding pricing and direct support.</p>
+          <p>When patient search opens, the profile you built is ready. The price stays £99 per month for as long as you keep the plan.</p>
         </div>
       </div>
 
@@ -601,12 +633,71 @@
     </div>
   </section>
 
-  <!-- Patient value -->
-  <section class="patient-value">
+  <!-- Patients -->
+  <section class="section tinted" id="patients">
     <div class="container">
-      <div class="eyebrow">Why this matters for your practice</div>
-      <h2>Patients come to us because it's simple, transparent and multilingual.</h2>
-      <p>That means better-matched, higher-intent bookings for you — patients who already know what they're looking for, in the language they're most comfortable speaking.</p>
+      <div class="benefits-head">
+        <div class="eyebrow">For patients · Coming soon</div>
+        <h2>Search is closed. Join the waitlist.</h2>
+        <p class="lede" style="margin-bottom: 0;">Patient search is closed. We are not announcing when it opens. Join with your name and email.</p>
+      </div>
+
+      <div class="benefits-grid" style="margin-bottom: 2.5rem;">
+        <div class="benefit-card">
+          <div class="benefit-icon" style="background: var(--blue-soft);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
+          </div>
+          <h3>Search stays closed</h3>
+          <p>The doctor directory is not open on this site yet. Joining the waitlist does not book a visit.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" style="background: var(--violet-soft);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <h3>Video and in-person</h3>
+          <p>When bookings open, you can book a video consultation or an in-person visit with a doctor who offers that type.</p>
+        </div>
+        <div class="benefit-card">
+          <div class="benefit-icon" style="background: var(--teal-soft);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg>
+          </div>
+          <h3>Founding doctors are joining</h3>
+          <p>Doctors can claim the £99 founding plan and set up a profile while patient search is closed.</p>
+        </div>
+      </div>
+
+      <div class="form-card" id="patientWaitlist" data-state="empty">
+        <div class="eyebrow" style="text-align: center; display: block;">Patient waitlist</div>
+        <h2>Join the patient waitlist</h2>
+        <p>Leave your name and email.</p>
+
+        <div class="form-success" id="patientFormSuccess">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          <span>You're on the patient waitlist. We'll email you when the marketplace opens.</span>
+        </div>
+        <div class="form-error" id="patientFormError">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+          <span id="patientFormErrorMsg">Something went wrong. Please try again.</span>
+        </div>
+
+        <form id="patientWaitlistForm" novalidate>
+          <div class="form-grid">
+            <div class="field full">
+              <label for="patientName">Full name</label>
+              <input id="patientName" name="name" type="text" required autocomplete="name" placeholder="Alex Rivera" />
+            </div>
+            <div class="field full">
+              <label for="patientEmail">Email</label>
+              <input id="patientEmail" name="email" type="email" required autocomplete="email" placeholder="you@email.com" />
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" id="patientSubmitBtn">
+            <span id="patientSubmitText">Join the patient waitlist</span>
+          </button>
+          <p class="form-fineprint">We'll only email you about the launch. Every email has an unsubscribe link.</p>
+          <p class="form-fineprint">We'll only use your details as set out in our <a href="/en/privacy">Privacy notice</a>. Doctors: <a href="/en/register-doctor?tier=founding&founding=1" style="color: var(--foreground); font-weight: 600;">claim a founding spot</a>.</p>
+        </form>
+      </div>
     </div>
   </section>
 
@@ -615,7 +706,7 @@
     <div class="form-card">
       <div class="eyebrow" style="text-align: center; display: block;">Founding Doctor Programme</div>
       <h2>Claim your founding spot</h2>
-      <p>Register on the <strong>founding plan</strong> at £99 per month for the first 100 doctors. Solo Professional features, monthly, cancel anytime. The price stays £99 while you keep the plan.</p>
+      <p>Register on the <strong>founding plan</strong> at £99 per month for the first 100 doctors. No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan. If you cancel, you lose the £99 price and cannot rejoin at £99. The 15% platform fee on consultations still applies and is not discounted.</p>
       <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary" style="width: 100%; justify-content: center; padding: 1rem; font-size: 1rem; margin-bottom: 1.5rem;">
         Claim My Founding Spot
         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
@@ -678,24 +769,14 @@
           <div class="field">
             <label for="country">Country</label>
             <select id="country" name="country" required>
-              <option value="">Select…</option>
-              <option value="GB">United Kingdom</option>
-              <option value="IE">Ireland</option>
-              <option value="IT">Italy</option>
-              <option value="ES">Spain</option>
-              <option value="DE">Germany</option>
-              <option value="FR">France</option>
-              <option value="PT">Portugal</option>
-              <option value="PL">Poland</option>
-              <option value="TR">Turkey</option>
-              <option value="other">Other</option>
+              <option value="GB" selected>United Kingdom</option>
             </select>
           </div>
         </div>
         <button type="submit" class="btn-primary" id="submitBtn">
           <span id="submitText">Join the Waitlist</span>
         </button>
-        <p class="form-fineprint">By applying you agree to be contacted about MyDoctors360 ahead of launch. We'll never share your details.</p>
+        <p class="form-fineprint">By applying you agree to be contacted about MyDoctors360 ahead of launch. We'll only use your details as set out in our <a href="/en/privacy">Privacy notice</a>.</p>
       </form>
     </div>
   </section>
@@ -714,18 +795,19 @@
           <p class="faq-a">Yes. You can register today, complete your profile and configure your availability — all before we go live publicly to patients. When we launch, your profile is ready to take bookings on day one.</p>
         </div>
         <div class="faq-item">
-          <p class="faq-q">When is MyDoctors360 launching to patients?</p>
-          <p class="faq-a">Soon. Founding doctors get advance notice and go live the moment we open the doors to patients.</p>
+          <p class="faq-q">When is MyDoctors360 opening to patients?</p>
+          <p class="faq-a">Coming soon. Patient search is closed, and we are not announcing a day. Founding doctors can sign up now. Patients can join the waitlist with a name and email.</p>
         </div>
         <div class="faq-item">
           <p class="faq-q">What does it cost?</p>
           <p class="faq-a">
-            <strong>Founding (£99/mo, first 100):</strong> Solo Professional features — bookings, video, payments, analytics, CRM and waitlist. Monthly, cancel anytime. The price stays £99 while you keep the plan. If you cancel, this price is gone.<br /><br />
-            <strong>Starter (£199/mo):</strong> solo — online bookings &amp; Stripe payouts, video, email reminders, messaging and AI. Medical testing optional (+£49/mo).<br /><br />
+            <strong>Founding (£99/mo, first 100):</strong> Solo Professional features — bookings, video, payments, analytics, CRM and waitlist. No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan. If you cancel, you lose the £99 price and cannot rejoin at £99. The 15% platform fee on consultations still applies and is not discounted.<br /><br />
+            <strong>Starter (£199/mo):</strong> solo — online bookings &amp; Stripe payouts, video, email reminders.<br /><br />
             <strong>Professional (£299/mo, 1 doctor):</strong> solo growth — everything in Starter plus advanced analytics, patient CRM and waitlist auto-notify.<br /><br />
-            <strong>Clinic (£897/mo):</strong> multi-doctor practices — 3 seats included (expand to 15), multi-location, team tools and medical testing included.<br /><br />
+            <strong>Clinic (£897/mo):</strong> multi-doctor practices — 3 seats included (expand to 15), multi-location and team tools.<br /><br />
             Annual billing is 10 months for 12 (2 months free). Upgrade or change plan anytime from your dashboard. Full matrix on
-            <a href="/en/pricing" style="color: inherit; font-weight: 600; text-decoration: underline;">pricing</a>.
+            <a href="/en/pricing" style="color: inherit; font-weight: 600; text-decoration: underline;">pricing</a>.<br /><br />
+            Prices exclude VAT. VAT will only be added if we become VAT-registered.
           </p>
         </div>
         <div class="faq-item">
@@ -740,7 +822,7 @@
         </div>
         <div class="faq-item">
           <p class="faq-q">Who can register?</p>
-          <p class="faq-a">Verified, regulated doctors and clinicians practising privately across the UK, Ireland, Italy, Spain, Germany, France, Portugal, Poland and Turkey. Clinics and group practices welcome.</p>
+          <p class="faq-a">Verified, regulated doctors and clinicians practising privately in the United Kingdom. Clinics and group practices in the United Kingdom are welcome.</p>
         </div>
         <div class="faq-item">
           <p class="faq-q">How is this different from existing platforms?</p>
@@ -797,8 +879,8 @@
         showError('Please select your specialty.');
         return;
       }
-      if (!data.country) {
-        showError('Please select your country.');
+      if (data.country !== 'GB') {
+        showError('Doctor sign-up is open in the United Kingdom only.');
         return;
       }
 
@@ -837,6 +919,75 @@
       submitBtn.disabled = false;
       submitText.textContent = 'Join the Waitlist';
     }
+
+    const patientCard = document.getElementById('patientWaitlist');
+    const patientForm = document.getElementById('patientWaitlistForm');
+    const patientSuccessEl = document.getElementById('patientFormSuccess');
+    const patientErrorEl = document.getElementById('patientFormError');
+    const patientErrorMsgEl = document.getElementById('patientFormErrorMsg');
+    const patientSubmitBtn = document.getElementById('patientSubmitBtn');
+    const patientSubmitText = document.getElementById('patientSubmitText');
+
+    function showPatientError(msg) {
+      patientCard.dataset.state = 'error';
+      patientErrorMsgEl.textContent = msg;
+      patientErrorEl.classList.add('show');
+      patientSuccessEl.classList.remove('show');
+      patientSubmitBtn.disabled = false;
+      patientSubmitText.textContent = 'Join the patient waitlist';
+    }
+
+    patientForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      patientSuccessEl.classList.remove('show');
+      patientErrorEl.classList.remove('show');
+
+      const data = {
+        name: document.getElementById('patientName').value.trim(),
+        email: document.getElementById('patientEmail').value.trim(),
+      };
+
+      if (!data.name || data.name.length < 2) {
+        showPatientError('Please enter your name.');
+        return;
+      }
+      if (!data.email) {
+        showPatientError('Please enter your email address.');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+        showPatientError('Please enter a valid email address.');
+        return;
+      }
+
+      patientSubmitBtn.disabled = true;
+      patientSubmitText.textContent = 'Submitting…';
+
+      try {
+        const res = await fetch('/api/waitlist/patient', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok || json.error) {
+          showPatientError(json.error || 'Something went wrong. Please try again.');
+          return;
+        }
+
+        patientForm.style.display = 'none';
+        patientCard.dataset.state = 'success';
+        patientSuccessEl.classList.add('show');
+      } catch (err) {
+        showPatientError('Network error. Please check your connection and try again.');
+      } finally {
+        if (patientCard.dataset.state !== 'success') {
+          patientSubmitBtn.disabled = false;
+          patientSubmitText.textContent = 'Join the patient waitlist';
+        }
+      }
+    });
   </script>
 
 </body>

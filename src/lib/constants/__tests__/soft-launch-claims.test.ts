@@ -145,7 +145,7 @@ describe("Soft Launch public claims", () => {
   it("coming-soon founding band and why-doctors grid match Legal copy", () => {
     const html = read("public/coming-soon/index.html");
     expect(html).toMatch(/First 100 founding doctors/);
-    expect(html).toMatch(/Reminders, follow-ups and invoices handled for you/);
+    expect(html).toMatch(/Reminders, follow-ups and activity statements/);
     expect(html).toMatch(
       /patient CRM and waitlist auto-notify/
     );
