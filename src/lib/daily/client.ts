@@ -6,6 +6,8 @@
  *   DAILY_API_KEY  — API key from Daily.co dashboard
  */
 
+import "server-only";
+
 export const DAILY_API_BASE = "https://api.daily.co/v1";
 
 function getApiKey(): string {

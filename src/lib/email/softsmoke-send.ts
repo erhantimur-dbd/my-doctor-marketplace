@@ -35,6 +35,7 @@ type ConfirmationParams = Parameters<typeof bookingConfirmationEmail>[0] & {
   timeZone?: string;
   manageUrl?: string;
   bookingId?: string;
+  locale?: string | null;
 };
 
 function unwrap<T>(value: T | T[] | null | undefined): T | null {
@@ -51,6 +52,10 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
     videoRoomUrl: params.videoRoomUrl,
     bookingId: params.bookingId,
     bookingNumber: params.bookingNumber,
+    appointmentDate: params.date,
+    startTime: params.time,
+    endTime: params.end,
+    locale: params.locale,
   });
   const next = { ...params, videoRoomUrl: videoHref };
   if (!isSoftsmokeTransactionalDoctor(params.doctor)) {
@@ -83,8 +88,9 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
       doctor_id,
       appointment_date,
       start_time,
+      end_time,
       consultation_type,
-      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, preferred_locale),
       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         slug,
@@ -109,10 +115,21 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     doctor_id: string;
     appointment_date: string;
     start_time: string;
+    end_time: string;
     consultation_type: string;
     patient:
-      | { first_name: string | null; last_name: string | null; email: string | null }
-      | { first_name: string | null; last_name: string | null; email: string | null }[]
+      | {
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          preferred_locale: string | null;
+        }
+      | {
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          preferred_locale: string | null;
+        }[]
       | null;
     doctor:
       | {
@@ -164,6 +181,12 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
             bookingId: row.id,
             bookingNumber: row.booking_number,
             source: "email",
+            locale: patient.preferred_locale,
+            times: {
+              appointmentDate: row.appointment_date,
+              startTime: row.start_time,
+              endTime: row.end_time,
+            },
           })
         : null,
     manageUrl: manageBookingUrl(row.id),

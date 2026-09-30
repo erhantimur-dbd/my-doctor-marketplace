@@ -4,6 +4,8 @@
  * must not be stored or written to logs.
  */
 
+import "server-only";
+
 import {
   DAILY_API_BASE,
   dailyAuthorizationHeader,

@@ -5,7 +5,10 @@ import {
   callerIsAssignedDoctor,
   JOIN_MESSAGES,
 } from "@/lib/video/consult-join";
-import { verifyGuestConsultJoin } from "@/lib/video/guest-join-link";
+import {
+  parseGuestLinkExp,
+  verifyGuestConsultJoin,
+} from "@/lib/video/guest-join-link";
 import { loadConsultJoinAttempt } from "@/lib/video/load-consult-join";
 import {
   sourceAllowsGuestSignature,
@@ -20,7 +23,7 @@ export const metadata: Metadata = {
 
 interface ConsultJoinPageProps {
   params: Promise<{ locale: string; bookingId: string }>;
-  searchParams: Promise<{ sig?: string; src?: string }>;
+  searchParams: Promise<{ sig?: string; src?: string; exp?: string }>;
 }
 
 function joinSource(input: {
@@ -39,10 +42,12 @@ export default async function ConsultJoinPage({
   const { bookingId } = await params;
   const sp = await searchParams;
   const signature = sp.sig?.trim() || null;
+  const guestLinkExp = parseGuestLinkExp(sp.exp);
 
   const loaded = await loadConsultJoinAttempt({
     bookingId,
     guestSignature: signature,
+    guestLinkExp,
   }).catch(() => null);
 
   if (!loaded) {
@@ -55,11 +60,17 @@ export default async function ConsultJoinPage({
     callerIsAssignedDoctor(loaded.booking, loaded.caller) ||
     loaded.caller.userId === loaded.booking.patientId ||
     (sourceAllowsGuestSignature(source) &&
-      verifyGuestConsultJoin(
-        loaded.booking.id,
-        loaded.booking.bookingNumber,
-        loaded.caller.guestSignature
-      ));
+      verifyGuestConsultJoin({
+        bookingId: loaded.booking.id,
+        bookingNumber: loaded.booking.bookingNumber,
+        signature: loaded.caller.guestSignature,
+        exp: loaded.caller.guestLinkExp,
+        times: {
+          appointmentDate: loaded.booking.appointmentDate,
+          startTime: loaded.booking.startTime,
+          endTime: loaded.booking.endTime,
+        },
+      }));
   if (!mayView) {
     return <JoinNotice message={JOIN_MESSAGES.unauthorised} />;
   }
@@ -91,6 +102,7 @@ export default async function ConsultJoinPage({
                 bookingId={loaded.booking.id}
                 source={source}
                 guestSignature={signature}
+                guestLinkExp={guestLinkExp}
                 label="Join video call"
                 size="lg"
                 className="w-full"

@@ -1,6 +1,5 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mintConsultJoin } from "@/actions/consult-join";
 import {
   assessConsultJoin,
   issueConsultJoin,
@@ -9,14 +8,54 @@ import {
   type ConsultJoinCaller,
 } from "@/lib/video/consult-join";
 import { signGuestConsultJoin } from "@/lib/video/guest-join-link";
-import {
-  CONSULT_JOIN_SOURCES,
-  type ConsultJoinSource,
-} from "@/lib/video/join-source";
+import { loadConsultJoinAttempt } from "@/lib/video/load-consult-join";
+import { consultMeetingBounds } from "@/lib/video/meeting-window";
+import { CONSULT_JOIN_SOURCES, type ConsultJoinSource } from "@/lib/video/join-source";
 
 const TOKEN = "scoped-meeting-token";
 const ROOM = "https://md360.daily.co/md-bk-1";
+const JOIN_SECRET = "consult-join-link-secret-32-bytes!!";
 const calls: { url: string; body: string }[] = [];
+
+const session = vi.hoisted(() => ({
+  booking: null as Record<string, unknown> | null,
+  user: null as { id: string } | null,
+  callerDoctorId: null as string | null,
+}));
+
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: () => ({
+    from(table: string) {
+      const query = {
+        select() {
+          return query;
+        },
+        eq() {
+          return query;
+        },
+        maybeSingle: async () => {
+          if (table === "bookings") return { data: session.booking, error: null };
+          if (table === "doctors") {
+            return {
+              data: session.callerDoctorId ? { id: session.callerDoctorId } : null,
+              error: null,
+            };
+          }
+          return { data: null, error: null };
+        },
+      };
+      return query;
+    },
+  }),
+}));
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: async () => ({
+    auth: {
+      getUser: async () => ({ data: { user: session.user } }),
+    },
+  }),
+}));
 
 const booking = (overrides: Partial<ConsultJoinBooking> = {}): ConsultJoinBooking => ({
   id: "11111111-1111-4111-8111-111111111111",
@@ -40,19 +79,80 @@ const during = new Date("2026-09-26T09:05:00.000Z");
 const tooEarly = new Date("2026-09-26T08:40:00.000Z");
 const tooLate = new Date("2026-09-26T10:05:00.000Z");
 
+function timesOf(row: ConsultJoinBooking = booking()) {
+  return {
+    appointmentDate: row.appointmentDate,
+    startTime: row.startTime,
+    endTime: row.endTime,
+  };
+}
+
 function caller(overrides: Partial<ConsultJoinCaller> = {}): ConsultJoinCaller {
   return {
     userId: null,
     doctorId: null,
     guestSignature: null,
+    guestLinkExp: null,
     ...overrides,
+  };
+}
+
+function guestProof(row: ConsultJoinBooking = booking()) {
+  const signed = signGuestConsultJoin(row.id, row.bookingNumber, timesOf(row));
+  if (!signed) throw new Error("expected a guest signature");
+  return signed;
+}
+
+function allowedCaller(
+  source: ConsultJoinSource,
+  row: ConsultJoinBooking = booking()
+): ConsultJoinCaller {
+  const signed = guestProof(row);
+  if (source === "doctor_dashboard") {
+    return caller({
+      userId: row.doctorProfileId,
+      doctorId: row.doctorId,
+    });
+  }
+  if (source === "guest_join") {
+    return caller({ guestSignature: signed.sig, guestLinkExp: signed.exp });
+  }
+  return caller({
+    userId: row.patientId,
+    guestSignature: signed.sig,
+    guestLinkExp: signed.exp,
+  });
+}
+
+function bookingRow(row: ConsultJoinBooking = booking()) {
+  return {
+    id: row.id,
+    booking_number: row.bookingNumber,
+    status: row.status,
+    consultation_type: row.consultationType,
+    patient_id: row.patientId,
+    doctor_id: row.doctorId,
+    appointment_date: row.appointmentDate,
+    start_time: row.startTime,
+    end_time: row.endTime,
+    video_room_url: row.roomUrl,
+    daily_room_name: row.roomName,
+    patient: { first_name: "Ada", last_name: "Patient" },
+    doctor: {
+      id: row.doctorId,
+      profile_id: row.doctorProfileId,
+      profile: { first_name: "Kim", last_name: "Doctor" },
+    },
   };
 }
 
 beforeEach(() => {
   calls.length = 0;
+  session.booking = null;
+  session.user = null;
+  session.callerDoctorId = null;
   process.env.DAILY_API_KEY = "test-daily-key";
-  process.env.CONSULT_JOIN_LINK_SECRET = "test-join-secret";
+  process.env.CONSULT_JOIN_LINK_SECRET = JOIN_SECRET;
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
   vi.stubGlobal(
@@ -68,6 +168,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -89,23 +190,10 @@ describe("issueConsultJoin", () => {
   it.each(CONSULT_JOIN_SOURCES)(
     "%s mints a token for the allowed participant",
     async (source) => {
-      const guestSignature = signGuestConsultJoin(
-        booking().id,
-        booking().bookingNumber
-      );
-      const allowed: ConsultJoinCaller =
-        source === "doctor_dashboard"
-          ? caller({ userId: "doctor-user", doctorId: "doctor-row" })
-          : source === "patient_dashboard"
-            ? caller({ userId: "patient-user" })
-            : source === "guest_join"
-              ? caller({ guestSignature })
-              : caller({ userId: "patient-user" });
-
       const result = await issueConsultJoin({
         source,
         booking: booking(),
-        caller: allowed,
+        caller: allowedCaller(source),
         now: during,
       });
 
@@ -114,8 +202,12 @@ describe("issueConsultJoin", () => {
       expect(result.joinUrl).toContain("t=");
       expect(result.joinUrl.startsWith(ROOM)).toBe(true);
       const props = tokenBody();
+      const bounds = consultMeetingBounds(timesOf());
+      expect(bounds).toBeTruthy();
       expect(props.room_name).toBe("md-bk-1");
       expect(props.eject_at_token_exp).toBe(true);
+      expect(props.nbf).toBe(bounds!.nbf);
+      expect(props.exp).toBe(bounds!.exp);
       expect(props.is_owner).toBe(source === "doctor_dashboard");
       expect(calls[0]?.url).toContain("/rooms/md-bk-1");
       expect(JSON.parse(calls[0]!.body).privacy).toBe("private");
@@ -145,10 +237,11 @@ describe("issueConsultJoin", () => {
   );
 
   it.each(CONSULT_JOIN_SOURCES)("%s refuses a cancelled booking", async (source) => {
+    const row = booking({ status: "cancelled_patient" });
     const result = await issueConsultJoin({
       source,
-      booking: booking({ status: "cancelled_patient" }),
-      caller: caller({ userId: "patient-user" }),
+      booking: row,
+      caller: allowedCaller(source, row),
       now: during,
     });
     expect(result).toEqual({ ok: false, error: JOIN_MESSAGES.cancelled });
@@ -156,37 +249,70 @@ describe("issueConsultJoin", () => {
   });
 
   it.each(CONSULT_JOIN_SOURCES)("%s refuses a refunded booking", async (source) => {
+    const row = booking({ status: "refunded" });
     const result = await issueConsultJoin({
       source,
-      booking: booking({ status: "refunded" }),
-      caller: caller({ userId: "doctor-user", doctorId: "doctor-row" }),
+      booking: row,
+      caller: allowedCaller(source, row),
       now: during,
     });
     expect(result).toEqual({ ok: false, error: JOIN_MESSAGES.refunded });
     expect(calls).toHaveLength(0);
   });
 
+  it.each(["no_show", "completed", "pending_payment"] as const)(
+    "refuses %s without calling Daily",
+    async (status) => {
+      const result = await issueConsultJoin({
+        source: "patient_dashboard",
+        booking: booking({ status }),
+        caller: allowedCaller("patient_dashboard"),
+        now: during,
+      });
+      expect(result).toEqual({ ok: false, error: JOIN_MESSAGES.notJoinable });
+      expect(calls).toHaveLength(0);
+    }
+  );
+
   it.each(CONSULT_JOIN_SOURCES)(
     "%s refuses requests outside the join window",
     async (source) => {
-      const who = caller({ userId: "patient-user" });
+      const row = booking();
       const early = await issueConsultJoin({
         source,
-        booking: booking(),
-        caller: who,
+        booking: row,
+        caller: allowedCaller(source, row),
         now: tooEarly,
       });
       const late = await issueConsultJoin({
         source,
-        booking: booking(),
-        caller: who,
+        booking: row,
+        caller: allowedCaller(source, row),
         now: tooLate,
       });
       expect(early).toEqual({ ok: false, error: JOIN_MESSAGES.tooEarly });
-      expect(late).toEqual({ ok: false, error: JOIN_MESSAGES.tooLate });
+      if (source === "guest_join") {
+        expect(late).toEqual({ ok: false, error: JOIN_MESSAGES.wrongUser });
+      } else {
+        expect(late).toEqual({ ok: false, error: JOIN_MESSAGES.tooLate });
+      }
       expect(calls).toHaveLength(0);
     }
   );
+
+  it("does not reveal status or timing to an unauthorised caller", async () => {
+    const stranger = caller({ userId: "stranger", doctorId: "other-doctor" });
+    for (const status of ["cancelled_patient", "no_show", "completed", "pending_payment", "confirmed"]) {
+      const result = await issueConsultJoin({
+        source: "patient_dashboard",
+        booking: booking({ status }),
+        caller: stranger,
+        now: tooEarly,
+      });
+      expect(result).toEqual({ ok: false, error: JOIN_MESSAGES.wrongUser });
+    }
+    expect(calls).toHaveLength(0);
+  });
 
   it("gives is_owner only to the assigned doctor, including a clinic org member who is that doctor", async () => {
     const doctor = await issueConsultJoin({
@@ -221,11 +347,11 @@ describe("issueConsultJoin", () => {
   });
 
   it("lets a verified guest link mint a patient token and rejects a bad signature", async () => {
-    const signature = signGuestConsultJoin(booking().id, booking().bookingNumber);
+    const signed = guestProof();
     const ok = await issueConsultJoin({
       source: "guest_join",
       booking: booking(),
-      caller: caller({ guestSignature: signature }),
+      caller: caller({ guestSignature: signed.sig, guestLinkExp: signed.exp }),
       now: during,
     });
     expect(ok.ok).toBe(true);
@@ -236,61 +362,124 @@ describe("issueConsultJoin", () => {
     const bad = await issueConsultJoin({
       source: "guest_join",
       booking: booking(),
-      caller: caller({ guestSignature: "not-the-signature" }),
+      caller: caller({ guestSignature: "not-the-signature", guestLinkExp: signed.exp }),
       now: during,
     });
     expect(bad).toEqual({ ok: false, error: JOIN_MESSAGES.wrongUser });
     expect(calls).toHaveLength(0);
   });
 
+  it("rejects an expired guest link and a link signed before a reschedule", async () => {
+    const signed = guestProof();
+    const expired = await issueConsultJoin({
+      source: "guest_join",
+      booking: booking(),
+      caller: caller({ guestSignature: signed.sig, guestLinkExp: signed.exp }),
+      now: tooLate,
+    });
+    expect(expired).toEqual({ ok: false, error: JOIN_MESSAGES.wrongUser });
+
+    const moved = booking({ endTime: "2026-09-26T11:00:00.000Z" });
+    const stale = await issueConsultJoin({
+      source: "email_join_page",
+      booking: moved,
+      caller: caller({ guestSignature: signed.sig, guestLinkExp: signed.exp }),
+      now: during,
+    });
+    expect(stale).toEqual({ ok: false, error: JOIN_MESSAGES.wrongUser });
+
+    const fresh = guestProof(moved);
+    const ok = await issueConsultJoin({
+      source: "guest_join",
+      booking: moved,
+      caller: caller({ guestSignature: fresh.sig, guestLinkExp: fresh.exp }),
+      now: during,
+    });
+    expect(ok.ok).toBe(true);
+    expect(calls.filter((call) => call.url.endsWith("/meeting-tokens"))).toHaveLength(1);
+  });
+
   it("does not accept a guest signature on the patient or doctor dashboard", async () => {
-    const signature = signGuestConsultJoin(booking().id, booking().bookingNumber);
+    const signed = guestProof();
     for (const source of ["patient_dashboard", "doctor_dashboard"] as const) {
       const result = await issueConsultJoin({
         source,
         booking: booking(),
-        caller: caller({ guestSignature: signature }),
+        caller: caller({ guestSignature: signed.sig, guestLinkExp: signed.exp }),
         now: during,
       });
       expect(result.ok).toBe(false);
     }
     expect(calls).toHaveLength(0);
   });
+
+  it("returns roomFailed when the room lock throws and does not mint", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("no", { status: 500 }))
+    );
+    const result = await issueConsultJoin({
+      source: "patient_dashboard",
+      booking: booking(),
+      caller: allowedCaller("patient_dashboard"),
+      now: during,
+    });
+    expect(result).toEqual({ ok: false, error: JOIN_MESSAGES.roomFailed });
+  });
 });
 
-describe("join path wiring", () => {
-  const read = (rel: string) => readFileSync(join(process.cwd(), rel), "utf8");
+describe("mintConsultJoin", () => {
+  it("mints for a guest signature and refuses a stranger without calling Daily", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(during);
+    const row = booking();
+    const signed = guestProof(row);
+    session.booking = bookingRow(row);
+    session.user = null;
 
-  it("points every join surface at a server mint and keeps tokens out of email templates", () => {
-    expect(read("src/components/booking/video-waiting-room.tsx")).toContain(
-      'source="patient_dashboard"'
-    );
-    expect(read("src/components/booking/start-appointment-button.tsx")).toContain(
-      'source="doctor_dashboard"'
-    );
-    expect(
-      read("src/app/[locale]/(doctor)/doctor-dashboard/bookings/bookings-client.tsx")
-    ).toContain('source="doctor_dashboard"');
-    expect(read("src/app/[locale]/(doctor)/doctor-dashboard/page.tsx")).not.toContain(
-      "videoRoomUrl="
-    );
-    expect(read("src/app/[locale]/(public)/booking-confirmation/page.tsx")).toContain(
-      'source: "confirm"'
-    );
-    const joinPage = read("src/app/[locale]/(public)/join/[bookingId]/page.tsx");
-    expect(joinPage).toContain('"guest_join"');
-    expect(joinPage).toContain('"email_join_page"');
-    expect(joinPage).toContain('"booking_confirmation"');
-    expect(read("src/lib/daily/client.ts")).toContain('privacy: "private"');
-    expect(read("src/lib/email/templates.ts")).toContain("safeConsultEmailHref");
-    expect(read("src/app/api/cron/send-reminders/route.ts")).toContain(
-      "consultJoinPageUrl"
-    );
-    expect(read("src/app/api/cron/send-reminders/route.ts")).not.toContain(
-      "joinUrl: booking.video_room_url"
-    );
+    const ok = await mintConsultJoin({
+      bookingId: row.id,
+      source: "guest_join",
+      guestSignature: signed.sig,
+      exp: signed.exp,
+    });
+    expect(ok.ok).toBe(true);
+    if (ok.ok) expect(ok.joinUrl).toContain("t=");
 
-    const sources: ConsultJoinSource[] = [...CONSULT_JOIN_SOURCES];
-    expect(sources).toHaveLength(5);
+    calls.length = 0;
+    session.user = { id: "stranger" };
+    session.callerDoctorId = "other-doctor";
+    const loaded = await loadConsultJoinAttempt({
+      bookingId: row.id,
+      guestSignature: null,
+      guestLinkExp: null,
+    });
+    expect(loaded?.caller.userId).toBe("stranger");
+    const issued = loaded
+      ? await issueConsultJoin({
+          source: "patient_dashboard",
+          booking: loaded.booking,
+          caller: loaded.caller,
+          now: during,
+        })
+      : null;
+    expect(issued).toEqual({ ok: false, error: JOIN_MESSAGES.wrongUser });
+
+    const denied = await mintConsultJoin({
+      bookingId: row.id,
+      source: "patient_dashboard",
+    });
+    expect(denied).toEqual({ ok: false, error: JOIN_MESSAGES.wrongUser });
+    expect(calls).toHaveLength(0);
+    vi.useRealTimers();
+  });
+
+  it("refuses a malformed booking id without calling Daily", async () => {
+    const result = await mintConsultJoin({
+      bookingId: "not-a-uuid",
+      source: "guest_join",
+    });
+    expect(result).toEqual({ ok: false, error: JOIN_MESSAGES.unauthorised });
+    expect(calls).toHaveLength(0);
   });
 });

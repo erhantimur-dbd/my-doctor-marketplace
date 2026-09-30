@@ -8,6 +8,19 @@ import { hasProductEntitlements } from "@/lib/utils/feature-flags";
 export const DOCTOR_BOOKINGS_SELECT =
   "id, booking_number, appointment_date, start_time, end_time, consultation_type, status, currency, total_amount_cents, patient_notes, video_room_url, visit_summary, visit_summary_at, is_gp_pool, gp_reassignment_status, display_doctor_as, patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)";
 
+/**
+ * Drop the Daily room URL before a booking row reaches the browser.
+ * The client only needs to know whether a room exists.
+ */
+export function presentDoctorBookingsForClient<
+  T extends { video_room_url?: string | null },
+>(rows: readonly T[]): (Omit<T, "video_room_url"> & { has_video_room: boolean })[] {
+  return rows.map((row) => {
+    const { video_room_url, ...rest } = row;
+    return { ...rest, has_video_room: Boolean(video_room_url) };
+  });
+}
+
 export const DOCTOR_RESCHEDULE_SELECT = `*, booking:bookings!inner(
           id, booking_number, appointment_date, start_time, end_time,
           patient:profiles!bookings_patient_id_fkey(first_name, last_name, email)

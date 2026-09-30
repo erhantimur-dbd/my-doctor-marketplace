@@ -1,6 +1,7 @@
 "use server";
 
 import { issueConsultJoin, JOIN_MESSAGES } from "@/lib/video/consult-join";
+import { parseGuestLinkExp } from "@/lib/video/guest-join-link";
 import {
   isConsultJoinSource,
   type ConsultJoinSource,
@@ -13,6 +14,7 @@ export async function mintConsultJoin(input: {
   bookingId: string;
   source: ConsultJoinSource;
   guestSignature?: string | null;
+  exp?: number | string | null;
 }): Promise<{ ok: true; joinUrl: string } | { ok: false; error: string }> {
   if (!input || !isConsultJoinSource(input.source) || !BOOKING_ID.test(input.bookingId || "")) {
     return { ok: false, error: JOIN_MESSAGES.unauthorised };
@@ -21,6 +23,7 @@ export async function mintConsultJoin(input: {
   const loaded = await loadConsultJoinAttempt({
     bookingId: input.bookingId,
     guestSignature: input.guestSignature?.trim() || null,
+    guestLinkExp: parseGuestLinkExp(input.exp),
   });
   if (!loaded) return { ok: false, error: JOIN_MESSAGES.unauthorised };
 

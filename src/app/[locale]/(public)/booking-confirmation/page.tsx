@@ -41,7 +41,10 @@ import {
   patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
 import { getTranslations } from "next-intl/server";
-import { consultJoinPagePath } from "@/lib/video/guest-join-link";
+import {
+  confirmationIncludeGuestSignature,
+  consultJoinPagePath,
+} from "@/lib/video/guest-join-link";
 
 export const metadata: Metadata = {
   title: "Booking Confirmed",
@@ -409,6 +412,16 @@ export default async function BookingConfirmationPage({
                       bookingId: booking.id,
                       bookingNumber: booking.booking_number,
                       source: "confirm",
+                      times: {
+                        appointmentDate: booking.appointment_date,
+                        startTime: booking.start_time,
+                        endTime: booking.end_time,
+                      },
+                      includeSignature: confirmationIncludeGuestSignature({
+                        lookupMode: lookup.mode,
+                        userId: user?.id,
+                        patientId: booking.patient_id,
+                      }),
                     })}
                   >
                     <Video className="mr-2 h-4 w-4" />

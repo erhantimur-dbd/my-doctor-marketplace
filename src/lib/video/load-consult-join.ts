@@ -1,3 +1,5 @@
+import "server-only";
+
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { ConsultJoinBooking, ConsultJoinCaller } from "@/lib/video/consult-join";
@@ -45,6 +47,7 @@ const BOOKING_SELECT = `
 export async function loadConsultJoinAttempt(input: {
   bookingId: string;
   guestSignature: string | null;
+  guestLinkExp: number | null;
 }): Promise<{ booking: ConsultJoinBooking; caller: ConsultJoinCaller } | null> {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -131,6 +134,7 @@ export async function loadConsultJoinAttempt(input: {
       userId: user?.id ?? null,
       doctorId: callerDoctorId,
       guestSignature: input.guestSignature,
+      guestLinkExp: input.guestLinkExp,
     },
   };
 }

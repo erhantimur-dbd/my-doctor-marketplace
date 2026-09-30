@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { doctorHasBookingsEntitlement } from "@/lib/doctor/doctor-bookings-query";
+import {
+  doctorHasBookingsEntitlement,
+  presentDoctorBookingsForClient,
+} from "@/lib/doctor/doctor-bookings-query";
 
 function read(rel: string): string {
   return readFileSync(join(process.cwd(), rel), "utf8");
@@ -46,5 +49,19 @@ describe("doctor bookings first paint", () => {
 
   it("does not clear a seeded list when the client refetch errors", () => {
     expect(client).toContain("if (!error) setBookings");
+  });
+});
+
+describe("doctor booking rows sent to the client", () => {
+  it("replaces the Daily room URL with has_video_room", () => {
+    const rows = presentDoctorBookingsForClient([
+      { id: "1", video_room_url: "https://md360.daily.co/md-bk-1" },
+      { id: "2", video_room_url: null },
+    ]);
+    expect(rows).toEqual([
+      { id: "1", has_video_room: true },
+      { id: "2", has_video_room: false },
+    ]);
+    expect(JSON.stringify(rows)).not.toContain("daily.co");
   });
 });

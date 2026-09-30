@@ -49,8 +49,8 @@ import { respondToReschedule } from "@/actions/reschedule";
 import { saveVisitSummary } from "@/actions/booking";
 import { doctorCantMakeGpAppointment } from "@/actions/gp-reassignment";
 import { toast } from "sonner";
+import { reloadDoctorBookings } from "@/actions/doctor-bookings";
 import {
-  DOCTOR_BOOKINGS_SELECT,
   DOCTOR_RESCHEDULE_SELECT,
   type DoctorBookingsInitial,
 } from "@/lib/doctor/doctor-bookings-query";
@@ -158,12 +158,7 @@ function BookingsContent({ initial }: { initial?: DoctorBookingsInitial }) {
       setDoctorId(doctor.id);
       setDoctorCurrency(doctor.base_currency);
 
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(DOCTOR_BOOKINGS_SELECT)
-        .eq("doctor_id", doctor.id)
-        .order("appointment_date", { ascending: false })
-        .order("start_time", { ascending: false });
+      const { data, error } = await reloadDoctorBookings(doctor.id);
 
       // A failed refetch must not wipe the server-rendered list.
       if (!error) setBookings((data as unknown as BookingRow[]) || []);
@@ -290,7 +285,7 @@ function BookingsContent({ initial }: { initial?: DoctorBookingsInitial }) {
   );
 
   function isVideoJoinEnabled(booking: BookingRow): boolean {
-    if (booking.consultation_type !== "video" || !booking.video_room_url) return false;
+    if (booking.consultation_type !== "video" || !booking.has_video_room) return false;
     if (!["confirmed", "approved"].includes(booking.status)) return false;
     return isWithinConsultJoinWindow({
       now: new Date(),
@@ -408,7 +403,7 @@ function BookingsContent({ initial }: { initial?: DoctorBookingsInitial }) {
               </TableCell>
               {showVideoButton && (
                 <TableCell>
-                  {booking.consultation_type === "video" && booking.video_room_url ? (
+                  {booking.consultation_type === "video" && booking.has_video_room ? (
                     <JoinConsultButton
                       bookingId={booking.id}
                       source="doctor_dashboard"

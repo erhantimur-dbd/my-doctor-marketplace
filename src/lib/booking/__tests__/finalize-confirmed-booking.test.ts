@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createRoom, getRoom } from "@/lib/daily/client";
+import { createRoom, getRoom, setRoomPrivate } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
 import {
   confirmBookingWithoutStripeCheckout,
@@ -30,6 +30,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 vi.mock("@/lib/daily/client", () => ({
   createRoom: vi.fn(),
   getRoom: vi.fn(),
+  setRoomPrivate: vi.fn(),
 }));
 
 vi.mock("@/lib/email/client", () => ({
@@ -215,6 +216,8 @@ beforeEach(() => {
   installClient();
   vi.mocked(createRoom).mockReset();
   vi.mocked(getRoom).mockReset();
+  vi.mocked(setRoomPrivate).mockReset();
+  vi.mocked(setRoomPrivate).mockResolvedValue(undefined);
   vi.mocked(sendEmail).mockClear();
   vi.mocked(createRoom).mockResolvedValue({
     id: "room-1",
@@ -485,7 +488,28 @@ describe("charge-skip confirm", () => {
 
     expect(result.videoRoomUrl).toBe(ROOM_URL);
     expect(getRoom).toHaveBeenCalledWith(ROOM_NAME);
+    expect(setRoomPrivate).toHaveBeenCalledWith(ROOM_NAME);
     expect(roomUpdates(clientRef.current?.ops ?? [])).toHaveLength(1);
+  });
+
+  it("does not persist a reused room when locking it fails", async () => {
+    vi.mocked(createRoom).mockRejectedValue(
+      new Error("Daily.co createRoom failed (400): already exists")
+    );
+    vi.mocked(getRoom).mockResolvedValue({
+      id: "room-existing",
+      name: ROOM_NAME,
+      url: ROOM_URL,
+      created_at: "2026-09-25T12:00:00Z",
+      config: {},
+    });
+    vi.mocked(setRoomPrivate).mockRejectedValue(new Error("lock failed"));
+
+    const result = await finalizeConfirmedBookingById(BOOKING_ID);
+
+    expect(setRoomPrivate).toHaveBeenCalledWith(ROOM_NAME);
+    expect(result.videoRoomUrl).toBeNull();
+    expect(roomUpdates(clientRef.current?.ops ?? [])).toHaveLength(0);
   });
 
   it("returns an error and skips Daily when the confirm update fails", async () => {

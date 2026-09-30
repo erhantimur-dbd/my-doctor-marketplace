@@ -147,6 +147,21 @@ export async function GET(request: NextRequest) {
       email: doctorProfile?.email,
     });
 
+    const joinPageUrl =
+      booking.consultation_type === "video"
+        ? consultJoinPageUrl({
+            bookingId: booking.id,
+            bookingNumber: booking.booking_number,
+            source: "email",
+            locale: patient?.preferred_locale,
+            times: {
+              appointmentDate: booking.appointment_date,
+              startTime: booking.start_time,
+              endTime: booking.end_time,
+            },
+          })
+        : null;
+
     for (const pref of doctorPrefs) {
       if (!pref.is_enabled) continue;
 
@@ -178,14 +193,6 @@ export async function GET(request: NextRequest) {
               : "In-Person Consultation";
 
         if (patient?.email && !sentSet.has(key)) {
-        const joinPageUrl =
-          booking.consultation_type === "video"
-            ? consultJoinPageUrl({
-                bookingId: booking.id,
-                bookingNumber: booking.booking_number,
-                source: "email",
-              })
-            : null;
         const { subject, html } = softsmokeDoctor
           ? softsmokePatientReminderEmail({
               patientFirstName: patient.first_name || "there",
@@ -263,14 +270,7 @@ export async function GET(request: NextRequest) {
           channel: "in_app",
           data: {
             booking_id: booking.id,
-            join_url:
-              booking.consultation_type === "video"
-                ? consultJoinPageUrl({
-                    bookingId: booking.id,
-                    bookingNumber: booking.booking_number,
-                    source: "email",
-                  })
-                : null,
+            join_url: joinPageUrl,
           },
         });
         if (!notifError) {

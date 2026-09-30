@@ -12,7 +12,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createRoom, getRoom } from "@/lib/daily/client";
+import { createRoom, getRoom, setRoomPrivate } from "@/lib/daily/client";
 import { notifyDoctorOfNewBooking } from "@/lib/notifications/doctor-new-booking";
 import { sendSoftsmokeChargeSkipPatientConfirmation } from "@/lib/email/softsmoke-send";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
@@ -209,6 +209,7 @@ export async function ensureDailyVideoRoom(
   );
 
   let room;
+  let reusedExisting = false;
   try {
     room = await createRoom({
       name: roomName,
@@ -219,6 +220,11 @@ export async function ensureDailyVideoRoom(
     const message = err instanceof Error ? err.message : String(err);
     if (!/already exists/i.test(message)) throw err;
     room = await getRoom(roomName);
+    reusedExisting = true;
+  }
+
+  if (reusedExisting) {
+    await setRoomPrivate(room.name);
   }
 
   const { error } = await supabase

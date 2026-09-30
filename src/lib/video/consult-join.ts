@@ -1,7 +1,10 @@
 /**
  * Decide who may join a consult, then mint a short-lived Daily token.
- * Authorisation runs before any Daily call.
+ * Authorisation runs before any Daily call, and before status or time
+ * checks, so an unauthorised caller learns nothing about the booking.
  */
+
+import "server-only";
 
 import { consultMeetingBounds } from "@/lib/video/meeting-window";
 import {
@@ -55,6 +58,8 @@ export interface ConsultJoinCaller {
   /** doctors.id for the signed-in user, when they have a doctor row. */
   doctorId: string | null;
   guestSignature: string | null;
+  /** exp query param from a signed guest link. Null when the caller has a session. */
+  guestLinkExp: number | null;
 }
 
 export type ConsultJoinRole = "patient" | "doctor";
@@ -91,13 +96,25 @@ export function callerIsAssignedDoctor(
 function roleForCaller(
   source: ConsultJoinSource,
   booking: ConsultJoinBooking,
-  caller: ConsultJoinCaller
+  caller: ConsultJoinCaller,
+  now: Date
 ): ConsultJoinRole | null {
   const isDoctor = callerIsAssignedDoctor(booking, caller);
   const isPatient = Boolean(caller.userId && caller.userId === booking.patientId);
   const guestOk =
     sourceAllowsGuestSignature(source) &&
-    verifyGuestConsultJoin(booking.id, booking.bookingNumber, caller.guestSignature);
+    verifyGuestConsultJoin({
+      bookingId: booking.id,
+      bookingNumber: booking.bookingNumber,
+      signature: caller.guestSignature,
+      exp: caller.guestLinkExp,
+      times: {
+        appointmentDate: booking.appointmentDate,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+      },
+      now,
+    });
 
   if (source === "doctor_dashboard") return isDoctor ? "doctor" : null;
   if (source === "patient_dashboard") return isPatient ? "patient" : null;
@@ -115,6 +132,11 @@ export function assessConsultJoin(input: {
 }): ConsultJoinDecision {
   const { booking, caller, source } = input;
   const now = input.now ?? new Date();
+
+  const role = roleForCaller(source, booking, caller, now);
+  if (!role) {
+    return { ok: false, error: JOIN_MESSAGES.wrongUser };
+  }
 
   if (booking.consultationType !== "video") {
     return { ok: false, error: JOIN_MESSAGES.notVideo };
@@ -147,11 +169,6 @@ export function assessConsultJoin(input: {
   }
   if (nowSec >= bounds.exp) {
     return { ok: false, error: JOIN_MESSAGES.tooLate };
-  }
-
-  const role = roleForCaller(source, booking, caller);
-  if (!role) {
-    return { ok: false, error: JOIN_MESSAGES.wrongUser };
   }
 
   if (role === "doctor") {

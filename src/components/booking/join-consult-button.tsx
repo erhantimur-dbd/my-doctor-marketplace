@@ -11,6 +11,7 @@ interface JoinConsultButtonProps {
   bookingId: string;
   source: ConsultJoinSource;
   guestSignature?: string | null;
+  guestLinkExp?: number | null;
   label?: string;
   disabled?: boolean;
   size?: "default" | "sm" | "lg";
@@ -21,6 +22,7 @@ export function JoinConsultButton({
   bookingId,
   source,
   guestSignature,
+  guestLinkExp,
   label = "Join video call",
   disabled = false,
   size = "default",
@@ -38,6 +40,7 @@ export function JoinConsultButton({
         bookingId,
         source,
         guestSignature,
+        exp: guestLinkExp,
       });
       if (!result.ok) {
         setError(result.error);
