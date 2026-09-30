@@ -75,6 +75,11 @@ describe("coming-soon page copy", () => {
     expect(visible).not.toMatch(/Patient search is closed/i);
     expect(html).toMatch(/£199/);
     expect(html).toMatch(/£299/);
+    expect(html).not.toMatch(/£897/);
+    expect(visible).toContain("Starter stays £199 and Professional £299.");
+    expect(visible).toContain(
+      "Clinic:</strong> for multi-doctor practices. Get in touch for pricing."
+    );
     expect(html).toMatch(/video consultation/i);
     expect(html).toMatch(/in-person/i);
     expect(html).toMatch(/register-doctor\?tier=founding&founding=1/);
