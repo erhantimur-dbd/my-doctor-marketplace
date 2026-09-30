@@ -763,8 +763,9 @@ describe("wallet destination never refunds the card", () => {
         destination: "bank",
         paymentIntentId: null,
         cardPaidCents: 0,
-        creditPaidCents: 10000,
-        refundPercent: 50,
+        // Callers pass the credit still outstanding, not the original gross.
+        creditPaidCents: 5000,
+        refundPercent: 100,
         alreadyRefundedCents: 5000,
       },
       deps

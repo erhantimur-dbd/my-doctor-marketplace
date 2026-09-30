@@ -488,16 +488,16 @@ export async function refundConsultSplit(
     throw new Error("This card payment has no payment intent to refund");
   }
 
-  // Always reverse the credit-share transfer for this slice. Lower-level
-  // reverseDoctorWalletCreditShare already subtracts reversed_cents; skipping
-  // here when reversed >= this slice alone blocked a second equal partial.
+  // creditPaidCents is the credit still outstanding (callers pass the
+  // remainder). The doctor reversal scales against the transfer row's
+  // original credit_amount_cents, then caps at the unreversed transfer.
   const settled = await refundConsultCardAndCreditShare(
     {
       paymentIntentId: cardToStripeCents > 0 ? input.paymentIntentId : null,
       cardRefundCents: cardToStripeCents,
       bookingId: input.bookingId,
-      refundAmountCents: split.creditRefundCents,
-      paidAmountCents: input.creditPaidCents,
+      refundedCreditCents: split.creditRefundCents,
+      creditOutstandingCents: input.creditPaidCents,
       alreadyRefundedCents,
     },
     deps

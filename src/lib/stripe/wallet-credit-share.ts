@@ -40,12 +40,35 @@ export function walletCreditTransferGroup(bookingId: string): string {
   return `booking_${bookingId}`;
 }
 
+/**
+ * One refund, one key. The cursor is the credit already returned before this
+ * refund plus the credit this refund returns, so two partials do not collide
+ * and a replay of the same refund repeats the same key.
+ */
 export function walletCreditReversalIdempotencyKey(
   bookingId: string,
-  alreadyReversedCents: number,
-  reversalCents: number
+  creditRefundedBeforeCents: number,
+  refundedCreditCents: number
 ): string {
-  return `wallet-credit-reversal-${bookingId}-${alreadyReversedCents}-${reversalCents}`;
+  return `wallet-credit-reversal-${bookingId}-${creditRefundedBeforeCents}-${refundedCreditCents}`;
+}
+
+function creditRefundCursor(input: {
+  originalCreditCents: number;
+  creditOutstandingCents: number;
+  refundedCreditCents: number;
+}): {
+  original: number;
+  outstanding: number;
+  before: number;
+  after: number;
+  refunded: number;
+} {
+  const original = Math.max(0, Math.round(input.originalCreditCents));
+  const outstanding = Math.max(0, Math.round(input.creditOutstandingCents));
+  const refunded = Math.max(0, Math.round(input.refundedCreditCents));
+  const before = Math.max(0, original - Math.min(original, outstanding));
+  return { original, outstanding, before, after: before + refunded, refunded };
 }
 
 export interface ConsultCheckoutMoney {
@@ -108,28 +131,48 @@ export function walletCreditDoctorShare(creditAmountCents: number): {
   };
 }
 
+/**
+ * Doctor-share cents to reverse for one credit refund.
+ *
+ * The share follows the original gross credit, not the credit still
+ * outstanding:
+ *   round(transfer * creditReturned / originalCredit).
+ * Each call reverses only the increase in that cumulative share, capped at
+ * the transfer that is still outstanding. When this refund finishes the
+ * credit, the target is the whole transfer, so the last reversal is the
+ * exact remainder and rounding cannot leave or take a cent. A replay, whose
+ * cumulative share is already on the row, returns 0.
+ */
 export function proportionalCreditTransferReversalCents(input: {
   transferAmountCents: number;
   alreadyReversedCents: number;
-  refundAmountCents: number;
-  paidAmountCents: number;
+  refundedCreditCents: number;
+  originalCreditCents: number;
+  /** Credit still unpaid-back before this refund. Not the proportion base. */
+  creditOutstandingCents: number;
 }): number {
-  const remaining = Math.max(
-    0,
-    input.transferAmountCents - input.alreadyReversedCents
-  );
+  const transfer = Math.max(0, Math.round(input.transferAmountCents));
+  const already = Math.max(0, Math.round(input.alreadyReversedCents));
+  const remainingTransfer = Math.max(0, transfer - already);
+  const cursor = creditRefundCursor(input);
   if (
-    remaining <= 0 ||
-    input.refundAmountCents <= 0 ||
-    input.paidAmountCents <= 0
+    remainingTransfer <= 0 ||
+    cursor.refunded <= 0 ||
+    cursor.original <= 0 ||
+    cursor.outstanding <= 0
   ) {
     return 0;
   }
-  if (input.refundAmountCents >= input.paidAmountCents) return remaining;
-  const raw = Math.round(
-    (input.transferAmountCents * input.refundAmountCents) / input.paidAmountCents
-  );
-  return Math.min(remaining, Math.max(0, raw));
+
+  const expectedAfter =
+    cursor.after >= cursor.original
+      ? transfer
+      : Math.min(
+          transfer,
+          Math.max(0, Math.round((transfer * cursor.after) / cursor.original))
+        );
+
+  return Math.max(0, Math.min(remainingTransfer, expectedAfter - already));
 }
 
 export type WalletCreditTransferStatus =
@@ -579,14 +622,21 @@ export async function runFullCreditSettlement(
 }
 
 /**
- * Reverse the credit-share transfer in proportion to the patient refund.
+ * Reverse the credit-share transfer in proportion to the original credit
+ * paid (the row's credit_amount_cents), not the credit still outstanding.
  * No row means this booking did not pay the doctor from wallet credit.
  */
 export async function reverseDoctorWalletCreditShare(
   input: {
     bookingId: string;
-    refundAmountCents: number;
-    paidAmountCents: number;
+    /** Credit cents this refund returns to the patient. */
+    refundedCreditCents: number;
+    /**
+     * Credit still outstanding before this refund. Callers pass the
+     * remaining credit. The proportion uses the transfer row's original
+     * credit_amount_cents instead.
+     */
+    creditOutstandingCents: number;
   },
   deps?: WalletCreditDeps
 ): Promise<{ reversedCents: number; reversalId?: string }> {
@@ -603,14 +653,21 @@ export async function reverseDoctorWalletCreditShare(
   }
   if (!record?.stripe_transfer_id) return { reversedCents: 0 };
 
+  const alreadyReversedCents = record.reversed_cents || 0;
   const reversalCents = proportionalCreditTransferReversalCents({
     transferAmountCents: record.amount_cents,
-    alreadyReversedCents: record.reversed_cents || 0,
-    refundAmountCents: input.refundAmountCents,
-    paidAmountCents: input.paidAmountCents,
+    alreadyReversedCents,
+    refundedCreditCents: input.refundedCreditCents,
+    originalCreditCents: record.credit_amount_cents,
+    creditOutstandingCents: input.creditOutstandingCents,
   });
   if (reversalCents <= 0) return { reversedCents: 0 };
 
+  const cursor = creditRefundCursor({
+    originalCreditCents: record.credit_amount_cents,
+    creditOutstandingCents: input.creditOutstandingCents,
+    refundedCreditCents: input.refundedCreditCents,
+  });
   const reversal = await reverseConnectTransfer({
     transferId: record.stripe_transfer_id,
     amountCents: reversalCents,
@@ -622,13 +679,13 @@ export async function reverseDoctorWalletCreditShare(
     },
     idempotencyKey: walletCreditReversalIdempotencyKey(
       input.bookingId,
-      record.reversed_cents || 0,
-      reversalCents
+      cursor.before,
+      cursor.refunded
     ),
     stripe: transferClient(deps),
   });
 
-  const reversedCents = (record.reversed_cents || 0) + reversalCents;
+  const reversedCents = alreadyReversedCents + reversalCents;
   const status: WalletCreditTransferStatus =
     reversedCents >= record.amount_cents ? "reversed" : "partially_reversed";
   await store.update(input.bookingId, {
@@ -658,8 +715,10 @@ export async function refundConsultCardAndCreditShare(
     paymentIntentId: string | null;
     cardRefundCents: number;
     bookingId: string;
-    refundAmountCents: number;
-    paidAmountCents: number;
+    /** Credit cents this refund returns. */
+    refundedCreditCents: number;
+    /** Credit still outstanding before this refund. */
+    creditOutstandingCents: number;
     alreadyRefundedCents?: number;
   },
   deps?: WalletCreditDeps
@@ -693,8 +752,8 @@ export async function refundConsultCardAndCreditShare(
   const reversed = await reverseDoctorWalletCreditShare(
     {
       bookingId: input.bookingId,
-      refundAmountCents: input.refundAmountCents,
-      paidAmountCents: input.paidAmountCents,
+      refundedCreditCents: input.refundedCreditCents,
+      creditOutstandingCents: input.creditOutstandingCents,
     },
     deps
   );

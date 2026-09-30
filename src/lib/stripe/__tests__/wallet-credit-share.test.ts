@@ -10,7 +10,9 @@ import {
   payDoctorWalletCreditShare,
   proportionalCreditTransferReversalCents,
   refundConsultCardAndCreditShare,
+  reverseDoctorWalletCreditShare,
   runFullCreditSettlement,
+  walletCreditReversalIdempotencyKey,
   settlePartCreditAfterCardPayment,
   walletCreditShareIdempotencyKey,
   walletCreditTableMissingCode,
@@ -512,8 +514,8 @@ describe("refunds reverse the credit transfer and the card charge", () => {
         paymentIntentId: "pi_card",
         cardRefundCents: 6000,
         bookingId: BOOKING_ID,
-        refundAmountCents: 10000,
-        paidAmountCents: 10000,
+        refundedCreditCents: 10000,
+        creditOutstandingCents: 10000,
       },
       { stripe, store }
     );
@@ -542,8 +544,9 @@ describe("refunds reverse the credit transfer and the card charge", () => {
       proportionalCreditTransferReversalCents({
         transferAmountCents: 3400,
         alreadyReversedCents: 0,
-        refundAmountCents: 5000,
-        paidAmountCents: 10000,
+        refundedCreditCents: 2000,
+        originalCreditCents: 4000,
+        creditOutstandingCents: 4000,
       })
     ).toBe(1700);
 
@@ -557,8 +560,8 @@ describe("refunds reverse the credit transfer and the card charge", () => {
         paymentIntentId: "pi_card",
         cardRefundCents: 3000,
         bookingId: BOOKING_ID,
-        refundAmountCents: 5000,
-        paidAmountCents: 10000,
+        refundedCreditCents: 2000,
+        creditOutstandingCents: 4000,
       },
       deps
     );
@@ -578,8 +581,8 @@ describe("refunds reverse the credit transfer and the card charge", () => {
         paymentIntentId: "pi_card",
         cardRefundCents: 3000,
         bookingId: BOOKING_ID,
-        refundAmountCents: 5000,
-        paidAmountCents: 10000,
+        refundedCreditCents: 2000,
+        creditOutstandingCents: 2000,
       },
       deps
     );
@@ -613,8 +616,8 @@ describe("refunds reverse the credit transfer and the card charge", () => {
         paymentIntentId: null,
         cardRefundCents: 0,
         bookingId: BOOKING_ID,
-        refundAmountCents: 10000,
-        paidAmountCents: 10000,
+        refundedCreditCents: 10000,
+        creditOutstandingCents: 10000,
       },
       { stripe: refund.stripe, store }
     );
@@ -625,6 +628,211 @@ describe("refunds reverse the credit transfer and the card charge", () => {
     expect(refund.reversals[0]).toMatchObject({
       params: { amount: 8500 },
     });
+  });
+});
+
+describe("sequential partial refunds reverse against the original credit", () => {
+  const PARTIAL_BOOKING = "book-partial-credit";
+
+  async function seedOriginal(
+    store: WalletCreditTransferStore,
+    input: { creditAmountCents: number; amountCents: number }
+  ) {
+    await store.insert({
+      booking_id: PARTIAL_BOOKING,
+      doctor_id: DOCTOR_ID,
+      amount_cents: input.amountCents,
+      credit_amount_cents: input.creditAmountCents,
+      commission_cents: input.creditAmountCents - input.amountCents,
+      stripe_transfer_id: "tr_partial",
+      status: "paid",
+      statement_line: PAID_WITH_WALLET_CREDIT_LINE,
+      currency: "GBP",
+      reversed_cents: 0,
+      kind: WALLET_CREDIT_SHARE_KIND,
+    });
+  }
+
+  function shareOf(transferAmountCents: number, refunded: number, original: number) {
+    return Math.round((transferAmountCents * refunded) / original);
+  }
+
+  it("reverses 50% then the remaining 50% without treating the remainder as the whole transfer", async () => {
+    const store = memoryStore();
+    await seedOriginal(store, { creditAmountCents: 1000, amountCents: 850 });
+    const { stripe, reversals } = stripeDouble();
+    const deps = { stripe, store };
+
+    const first = await reverseDoctorWalletCreditShare(
+      {
+        bookingId: PARTIAL_BOOKING,
+        refundedCreditCents: 500,
+        creditOutstandingCents: 1000,
+      },
+      deps
+    );
+    expect(first.reversedCents).toBe(shareOf(850, 500, 1000));
+    expect(first.reversedCents).toBe(425);
+    expect(await store.findByBookingId(PARTIAL_BOOKING)).toMatchObject({
+      status: "partially_reversed",
+      reversed_cents: 425,
+    });
+
+    // The second refund is passed the REMAINING credit (500), which used to
+    // become the denominator and reverse 100% of the original 850 transfer.
+    const second = await reverseDoctorWalletCreditShare(
+      {
+        bookingId: PARTIAL_BOOKING,
+        refundedCreditCents: 500,
+        creditOutstandingCents: 500,
+      },
+      deps
+    );
+    expect(second.reversedCents).toBe(425);
+    expect(reversals.map((row) => (row.params as { amount?: number }).amount)).toEqual([
+      425, 425,
+    ]);
+    expect(reversals.map((row) => (row.options as { idempotencyKey?: string }).idempotencyKey)).toEqual([
+      walletCreditReversalIdempotencyKey(PARTIAL_BOOKING, 0, 500),
+      walletCreditReversalIdempotencyKey(PARTIAL_BOOKING, 500, 500),
+    ]);
+    expect(await store.findByBookingId(PARTIAL_BOOKING)).toMatchObject({
+      status: "reversed",
+      reversed_cents: 850,
+    });
+  });
+
+  it("reverses 30% then 20% then 50%, and the last slice is the exact remainder", async () => {
+    const store = memoryStore();
+    await seedOriginal(store, { creditAmountCents: 1000, amountCents: 850 });
+    const { stripe, reversals } = stripeDouble();
+    const deps = { stripe, store };
+    const steps = [
+      { refunded: 300, outstanding: 1000 },
+      { refunded: 200, outstanding: 700 },
+      { refunded: 500, outstanding: 500 },
+    ];
+
+    const reversed: number[] = [];
+    for (const step of steps) {
+      const result = await reverseDoctorWalletCreditShare(
+        {
+          bookingId: PARTIAL_BOOKING,
+          refundedCreditCents: step.refunded,
+          creditOutstandingCents: step.outstanding,
+        },
+        deps
+      );
+      reversed.push(result.reversedCents);
+    }
+
+    expect(reversed[0]).toBe(shareOf(850, 300, 1000));
+    expect(reversed[1]).toBe(shareOf(850, 200, 1000));
+    expect(reversed[0]).toBe(255);
+    expect(reversed[1]).toBe(170);
+    const remainder = 850 - reversed[0] - reversed[1];
+    expect(reversed[2]).toBe(remainder);
+    let running = 0;
+    for (const cents of reversed) {
+      running += cents;
+      expect(running).toBeLessThanOrEqual(850);
+    }
+    expect(running).toBe(850);
+    expect(await store.findByBookingId(PARTIAL_BOOKING)).toMatchObject({
+      status: "reversed",
+      reversed_cents: 850,
+    });
+    expect(reversals).toHaveLength(3);
+    const keys = reversals.map(
+      (row) => (row.options as { idempotencyKey?: string }).idempotencyKey
+    );
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("on a final refund that does not divide evenly, reverses the exact remainder", async () => {
+    const store = memoryStore();
+    // 15% of 100 is 15, so the doctor transfer is 85. 30/20/50 rounds to
+    // 26 + 17, and a naive last slice of round(85 * 50 / 100) is 43.
+    await seedOriginal(store, { creditAmountCents: 100, amountCents: 85 });
+    const { stripe } = stripeDouble();
+    const deps = { stripe, store };
+    const first = await reverseDoctorWalletCreditShare(
+      {
+        bookingId: PARTIAL_BOOKING,
+        refundedCreditCents: 30,
+        creditOutstandingCents: 100,
+      },
+      deps
+    );
+    const second = await reverseDoctorWalletCreditShare(
+      {
+        bookingId: PARTIAL_BOOKING,
+        refundedCreditCents: 20,
+        creditOutstandingCents: 70,
+      },
+      deps
+    );
+    const third = await reverseDoctorWalletCreditShare(
+      {
+        bookingId: PARTIAL_BOOKING,
+        refundedCreditCents: 50,
+        creditOutstandingCents: 50,
+      },
+      deps
+    );
+
+    expect(first.reversedCents).toBe(Math.round((85 * 30) / 100));
+    expect(second.reversedCents).toBe(Math.round((85 * 20) / 100));
+    expect(third.reversedCents).toBe(85 - first.reversedCents - second.reversedCents);
+    expect(third.reversedCents).toBe(42);
+    expect(Math.round((85 * 50) / 100)).toBe(43);
+    expect(first.reversedCents + second.reversedCents + third.reversedCents).toBe(85);
+    expect(await store.findByBookingId(PARTIAL_BOOKING)).toMatchObject({
+      status: "reversed",
+      reversed_cents: 85,
+    });
+  });
+
+  it("does not reverse again when the same refund is replayed", async () => {
+    const store = memoryStore();
+    await seedOriginal(store, { creditAmountCents: 1000, amountCents: 850 });
+    const { stripe, reversals } = stripeDouble();
+    const deps = { stripe, store };
+    const input = {
+      bookingId: PARTIAL_BOOKING,
+      refundedCreditCents: 500,
+      creditOutstandingCents: 1000,
+    };
+
+    const first = await reverseDoctorWalletCreditShare(input, deps);
+    const replay = await reverseDoctorWalletCreditShare(input, deps);
+
+    expect(first.reversedCents).toBe(425);
+    expect(replay.reversedCents).toBe(0);
+    expect(replay.reversalId).toBeUndefined();
+    expect(reversals).toHaveLength(1);
+    expect(reversals[0]?.options).toMatchObject({
+      idempotencyKey: walletCreditReversalIdempotencyKey(PARTIAL_BOOKING, 0, 500),
+    });
+    expect(await store.findByBookingId(PARTIAL_BOOKING)).toMatchObject({
+      status: "partially_reversed",
+      reversed_cents: 425,
+    });
+  });
+
+  it("a partial of the remaining credit stays proportional to the original, not the remainder", () => {
+    // 5 of 10 remaining. Original credit 20, transfer 17 (credit minus 15%).
+    // Scaling 5/10 against the full 17 reverses 8; 5/20 reverses 4.
+    expect(
+      proportionalCreditTransferReversalCents({
+        transferAmountCents: 17,
+        alreadyReversedCents: Math.round((17 * 10) / 20),
+        refundedCreditCents: 5,
+        originalCreditCents: 20,
+        creditOutstandingCents: 10,
+      })
+    ).toBe(4);
+    expect(Math.min(17 - 9, Math.round((17 * 5) / 10))).toBe(8);
   });
 });
 
