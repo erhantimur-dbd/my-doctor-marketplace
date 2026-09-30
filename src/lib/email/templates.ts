@@ -676,6 +676,69 @@ export function welcomeEmail({
 }
 
 // ---------------------------------------------------------------------------
+// Doctor Welcome Email
+// Sent from registerDoctor and registerDoctorWithCheckout. Patient signup
+// keeps welcomeEmail above.
+// ---------------------------------------------------------------------------
+
+export function doctorWelcomeEmail({
+  name,
+}: WelcomeEmailParams): { subject: string; html: string } {
+  const subject = `Welcome to ${BRAND_NAME} — set up your doctor account`;
+
+  const html = baseLayout(`
+    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Set up your doctor account</h2>
+    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+      Hi ${name}, thank you for registering as a doctor on ${BRAND_NAME}. Your account is created. Finish these steps before patients can book with you.
+    </p>
+
+    <p style="margin: 0 0 16px; font-size: 14px; color: #374151; line-height: 1.6;">
+      What to do next:
+    </p>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+      <tr>
+        <td style="padding: 12px 16px; background-color: #f9fafb; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #111827;">
+            <strong style="color: ${BRAND_COLOR};">1.</strong>&nbsp; Verify your email using the confirmation link we sent you
+          </p>
+        </td>
+      </tr>
+      <tr><td style="height: 8px;"></td></tr>
+      <tr>
+        <td style="padding: 12px 16px; background-color: #f9fafb; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #111827;">
+            <strong style="color: ${BRAND_COLOR};">2.</strong>&nbsp; Finish your profile, including your availability
+          </p>
+        </td>
+      </tr>
+      <tr><td style="height: 8px;"></td></tr>
+      <tr>
+        <td style="padding: 12px 16px; background-color: #f9fafb; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #111827;">
+            <strong style="color: ${BRAND_COLOR};">3.</strong>&nbsp; Connect Stripe so consultation payments can reach you
+          </p>
+        </td>
+      </tr>
+      <tr><td style="height: 8px;"></td></tr>
+      <tr>
+        <td style="padding: 12px 16px; background-color: #f9fafb; border-radius: 6px;">
+          <p style="margin: 0; font-size: 14px; color: #111827;">
+            <strong style="color: ${BRAND_COLOR};">4.</strong>&nbsp; Wait for verification. We review your details before your profile goes live
+          </p>
+        </td>
+      </tr>
+    </table>
+
+    <p style="margin: 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+      If you have any questions, our support team is always here to help.
+    </p>
+  `);
+
+  return { subject, html };
+}
+
+// ---------------------------------------------------------------------------
 // Doctor Verified Email
 // ---------------------------------------------------------------------------
 
