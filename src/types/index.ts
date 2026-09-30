@@ -337,6 +337,7 @@ export interface Booking {
   rescheduled_at: string | null;
   dependent_id: string | null;
   dependent_name: string | null;
+  is_test: boolean;
   created_at: string;
   updated_at: string;
 }
