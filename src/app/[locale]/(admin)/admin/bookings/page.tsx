@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatAdminBookingTime } from "@/lib/booking/admin-booking-display";
 import { formatCurrency } from "@/lib/utils/currency";
 import { Calendar, Clock, CheckCircle, Eye, Plus } from "lucide-react";
 import { BookingFilters } from "./booking-filters";
@@ -248,7 +249,11 @@ export default async function AdminBookingsPage({
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {booking.start_time?.slice(0, 5)}
+                    {formatAdminBookingTime(
+                      booking.start_time,
+                      booking.end_time,
+                      booking.appointment_date
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
