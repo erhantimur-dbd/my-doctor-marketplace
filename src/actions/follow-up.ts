@@ -759,3 +759,45 @@ export async function getPatientTreatmentPlans() {
     return { active: [], completed: [], error: "Failed to fetch care plans." };
   }
 }
+
+/**
+ * Patient accept or cancel. Ownership and the pending-only transition are
+ * enforced inside patient_transition_follow_up_invitation, which runs as the
+ * signed-in user. This does not use the service role.
+ */
+export async function patientTransitionFollowUpInvitation(
+  invitationId: string,
+  status: string
+): Promise<{ success?: boolean; error?: string }> {
+  if (!isCarePlansEnabled()) {
+    return { error: CARE_PLANS_DISABLED_MESSAGE };
+  }
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { error: "You must be logged in." };
+    }
+
+    const { data, error } = await supabase.rpc(
+      "patient_transition_follow_up_invitation",
+      {
+        p_invitation_id: invitationId,
+        p_status: status,
+      }
+    );
+
+    if (error || data !== true) {
+      return { error: "This invitation can no longer be updated." };
+    }
+
+    return { success: true };
+  } catch (err) {
+    log.error("patientTransitionFollowUpInvitation error:", { err: err });
+    return { error: "An unexpected error occurred." };
+  }
+}
