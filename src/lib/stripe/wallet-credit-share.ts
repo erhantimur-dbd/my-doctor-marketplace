@@ -819,3 +819,27 @@ export async function refundConsultCardAndCreditShare(
 
   return { cardRefundId, reversedCents: reversed.reversedCents };
 }
+
+/**
+ * Refund that is not a consult card share: a payment correction with no
+ * booking, or a founding invoice overcharge. Consult card refunds stay on
+ * refundConsultCardAndCreditShare so booking counters are recorded.
+ */
+export async function createPlatformRefund(input: {
+  chargeId?: string | null;
+  paymentIntentId?: string | null;
+  amountCents: number;
+  idempotencyKey: string;
+}): Promise<{ refundId: string }> {
+  const stripe = getStripe();
+  const refund = await stripe.refunds.create(
+    {
+      ...(input.chargeId
+        ? { charge: input.chargeId }
+        : { payment_intent: input.paymentIntentId || undefined }),
+      amount: input.amountCents,
+    },
+    { idempotencyKey: input.idempotencyKey }
+  );
+  return { refundId: refund.id };
+}

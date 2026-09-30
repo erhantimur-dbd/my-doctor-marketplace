@@ -3,7 +3,10 @@ import {
   createConnectTransfer,
   reverseConnectTransfer,
 } from "@/lib/stripe/transfer-handoff";
-import { refundConsultCardAndCreditShare } from "@/lib/stripe/wallet-credit-share";
+import {
+  createPlatformRefund,
+  refundConsultCardAndCreditShare,
+} from "@/lib/stripe/wallet-credit-share";
 import { creditWallet, debitWallet } from "@/lib/wallet";
 
 export function correctionReversalIdempotencyKey(
@@ -52,17 +55,13 @@ export async function executePatientCardRefund(input: {
     });
     return { refundId: result.cardRefundId };
   }
-  const stripe = getStripe();
-  const refund = await stripe.refunds.create(
-    {
-      ...(input.stripeChargeId
-        ? { charge: input.stripeChargeId }
-        : { payment_intent: input.paymentIntentId || undefined }),
-      amount: input.amountCents,
-    },
-    { idempotencyKey: `payment-correction-refund-${input.correctionId}` }
-  );
-  return { refundId: refund.id };
+  const refund = await createPlatformRefund({
+    chargeId: input.stripeChargeId,
+    paymentIntentId: input.paymentIntentId,
+    amountCents: input.amountCents,
+    idempotencyKey: `payment-correction-refund-${input.correctionId}`,
+  });
+  return { refundId: refund.refundId };
 }
 
 export async function executeWalletAdjustment(input: {
@@ -130,9 +129,10 @@ export async function executeFoundingInvoiceRefund(input: {
   if (!chargeId) {
     throw new Error("This founding invoice has no charge to refund");
   }
-  const refund = await stripe.refunds.create(
-    { charge: chargeId, amount: input.amountCents },
-    { idempotencyKey: `payment-correction-invoice-refund-${input.correctionId}` }
-  );
-  return { refundId: refund.id };
+  const refund = await createPlatformRefund({
+    chargeId,
+    amountCents: input.amountCents,
+    idempotencyKey: `payment-correction-invoice-refund-${input.correctionId}`,
+  });
+  return { refundId: refund.refundId };
 }
