@@ -276,7 +276,7 @@ export async function applyTreatmentPlanCheckoutPayment(
         ? "Video Consultation"
         : "In-Person Consultation";
 
-    const { subject, html } = resolvePatientConfirmationEmail({
+    const { subject, html, attachments } = resolvePatientConfirmationEmail({
       patientName: patient.first_name || "Patient",
       doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
       date: booking.appointment_date,
@@ -297,7 +297,7 @@ export async function applyTreatmentPlanCheckoutPayment(
       },
     });
 
-    sendEmail({ to: patient.email, subject, html }).catch((err) =>
+    sendEmail({ to: patient.email, subject, html, attachments }).catch((err) =>
       console.error("Confirmation email error (treatment plan):", err)
     );
 
