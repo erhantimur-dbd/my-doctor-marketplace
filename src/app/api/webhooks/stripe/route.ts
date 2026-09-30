@@ -115,6 +115,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+  // charge.refunded and refund.created are not applied in this switch.
+  // Consult counters are written by recordConsultRefundOnBooking, which claims
+  // the Stripe refund id first. Copying the charge's refund total here would
+  // add those cents a second time.
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
