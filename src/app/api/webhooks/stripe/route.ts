@@ -1078,7 +1078,7 @@ export async function POST(request: NextRequest) {
         if (licenseStatus === "active" || licenseStatus === "trialing") {
           try {
             const { processReferralReward } = await import(
-              "@/actions/referral"
+              "@/lib/referrals/internal"
             );
             let rewardDoctorId = subscription.metadata?.doctor_id;
             if (!rewardDoctorId) {

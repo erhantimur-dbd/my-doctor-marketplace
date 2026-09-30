@@ -57,7 +57,7 @@ describe("license price env helper (H4)", () => {
 
 describe("referral cold-code + free booking gate", () => {
   it("processReferralSignup accepts referralCode argument", () => {
-    const ref = read("src/actions/referral.ts");
+    const ref = read("src/lib/referrals/internal.ts");
     expect(ref).toMatch(/referralCode\?/);
     expect(ref).toContain("referral_code");
   });

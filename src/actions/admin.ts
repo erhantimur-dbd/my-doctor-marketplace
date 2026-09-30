@@ -46,7 +46,7 @@ import {
 } from "@/lib/whatsapp/templates";
 import { headers } from "next/headers";
 
-import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
+import { notifyAvailabilitySubscribers } from "@/lib/availability/notify-subscribers";
 import { log } from "@/lib/utils/logger";
 import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
 import {

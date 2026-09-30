@@ -205,7 +205,7 @@ export async function updateAvailabilitySchedule(formData: FormData) {
       ? `Dr. ${profile.first_name || ""} ${profile.last_name || ""}`.trim()
       : "Your doctor";
     const { notifyAvailabilitySubscribers } = await import(
-      "@/actions/availability-alerts"
+      "@/lib/availability/notify-subscribers"
     );
     notifyAvailabilitySubscribers(
       doctor.id,
@@ -267,7 +267,7 @@ export async function addAvailabilityOverride(formData: FormData) {
         ? `Dr. ${profile.first_name || ""} ${profile.last_name || ""}`.trim()
         : "Your doctor";
       const { notifyAvailabilitySubscribers } = await import(
-        "@/actions/availability-alerts"
+        "@/lib/availability/notify-subscribers"
       );
       notifyAvailabilitySubscribers(
         doctor.id,
