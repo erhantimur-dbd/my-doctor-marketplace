@@ -1,5 +1,4 @@
-import { generateObject } from "ai";
-import { aiModel, isAIEnabled } from "@/lib/ai/provider";
+import { aiModel, generateMeteredObject, isAIEnabled } from "@/lib/ai/provider";
 import { reviewSummarySchema, type ReviewSummary } from "@/lib/ai/schemas";
 import { log } from "@/lib/utils/logger";
 
@@ -26,7 +25,7 @@ export async function generateReviewSummary(
     .join("\n");
 
   try {
-    const { object } = await generateObject({
+    const { object } = await generateMeteredObject("review_summary", {
       model: aiModel,
       schema: reviewSummarySchema,
       prompt: `You are writing a brief summary for a doctor's profile page on a healthcare booking platform.
@@ -45,7 +44,9 @@ ${reviewTexts}`,
 
     return object;
   } catch (err) {
-    log.error("Review summary generation failed:", { err: err });
+    log.error("Review summary generation failed", {
+      name: err instanceof Error ? err.name : "unknown",
+    });
     return null;
   }
 }

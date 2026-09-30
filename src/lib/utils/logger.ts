@@ -27,7 +27,7 @@ function serialize(entry: LogEntry): string {
   if (IS_PRODUCTION) {
     return JSON.stringify({
       ...entry,
-      data: sanitizeData(entry.data),
+      data: sanitizeLogData(entry.data),
     });
   }
   // Dev: human-readable
@@ -41,27 +41,41 @@ function serialize(entry: LogEntry): string {
   return `${prefix} ${entry.message}${dataStr}`;
 }
 
-/** Strip sensitive patterns from log data */
-function sanitizeData(
+const SENSITIVE_KEYS = [
+  "password",
+  "token",
+  "secret",
+  "api_key",
+  "apiKey",
+  "authorization",
+  "cookie",
+  "credit_card",
+  "ssn",
+  "stripe_secret",
+];
+
+/**
+ * Strip secrets from log data.
+ * Numeric `*Tokens` counts are kept. The substring "token" would otherwise
+ * redact `inputTokens` / `outputTokens` / `totalTokens` on the AI meter.
+ * A non-number under those names is still redacted.
+ */
+export function sanitizeLogData(
   data?: Record<string, unknown>
 ): Record<string, unknown> | undefined {
   if (!data) return undefined;
   const sanitized: Record<string, unknown> = {};
-  const SENSITIVE_KEYS = [
-    "password",
-    "token",
-    "secret",
-    "api_key",
-    "apiKey",
-    "authorization",
-    "cookie",
-    "credit_card",
-    "ssn",
-    "stripe_secret",
-  ];
 
   for (const [key, value] of Object.entries(data)) {
-    if (SENSITIVE_KEYS.some((sk) => key.toLowerCase().includes(sk))) {
+    const lower = key.toLowerCase();
+    const tokenCount =
+      typeof value === "number" &&
+      Number.isFinite(value) &&
+      lower.endsWith("tokens");
+    if (
+      !tokenCount &&
+      SENSITIVE_KEYS.some((sk) => lower.includes(sk.toLowerCase()))
+    ) {
       sanitized[key] = "[REDACTED]";
     } else if (value instanceof Error) {
       sanitized[key] = {

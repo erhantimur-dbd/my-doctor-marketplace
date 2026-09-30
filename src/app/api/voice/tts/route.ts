@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
+import { meteredXaiFetch } from "@/lib/ai/usage-meter";
 import {
   getXaiApiKey,
   GROK_DEFAULT_VOICE_ID,
@@ -77,30 +78,34 @@ export async function POST(request: NextRequest) {
       body.language || body.locale || "en"
     );
 
-    const res = await fetch(`${XAI_API_BASE}/tts`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+    const metered = await meteredXaiFetch({
+      feature: "tts",
+      url: `${XAI_API_BASE}/tts`,
+      init: {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text,
+          voice_id: voiceId,
+          language,
+        }),
       },
-      body: JSON.stringify({
-        text,
-        voice_id: voiceId,
-        language,
-      }),
+      inputChars: text.length,
     });
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
+    if (!metered.ok) {
+      const errText = await metered.errorText();
       return NextResponse.json(
         { error: "Grok TTS failed", detail: errText.slice(0, 300) },
         { status: 502 }
       );
     }
 
-    const audio = await res.arrayBuffer();
-    const contentType =
-      res.headers.get("content-type") || "audio/mpeg";
+    const audio = await metered.readBytes();
+    const contentType = metered.contentType || "audio/mpeg";
     return new NextResponse(audio, {
       status: 200,
       headers: {

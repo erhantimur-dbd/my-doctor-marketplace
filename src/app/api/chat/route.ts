@@ -3,8 +3,8 @@ import {
   isPublicChatEnabled,
   PUBLIC_CHAT_DISABLED_MESSAGE,
 } from "@/lib/launch/soft-launch";
-import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
-import { aiModel, isAIEnabled } from "@/lib/ai/provider";
+import { convertToModelMessages, stepCountIs, type UIMessage } from "ai";
+import { aiModel, isAIEnabled, streamMeteredText } from "@/lib/ai/provider";
 import { buildChatTools, type ChatToolsContext } from "@/lib/chat/tools";
 import { buildSystemPrompt } from "@/lib/chat/system-prompt";
 import type { DoctorsSearchFilters } from "@/lib/voice/search-url";
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const modelMessages = await convertToModelMessages(messages);
-    const result = streamText({
+    const result = streamMeteredText("chat", {
       model: aiModel,
       system: buildSystemPrompt(locale),
       messages: modelMessages,
@@ -93,7 +93,9 @@ export async function POST(request: NextRequest) {
 
     return result.toUIMessageStreamResponse();
   } catch (err) {
-    log.error("[chat] streamText error:", { err });
+    log.error("[chat] streamText error", {
+      name: err instanceof Error ? err.name : "unknown",
+    });
     return NextResponse.json(
       { error: "Chat is temporarily unavailable. Please try again." },
       { status: 500 }

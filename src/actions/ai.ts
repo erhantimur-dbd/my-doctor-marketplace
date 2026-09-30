@@ -1,7 +1,12 @@
 "use server";
 
-import { generateObject } from "ai";
-import { aiModel, isAIEnabled } from "@/lib/ai/provider";
+import {
+  aiModel,
+  generateMeteredObject,
+  isAIEnabled,
+  meterNlSearch,
+  recordAiUsage,
+} from "@/lib/ai/provider";
 import {
   symptomAnalysisSchema,
   nlSearchSchema,
@@ -102,7 +107,6 @@ export async function analyzeSymptoms(
     log.warn("[AI] analyzeSymptoms: OPENAI_API_KEY not found in env");
     return { data: null, error: "AI not configured" };
   }
-  console.log("[AI] analyzeSymptoms: starting for input:", input.substring(0, 50));
 
   const supabase = createAdminClient();
   const hash = hashInput(trimmed, locale);
@@ -118,7 +122,12 @@ export async function analyzeSymptoms(
       .single();
 
     if (cached?.result) {
-      console.log("[AI] analyzeSymptoms: cache hit");
+      recordAiUsage({
+        feature: "symptom",
+        outcome: "cache",
+        billed: false,
+        provider: "openai",
+      });
       return { data: cached.result as SymptomAnalysis, error: null };
     }
   } catch (e) {
@@ -135,7 +144,7 @@ export async function analyzeSymptoms(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-    const { object } = await generateObject({
+    const { object } = await generateMeteredObject("symptom", {
       model: aiModel,
       schema: symptomAnalysisSchema,
       prompt: `You are a SPECIALTY FINDER for a healthcare booking platform.
@@ -220,7 +229,9 @@ fields in the response schema.`,
 
     return { data: result, error: null };
   } catch (err) {
-    log.error("AI symptom analysis error:", { err: err });
+    log.error("AI symptom analysis error", {
+      name: err instanceof Error ? err.name : "unknown",
+    });
     return { data: null, error: "AI analysis failed" };
   }
 }
@@ -235,7 +246,6 @@ export async function parseNaturalLanguageSearch(
     log.warn("[AI] parseNaturalLanguageSearch: OPENAI_API_KEY not found in env");
     return { data: null, error: "AI not configured" };
   }
-  console.log("[AI] parseNaturalLanguageSearch: starting for input:", input.substring(0, 50));
 
   const trimmed = input.trim();
   if (trimmed.length < 5) {
@@ -255,7 +265,7 @@ export async function parseNaturalLanguageSearch(
       .single();
 
     if (cached?.parsed_filters) {
-      console.log("[AI] parseNaturalLanguageSearch: cache hit");
+      meterNlSearch("cache");
       return {
         data: cached.parsed_filters as NLSearchFilters,
         error: null,
@@ -282,7 +292,7 @@ export async function parseNaturalLanguageSearch(
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
 
-    const { object } = await generateObject({
+    const { object } = await generateMeteredObject("nl_search", {
       model: aiModel,
       schema: nlSearchSchema,
       prompt: `Parse this natural language healthcare search query into structured filters.
@@ -335,7 +345,6 @@ CRITICAL FILTER RULES:
     });
 
     clearTimeout(timeout);
-    console.log("[AI] parseNaturalLanguageSearch: AI returned:", JSON.stringify(object));
 
     // Validate specialty slug if present
     const validSlugs = new Set(SPECIALTIES.map((s) => s.slug));
@@ -379,7 +388,9 @@ CRITICAL FILTER RULES:
 
     return { data: result, error: null };
   } catch (err) {
-    log.error("NL search parse error:", { err: err });
+    log.error("NL search parse error", {
+      name: err instanceof Error ? err.name : "unknown",
+    });
     return { data: null, error: "AI search parsing failed" };
   }
 }
