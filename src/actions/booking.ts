@@ -607,8 +607,8 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         });
         await reverseDoctorWalletCreditShare({
           bookingId: booking.id,
-          refundAmountCents: walletCreditToApply,
-          paidAmountCents: walletCreditToApply,
+          refundedCreditCents: walletCreditToApply,
+          creditOutstandingCents: walletCreditToApply,
         }).catch((err) =>
           log.error("Full-credit reversal after confirm failure", { err })
         );
