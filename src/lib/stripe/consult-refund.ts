@@ -34,17 +34,59 @@ export interface ConsultPaidParts {
   creditPaidCents: number;
 }
 
+const PAID_RESCHEDULE_BALANCE_STATUSES = new Set(["paid", "refunded"]);
+
 /**
- * Card is the amount actually charged after credit. Credit is
- * wallet_credit_applied_cents. Deposit bookings use the deposit, not the
- * consultation total.
+ * Dearer-slot reschedule successor. `total_amount_cents` is the new full fee.
+ * This row's own card charge is `reschedule_price_diff_cents` (the balance
+ * PaymentIntent). Cheaper reschedules store a non-positive diff, mark
+ * payment `not_required`, and rebase `total_amount_cents` instead.
+ *
+ * Returns null when this row is not a paid balance booking, so callers keep
+ * the deposit / consultation-total basis.
+ */
+export function rescheduleBalanceOwnCardPaidCents(booking: {
+  rescheduled_from_booking_id?: string | null;
+  reschedule_price_diff_cents?: number | null;
+  reschedule_payment_status?: string | null;
+}): number | null {
+  const diff = Number(booking.reschedule_price_diff_cents || 0);
+  if (diff <= 0) return null;
+  if (!booking.rescheduled_from_booking_id) return null;
+  const status = booking.reschedule_payment_status ?? "";
+  if (!PAID_RESCHEDULE_BALANCE_STATUSES.has(status)) return null;
+  return diff;
+}
+
+/**
+ * Card is the amount this booking's own payment actually took, after credit.
+ * Credit is wallet_credit_applied_cents. Deposit bookings use the deposit,
+ * not the consultation total. A paid dearer-slot balance row uses its own
+ * price-diff charge, not `total_amount_cents` (that column is the new full fee;
+ * the rest was charged on the paired original booking).
  */
 export function storedConsultPaidParts(booking: {
   payment_mode?: string | null;
   deposit_amount_cents?: number | null;
   total_amount_cents?: number | null;
   wallet_credit_applied_cents?: number | null;
+  rescheduled_from_booking_id?: string | null;
+  reschedule_price_diff_cents?: number | null;
+  reschedule_payment_status?: string | null;
 }): ConsultPaidParts {
+  const balanceCardPaidCents = rescheduleBalanceOwnCardPaidCents(booking);
+  if (balanceCardPaidCents != null) {
+    // The balance PaymentIntent is the full price difference. Wallet credit
+    // on this row, if any, is additional to that charge and is normally 0.
+    return {
+      cardPaidCents: balanceCardPaidCents,
+      creditPaidCents: Math.max(
+        0,
+        Number(booking.wallet_credit_applied_cents || 0)
+      ),
+    };
+  }
+
   const due =
     booking.payment_mode === "deposit" && booking.deposit_amount_cents != null
       ? booking.deposit_amount_cents
@@ -85,8 +127,9 @@ export function storedConsultRefundCounters(booking: {
 }
 
 /**
- * Card/credit still available to return. Wallet-destination card settlements
- * are not Stripe-refundable later.
+ * Card/credit still available to return on this booking's own payment.
+ * Wallet-destination card settlements are not Stripe-refundable later.
+ * Admin refund, cancel, and full-refund detection all cap through here.
  */
 export function remainingConsultPaidParts(
   booking: Parameters<typeof storedConsultPaidParts>[0] &
@@ -589,6 +632,9 @@ export async function refundClinicCancellation(
     deposit_amount_cents?: number | null;
     total_amount_cents?: number | null;
     wallet_credit_applied_cents?: number | null;
+    rescheduled_from_booking_id?: string | null;
+    reschedule_price_diff_cents?: number | null;
+    reschedule_payment_status?: string | null;
     paid_at?: string | null;
     refund_amount_cents?: number | null;
     card_refunded_to_card_cents?: number | null;
@@ -655,6 +701,9 @@ export async function refundAdminBookingPayment(
     deposit_amount_cents?: number | null;
     total_amount_cents?: number | null;
     wallet_credit_applied_cents?: number | null;
+    rescheduled_from_booking_id?: string | null;
+    reschedule_price_diff_cents?: number | null;
+    reschedule_payment_status?: string | null;
     paid_at?: string | null;
     refunded_at?: string | null;
     refund_amount_cents?: number | null;

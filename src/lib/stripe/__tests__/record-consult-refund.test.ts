@@ -96,6 +96,83 @@ function cardRefund(
   };
 }
 
+describe("recordConsultRefundOnBooking balance row", () => {
+  const originalId = "22222222-2222-2222-2222-222222222222";
+
+  function balanceBooking(overrides: Record<string, unknown> = {}) {
+    return paidBooking({
+      booking_number: "BK-20260926-1126",
+      total_amount_cents: 5000,
+      reschedule_price_diff_cents: 1000,
+      reschedule_payment_status: "paid",
+      rescheduled_from_booking_id: originalId,
+      stripe_charge_id: "ch_3UK31MPhJvj3ftQe19YquLhR",
+      ...overrides,
+    });
+  }
+
+  it("sets refunded_at when the £10 balance charge is fully refunded, not the £50 fee", async () => {
+    const booking = balanceBooking();
+    const mem = memoryWriter(booking);
+
+    const partial = await recordConsultRefundOnBooking(
+      {
+        bookingId: BOOKING_ID,
+        booking,
+        settled: cardRefund(400, "re_balance_partial"),
+        markStatusRefunded: true,
+      },
+      { writer: mem.writer }
+    );
+    expect("error" in partial).toBe(false);
+    expect(mem.row()).toMatchObject({
+      card_refunded_to_card_cents: 400,
+      refund_amount_cents: 400,
+    });
+    expect(mem.row()).not.toHaveProperty("refunded_at");
+    expect(mem.row().status).toBe("confirmed");
+
+    const afterPartial = { ...booking, ...mem.row() };
+    const rest = await recordConsultRefundOnBooking(
+      {
+        bookingId: BOOKING_ID,
+        booking: afterPartial,
+        settled: cardRefund(600, "re_balance_rest"),
+        markStatusRefunded: true,
+      },
+      { writer: mem.writer }
+    );
+    expect("error" in rest).toBe(false);
+    expect(mem.row()).toMatchObject({
+      card_refunded_to_card_cents: 1000,
+      refund_amount_cents: 1000,
+      status: "refunded",
+    });
+    expect(mem.row().refunded_at).toEqual(expect.any(String));
+  });
+
+  it("marks a single full refund of the balance charge refunded", async () => {
+    const booking = balanceBooking();
+    const mem = memoryWriter(booking);
+
+    const recorded = await recordConsultRefundOnBooking(
+      {
+        bookingId: BOOKING_ID,
+        booking,
+        settled: cardRefund(1000, "re_balance_full"),
+      },
+      { writer: mem.writer }
+    );
+    expect("error" in recorded).toBe(false);
+    expect(mem.row()).toMatchObject({
+      card_refunded_to_card_cents: 1000,
+      refund_amount_cents: 1000,
+    });
+    expect(mem.row().refunded_at).toEqual(expect.any(String));
+    expect(mem.row().status).toBe("confirmed");
+  });
+});
+
 describe("recordConsultRefundOnBooking", () => {
   afterEach(() => {
     vi.restoreAllMocks();
