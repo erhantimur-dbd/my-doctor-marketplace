@@ -7,7 +7,7 @@ function read(rel: string): string {
 }
 
 const invitations = read("supabase/migrations/00130_security_restrict.sql");
-const clinic = read("supabase/migrations/00131_clinic_invitations_restrict.sql");
+const clinic = read("supabase/migrations/00132_clinic_invitations_restrict.sql");
 
 describe("00130 follow_up_invitations and organizations", () => {
   it("drops repo and Production policies before recreating the final set", () => {
@@ -74,7 +74,7 @@ describe("00130 follow_up_invitations and organizations", () => {
   });
 });
 
-describe("00131 clinic invitations", () => {
+describe("00132 clinic invitations", () => {
   it("drops the anon token policy and does not recreate it", () => {
     expect(clinic).toContain(
       'DROP POLICY IF EXISTS "Anyone can read pending invitations by token"'
