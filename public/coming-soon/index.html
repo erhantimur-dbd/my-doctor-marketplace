@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MyDoctors360 — Coming soon | Founding Doctor Programme</title>
-  <meta name="description" content="MyDoctors360 is coming soon. Patient search is closed. Join the patient waitlist, or claim the £99 founding doctor plan." />
+  <meta name="description" content="Your private practice, found and booked online. Patients are searching for private doctors. Make sure they find you." />
   <meta property="og:title" content="MyDoctors360 — Coming soon" />
-  <meta property="og:description" content="Patient search is closed. Patients can join the waitlist. Doctors can claim the £99 founding plan." />
+  <meta property="og:description" content="MyDoctors360 gives you a profile patients can search, with booking, video consultations and payment in one place." />
   <meta property="og:type" content="website" />
   <meta name="google-site-verification" content="EdM0owW0expdv2fT1tiUvYx9ibGdw3FW_k7489bQRmE" />
   <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -121,12 +121,16 @@
     }
     .hero-content { position: relative; max-width: 820px; }
     .badge {
-      display: inline-flex; align-items: center; gap: 0.5rem;
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
       background: #fff; border: 1px solid var(--border);
       border-radius: 999px; padding: 0.5rem 1.125rem;
       font-size: 0.8125rem; font-weight: 600; color: var(--foreground);
       margin-bottom: 1.75rem;
       box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+      max-width: 100%;
+      flex-wrap: wrap;
+      white-space: normal;
+      text-align: center;
     }
     .badge-dot { width: 8px; height: 8px; background: var(--emerald); border-radius: 50%; animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -155,15 +159,35 @@
       transition: background 0.2s;
     }
     .btn-secondary:hover { background: var(--muted); }
-    .hero-meta {
-      display: inline-flex; align-items: flex-start; gap: 0.5rem;
-      max-width: 100%;
-      font-size: 0.8125rem; color: var(--muted-foreground);
-      margin-top: 0.5rem;
-      text-align: left;
+    .hero-prices {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+      max-width: 720px;
+      margin: 0.25rem auto 0;
+      text-align: center;
     }
-    .hero-meta svg { margin-top: 0.2rem; flex-shrink: 0; }
-    .hero-meta strong { color: var(--foreground); }
+    .hero-price {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.875rem 0.75rem;
+      min-width: 0;
+    }
+    .hero-price strong {
+      display: block;
+      color: var(--foreground);
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+    .hero-price span {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.8125rem;
+      color: var(--muted-foreground);
+      line-height: 1.4;
+    }
 
     /* ---- About strip ---- */
     .about {
@@ -284,16 +308,13 @@
       margin-top: 1.5rem; font-size: 0.8125rem;
       color: rgba(255,255,255,0.6);
     }
-    .vat-note {
-      font-size: 0.75rem;
-      font-weight: 500;
-      letter-spacing: 0;
-      line-height: 1.4;
+    .patient-line {
+      font-size: 0.8125rem;
       color: var(--muted-foreground);
-      white-space: nowrap;
-      margin-left: 0.35rem;
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto 1.25rem;
     }
-    .founding .vat-note { color: rgba(255,255,255,0.65); }
 
     /* ---- Steps ---- */
     .steps-head { text-align: center; max-width: 720px; margin: 0 auto 3rem; }
@@ -427,7 +448,32 @@
       .form-card { padding: 1.75rem 1.25rem; }
       .form-grid { grid-template-columns: 1fr; }
       .audience-grid { grid-template-columns: 1fr; }
+      .benefits-grid { grid-template-columns: 1fr; }
+      .hero-prices { grid-template-columns: 1fr; }
+      .hero-ctas { flex-direction: column; align-items: stretch; }
+      .hero-ctas .btn-primary,
+      .hero-ctas .btn-secondary {
+        width: 100%;
+        justify-content: center;
+        box-sizing: border-box;
+      }
       .founding { padding: 4rem 1.25rem; }
+      .founding-ctas {
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+      }
+      .founding-ctas .btn-primary,
+      .founding-ctas .btn-ghost-light {
+        width: 100%;
+        min-height: 3.25rem;
+        height: 3.25rem;
+        justify-content: center;
+        align-items: center;
+        box-sizing: border-box;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
     }
   </style>
 </head>
@@ -459,21 +505,31 @@
     <div class="hero-content">
       <div class="badge">
         <span class="badge-dot"></span>
-        Coming soon
+        Your private practice, found and booked online.
       </div>
-      <h1>The marketplace is <span>coming soon.</span></h1>
-      <p class="hero-sub">Patient search is closed. Patients can join the waitlist. Doctors can claim the founding plan and build a profile now.</p>
+      <h1>Patients are searching for private doctors. Make sure they find you.</h1>
+      <p class="hero-sub">MyDoctors360 gives you a profile patients can search, with booking, video consultations and payment in one place. You set your hours and fees, and we handle the admin.</p>
       <div class="hero-ctas">
-        <a href="#patients" class="btn-secondary">Join the patient waitlist</a>
         <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary">
-          Claim My Founding Spot
+          Claim your founding spot
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
         </a>
+        <a href="#patients" class="btn-secondary">I&apos;m a patient, tell me when it opens</a>
       </div>
-      <p class="hero-meta">
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="#10b981"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-        <span><strong>£99 per month for the first 100 doctors.</strong><span class="vat-note">Prices exclude VAT</span> No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted.&nbsp;<a href="/en/login" style="color: var(--foreground); text-decoration: underline; font-weight: 600;">Sign in →</a></span>
-      </p>
+      <div class="hero-prices">
+        <div class="hero-price">
+          <strong>£99</strong>
+          <span>a month for our first 100 doctors</span>
+        </div>
+        <div class="hero-price">
+          <strong>£199</strong>
+          <span>Starter</span>
+        </div>
+        <div class="hero-price">
+          <strong>£299</strong>
+          <span>Professional</span>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -482,7 +538,6 @@
     <div class="container">
       <div class="eyebrow">Coming soon</div>
       <h2>One page for patients and doctors.</h2>
-      <p style="margin-bottom: 2rem;">Patient search is closed. The doctor path stays open: founding doctors can sign up today. Patients can join the waitlist.</p>
       <div class="audience-grid">
         <article class="audience-card patients">
           <div class="eyebrow">For patients</div>
@@ -492,9 +547,9 @@
         </article>
         <article class="audience-card doctors">
           <div class="eyebrow">For doctors</div>
-          <h3>£99 per month for the first 100 doctors<span class="vat-note">Prices exclude VAT</span></h3>
-          <p>No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted. Sign up now and set video or in-person visits before patient search opens.</p>
-          <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary">Claim My Founding Spot</a>
+          <h3>Set your hours and fees</h3>
+          <p>Sign up now and set video or in-person visits.</p>
+          <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary">Claim your founding spot</a>
         </article>
       </div>
     </div>
@@ -503,59 +558,26 @@
   <!-- Benefits -->
   <section class="section" id="why">
     <div class="container">
-      <div class="benefits-head" id="doctors">
-        <div class="eyebrow">For doctors</div>
-        <h2>What founding doctors can set up now.</h2>
-        <p style="color: var(--muted-foreground); font-size: 1rem;">Patient search is closed. Your signup, profile, bookings setup, video and in-person visits are not.</p>
-      </div>
-
-      <div class="benefits-grid">
-        <div class="benefit-card">
-          <div class="benefit-icon" style="background: var(--blue-soft);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-          </div>
-          <h3>Own your schedule</h3>
-          <p>Set your hours, fees and consultation types in the doctor dashboard before patient search opens.</p>
-        </div>
-
-        <div class="benefit-card">
-          <div class="benefit-icon" style="background: var(--emerald-soft);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h2M12 15h2"/></svg>
-          </div>
-          <h3>Card payments and payouts</h3>
-          <p>Patients pay by card. A 15% platform fee applies to consultations and is not discounted.</p>
-        </div>
-
-        <div class="benefit-card">
-          <div class="benefit-icon" style="background: var(--teal-soft);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg>
-          </div>
-          <h3>Your profile before search opens</h3>
-          <p>List your specialty and fees now. Patient search is closed, so the directory is not taking bookings from the public site yet.</p>
-        </div>
-
-        <div class="benefit-card">
-          <div class="benefit-icon" style="background: var(--violet-soft);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          </div>
-          <h3>Video and in-person</h3>
-          <p>Offer a video consultation or an in-person visit. Patients choose the type you list when bookings open.</p>
-        </div>
-
+      <div class="benefits-grid" id="doctors">
         <div class="benefit-card">
           <div class="benefit-icon" style="background: var(--amber-soft);">
             <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
           </div>
-          <h3>Automated admin</h3>
-          <p>Reminders, follow-ups and activity statements. Reclaim hours every week.</p>
+          <p>Still juggling calls, emails and chasing payments? That&apos;s time you&apos;re not paid for.</p>
         </div>
 
         <div class="benefit-card">
           <div class="benefit-icon" style="background: var(--rose-soft);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8.5 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 9 8.5 12 2"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
           </div>
-          <h3>Founding doctors</h3>
-          <p>The first 100 doctors join at £99 per month.<span class="vat-note">Prices exclude VAT</span> No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted.</p>
+          <p>Every missed enquiry is a patient booking with someone else.</p>
+        </div>
+
+        <div class="benefit-card">
+          <div class="benefit-icon" style="background: var(--teal-soft);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          </div>
+          <p>With MyDoctors360, patients find you, book a slot, see you by video and pay upfront.</p>
         </div>
       </div>
     </div>
@@ -564,30 +586,14 @@
   <!-- Founding Doctor highlight -->
   <section class="founding" id="founding">
     <div class="founding-inner">
-      <div class="eyebrow">The Founding Doctor Programme</div>
-      <h2>£99 per month for the first 100 doctors.<span class="vat-note">Prices exclude VAT</span></h2>
-      <p>No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted. Solo Professional features cover bookings, video, payments, analytics, patient CRM and waitlist auto-notify.</p>
+      <div class="eyebrow">Founding doctors</div>
+      <h2>The Founding Doctor Programme</h2>
+      <p class="founding-offer">£99 a month for our first 100 doctors. No minimum term, cancel any time. The £99 price stays as long as you keep the plan. If you cancel, it can&apos;t be reclaimed. A 15% platform fee applies to consultations. Prices exclude VAT.</p>
 
       <div class="founding-perks">
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>The price stays £99 per month for as long as you keep the plan<span class="vat-note">Prices exclude VAT</span></span>
-        </div>
-        <div class="perk-row">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>No minimum term, cancel anytime</span>
-        </div>
-        <div class="perk-row">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>If you cancel, you lose the £99 price and cannot rejoin at £99<span class="vat-note">Prices exclude VAT</span></span>
-        </div>
-        <div class="perk-row">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
           <span>Bookings, video and in-person visits</span>
-        </div>
-        <div class="perk-row">
-          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-          <span>The 15% platform fee on consultations still applies and is not discounted</span>
         </div>
         <div class="perk-row">
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
@@ -602,12 +608,12 @@
 
       <div class="founding-ctas">
         <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary">
-          Claim My Founding Spot
+          Claim your founding spot
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
         </a>
         <a href="/en/pricing" class="btn-ghost-light">See plans</a>
       </div>
-      <p class="founding-fineprint">The founding plan is £99 per month for the first 100 doctors.<span class="vat-note">Prices exclude VAT</span> No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted. Starter stays £199<span class="vat-note">Prices exclude VAT</span>, Professional £299<span class="vat-note">Prices exclude VAT</span>, and Clinic £897 (3–15 seats). Prices exclude VAT. VAT will only be added if we become VAT-registered.</p>
+      <p class="founding-fineprint">Starter stays £199, Professional £299, and Clinic £897 (3–15 seats).</p>
     </div>
   </section>
 
@@ -633,13 +639,13 @@
         <div class="step">
           <div class="step-num">3</div>
           <h3>Launch with us</h3>
-          <p>When patient search opens, the profile you built is ready. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span></p>
+          <p>The profile you built is ready.</p>
         </div>
       </div>
 
       <div style="text-align: center; margin-top: 3rem;">
         <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary">
-          Claim My Founding Spot
+          Claim your founding spot
           <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
         </a>
       </div>
@@ -651,33 +657,10 @@
     <div class="container">
       <div class="benefits-head">
         <div class="eyebrow">For patients · Coming soon</div>
-        <h2>Search is closed. Join the waitlist.</h2>
-        <p class="lede" style="margin-bottom: 0;">Patient search is closed. We are not announcing when it opens. Join with your name and email.</p>
+        <h2>Join the waitlist</h2>
       </div>
 
-      <div class="benefits-grid" style="margin-bottom: 2.5rem;">
-        <div class="benefit-card">
-          <div class="benefit-icon" style="background: var(--blue-soft);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
-          </div>
-          <h3>Search stays closed</h3>
-          <p>The doctor directory is not open on this site yet. Joining the waitlist does not book a visit.</p>
-        </div>
-        <div class="benefit-card">
-          <div class="benefit-icon" style="background: var(--violet-soft);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          </div>
-          <h3>Video and in-person</h3>
-          <p>When bookings open, you can book a video consultation or an in-person visit with a doctor who offers that type.</p>
-        </div>
-        <div class="benefit-card">
-          <div class="benefit-icon" style="background: var(--teal-soft);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 016-6h4a6 6 0 016 6v1"/></svg>
-          </div>
-          <h3>Founding doctors are joining</h3>
-          <p>Doctors can claim the £99 founding plan<span class="vat-note">Prices exclude VAT</span> and set up a profile while patient search is closed.</p>
-        </div>
-      </div>
+      <p class="patient-line">Patient booking opens soon. Join the waitlist and we&apos;ll let you know.</p>
 
       <div class="form-card" id="patientWaitlist" data-state="empty">
         <div class="eyebrow" style="text-align: center; display: block;">Patient waitlist</div>
@@ -719,9 +702,9 @@
     <div class="form-card">
       <div class="eyebrow" style="text-align: center; display: block;">Founding Doctor Programme</div>
       <h2>Claim your founding spot</h2>
-      <p>Register on the <strong>founding plan</strong> at £99 per month for the first 100 doctors.<span class="vat-note">Prices exclude VAT</span> No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted.</p>
+      <p>Register on the <strong>founding plan</strong>.</p>
       <a href="/en/register-doctor?tier=founding&founding=1" class="btn-primary" style="width: 100%; justify-content: center; padding: 1rem; font-size: 1rem; margin-bottom: 1.5rem;">
-        Claim My Founding Spot
+        Claim your founding spot
         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
       </a>
       <p style="text-align:center; font-size:0.875rem; color: var(--muted-foreground); margin-bottom: 1.25rem;">Prefer a lighter option? Join the waitlist below and we&apos;ll follow up ahead of launch.</p>
@@ -731,7 +714,7 @@
 
       <div class="form-success" id="formSuccess">
         <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-        <span>You're on the founding list. <a href="/en/register-doctor?tier=founding&founding=1" style="font-weight:700; text-decoration:underline;">Register now on the £99 founding plan →</a><span class="vat-note">Prices exclude VAT</span> to claim your spot and build your profile.</span>
+        <span>You're on the founding list. <a href="/en/register-doctor?tier=founding&founding=1" style="font-weight:700; text-decoration:underline;">Register now on the £99 founding plan →</a> to claim your spot and build your profile.</span>
       </div>
       <div class="form-error" id="formError">
         <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
@@ -809,14 +792,14 @@
         </div>
         <div class="faq-item">
           <p class="faq-q">When is MyDoctors360 opening to patients?</p>
-          <p class="faq-a">Coming soon. Patient search is closed, and we are not announcing a day. Founding doctors can sign up now. Patients can join the waitlist with a name and email.</p>
+          <p class="faq-a">Coming soon. Founding doctors can sign up now. Patients can join the waitlist with a name and email.</p>
         </div>
         <div class="faq-item">
           <p class="faq-q">What does it cost?</p>
           <p class="faq-a">
-            <strong>Founding (£99/mo, first 100):</strong><span class="vat-note">Prices exclude VAT</span> Solo Professional features — bookings, video, payments, analytics, CRM and waitlist. No minimum term, cancel anytime. The price stays £99 per month for as long as you keep the plan.<span class="vat-note">Prices exclude VAT</span> If you cancel, you lose the £99 price and cannot rejoin at £99.<span class="vat-note">Prices exclude VAT</span> The 15% platform fee on consultations still applies and is not discounted.<br /><br />
-            <strong>Starter (£199/mo):</strong><span class="vat-note">Prices exclude VAT</span> solo — online bookings &amp; Stripe payouts, video, email reminders.<br /><br />
-            <strong>Professional (£299/mo, 1 doctor):</strong><span class="vat-note">Prices exclude VAT</span> solo growth — everything in Starter plus advanced analytics, patient CRM and waitlist auto-notify.<br /><br />
+            <strong>Founding (£99/mo, first 100):</strong> Solo Professional features — bookings, video, payments, analytics, CRM and waitlist.<br /><br />
+            <strong>Starter (£199/mo):</strong> solo — online bookings &amp; Stripe payouts, video, email reminders.<br /><br />
+            <strong>Professional (£299/mo, 1 doctor):</strong> solo growth — everything in Starter plus advanced analytics, patient CRM and waitlist auto-notify.<br /><br />
             <strong>Clinic (£897/mo):</strong> multi-doctor practices — 3 seats included (expand to 15), multi-location and team tools.<br /><br />
             Annual billing is 10 months for 12 (2 months free). Upgrade or change plan anytime from your dashboard. Full matrix on
             <a href="/en/pricing" style="color: inherit; font-weight: 600; text-decoration: underline;">pricing</a>.<br /><br />
