@@ -1,8 +1,10 @@
 import type { LicenseTier } from "@/types";
 import { PACKAGE_MARKETING } from "@/lib/constants/package-features";
+import { displayCurrency } from "@/lib/billing/display-currency";
+import { DEFAULT_CURRENCY } from "@/lib/billing/currency-for-country";
 
 // ─── Currency & Exchange Rates ─────────────────────────────
-export const BASE_CURRENCY = "GBP";
+export const BASE_CURRENCY = DEFAULT_CURRENCY;
 
 /** Approximate exchange rates from GBP. Updated periodically. */
 export const EXCHANGE_RATES: Record<string, number> = {
@@ -21,19 +23,9 @@ export function convertPrice(
   return Math.round(penceGBP * rate);
 }
 
-/** Map a locale to its display currency */
+/** Map a locale to the currency we can actually charge. */
 export function getDisplayCurrency(locale: string): string {
-  switch (locale) {
-    case "en":
-      return "GBP";
-    case "tr":
-      return "TRY";
-    case "ja":
-    case "zh":
-      return "USD";
-    default:
-      return "EUR"; // de, fr, es, it, pt
-  }
+  return displayCurrency({ locale });
 }
 
 /** Format a price in minor units for display */
@@ -64,7 +56,7 @@ export function formatPriceForLocale(
   locale: string,
   options?: { fractionDigits?: number }
 ): string {
-  const currency = getDisplayCurrency(locale);
+  const currency = displayCurrency({ locale });
   const converted = convertPrice(penceGBP, currency);
   return formatPrice(converted, currency, options);
 }
@@ -80,7 +72,7 @@ export function formatAnnualEffectiveMonthlyForLocale(
 ): string {
   // Inline 10× rule to avoid circular imports with billing-period
   const yearlyPence = monthlyPenceGBP <= 0 ? 0 : monthlyPenceGBP * 10;
-  const currency = getDisplayCurrency(locale);
+  const currency = displayCurrency({ locale });
   const yearlyMinor = convertPrice(yearlyPence, currency);
   const effectiveMinor = Math.round(yearlyMinor / 12);
   return formatPrice(effectiveMinor, currency, { fractionDigits: 0 });

@@ -6,13 +6,19 @@
  * below already name the currency each country would use.
  *
  * currencyForCountry returns null when the country is missing, not in the
- * map, or mapped to a currency that is not enabled. Callers must then omit
- * base_currency so the column default applies. Migration 00121 sets that
- * default to GBP. Before 00121 the default was EUR, and sign-up did not
- * set the organisation currency.
+ * map, or mapped to a currency that is not enabled. Sign-up then omits
+ * base_currency so the column default applies. Migration 00121 sets the
+ * organisations default to GBP. Migration 00122 sets the doctors default
+ * to the same currency. Before 00121 the organisations default was EUR,
+ * and sign-up did not set the organisation currency.
+ *
+ * DEFAULT_CURRENCY is the single fallback when a mapped currency is off.
+ * Do not add another GBP literal for that case.
  */
 
-export const ENABLED_CURRENCIES = ["GBP"] as const;
+export const DEFAULT_CURRENCY = "GBP" as const;
+
+export const ENABLED_CURRENCIES = [DEFAULT_CURRENCY] as const;
 
 export type EnabledCurrency = (typeof ENABLED_CURRENCIES)[number];
 
@@ -46,4 +52,15 @@ export function currencyForCountry(
     return null;
   }
   return currency as EnabledCurrency;
+}
+
+/**
+ * Currency for a manual organisation form that did not submit one.
+ * Uses the country map when that currency is enabled, otherwise
+ * DEFAULT_CURRENCY.
+ */
+export function fallbackOrganizationCurrency(
+  country?: string | null
+): EnabledCurrency {
+  return currencyForCountry(country) ?? DEFAULT_CURRENCY;
 }
