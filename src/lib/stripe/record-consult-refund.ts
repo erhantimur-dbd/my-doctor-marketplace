@@ -21,8 +21,10 @@ import { bookingRowUpdateError } from "@/lib/booking/booking-row-update";
 import { log } from "@/lib/utils/logger";
 import {
   bookingRefundSettlementPatch,
+  storedConsultPaidParts,
   type ConsultRefundResult,
 } from "@/lib/stripe/consult-refund";
+import { restoreAppliedOffsetForRefund } from "@/lib/payments/payout-offset-store";
 
 export const CONSULT_REFUND_LEDGER_EVENT_TYPE = "consult_refund_recorded";
 
@@ -134,6 +136,24 @@ async function releaseAll(
   }
 }
 
+export type RestoreOffsetForRefund = (input: {
+  bookingId: string;
+  refundId: string;
+  refundCents: number;
+  originalPaidCents: number;
+}) => Promise<number>;
+
+function refundCentsOf(settled: RecordedConsultRefund): number {
+  return (
+    (settled.cardRefundCents ??
+      (settled.cardRefundedToCardCents || 0) +
+        Math.max(
+          0,
+          (settled.walletCreditCents || 0) - (settled.creditRefundCents || 0)
+        )) + (settled.creditRefundCents || 0)
+  );
+}
+
 export async function recordConsultRefundOnBooking(
   input: {
     bookingId: string;
@@ -155,7 +175,10 @@ export async function recordConsultRefundOnBooking(
      */
     patchOverride?: Record<string, unknown> | null;
   },
-  deps?: { writer?: ConsultRefundBookingWriter }
+  deps?: {
+    writer?: ConsultRefundBookingWriter;
+    restoreOffset?: RestoreOffsetForRefund;
+  }
 ): Promise<
   | { error: string }
   | { alreadyRecorded: boolean; patch: Record<string, unknown> | null }
@@ -261,6 +284,24 @@ export async function recordConsultRefundOnBooking(
   if (rowError) {
     await releaseAll(writer, claimed);
     return rowError;
+  }
+
+  const parts = storedConsultPaidParts(input.booking);
+  const originalPaidCents = parts.cardPaidCents + parts.creditPaidCents;
+  const refundId = (settled?.cardRefundId || "").trim() || keys[0] || "";
+  try {
+    await (deps?.restoreOffset ?? restoreAppliedOffsetForRefund)({
+      bookingId: input.bookingId,
+      refundId,
+      refundCents: refundCentsOf(settled!),
+      originalPaidCents,
+    });
+  } catch (err) {
+    log.error("Could not restore a payment-correction offset after refund", {
+      bookingId: input.bookingId,
+      refundId,
+      err,
+    });
   }
 
   return { alreadyRecorded: false, patch };

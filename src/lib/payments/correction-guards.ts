@@ -106,6 +106,53 @@ export function approvalsSatisfied(state: {
   return true;
 }
 
+/**
+ * Dispute and approval gate for an offset.
+ * An open dispute uses assertNoOpenDispute: the whole correction pauses.
+ * Approvals are distinct named approvers, excluding the creator, plus a
+ * director when the doctor has escalated.
+ * A fully reserved row still passes: remaining cents were already taken.
+ */
+export function offsetRecoveryGateOpen(input: {
+  disputeOpen: boolean;
+  requiredApprovals: number;
+  createdBy: string | null;
+  approvals: ApprovalRecord[];
+  escalatedByDoctorAt: string | null;
+}): boolean {
+  try {
+    assertNoOpenDispute({ disputeOpen: input.disputeOpen });
+  } catch {
+    return false;
+  }
+  return approvalsSatisfied(input);
+}
+
+/** Whether a doctor offset may be reserved or an existing hold kept. */
+export function isCorrectionOffsetEligible(input: {
+  recoveryStep: number;
+  noticeSentAt: string | null;
+  earliestRecoveryAt: string | null;
+  clearRisk: boolean;
+  disputeOpen: boolean;
+  requiredApprovals: number;
+  createdBy: string | null;
+  approvals: ApprovalRecord[];
+  escalatedByDoctorAt: string | null;
+  reversalShortOrFailed: boolean;
+  nowIso: string;
+}): boolean {
+  if (!offsetRecoveryGateOpen(input)) return false;
+  if (input.recoveryStep < 2 || !input.noticeSentAt) return false;
+  if (!input.reversalShortOrFailed) return false;
+  if (!input.clearRisk) {
+    if (!input.earliestRecoveryAt || input.nowIso < input.earliestRecoveryAt) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function isWithinTwelveMonths(
   relatedPaymentAt: Date,
   createdAt: Date

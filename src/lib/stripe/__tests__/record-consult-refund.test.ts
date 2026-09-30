@@ -266,6 +266,43 @@ describe("recordConsultRefundOnBooking", () => {
     expect(mem.updates()).toBe(1);
   });
 
+  it("restores an applied offset once per refund id", async () => {
+    const booking = paidBooking({ total_amount_cents: 10000 });
+    const mem = memoryWriter(booking);
+    const restored: {
+      bookingId: string;
+      refundId: string;
+      refundCents: number;
+      originalPaidCents: number;
+    }[] = [];
+    const deps = {
+      writer: mem.writer,
+      restoreOffset: async (input: (typeof restored)[number]) => {
+        restored.push(input);
+        return 500;
+      },
+    };
+    const settled = cardRefund(5000, "re_offset");
+    await recordConsultRefundOnBooking(
+      { bookingId: BOOKING_ID, booking, settled },
+      deps
+    );
+    expect(restored).toEqual([
+      {
+        bookingId: BOOKING_ID,
+        refundId: "re_offset",
+        refundCents: 5000,
+        originalPaidCents: 10000,
+      },
+    ]);
+    const fresh = { ...booking, ...mem.row() };
+    await recordConsultRefundOnBooking(
+      { bookingId: BOOKING_ID, booking: fresh, settled },
+      deps
+    );
+    expect(restored).toHaveLength(1);
+  });
+
   it("treats a wallet retry that dropped the Stripe refund id as the same refund", async () => {
     const booking = paidBooking({
       total_amount_cents: 6000,

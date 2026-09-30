@@ -22,8 +22,14 @@ import {
 } from "@/lib/payments/correction-guards";
 import {
   destinationFeeWithOffset,
+  offsetRestoreCents,
   transferAmountWithOffset,
 } from "@/lib/payments/payout-offset";
+import {
+  planOffsetReserve,
+  reserveDoctorOffsetCents,
+  type OffsetRow,
+} from "@/lib/payments/payout-offset-store";
 import { correctionReversalIdempotencyKey } from "@/lib/payments/correction-execute";
 import { consultCardClawbackIdempotencyKey } from "@/lib/stripe/consult-refund";
 import { paymentCorrectionNoticeEmail } from "@/lib/email/payment-correction-notice";
@@ -283,6 +289,83 @@ describe("correction guards", () => {
 });
 
 describe("offset, reversal, and notice copy", () => {
+  it("reserves nothing once an approved correction is disputed", async () => {
+    const now = "2026-02-01T00:00:00.000Z";
+    const approved: OffsetRow = {
+      id: "c1",
+      offsetRemainingCents: 0,
+      recoveryStep: 2,
+      noticeSentAt: "2026-01-01T00:00:00.000Z",
+      earliestRecoveryAt: "2026-01-15T00:00:00.000Z",
+      clearRisk: false,
+      disputeOpen: false,
+      requiredApprovals: 1,
+      createdBy: "creator",
+      approvals: [{ approverId: "approver", inAllowlist: true, director: false }],
+      escalatedByDoctorAt: null,
+      reversalShortOrFailed: true,
+    };
+    const held = [
+      { correctionId: "c1", amountCents: 400, status: "reserved" as const },
+    ];
+    expect(
+      planOffsetReserve({ rows: [approved], holds: held, maxCents: 1000, nowIso: now })
+        .cents
+    ).toBe(400);
+
+    const disputed = planOffsetReserve({
+      rows: [{ ...approved, disputeOpen: true }],
+      holds: held,
+      maxCents: 1000,
+      nowIso: now,
+    });
+    expect(disputed.cents).toBe(0);
+    expect(disputed.reservations).toEqual([]);
+    expect(disputed.releaseCorrectionIds).toEqual(["c1"]);
+
+    const released: string[][] = [];
+    const cents = await reserveDoctorOffsetCents(
+      { doctorId: "doc", bookingId: "book", maxCents: 1000 },
+      {
+        loadRows: async () => [{ ...approved, disputeOpen: true }],
+        loadHolds: async () => held,
+        release: async (bookingIds) => {
+          released.push(bookingIds);
+        },
+        nowIso: now,
+      }
+    );
+    expect(cents).toBe(0);
+    expect(released).toEqual([["book"]]);
+  });
+
+  it("restores a refunded share of an applied offset", () => {
+    expect(
+      offsetRestoreCents({
+        holdCents: 1000,
+        alreadyRestoredCents: 0,
+        refundCents: 5000,
+        originalPaidCents: 10000,
+      })
+    ).toBe(500);
+    expect(
+      offsetRestoreCents({
+        holdCents: 1000,
+        alreadyRestoredCents: 500,
+        refundCents: 5000,
+        originalPaidCents: 10000,
+      })
+    ).toBe(500);
+    expect(
+      offsetRestoreCents({
+        holdCents: 1000,
+        alreadyRestoredCents: 0,
+        refundCents: 10000,
+        originalPaidCents: 10000,
+      })
+    ).toBe(1000);
+  });
+
   it("raises the destination fee and shrinks the wallet transfer by the same offset", () => {
     const fee = destinationFeeWithOffset({
       applicationFeeCents: 1500,
@@ -401,6 +484,23 @@ describe("no correction path charges a saved card", () => {
     expect(migration).toContain("escalated_by_doctor_at");
     expect(migration).toContain("AND party = 'doctor'");
     expect(migration).toContain("account_closing");
+    const reserveFn = migration.slice(
+      migration.indexOf("FUNCTION public.reserve_correction_offset"),
+      migration.indexOf("FUNCTION public.release_reserved_offset_holds")
+    );
+    const disputeAt = reserveFn.indexOf(
+      "v_row.disputed_at IS NOT NULL AND v_row.dispute_resolved_at IS NULL"
+    );
+    const returnExisting = reserveFn.indexOf("RETURN v_existing");
+    expect(disputeAt).toBeGreaterThan(0);
+    expect(returnExisting).toBeGreaterThan(disputeAt);
+    expect(reserveFn.indexOf("status = 'released'")).toBeLessThan(returnExisting);
+    expect(reserveFn).toContain("required_approvals");
+    expect(reserveFn).toContain("p.director");
+    expect(migration).toContain("restore_offset_for_refund");
+    expect(migration).toContain("offset_restored");
+    expect(migration).toContain("settled_by_offset");
+    expect(migration).toContain("offset_cents");
     expect(read("src/lib/wallet/index.ts")).toContain("payment_correction");
     expect(read(".env.example")).toContain("PAYMENT_ERROR_NOTICES");
   });

@@ -262,7 +262,11 @@ CREATE TRIGGER payment_correction_approvals_guard
   EXECUTE FUNCTION public.payment_correction_approvals_guard();
 
 -- Reserve offset cents against one correction for one booking.
--- Returns the cents reserved (0 when the row is not eligible or already held).
+-- Returns the cents reserved (0 when the row is not eligible).
+-- An open dispute (disputed_at set, dispute_resolved_at null — the same
+-- pause as assertNoOpenDispute) or unmet approvals release every reserved
+-- hold on the correction and return 0, even when this booking already holds
+-- cents. Applied holds stay applied until a refund restores them.
 CREATE OR REPLACE FUNCTION public.reserve_correction_offset(
   p_correction_id UUID,
   p_booking_id UUID,
@@ -276,9 +280,63 @@ DECLARE
   v_row public.payment_corrections%ROWTYPE;
   v_existing INT;
   v_approvals INT;
-  v_director BOOLEAN;
+  v_director BOOLEAN := TRUE;
+  v_hold public.payment_correction_offset_holds%ROWTYPE;
+  v_open_dispute BOOLEAN;
+  v_approvals_met BOOLEAN;
 BEGIN
   IF p_amount IS NULL OR p_amount <= 0 THEN
+    RETURN 0;
+  END IF;
+
+  SELECT * INTO v_row
+  FROM public.payment_corrections
+  WHERE id = p_correction_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN 0;
+  END IF;
+
+  v_open_dispute := v_row.disputed_at IS NOT NULL AND v_row.dispute_resolved_at IS NULL;
+
+  SELECT COUNT(DISTINCT a.approver_id) INTO v_approvals
+  FROM public.payment_correction_approvals a
+  JOIN public.payment_correction_approvers p ON p.profile_id = a.approver_id
+  WHERE a.correction_id = p_correction_id
+    AND (v_row.created_by IS NULL OR a.approver_id <> v_row.created_by);
+
+  IF v_row.escalated_by_doctor_at IS NOT NULL THEN
+    SELECT EXISTS (
+      SELECT 1
+      FROM public.payment_correction_approvals a
+      JOIN public.payment_correction_approvers p
+        ON p.profile_id = a.approver_id AND p.director
+      WHERE a.correction_id = p_correction_id
+        AND (v_row.created_by IS NULL OR a.approver_id <> v_row.created_by)
+    ) INTO v_director;
+  END IF;
+
+  v_approvals_met := v_approvals >= v_row.required_approvals AND COALESCE(v_director, FALSE);
+
+  IF v_open_dispute OR NOT v_approvals_met THEN
+    FOR v_hold IN
+      SELECT *
+      FROM public.payment_correction_offset_holds
+      WHERE correction_id = p_correction_id
+        AND status = 'reserved'
+      FOR UPDATE
+    LOOP
+      UPDATE public.payment_corrections
+      SET
+        offset_remaining_cents = offset_remaining_cents + v_hold.amount_cents,
+        updated_at = NOW()
+      WHERE id = v_hold.correction_id;
+
+      UPDATE public.payment_correction_offset_holds
+      SET status = 'released'
+      WHERE id = v_hold.id;
+    END LOOP;
     RETURN 0;
   END IF;
 
@@ -292,15 +350,6 @@ BEGIN
     RETURN v_existing;
   END IF;
 
-  SELECT * INTO v_row
-  FROM public.payment_corrections
-  WHERE id = p_correction_id
-  FOR UPDATE;
-
-  IF NOT FOUND THEN
-    RETURN 0;
-  END IF;
-
   IF v_row.party <> 'doctor'
     OR v_row.direction <> 'platform_favour'
     OR v_row.notice_sent_at IS NULL
@@ -310,38 +359,10 @@ BEGIN
     RETURN 0;
   END IF;
 
-  IF v_row.disputed_at IS NOT NULL AND v_row.dispute_resolved_at IS NULL THEN
-    RETURN 0;
-  END IF;
-
   IF NOT v_row.clear_risk
     AND (v_row.earliest_recovery_at IS NULL OR v_row.earliest_recovery_at > NOW())
   THEN
     RETURN 0;
-  END IF;
-
-  SELECT COUNT(DISTINCT a.approver_id) INTO v_approvals
-  FROM public.payment_correction_approvals a
-  JOIN public.payment_correction_approvers p ON p.profile_id = a.approver_id
-  WHERE a.correction_id = p_correction_id
-    AND (v_row.created_by IS NULL OR a.approver_id <> v_row.created_by);
-
-  IF v_approvals < v_row.required_approvals THEN
-    RETURN 0;
-  END IF;
-
-  IF v_row.escalated_by_doctor_at IS NOT NULL THEN
-    SELECT EXISTS (
-      SELECT 1
-      FROM public.payment_correction_approvals a
-      JOIN public.payment_correction_approvers p
-        ON p.profile_id = a.approver_id AND p.director
-      WHERE a.correction_id = p_correction_id
-        AND (v_row.created_by IS NULL OR a.approver_id <> v_row.created_by)
-    ) INTO v_director;
-    IF NOT v_director THEN
-      RETURN 0;
-    END IF;
   END IF;
 
   IF NOT EXISTS (
@@ -434,6 +455,106 @@ $$;
 
 REVOKE ALL ON FUNCTION public.apply_reserved_offset_holds(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.apply_reserved_offset_holds(UUID) TO service_role;
+
+-- Give a refunded share of applied offset holds back to offset_remaining_cents.
+-- Idempotent per refund id and hold. A settled correction reopens to recovering.
+CREATE OR REPLACE FUNCTION public.restore_offset_for_refund(
+  p_booking_id UUID,
+  p_refund_id TEXT,
+  p_refund_cents INT,
+  p_original_paid_cents INT
+) RETURNS INT
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_hold public.payment_correction_offset_holds%ROWTYPE;
+  v_already INT;
+  v_share INT;
+  v_restore INT;
+  v_total INT := 0;
+  v_refund INT;
+  v_original INT;
+BEGIN
+  IF p_refund_id IS NULL OR btrim(p_refund_id) = '' THEN
+    RETURN 0;
+  END IF;
+  IF p_refund_cents IS NULL OR p_refund_cents <= 0 THEN
+    RETURN 0;
+  END IF;
+  IF p_original_paid_cents IS NULL OR p_original_paid_cents <= 0 THEN
+    RETURN 0;
+  END IF;
+
+  v_original := p_original_paid_cents;
+  v_refund := LEAST(p_refund_cents, v_original);
+
+  FOR v_hold IN
+    SELECT *
+    FROM public.payment_correction_offset_holds
+    WHERE booking_id = p_booking_id
+      AND status = 'applied'
+    FOR UPDATE
+  LOOP
+    IF EXISTS (
+      SELECT 1
+      FROM public.payment_correction_events e
+      WHERE e.correction_id = v_hold.correction_id
+        AND e.event_type = 'offset_restored'
+        AND e.payload->>'refund_id' = p_refund_id
+        AND e.payload->>'hold_id' = v_hold.id::text
+    ) THEN
+      CONTINUE;
+    END IF;
+
+    SELECT COALESCE(SUM((e.payload->>'restored_cents')::INT), 0)
+      INTO v_already
+    FROM public.payment_correction_events e
+    WHERE e.correction_id = v_hold.correction_id
+      AND e.event_type = 'offset_restored'
+      AND e.payload->>'hold_id' = v_hold.id::text;
+
+    v_share := ROUND((v_hold.amount_cents::numeric * v_refund) / v_original)::INT;
+    v_restore := LEAST(
+      GREATEST(v_hold.amount_cents - COALESCE(v_already, 0), 0),
+      GREATEST(v_share, 0)
+    );
+    IF v_restore <= 0 THEN
+      CONTINUE;
+    END IF;
+
+    UPDATE public.payment_corrections
+    SET
+      offset_remaining_cents = offset_remaining_cents + v_restore,
+      status = CASE WHEN status = 'settled' THEN 'recovering' ELSE status END,
+      settled_at = CASE WHEN status = 'settled' THEN NULL ELSE settled_at END,
+      updated_at = NOW()
+    WHERE id = v_hold.correction_id;
+
+    INSERT INTO public.payment_correction_events (correction_id, event_type, payload)
+    VALUES (
+      v_hold.correction_id,
+      'offset_restored',
+      jsonb_build_object(
+        'refund_id', p_refund_id,
+        'hold_id', v_hold.id,
+        'booking_id', p_booking_id,
+        'restored_cents', v_restore,
+        'refund_cents', p_refund_cents,
+        'original_paid_cents', p_original_paid_cents
+      )
+    );
+
+    v_total := v_total + v_restore;
+  END LOOP;
+
+  RETURN v_total;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.restore_offset_for_refund(UUID, TEXT, INT, INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.restore_offset_for_refund(UUID, TEXT, INT, INT) TO service_role;
 
 ALTER TABLE public.payment_correction_approvers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_corrections ENABLE ROW LEVEL SECURITY;
@@ -528,3 +649,59 @@ CREATE POLICY "Admins read payment correction offset holds"
 
 -- No INSERT/UPDATE/DELETE policies. Server actions use the service role.
 -- Approvals and events reject UPDATE and DELETE even for the service role.
+
+-- Wallet-credit offsets. amount_cents stays the contractual doctor share
+-- (the split check). offset_cents is the part kept for a correction.
+-- The Stripe transfer is amount_cents - offset_cents. A full offset is
+-- settled_by_offset and sends no transfer.
+ALTER TABLE public.doctor_wallet_credit_transfers
+  ADD COLUMN IF NOT EXISTS offset_cents INT NOT NULL DEFAULT 0;
+
+ALTER TABLE public.doctor_wallet_credit_transfers
+  DROP CONSTRAINT IF EXISTS doctor_wallet_credit_transfers_status_check;
+
+DO $$
+DECLARE
+  v_name TEXT;
+BEGIN
+  FOR v_name IN
+    SELECT c.conname
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'public'
+      AND t.relname = 'doctor_wallet_credit_transfers'
+      AND c.contype = 'c'
+      AND pg_get_constraintdef(c.oid) ILIKE '%''pending''%'
+      AND pg_get_constraintdef(c.oid) NOT ILIKE '%settled_by_offset%'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE public.doctor_wallet_credit_transfers DROP CONSTRAINT %I',
+      v_name
+    );
+  END LOOP;
+END $$;
+
+ALTER TABLE public.doctor_wallet_credit_transfers
+  ADD CONSTRAINT doctor_wallet_credit_transfers_status_check
+  CHECK (
+    status IN (
+      'pending',
+      'paid',
+      'reversed',
+      'partially_reversed',
+      'settled_by_offset'
+    )
+  );
+
+ALTER TABLE public.doctor_wallet_credit_transfers
+  DROP CONSTRAINT IF EXISTS doctor_wallet_credit_transfers_offset_chk;
+
+ALTER TABLE public.doctor_wallet_credit_transfers
+  ADD CONSTRAINT doctor_wallet_credit_transfers_offset_chk
+  CHECK (offset_cents >= 0 AND offset_cents <= amount_cents);
+
+COMMENT ON COLUMN public.doctor_wallet_credit_transfers.offset_cents IS
+  'Payment-correction cents kept from this share. Stripe is sent amount_cents minus offset_cents. amount_cents stays the contractual doctor share.';
+COMMENT ON COLUMN public.doctor_wallet_credit_transfers.status IS
+  'pending until Stripe accepts the transfer, then paid. settled_by_offset means the offset covered the whole share and no transfer was sent.';

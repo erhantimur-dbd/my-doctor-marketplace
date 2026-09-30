@@ -19,6 +19,27 @@ export function destinationFeeWithOffset(input: {
   };
 }
 
+/**
+ * Cents of an applied offset to give back when a booking is refunded.
+ * Pro rata to this refund against the original paid total, and never more
+ * than the hold still outstanding.
+ */
+export function offsetRestoreCents(input: {
+  holdCents: number;
+  alreadyRestoredCents: number;
+  refundCents: number;
+  originalPaidCents: number;
+}): number {
+  const hold = Math.max(0, Math.round(input.holdCents));
+  const already = Math.max(0, Math.round(input.alreadyRestoredCents));
+  const refund = Math.max(0, Math.round(input.refundCents));
+  const original = Math.max(0, Math.round(input.originalPaidCents));
+  if (hold === 0 || refund === 0 || original === 0) return 0;
+  const share = Math.round((hold * Math.min(refund, original)) / original);
+  const room = Math.max(0, hold - already);
+  return Math.min(room, Math.max(0, share));
+}
+
 export function transferAmountWithOffset(input: {
   transferCents: number;
   offsetCents: number;
