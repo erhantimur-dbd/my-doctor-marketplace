@@ -989,6 +989,90 @@ describe("wallet destination never refunds the card", () => {
     expect(second).toBeNull();
   });
 
+  it("partial admin refunds of 1500 then 2500 on a 4000 booking step the remaining cap to 0", async () => {
+    const store = memoryStore();
+    const { stripe, deps } = harness(store);
+    const base = {
+      id: BOOKING_ID,
+      booking_number: "MD-40",
+      patient_id: "pat-1",
+      currency: "GBP",
+      stripe_payment_intent_id: "pi_40",
+      total_amount_cents: 4000,
+      wallet_credit_applied_cents: 0,
+      paid_at: "2026-09-26T12:00:00.000Z",
+      status: "confirmed",
+    };
+
+    expect(remainingConsultPaidParts(base).remainingPaidCents).toBe(4000);
+
+    const first = await refundAdminBookingPayment(base, 1500, deps);
+    expect("error" in first).toBe(false);
+    if ("error" in first) return;
+    expect(first.settlementPatch).toMatchObject({
+      card_refunded_to_card_cents: 1500,
+      card_credited_to_wallet_cents: 0,
+      credit_refunded_cents: 0,
+      refund_amount_cents: 1500,
+    });
+    expect(first.settlementPatch).not.toHaveProperty("refunded_at");
+    expect(first.settlementPatch).not.toHaveProperty("status");
+
+    const afterFirst = { ...base, ...first.settlementPatch };
+    expect(remainingConsultPaidParts(afterFirst).remainingPaidCents).toBe(2500);
+
+    const second = await refundAdminBookingPayment(afterFirst, 2500, deps);
+    expect("error" in second).toBe(false);
+    if ("error" in second) return;
+    expect(second.settlementPatch).toMatchObject({
+      card_refunded_to_card_cents: 4000,
+      card_credited_to_wallet_cents: 0,
+      credit_refunded_cents: 0,
+      refund_amount_cents: 4000,
+      status: "refunded",
+    });
+    expect(second.settlementPatch.refunded_at).toEqual(expect.any(String));
+
+    const afterSecond = { ...afterFirst, ...second.settlementPatch };
+    expect(remainingConsultPaidParts(afterSecond).remainingPaidCents).toBe(0);
+    expect(stripe.refunds.map((row) => row.params.amount)).toEqual([1500, 2500]);
+  });
+
+  it("a full admin refund sets refunded_at and status refunded", async () => {
+    const store = memoryStore();
+    const { deps } = harness(store);
+    const booking = {
+      id: BOOKING_ID,
+      booking_number: "MD-FULL",
+      patient_id: "pat-1",
+      currency: "GBP",
+      stripe_payment_intent_id: "pi_full",
+      total_amount_cents: 4000,
+      wallet_credit_applied_cents: 0,
+      paid_at: "2026-09-26T12:00:00.000Z",
+      refunded_at: null,
+      refund_amount_cents: 0,
+      card_refunded_to_card_cents: 0,
+      card_credited_to_wallet_cents: 0,
+      credit_refunded_cents: 0,
+      status: "confirmed",
+    };
+
+    const result = await refundAdminBookingPayment(booking, 4000, deps);
+    expect("error" in result).toBe(false);
+    if ("error" in result) return;
+    expect(result.settlementPatch).toMatchObject({
+      card_refunded_to_card_cents: 4000,
+      refund_amount_cents: 4000,
+      status: "refunded",
+    });
+    expect(result.settlementPatch.refunded_at).toEqual(expect.any(String));
+    expect(
+      remainingConsultPaidParts({ ...booking, ...result.settlementPatch })
+        .remainingPaidCents
+    ).toBe(0);
+  });
+
   it("cheaper reschedule rebase keeps later remaining refunds aligned to the new fee", () => {
     const rebase = cheaperReschedulePaidRebasePatch({
       originalTotalCents: 10000,

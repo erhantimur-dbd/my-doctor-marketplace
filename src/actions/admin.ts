@@ -20,6 +20,7 @@ import {
 } from "@/lib/stripe/consult-refund";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
+import { bookingRowUpdateError } from "@/lib/booking/booking-row-update";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { computeCancellationRefundPercent } from "@/lib/booking/cancellation-refund";
 import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
@@ -738,12 +739,24 @@ export async function adminRefundBooking(
   const refundAmount = settled.refundAmountCents;
   let refundRef = settled.cardRefundId || `refund-${bookingId}`;
 
-  const { error: updateError } = await supabase
+  // Bookings has no UPDATE policy. The logged-in admin client matches 0 rows
+  // and returns no error, so the Stripe refund must be written with the
+  // service-role client and a zero-row result treated as failure.
+  const adminSupabase = createAdminClient();
+  const { data: updatedRows, error: updateError } = await adminSupabase
     .from("bookings")
     .update(settled.settlementPatch)
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .select("id");
 
-  if (updateError) return { error: safeError(updateError) };
+  const rowError = bookingRowUpdateError({
+    error: updateError,
+    rows: updatedRows,
+    stripeRefundSucceeded: true,
+    bookingId,
+    stripeRefundId: settled.cardRefundId,
+  });
+  if (rowError) return { error: rowError.error };
 
   await logAdminAction(supabase, user.id, "booking_refunded", "booking", bookingId, {
     amount_cents: refundAmount,
@@ -2234,10 +2247,20 @@ export async function adminCancelBooking(
     ...(refundSettlementPatch || {}),
   };
 
-  await adminSupabase
+  const { data: cancelledRows, error: cancelUpdateError } = await adminSupabase
     .from("bookings")
     .update(updateData)
-    .eq("id", bookingId);
+    .eq("id", bookingId)
+    .select("id");
+
+  const cancelRowError = bookingRowUpdateError({
+    error: cancelUpdateError,
+    rows: cancelledRows,
+    stripeRefundSucceeded: refundAmountCents > 0,
+    bookingId,
+    stripeRefundId: refundRef,
+  });
+  if (cancelRowError) return { error: cancelRowError.error };
 
   // Remove from calendars (non-blocking)
   removeBookingFromGoogleCalendar(bookingId).catch((err) =>
