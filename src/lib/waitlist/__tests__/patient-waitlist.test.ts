@@ -94,6 +94,12 @@ describe("coming-soon page copy", () => {
     expect(html).not.toMatch(/coupon|promotion code/i);
   });
 
+  it("says prices exclude VAT in the pricing paragraph and the cost FAQ only", () => {
+    const line =
+      "Prices exclude VAT. VAT will only be added if we become VAT-registered.";
+    expect(html.split(line).length - 1).toBe(2);
+  });
+
   it("waitlist form has empty, success, and error states and only asks for name and email", () => {
     expect(html).toMatch(/id="patientWaitlistForm"/);
     expect(html).toMatch(/data-state="empty"/);
