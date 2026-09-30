@@ -40,8 +40,7 @@ interface ClinicInviteData {
     name: string;
     slug: string;
     logo_url: string | null;
-    description: string | null;
-  };
+  } | null;
 }
 
 interface Props {
@@ -90,7 +89,7 @@ export function InviteAcceptClient({
   const [showTransferWarning, setShowTransferWarning] = useState(false);
   const [existingSubTier, setExistingSubTier] = useState<string | null>(null);
 
-  if (inviteError || !invite) {
+  if (inviteError || !invite || !invite.organization) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-6">
         <Card className="w-full max-w-md text-center">
@@ -219,11 +218,6 @@ export function InviteAcceptClient({
               )}
               <div>
                 <CardTitle className="text-xl">{invite.organization.name}</CardTitle>
-                {invite.organization.description && (
-                  <CardDescription className="mt-0.5 text-sm">
-                    {invite.organization.description}
-                  </CardDescription>
-                )}
               </div>
             </div>
           </CardHeader>

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { loadPublicFollowUpInvitation } from "@/lib/invitations/load-public-invitation";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,32 +31,15 @@ export default async function InvitationConfirmedPage({ params }: ConfirmedPageP
   const { token, locale } = await params;
   const supabase = await createClient();
 
-  // Fetch invitation with first booking
-  const { data: invitation } = await supabase
-    .from("follow_up_invitations")
-    .select(`
-      id,
-      service_name,
-      total_sessions,
-      sessions_booked,
-      status,
-      doctor:doctors!inner(
-        title,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name)
-      )
-    `)
-    .eq("token", token)
-    .single();
+  const invitation = await loadPublicFollowUpInvitation(supabase, token);
 
   if (!invitation || invitation.status !== "accepted") {
     redirect(`/${locale}/invitation/${token}`);
   }
 
-  const inv: any = invitation;
-  const doctor: any = Array.isArray(inv.doctor) ? inv.doctor[0] : inv.doctor;
-  const doctorProfile: any = doctor?.profile
-    ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
-    : null;
+  const inv = invitation;
+  const doctor = inv.doctor;
+  const doctorProfile = doctor.profile;
   const doctorName = `${doctor?.title || "Dr."} ${doctorProfile?.first_name || ""} ${doctorProfile?.last_name || ""}`.trim();
   const remainingSessions = inv.total_sessions - inv.sessions_booked;
 

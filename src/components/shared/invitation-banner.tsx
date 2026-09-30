@@ -43,7 +43,6 @@ export function InvitationBanner() {
           .from("organization_members")
           .select(
             `organization_id, role, invited_at,
-             organization:organizations(name),
              inviter:profiles!organization_members_invited_by_fkey(first_name, last_name)`
           )
           .eq("user_id", userId)
@@ -53,9 +52,12 @@ export function InvitationBanner() {
 
         if (!membership) return;
 
-        const org: any = Array.isArray(membership.organization)
-          ? membership.organization[0]
-          : membership.organization;
+        const { data: orgRow } = await supabase
+          .from("public_organizations")
+          .select("name")
+          .eq("id", membership.organization_id)
+          .maybeSingle();
+        const org = orgRow;
         const inviter: any = Array.isArray(membership.inviter)
           ? membership.inviter[0]
           : membership.inviter;

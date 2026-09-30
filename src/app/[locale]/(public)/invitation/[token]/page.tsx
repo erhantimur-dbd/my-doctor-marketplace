@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { loadPublicFollowUpInvitation } from "@/lib/invitations/load-public-invitation";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,43 +36,22 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   const { token, locale } = await params;
   const supabase = await createClient();
 
-  // Fetch invitation with doctor details
-  const { data: invitation } = await supabase
-    .from("follow_up_invitations")
-    .select(`
-      *,
-      doctor:doctors!inner(
-        id,
-        slug,
-        title,
-        clinic_name,
-        address,
-        stripe_account_id,
-        stripe_onboarding_complete,
-        profile:profiles!doctors_profile_id_fkey(first_name, last_name, avatar_url),
-        location:locations(city, country_code)
-      )
-    `)
-    .eq("token", token)
-    .single();
+  const invitation = await loadPublicFollowUpInvitation(supabase, token);
 
   if (!invitation) {
     notFound();
   }
 
-  const inv: any = invitation;
-  const doctor: any = Array.isArray(inv.doctor) ? inv.doctor[0] : inv.doctor;
-  const doctorProfile: any = doctor?.profile
-    ? (Array.isArray(doctor.profile) ? doctor.profile[0] : doctor.profile)
-    : null;
-  const doctorLocation: any = doctor?.location
-    ? (Array.isArray(doctor.location) ? doctor.location[0] : doctor.location)
-    : null;
+  const inv = invitation;
+  const doctor = inv.doctor;
+  const doctorProfile = doctor.profile;
+  const doctorLocation = doctor.location;
 
   // Lazy expiry check
   const isExpired = inv.status === "pending" && new Date(inv.expires_at) < new Date();
   if (isExpired) {
-    await supabase
+    const admin = createAdminClient();
+    await admin
       .from("follow_up_invitations")
       .update({ status: "expired" })
       .eq("id", inv.id);
@@ -115,9 +96,9 @@ export default async function InvitationPage({ params }: InvitationPageProps) {
   }
 
   // pending status — show invitation details
-  const discountLabel = inv.discount_type === "percentage"
+  const discountLabel = inv.discount_type === "percentage" && inv.discount_value !== null
     ? `${inv.discount_value}%`
-    : inv.discount_type === "fixed_amount"
+    : inv.discount_type === "fixed_amount" && inv.discount_value !== null
       ? formatCurrency(inv.discount_value, inv.currency)
       : null;
 

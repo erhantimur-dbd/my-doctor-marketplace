@@ -6,7 +6,6 @@ import {
   Building2,
   MapPin,
   Phone,
-  Mail,
   Globe,
   Star,
   Clock,
@@ -29,8 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const supabase = await createClient();
 
   const { data: org } = await supabase
-    .from("organizations")
-    .select("name, description, seo_title, seo_description, logo_url, slug")
+    .from("public_organizations")
+    .select("name, description, seo_title, seo_description, logo_url, slug, cover_image_url")
     .eq("slug", slug)
     .single();
 
@@ -64,11 +63,12 @@ export default async function ClinicPublicPage({ params }: Props) {
   const supabase = await createClient();
 
   const { data: org } = await supabase
-    .from("organizations")
+    .from("public_organizations")
     .select(`
       id, name, slug, logo_url, cover_image_url,
-      description, website, phone, email,
-      city, country, specialties
+      description, website, specialties,
+      seo_title, seo_description,
+      brand_display_name, brand_favicon_url
     `)
     .eq("slug", slug)
     .single();
@@ -111,11 +111,6 @@ export default async function ClinicPublicPage({ params }: Props) {
     description: org.description,
     url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/${locale}/clinics/${slug}`,
     logo: org.logo_url,
-    telephone: org.phone,
-    email: org.email,
-    address: org.city
-      ? { "@type": "PostalAddress", addressLocality: org.city, addressCountry: org.country ?? "GB" }
-      : undefined,
     hasMap: org.website,
     medicalSpecialty: org.specialties,
   };
@@ -151,11 +146,6 @@ export default async function ClinicPublicPage({ params }: Props) {
             )}
             <div>
               <h1 className="text-3xl font-bold sm:text-4xl">{org.name}</h1>
-              {org.city && (
-                <p className="mt-1 flex items-center gap-1.5 text-sky-200">
-                  <MapPin className="h-4 w-4" />{org.city}
-                </p>
-              )}
               {org.specialties && org.specialties.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {org.specialties.slice(0, 5).map((s: string) => (
@@ -304,16 +294,6 @@ export default async function ClinicPublicPage({ params }: Props) {
             <Card>
               <CardContent className="p-5 space-y-3">
                 <p className="font-semibold">Contact</p>
-                {org.phone && (
-                  <a href={`tel:${org.phone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-sky-600">
-                    <Phone className="h-4 w-4" />{org.phone}
-                  </a>
-                )}
-                {org.email && (
-                  <a href={`mailto:${org.email}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-sky-600">
-                    <Mail className="h-4 w-4" />{org.email}
-                  </a>
-                )}
                 {org.website && (
                   <a
                     href={org.website}
