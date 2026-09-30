@@ -89,7 +89,8 @@ function stripeDouble() {
     refunds: {
       async create(
         params: {
-          payment_intent: string;
+          payment_intent?: string;
+          charge?: string;
           amount: number;
           reverse_transfer: boolean;
           refund_application_fee: boolean;
@@ -576,6 +577,48 @@ describe("wallet-destination card clawback", () => {
       `wallet-refund-reversal-${BOOKING_ID}-0-3000`
     );
   });
+
+  it("reverses the stored destination transfer instead of searching the payment intent", async () => {
+    const reversals: { transferId: string; amountCents?: number }[] = [];
+    const result = await clawbackCardDestinationShare(
+      {
+        paymentIntentId: "pi_card",
+        bookingId: BOOKING_ID,
+        cardPaidCents: 10000,
+        cardRefundCents: 6000,
+        destinationTransferId: "tr_3ULNGRPhJvj3ftQe024gvyCO",
+        idempotencyKey: consultCardClawbackIdempotencyKey(BOOKING_ID, 6000),
+      },
+      {
+        async findTransfer() {
+          throw new Error("should use the stored transfer id");
+        },
+        async retrieveTransfer() {
+          return {
+            id: "tr_3ULNGRPhJvj3ftQe024gvyCO",
+            amount: 8500,
+            currency: "gbp",
+          };
+        },
+        async reverseTransfer(input) {
+          reversals.push({
+            transferId: input.transferId,
+            amountCents: input.amountCents,
+          });
+          return { reversalId: "trr_stored" };
+        },
+      }
+    );
+
+    expect(result).toEqual({
+      reversalId: "trr_stored",
+      reversedCents: 5100,
+      transferFound: true,
+    });
+    expect(reversals).toEqual([
+      { transferId: "tr_3ULNGRPhJvj3ftQe024gvyCO", amountCents: 5100 },
+    ]);
+  });
 });
 
 describe("wallet destination never refunds the card", () => {
@@ -976,5 +1019,80 @@ describe("wallet destination never refunds the card", () => {
     expect(remaining.remainingPaidCents).toBe(8000);
     expect(remaining.cardPaidCents).toBe(4800);
     expect(remaining.creditPaidCents).toBe(3200);
+  });
+
+  it("caps an admin refund at the amount still refundable and refunds the stored charge", async () => {
+    const store = memoryStore();
+    const { stripe, deps } = harness(store);
+    const booking = {
+      id: BOOKING_ID,
+      booking_number: "MD-CAP",
+      patient_id: "pat-1",
+      currency: "GBP",
+      stripe_payment_intent_id: "pi_card",
+      stripe_charge_id: "ch_3ULNGRPhJvj3ftQe0DwVQ9cq",
+      stripe_destination_transfer_id: "tr_3ULNGRPhJvj3ftQe024gvyCO",
+      total_amount_cents: 10000,
+      wallet_credit_applied_cents: 0,
+      paid_at: "2026-09-26T12:00:00.000Z",
+      refunded_at: null,
+      card_refunded_to_card_cents: 4000,
+      card_credited_to_wallet_cents: 0,
+      credit_refunded_cents: 0,
+    };
+
+    const overRemaining = await refundAdminBookingPayment(booking, 8000, deps);
+    expect(overRemaining).toEqual({ error: "Invalid refund amount" });
+    expect(stripe.refunds).toHaveLength(0);
+
+    const depositOverTotal = await refundAdminBookingPayment(
+      {
+        ...booking,
+        payment_mode: "deposit",
+        deposit_amount_cents: 3000,
+        card_refunded_to_card_cents: 0,
+      },
+      10000,
+      deps
+    );
+    expect(depositOverTotal).toEqual({ error: "Invalid refund amount" });
+
+    const ok = await refundAdminBookingPayment(booking, 6000, deps);
+    expect("error" in ok).toBe(false);
+    if ("error" in ok) return;
+    expect(ok.refundAmountCents).toBe(6000);
+    expect(stripe.refunds[0]?.params).toEqual({
+      charge: "ch_3ULNGRPhJvj3ftQe0DwVQ9cq",
+      amount: 6000,
+      reverse_transfer: true,
+      refund_application_fee: true,
+    });
+  });
+});
+
+describe("admin issue-refund dialog cap", () => {
+  it("defaults and caps the input at the remaining refundable amount", () => {
+    const dialog = readFileSync(
+      join(
+        process.cwd(),
+        "src/app/[locale]/(admin)/admin/bookings/[id]/refund-dialog.tsx"
+      ),
+      "utf8"
+    );
+    const page = readFileSync(
+      join(
+        process.cwd(),
+        "src/app/[locale]/(admin)/admin/bookings/[id]/page.tsx"
+      ),
+      "utf8"
+    );
+
+    expect(page).toContain("remainingConsultPaidParts");
+    expect(page).toContain("refundableAmountCents");
+    expect(dialog).toContain("refundableAmountCents");
+    expect(dialog).toContain("Refundable amount:");
+    expect(dialog).toContain("max={refundableAmountCents}");
+    expect(dialog).toContain("useState(refundableAmountCents)");
+    expect(dialog).not.toContain("totalAmountCents");
   });
 });

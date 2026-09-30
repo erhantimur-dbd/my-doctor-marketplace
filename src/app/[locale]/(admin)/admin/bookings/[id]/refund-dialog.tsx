@@ -20,18 +20,18 @@ import { toast } from "sonner";
 
 interface RefundDialogProps {
   bookingId: string;
-  totalAmountCents: number;
+  refundableAmountCents: number;
   currency: string;
 }
 
 export function RefundDialog({
   bookingId,
-  totalAmountCents,
+  refundableAmountCents,
   currency,
 }: RefundDialogProps) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [amountCents, setAmountCents] = useState(totalAmountCents);
+  const [amountCents, setAmountCents] = useState(refundableAmountCents);
   const [reason, setReason] = useState("");
 
   const formatAmount = (cents: number) => {
@@ -54,7 +54,13 @@ export function RefundDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setAmountCents(refundableAmountCents);
+      }}
+    >
       <DialogTrigger asChild>
         <Button variant="destructive" size="sm" className="gap-1.5">
           <RotateCcw className="h-3.5 w-3.5" />
@@ -65,8 +71,9 @@ export function RefundDialog({
         <DialogHeader>
           <DialogTitle>Issue Refund</DialogTitle>
           <DialogDescription>
-            Process a refund for this booking. The refund will be sent back to
-            the patient&apos;s original payment method via Stripe.
+            Process a refund for this booking, up to the amount still
+            refundable ({formatAmount(refundableAmountCents)}). The refund is
+            sent back to the patient&apos;s original payment method via Stripe.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -76,10 +83,19 @@ export function RefundDialog({
               <Input
                 type="number"
                 min={1}
-                max={totalAmountCents}
+                max={refundableAmountCents}
                 step={1}
                 value={amountCents}
-                onChange={(e) => setAmountCents(Number(e.target.value))}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  if (!Number.isFinite(next)) {
+                    setAmountCents(0);
+                    return;
+                  }
+                  setAmountCents(
+                    Math.min(refundableAmountCents, Math.max(0, Math.round(next)))
+                  );
+                }}
                 className="w-[140px]"
               />
               <span className="text-sm text-muted-foreground">
@@ -87,7 +103,7 @@ export function RefundDialog({
               </span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Full amount: {formatAmount(totalAmountCents)}
+              Refundable amount: {formatAmount(refundableAmountCents)}
             </p>
           </div>
           <div>
@@ -108,7 +124,7 @@ export function RefundDialog({
           <Button
             variant="destructive"
             onClick={handleRefund}
-            disabled={isPending || amountCents <= 0 || amountCents > totalAmountCents}
+            disabled={isPending || amountCents <= 0 || amountCents > refundableAmountCents}
           >
             {isPending ? (
               <>

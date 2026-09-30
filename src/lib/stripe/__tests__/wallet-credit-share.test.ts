@@ -57,7 +57,8 @@ function stripeDouble() {
   const stripe = {
     refunds: {
       async create(params: {
-        payment_intent: string;
+        payment_intent?: string;
+        charge?: string;
         amount: number;
         reverse_transfer: boolean;
         refund_application_fee: boolean;

@@ -20,6 +20,7 @@ import {
 } from "@/lib/stripe/wallet-credit-share";
 import {
   findDestinationTransfer,
+  resolveDestinationTransfer,
   reverseConnectTransfer,
 } from "@/lib/stripe/transfer-handoff";
 
@@ -309,11 +310,13 @@ export interface ConsultRefundWallet {
 }
 
 export interface CardClawbackInput {
-  paymentIntentId: string;
+  paymentIntentId: string | null;
   bookingId: string;
   cardPaidCents: number;
   cardRefundCents: number;
   idempotencyKey: string;
+  /** bookings.stripe_destination_transfer_id when present. */
+  destinationTransferId?: string | null;
 }
 
 export interface CardClawbackResult {
@@ -327,6 +330,9 @@ export interface ConsultRefundDeps extends WalletCreditDeps {
   clawbackCardShare?: (input: CardClawbackInput) => Promise<CardClawbackResult>;
   findTransfer?: typeof findDestinationTransfer;
   reverseTransfer?: typeof reverseConnectTransfer;
+  retrieveTransfer?: (
+    id: string
+  ) => Promise<{ id: string; amount: number; currency: string } | null>;
 }
 
 function refundCreditDescription(input: {
@@ -367,11 +373,19 @@ function defaultWallet(): ConsultRefundWallet {
 
 export async function clawbackCardDestinationShare(
   input: CardClawbackInput,
-  deps?: Pick<ConsultRefundDeps, "findTransfer" | "reverseTransfer" | "stripe">
+  deps?: Pick<
+    ConsultRefundDeps,
+    "findTransfer" | "reverseTransfer" | "retrieveTransfer" | "stripe"
+  >
 ): Promise<CardClawbackResult> {
   const find = deps?.findTransfer ?? findDestinationTransfer;
   const reverse = deps?.reverseTransfer ?? reverseConnectTransfer;
-  const found = await find(input.paymentIntentId);
+  const found = await resolveDestinationTransfer({
+    paymentIntentId: input.paymentIntentId,
+    storedTransferId: input.destinationTransferId,
+    retrieveTransfer: deps?.retrieveTransfer,
+    findTransfer: find,
+  });
   if (!found) {
     return { reversalId: null, reversedCents: 0, transferFound: false };
   }
@@ -433,6 +447,8 @@ export async function refundConsultSplit(
     /** Cumulative patient-facing refund already settled on this booking. */
     alreadyRefundedCents?: number;
     sourceType?: Extract<WalletSourceType, "refund" | "cancel_rebook">;
+    stripeChargeId?: string | null;
+    stripeDestinationTransferId?: string | null;
   },
   deps?: ConsultRefundDeps
 ): Promise<ConsultRefundResult> {
@@ -484,7 +500,11 @@ export async function refundConsultSplit(
     return { ...empty, alreadyApplied: true };
   }
 
-  if (cardToStripeCents > 0 && !input.paymentIntentId) {
+  if (
+    cardToStripeCents > 0 &&
+    !input.paymentIntentId &&
+    !input.stripeChargeId
+  ) {
     throw new Error("This card payment has no payment intent to refund");
   }
 
@@ -494,6 +514,7 @@ export async function refundConsultSplit(
   const settled = await refundConsultCardAndCreditShare(
     {
       paymentIntentId: cardToStripeCents > 0 ? input.paymentIntentId : null,
+      stripeChargeId: cardToStripeCents > 0 ? input.stripeChargeId : null,
       cardRefundCents: cardToStripeCents,
       bookingId: input.bookingId,
       refundedCreditCents: split.creditRefundCents,
@@ -505,7 +526,7 @@ export async function refundConsultSplit(
 
   let cardClawbackCents = 0;
   if (cardToWalletCents > 0) {
-    if (!input.paymentIntentId) {
+    if (!input.paymentIntentId && !input.stripeDestinationTransferId) {
       throw new Error("This card payment has no payment intent to recover");
     }
     const clawback =
@@ -517,6 +538,7 @@ export async function refundConsultSplit(
       bookingId: input.bookingId,
       cardPaidCents: input.cardPaidCents,
       cardRefundCents: cardToWalletCents,
+      destinationTransferId: input.stripeDestinationTransferId,
       idempotencyKey: consultCardClawbackIdempotencyKey(
         input.bookingId,
         cardToWalletCents,
@@ -561,6 +583,8 @@ export async function refundClinicCancellation(
     patient_id: string;
     currency: string;
     stripe_payment_intent_id?: string | null;
+    stripe_charge_id?: string | null;
+    stripe_destination_transfer_id?: string | null;
     payment_mode?: string | null;
     deposit_amount_cents?: number | null;
     total_amount_cents?: number | null;
@@ -601,6 +625,8 @@ export async function refundClinicCancellation(
       currency: booking.currency,
       destination: "bank",
       paymentIntentId: booking.stripe_payment_intent_id || null,
+      stripeChargeId: booking.stripe_charge_id,
+      stripeDestinationTransferId: booking.stripe_destination_transfer_id,
       cardPaidCents: remaining.cardPaidCents,
       creditPaidCents: remaining.creditPaidCents,
       refundPercent: 100,
@@ -623,6 +649,8 @@ export async function refundAdminBookingPayment(
     patient_id: string;
     currency: string;
     stripe_payment_intent_id?: string | null;
+    stripe_charge_id?: string | null;
+    stripe_destination_transfer_id?: string | null;
     payment_mode?: string | null;
     deposit_amount_cents?: number | null;
     total_amount_cents?: number | null;
@@ -664,6 +692,8 @@ export async function refundAdminBookingPayment(
         currency: booking.currency,
         destination: "bank",
         paymentIntentId: booking.stripe_payment_intent_id || null,
+        stripeChargeId: booking.stripe_charge_id,
+        stripeDestinationTransferId: booking.stripe_destination_transfer_id,
         // Split against remaining unsettled parts so prior wallet clawbacks
         // are not Stripe-refunded again.
         cardPaidCents: remaining.cardPaidCents,

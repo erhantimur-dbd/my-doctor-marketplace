@@ -24,6 +24,7 @@ import {
 } from "@/lib/booking/booking-number";
 import { reschedulePaymentEmail } from "@/lib/email/templates";
 import { log } from "@/lib/utils/logger";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 import { z } from "zod/v4";
 
 // ─── Validators ──────────────────────────────────────────────
@@ -99,7 +100,7 @@ export async function adminCancelBooking(formData: FormData) {
     .select(`
       *,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone),
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         cancellation_policy,
         cancellation_hours,
         stripe_account_id,
@@ -184,7 +185,7 @@ export async function adminRescheduleBooking(formData: FormData) {
     .select(`
       *,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, phone),
-      doctor:doctors!inner(
+      doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id, consultation_fee_cents, stripe_account_id,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
       )
@@ -246,6 +247,8 @@ export async function adminRescheduleBooking(formData: FormData) {
             currency: booking.currency,
             destination: "bank",
             paymentIntentId: booking.stripe_payment_intent_id || null,
+            stripeChargeId: booking.stripe_charge_id,
+            stripeDestinationTransferId: booking.stripe_destination_transfer_id,
             cardPaidCents: remaining.cardPaidCents,
             creditPaidCents: remaining.creditPaidCents,
             refundAmountCents: Math.min(refundCents, remaining.remainingPaidCents),

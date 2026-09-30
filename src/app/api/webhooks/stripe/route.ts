@@ -31,6 +31,10 @@ import { bookingConfirmationSms as bookingConfirmationSmsTemplate } from "@/lib/
 import { creditWallet } from "@/lib/wallet";
 import { settlePartCreditAfterCardPayment } from "@/lib/stripe/wallet-credit-share";
 import { applyTreatmentPlanCheckoutPayment } from "@/lib/treatment-plan/complete-checkout";
+import {
+  paymentIntentIdFromStripe,
+  persistBookingDestinationChargeIds,
+} from "@/lib/stripe/destination-charge";
 import { createNotification } from "@/lib/notifications";
 import { earnPoints } from "@/lib/points";
 import Stripe from "stripe";
@@ -208,15 +212,24 @@ export async function POST(request: NextRequest) {
 
         // 2. Confirm first booking
         if (firstBookingId) {
+          const followUpPaymentIntentId = paymentIntentIdFromStripe(
+            session.payment_intent
+          );
           await supabase
             .from("bookings")
             .update({
               status: "confirmed",
-              stripe_payment_intent_id: session.payment_intent as string,
+              stripe_payment_intent_id: followUpPaymentIntentId,
               paid_at: new Date().toISOString(),
             })
             .eq("id", firstBookingId)
             .eq("status", "pending_payment");
+
+          await persistBookingDestinationChargeIds({
+            bookingId: firstBookingId,
+            paymentIntentId: followUpPaymentIntentId,
+            supabase,
+          });
 
           // Fetch full booking for email, video room, calendar export
           const { data: booking } = await supabase
@@ -368,11 +381,14 @@ export async function POST(request: NextRequest) {
         // booking_id branch (per-visit metadata also sets booking_id).
         await applyTreatmentPlanCheckoutPayment(session, supabase);
       } else if (bookingId && session.mode === "payment") {
+        const bookingPaymentIntentId = paymentIntentIdFromStripe(
+          session.payment_intent
+        );
         await supabase
           .from("bookings")
           .update({
             status: "confirmed",
-            stripe_payment_intent_id: session.payment_intent as string,
+            stripe_payment_intent_id: bookingPaymentIntentId,
             paid_at: new Date().toISOString(),
           })
           .eq("id", bookingId)
@@ -482,6 +498,7 @@ export async function POST(request: NextRequest) {
               currency: booking.currency,
               videoRoomUrl: booking.video_room_url,
               dailyRoomName: booking.daily_room_name,
+              paymentIntentId: bookingPaymentIntentId,
               patientFirstName: patient?.first_name ?? null,
               patientLastName: patient?.last_name ?? null,
               clinicName: doctor?.clinic_name ?? null,
@@ -1258,6 +1275,12 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", newBookingId)
         .neq("status", "confirmed");
+
+      await persistBookingDestinationChargeIds({
+        bookingId: newBookingId,
+        paymentIntentId: paymentIntent.id,
+        supabase,
+      });
 
       // 2. Cancel the original booking (superseded by the rescheduled one)
       await supabase

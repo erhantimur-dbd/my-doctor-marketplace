@@ -18,6 +18,7 @@ import {
 } from "@/lib/email/softsmoke-templates";
 import { sendSoftsmokeDoctorDiaryChange } from "@/lib/email/softsmoke-send";
 import { log } from "@/lib/utils/logger";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 
 // ── Patient requests a reschedule ───────────────────────────────────
 
@@ -39,7 +40,7 @@ export async function requestReschedule(input: RequestRescheduleInput) {
     .from("bookings")
     .select(
       `id, patient_id, doctor_id, appointment_date, start_time, end_time, status,
-       doctor:doctors!inner(
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
          profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
        )`
     )

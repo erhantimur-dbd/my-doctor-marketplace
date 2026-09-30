@@ -22,6 +22,7 @@ import { getCommissionCents } from "@/lib/utils/currency";
 import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { computeCancellationRefundPercent } from "@/lib/booking/cancellation-refund";
+import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
 import { sendEmail } from "@/lib/email/client";
 import {
   adminBookingPaymentLinkEmail,
@@ -1061,7 +1062,7 @@ export async function exportBookingsCSV() {
       `booking_number, appointment_date, start_time, status, consultation_type,
        total_amount_cents, platform_fee_cents, currency,
        patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
-       doctor:doctors!inner(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(profile:profiles!doctors_profile_id_fkey(first_name, last_name))`
     )
     .order("appointment_date", { ascending: false })
     .limit(5000);
@@ -1969,7 +1970,7 @@ export async function adminResendPaymentLink(bookingId: string) {
        total_amount_cents, consultation_fee_cents, platform_fee_cents,
        currency, service_name,
        patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
-       doctor:doctors!inner(
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
          stripe_account_id, base_currency,
          profile:profiles!doctors_profile_id_fkey(first_name, last_name)
        )`
@@ -2131,7 +2132,7 @@ export async function adminCancelBooking(
        patient:profiles!bookings_patient_id_fkey(
          first_name, last_name, email, phone, notification_whatsapp, preferred_locale
        ),
-       doctor:doctors!inner(
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
          id, slug, cancellation_policy, cancellation_hours, stripe_account_id,
          profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
        )`
@@ -2206,6 +2207,8 @@ export async function adminCancelBooking(
         currency: booking.currency,
         destination: "bank",
         paymentIntentId: booking.stripe_payment_intent_id,
+        stripeChargeId: booking.stripe_charge_id,
+        stripeDestinationTransferId: booking.stripe_destination_transfer_id,
         cardPaidCents: paidParts.cardPaidCents,
         creditPaidCents: paidParts.creditPaidCents,
         refundPercent,
@@ -2377,7 +2380,7 @@ export async function adminGetCancelPreview(bookingId: string) {
     .select(
       `id, status, appointment_date, start_time, total_amount_cents, currency,
        created_by_admin_id, stripe_checkout_session_id,
-       doctor:doctors!inner(cancellation_policy, cancellation_hours)`
+       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(cancellation_policy, cancellation_hours)`
     )
     .eq("id", bookingId)
     .single();

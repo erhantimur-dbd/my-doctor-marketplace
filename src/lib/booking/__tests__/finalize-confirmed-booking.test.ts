@@ -7,6 +7,7 @@ import {
   confirmBookingWithoutStripeCheckout,
   dailyRoomExpiresAtUnix,
   dailyRoomNameForBooking,
+  finalizeConfirmedBooking,
   finalizeConfirmedBookingById,
 } from "@/lib/booking/finalize-confirmed-booking";
 
@@ -394,6 +395,61 @@ describe("charge-skip confirm", () => {
     const ops = clientRef.current?.ops ?? [];
     expect(roomUpdates(ops)).toHaveLength(0);
     expect(notificationInserts(ops)).toHaveLength(1);
+    expect(
+      ops.some(
+        (op) =>
+          op.payload &&
+          typeof op.payload === "object" &&
+          "stripe_charge_id" in op.payload
+      )
+    ).toBe(false);
+  });
+
+  it("stores the charge and destination transfer when a payment intent is confirmed", async () => {
+    const retrieve = vi.fn().mockResolvedValue({
+      latest_charge: {
+        id: "ch_3ULNGRPhJvj3ftQe0DwVQ9cq",
+        transfer: { id: "tr_3ULNGRPhJvj3ftQe024gvyCO" },
+      },
+    });
+
+    await finalizeConfirmedBooking(
+      {
+        id: BOOKING_ID,
+        bookingNumber: "BK-20260925-A856",
+        patientId: "patient-darren",
+        doctorId: DOCTOR_ID,
+        appointmentDate: "2026-09-26",
+        startTime: "10:00:00",
+        endTime: "10:30:00",
+        consultationType: "in_person",
+        totalAmountCents: 9900,
+        currency: "gbp",
+        patientFirstName: "Darren",
+        patientLastName: "Been",
+        notifyDoctor: false,
+        paymentIntentId: "pi_test",
+      },
+      {
+        stripe: { paymentIntents: { retrieve } },
+      }
+    );
+
+    expect(retrieve).toHaveBeenCalledWith("pi_test", {
+      expand: ["latest_charge", "latest_charge.transfer"],
+    });
+    const chargeUpdate = (clientRef.current?.ops ?? []).find(
+      (op) =>
+        op.table === "bookings" &&
+        op.action === "update" &&
+        op.payload &&
+        typeof op.payload === "object" &&
+        "stripe_charge_id" in op.payload
+    );
+    expect(chargeUpdate?.payload).toEqual({
+      stripe_charge_id: "ch_3ULNGRPhJvj3ftQe0DwVQ9cq",
+      stripe_destination_transfer_id: "tr_3ULNGRPhJvj3ftQe024gvyCO",
+    });
   });
 
   it("reuses an existing Daily room and does not insert a second notification", async () => {
