@@ -77,7 +77,7 @@ describe("Soft Launch public claims", () => {
     expect(foundingBlock).not.toMatch(/£0|no card|lifetime free|Founding Free/i);
     expect(pricingToggle).toMatch(/£99 per month for the first 100 doctors/);
     expect(pricingToggle).toMatch(/cancel anytime/i);
-    expect(comingSoon).toMatch(/£99 per month for the first 100 doctors/);
+    expect(comingSoon).toMatch(/£99 a month for our first 100 doctors/);
     expect(pricingToggle).not.toMatch(/Founding Free|£0|no card|lifetime free/i);
     expect(comingSoon).not.toMatch(/Founding Free|£0|no card|lifetime free/i);
     expect(features).not.toMatch(/free forever/i);
