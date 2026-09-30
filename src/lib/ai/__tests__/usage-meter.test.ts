@@ -303,7 +303,7 @@ describe("metered xAI fetch", () => {
 });
 
 describe("call sites", () => {
-  it("wraps OpenAI and xAI calls, keeps launch flags off, and does not schedule review summaries", () => {
+  it("wraps OpenAI and xAI calls, keeps launch flags off, and meters the scheduled review-summary cron", () => {
     const meter = read("src/lib/ai/usage-meter.ts");
     const ai = read("src/actions/ai.ts");
     const reviews = read("src/lib/ai/review-summarizer.ts");
@@ -312,6 +312,9 @@ describe("call sites", () => {
     const tts = read("src/app/api/voice/tts/route.ts");
     const launch = read("src/lib/launch/soft-launch.ts");
     const vercel = read("vercel.json");
+    const reviewCron = read(
+      "src/app/api/cron/generate-review-summaries/route.ts"
+    );
 
     expect(meter).toContain("export const AI_SDK_MAX_RETRIES = 0");
     expect(meter).toContain("maxRetries: AI_SDK_MAX_RETRIES");
@@ -348,7 +351,16 @@ describe("call sites", () => {
     expect(launch).toContain(
       "export function isSymptomAnalysisEnabled(): boolean {\n  return false;\n}"
     );
-    expect(vercel).not.toContain("generate-review-summaries");
+
+    const crons = JSON.parse(vercel) as {
+      crons: { path: string; schedule: string }[];
+    };
+    expect(crons.crons).toContainEqual({
+      path: "/api/cron/generate-review-summaries",
+      schedule: "0 6 * * *",
+    });
+    expect(reviewCron).toContain("if (!isAIEnabled())");
+    expect(reviewCron).toContain("generateReviewSummary");
   });
 });
 
