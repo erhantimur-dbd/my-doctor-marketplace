@@ -17,6 +17,7 @@ export type ActiveLicenseStatus = (typeof ACTIVE_LICENSE_STATUSES)[number];
 export const TIER_RANK: Record<string, number> = {
   free: 0,
   starter: 1,
+  founding: 2,
   professional: 2,
   clinic: 3,
   enterprise: 4,

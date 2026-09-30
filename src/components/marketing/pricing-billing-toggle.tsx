@@ -37,6 +37,7 @@ import { cn } from "@/lib/utils";
 function getTierIcon(tierId: string): LucideIcon {
   switch (tierId) {
     case "free":
+    case "founding":
       return Stethoscope;
     case "starter":
       return Zap;
@@ -90,17 +91,18 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
   const discount = annualDiscountPercent();
 
   const displayTiers = useMemo(() => {
-    const free = LICENSE_TIERS.find((t) => t.isFreeTier);
-    const paid = LICENSE_TIERS.filter((t) => !t.isFreeTier);
-    return free ? [free, ...paid] : paid;
+    const publicTiers = LICENSE_TIERS.filter((t) => !t.legacyGrantOnly);
+    const founding = publicTiers.find((t) => t.id === "founding");
+    const rest = publicTiers.filter((t) => t.id !== "founding");
+    return founding ? [founding, ...rest] : rest;
   }, []);
 
   function registerHref(tier: LicenseTierConfig) {
     const params = new URLSearchParams({ tier: tier.id });
-    if (tier.isFreeTier) {
+    if (tier.id === "founding") {
       params.set("founding", "1");
-    }
-    if (!tier.isFreeTier && !tier.isCustomPricing) {
+      params.set("billing", "monthly");
+    } else if (!tier.isCustomPricing) {
       params.set("billing", period);
     }
     return `/register-doctor?${params.toString()}`;
@@ -131,7 +133,7 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
 
   /**
    * Fixed 3-line price stack for every card:
-   *   1. Amount (or Custom / £0)
+   *   1. Amount (or Custom)
    *   2. Unit line (always present, same height)
    *   3. Billing detail (always present, same height)
    * Prevents wrap of "/ user / mo" under the figure in narrow 5-col layout.
@@ -145,11 +147,10 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
       amount = "Custom";
       unit = "per org";
       detail = "Contact us for a quote";
-    } else if (tier.isFreeTier) {
-      // Same formatter + 3-line skeleton as paid so £0 shares the amount baseline
-      amount = formatPriceForLocale(0, locale);
+    } else if (tier.monthlyOnly) {
+      amount = formatPriceForLocale(tier.priceMonthlyPence, locale);
       unit = "per mo";
-      detail = "£0 — no card required";
+      detail = "Monthly · cancel anytime";
     } else if (period === "annual") {
       const list = tier.priceMonthlyPence;
       const yearly = annualTotalPence(list);
@@ -174,7 +175,7 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
 
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-0.5">
-        {/* Line 1 — fixed height so Free £0 and paid amounts share one baseline */}
+        {/* Line 1 — fixed height so every amount shares one baseline */}
         <p className="flex h-9 w-full items-end justify-center text-center text-3xl font-bold leading-none tracking-tight tabular-nums xl:text-[1.75rem]">
           {amount}
         </p>
@@ -244,7 +245,7 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
           const tierColor = getTierColor(tier.id);
           const isPopular = tier.popular;
           const isEnterprise = tier.isCustomPricing;
-          const isFree = !!tier.isFreeTier;
+          const isFounding = tier.id === "founding";
 
           return (
             <Card
@@ -252,8 +253,8 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
               className={cn(
                 "relative flex flex-col overflow-hidden border",
                 isPopular && "border-foreground/20 shadow-lg",
-                isFree && "border-emerald-400/90 shadow-sm",
-                !isPopular && !isFree && "border-border"
+                isFounding && "border-emerald-400/90 shadow-sm",
+                !isPopular && !isFounding && "border-border"
               )}
             >
               {isPopular && (
@@ -263,10 +264,10 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                   </Badge>
                 </div>
               )}
-              {isFree && (
+              {isFounding && (
                 <div className="absolute -top-0 left-1/2 z-10 -translate-x-1/2 translate-y-2">
                   <Badge className="bg-emerald-600 text-white shadow-md hover:bg-emerald-600">
-                    Start here
+                    First 100
                   </Badge>
                 </div>
               )}
@@ -303,13 +304,13 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                       Custom seats &amp; SLA
                     </p>
                   </>
-                ) : isFree ? (
+                ) : isFounding ? (
                   <>
                     <p className="text-xs leading-snug text-muted-foreground">
-                      Lifetime Professional equivalent
+                      Price stays £99 while you keep it
                     </p>
                     <p className="text-xs leading-snug text-muted-foreground">
-                      Value £299/mo · 1 doctor
+                      Solo Professional features · 1 doctor
                     </p>
                   </>
                 ) : (
@@ -396,11 +397,11 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
                 ) : (
                   <Button
                     className="h-auto min-h-10 w-full rounded-full px-3 text-sm"
-                    variant={isPopular || isFree ? "default" : "outline"}
+                    variant={isPopular || isFounding ? "default" : "outline"}
                     asChild
                   >
                     <Link href={registerHref(tier)}>
-                      {isFree ? "Start free" : "Get Started"}
+                      {isFounding ? "Claim founding spot" : "Get Started"}
                     </Link>
                   </Button>
                 )}
@@ -417,11 +418,12 @@ export function PricingBillingToggle({ locale }: PricingBillingToggleProps) {
         Professional = 1 doctor · Clinic = 3 included (to 15).
       </p>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Founding Free is a lifetime Solo Professional equivalent (value
-        £299/mo, Founding Free £0). Bookings, video, payments, analytics, CRM
-        and waitlist are included. Multi-doctor seats, multi-location, team
-        tools and included medical testing are Clinic+. Custom branding &amp;
-        API are Enterprise. SMS and WhatsApp reminders are coming soon — not available
+        The founding plan is £99 per month for the first 100 doctors. It is
+        monthly and you can cancel anytime. The price stays £99 for as long as
+        you keep the plan. If you cancel, you lose this price. It includes
+        Solo Professional features: bookings, video, payments, analytics, CRM
+        and waitlist. Starter stays £199, Professional £299, Clinic £897.
+        SMS and WhatsApp reminders are coming soon — not available
         at Soft Launch.
       </p>
     </div>

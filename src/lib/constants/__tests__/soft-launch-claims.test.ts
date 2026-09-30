@@ -63,21 +63,28 @@ describe("Soft Launch public claims", () => {
     }
   });
 
-  it("Founding Free copy is £0 — no card required (not Free forever)", () => {
+  it("founding offer copy is £99 per month, not a free lifetime plan", () => {
     const features = read("src/lib/constants/package-features.ts");
     const pricingToggle = read(
       "src/components/marketing/pricing-billing-toggle.tsx"
     );
     const comingSoon = read("public/coming-soon/index.html");
-    expect(features).toMatch(/£0 — no card required/);
-    expect(pricingToggle).toMatch(/£0 — no card required/);
-    expect(comingSoon).toMatch(/£0 — no card required|no card required/i);
+    const foundingBlock = features.slice(
+      features.indexOf("founding:"),
+      features.indexOf("free:")
+    );
+    expect(foundingBlock).toMatch(/£99 per month/);
+    expect(foundingBlock).not.toMatch(/£0|no card|lifetime free|Founding Free/i);
+    expect(pricingToggle).toMatch(/£99 per month for the first 100 doctors/);
+    expect(pricingToggle).toMatch(/cancel anytime/i);
+    expect(comingSoon).toMatch(/£99 per month for the first 100 doctors/);
+    expect(pricingToggle).not.toMatch(/Founding Free|£0|no card|lifetime free/i);
+    expect(comingSoon).not.toMatch(/Founding Free|£0|no card|lifetime free/i);
     expect(features).not.toMatch(/free forever/i);
     expect(pricingToggle).not.toMatch(/free forever/i);
   });
 
-  it("Founding Free surfaces lifetime Professional equivalent · value £299/mo · £0", () => {
-    const features = read("src/lib/constants/package-features.ts");
+  it("public founding surfaces name £99, the first 100, and price lock", () => {
     const pricing = read("src/app/[locale]/(public)/pricing/page.tsx");
     const register = read(
       "src/app/[locale]/(public)/register-doctor/page.tsx"
@@ -86,14 +93,14 @@ describe("Soft Launch public claims", () => {
       "src/components/marketing/pricing-billing-toggle.tsx"
     );
     for (const [rel, text] of [
-      ["package-features", features],
       ["pricing", pricing],
       ["register-doctor", register],
       ["pricing-toggle", toggle],
     ] as const) {
-      expect(text, rel).toMatch(/lifetime Solo Professional equivalent/i);
-      expect(text, rel).toMatch(/£299/);
-      expect(text, rel).toMatch(/£0/);
+      expect(text, rel).toMatch(/£99/);
+      expect(text, rel).toMatch(/first 100/i);
+      expect(text, rel).toMatch(/cancel anytime/i);
+      expect(text, rel).not.toMatch(/Founding Free|£0|no card|lifetime free/i);
       expect(text, rel).not.toMatch(/care marketplace/i);
     }
   });
@@ -107,16 +114,15 @@ describe("Soft Launch public claims", () => {
       "src/app/[locale]/(public)/register-doctor/page.tsx"
     );
 
-    expect(company).toMatch(/FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE/);
+    expect(company).toMatch(/FOUNDING_OFFER_VALUE_LINE/);
     expect(company).toMatch(/FOUNDING_FREE_LICENSE_TITLE/);
-    expect(company).toMatch(/lifetime Founding Free/);
-    expect(company).toMatch(/Lifetime Founding Free/);
+    expect(company).toMatch(/£99 per month/);
     expect(company).toMatch(/Solo Professional features/);
-    expect(company).toMatch(/£299\/mo/);
-    expect(company).toMatch(/Founding Free £0, no card/);
+    expect(company).toMatch(/first 100 doctors/);
+    expect(company).toMatch(/cancel anytime/i);
     expect(company).not.toMatch(/free forever/i);
 
-    expect(heading).toMatch(/FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE/);
+    expect(heading).toMatch(/FOUNDING_OFFER_VALUE_LINE/);
     expect(heading).toMatch(/Join the Founding Doctor Programme/);
     expect(heading).toMatch(/Thanks/);
     expect(heading).not.toMatch(/free forever/i);
@@ -131,7 +137,7 @@ describe("Soft Launch public claims", () => {
     const pricing = read("src/app/[locale]/(public)/pricing/page.tsx");
     expect(pricing).toMatch(/Patient records and booking history/);
     expect(pricing).toMatch(/Join the Founding Doctor Programme/);
-    expect(pricing).toMatch(/register-doctor\?tier=free&founding=1/);
+    expect(pricing).toMatch(/register-doctor\?tier=founding&founding=1/);
     expect(pricing).toMatch(/Reach patients looking for your specialty/);
     expect(pricing).not.toMatch(/treatment tags/i);
   });
@@ -158,7 +164,7 @@ describe("Soft Launch public claims", () => {
 
     const register = read("src/app/[locale]/(auth)/register/page.tsx");
     expect(register).toMatch(/Patient registration opens at launch/);
-    expect(register).toMatch(/FOUNDING_REGISTER_HREF|register-doctor\?tier=free/);
+    expect(register).toMatch(/FOUNDING_REGISTER_HREF|register-doctor\?tier=founding/);
     expect(register).not.toMatch(/AuthPage/);
   });
 

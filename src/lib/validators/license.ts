@@ -1,7 +1,14 @@
 import { z } from "zod/v4";
 
 export const createLicenseCheckoutSchema = z.object({
-  tier: z.enum(["free", "starter", "professional", "clinic", "enterprise"]),
+  tier: z.enum([
+    "free",
+    "founding",
+    "starter",
+    "professional",
+    "clinic",
+    "enterprise",
+  ]),
   billing_period: z.enum(["monthly", "annual"]).default("monthly"),
   seat_count: z.number().int().min(1).max(15).optional(),
   coupon_code: z.string().max(50).optional(),
@@ -21,13 +28,21 @@ export const toggleModuleSchema = z.object({
 });
 
 export const upgradeTierSchema = z.object({
-  new_tier: z.enum(["free", "starter", "professional", "clinic", "enterprise"]),
+  new_tier: z.enum([
+    "free",
+    "founding",
+    "starter",
+    "professional",
+    "clinic",
+    "enterprise",
+  ]),
 });
 
 /** Self-service plan change: upgrade now or schedule downgrade/cancel at period end */
 export const schedulePlanChangeSchema = z.object({
   target_tier: z.enum([
     "free",
+    "founding",
     "starter",
     "professional",
     "clinic",

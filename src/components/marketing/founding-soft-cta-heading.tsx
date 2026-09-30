@@ -1,4 +1,4 @@
-import { FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE } from "@/lib/constants/company";
+import { FOUNDING_OFFER_VALUE_LINE } from "@/lib/constants/company";
 
 /**
  * Soft Launch Soft CTA chrome for register-doctor.
@@ -13,7 +13,7 @@ export function FoundingSoftCtaHeading({
     <div className="text-center">
       <h1 className="text-2xl font-bold">{title}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        {FOUNDING_FREE_SOFT_LAUNCH_VALUE_LINE}
+        {FOUNDING_OFFER_VALUE_LINE}
       </p>
     </div>
   );

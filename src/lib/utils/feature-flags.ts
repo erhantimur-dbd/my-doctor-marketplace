@@ -1,11 +1,10 @@
 /**
  * Feature flags — tier-based gating for organizations.
  *
- * Soft Launch product lock: Founding Free (`tier=free`) is a lifetime
- * Solo Professional perk (thank-you for helping launch). Stored billing
- * identity stays `free` (£0, no Stripe). Capability checks use
- * `getEntitlementTier`, which maps an explicit `free` licence to
- * `professional`. Missing / unknown licences still deny paid features.
+ * Entitlements: an explicit `free` licence is a grandfathered £0
+ * Professional seat and is not issued to new signups. The current founding
+ * offer is `tier=founding` (£99/month) and maps to the same Professional
+ * capabilities. Missing / unknown licences still deny paid features.
  *
  * Soft Launch #18 clinical kill-switch stays fail-closed regardless of
  * these flags (prescriptions, care plans, public chat).
@@ -16,6 +15,7 @@
 
 export type LicenseTier =
   | "free"
+  | "founding"
   | "starter"
   | "professional"
   | "clinic"
@@ -44,7 +44,7 @@ export type FeatureKey =
   | "ai_sentiment_tags"
   | "stripe_connect";
 
-/** Solo Professional is the entitlement source for Founding Free. */
+/** Solo Professional capabilities for grandfathered free and the £99 founding plan. */
 export const FOUNDING_FREE_ENTITLEMENT_TIER: LicenseTier = "professional";
 
 /** Soft Launch claim value for the Founding Free lifetime perk. */
@@ -52,8 +52,8 @@ export const FOUNDING_FREE_CLAIM_VALUE_PENCE = 29900;
 
 /**
  * Feature matrix — which entitlement tiers unlock which features.
- * Founding Free maps onto Professional via getEntitlementTier — do not
- * list `free` here (billing identity ≠ entitlement tier).
+ * `free` and `founding` map onto Professional via getEntitlementTier.
+ * Do not list them here (billing identity ≠ entitlement tier).
  */
 const FEATURE_MATRIX: Record<FeatureKey, LicenseTier[]> = {
   // Starter+ (core paid marketplace)
@@ -100,7 +100,8 @@ export function normalizeLicenseTier(
     tier === "professional" ||
     tier === "clinic" ||
     tier === "enterprise" ||
-    tier === "free"
+    tier === "free" ||
+    tier === "founding"
   ) {
     return tier;
   }
@@ -109,13 +110,15 @@ export function normalizeLicenseTier(
 
 /**
  * Map a stored licence tier to the feature-entitlement tier.
- * Explicit Founding Free (`"free"`) inherits Solo Professional for life.
+ * Grandfathered `free` and the £99 `founding` plan inherit Solo Professional.
  * Null / unknown stay on the empty gateway (no paid features).
  */
 export function getEntitlementTier(
   tier: string | null | undefined
 ): LicenseTier {
-  if (tier === "free") return FOUNDING_FREE_ENTITLEMENT_TIER;
+  if (tier === "free" || tier === "founding") {
+    return FOUNDING_FREE_ENTITLEMENT_TIER;
+  }
   return normalizeLicenseTier(tier);
 }
 
@@ -136,7 +139,7 @@ export function hasFeature(
   return allowed.includes(entitlement);
 }
 
-/** True when org is on the Founding Free billing plan (£0) or has no paid tier. */
+/** True for a grandfathered £0 licence or a missing tier. The £99 founding plan is paid. */
 export function isFreeLicenseTier(tier: string | null | undefined): boolean {
   return normalizeLicenseTier(tier) === "free";
 }

@@ -177,7 +177,7 @@ export default function ContactPage() {
               className="rounded-full"
               asChild
             >
-              <Link href="/register-doctor?tier=free&founding=1">
+              <Link href="/register-doctor?tier=founding&founding=1">
                 Join the Founding Doctor Programme{" "}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>

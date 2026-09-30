@@ -84,9 +84,9 @@ describe("founding + signup go-live contracts", () => {
     expect(auth).toContain("7-digit GMC");
     expect(auth).toContain("Please select the country where you practise");
     expect(auth).toContain("Please enter your practice city");
-    expect(auth).toContain("claimFoundingMembership");
+    expect(auth).toContain("claimFoundingOfferForCheckout");
     expect(auth).toContain("terms_accepted_at");
-    expect(auth).toContain("foundingFreeLicenseMetadata");
+    expect(auth).not.toContain("foundingFreeLicenseMetadata");
   });
 
   it("register wizard requires city, country, and GB GMC on step 3", () => {

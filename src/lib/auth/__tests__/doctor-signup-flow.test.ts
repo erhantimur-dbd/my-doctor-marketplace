@@ -58,8 +58,9 @@ describe("doctor signup flow contracts", () => {
     expect(auth).toMatch(/export async function registerDoctor\b/);
     expect(auth).toMatch(/export async function registerDoctorWithCheckout\b/);
     expect(auth).toMatch(/supabase\.auth\.signUp/);
-    // Free license insert
-    expect(auth).toMatch(/tier:\s*"free"/);
+    // New signups do not insert a £0 founding licence.
+    expect(auth).not.toMatch(/tier:\s*"free"/);
+    expect(auth).toMatch(/claimFoundingOfferForCheckout/);
     // Paid path creates Stripe Checkout subscription with tier metadata
     expect(auth).toMatch(/mode:\s*"subscription"/);
     expect(auth).toMatch(/checkoutUrl/);

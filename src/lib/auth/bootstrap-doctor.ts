@@ -1,6 +1,8 @@
 /**
- * Create a minimal doctor + org + free license shell for OAuth doctor signup.
- * Does not replace the full wizard — profile completion still required.
+ * Create a minimal doctor + org shell for OAuth doctor signup.
+ * Does not grant a licence. The £99 founding plan is only issued after a
+ * successful founding-spot claim on checkout. Does not replace the full
+ * wizard — profile completion still required.
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,8 +13,8 @@ export type BootstrapDoctorResult =
   | { ok: false; error: string };
 
 /**
- * Ensure the user has profile role=doctor, a doctors row, org, and free license.
- * Idempotent if doctor already exists.
+ * Ensure the user has profile role=doctor, a doctors row, and an org.
+ * Idempotent if doctor already exists. No licence and no founding-spot claim.
  */
 export async function bootstrapDoctorShell(params: {
   userId: string;
@@ -136,29 +138,9 @@ export async function bootstrapDoctorShell(params: {
           .from("doctors")
           .update({ organization_id: newOrg.id })
           .eq("id", newDoctor.id);
-
-        await admin.from("licenses").insert({
-          organization_id: newOrg.id,
-          tier: "free",
-          status: "active",
-          max_seats: 1,
-          used_seats: 1,
-          current_period_start: new Date().toISOString(),
-          current_period_end: "2099-12-31T23:59:59.000Z",
-        });
       }
     } catch (orgErr) {
       log.error("OAuth doctor org bootstrap failed", { err: orgErr });
-    }
-
-    // Founding Doctor Programme — same path as email/password signup
-    try {
-      const { claimFoundingMembership } = await import(
-        "@/lib/founding/members"
-      );
-      await claimFoundingMembership(newDoctor.id);
-    } catch (foundingErr) {
-      log.error("OAuth founding claim failed", { err: foundingErr });
     }
 
     return {
