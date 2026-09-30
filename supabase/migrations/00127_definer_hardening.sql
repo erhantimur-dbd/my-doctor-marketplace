@@ -124,8 +124,9 @@ AS $$ SELECT pg_catalog.nextval('public.invoice_number_seq'::regclass); $$;
 -- ---------------------------------------------------------------------------
 -- search_path on every in-repo SECURITY DEFINER function that did not set one.
 -- Availability RPCs keep anon and authenticated EXECUTE.
--- get_available_dates_in_range and the 5-arg get_available_slots overload
--- are not in this repo (they are part of the prod drift import).
+-- The 5-arg get_available_slots overload is prod-only and already pinned.
+-- Positional calls of the 3-arg and 4-arg overloads are ambiguous on prod
+-- (42725) because that 5-arg overload exists. This file does not change that.
 -- nextval_invoice_number grants are in the prod script above; this only pins search_path.
 -- ---------------------------------------------------------------------------
 
@@ -141,99 +142,25 @@ ALTER FUNCTION public.get_clinic_location_doctors(uuid) SET search_path = '';
 ALTER FUNCTION public.update_doctor_rating() SET search_path = '';
 ALTER FUNCTION public.update_ticket_updated_at() SET search_path = '';
 
--- Latest definitions, with public.* on every table reference.
-CREATE OR REPLACE FUNCTION public.get_live_available_doctor_ids(
-  p_specialty_slug TEXT DEFAULT NULL
-)
-RETURNS UUID[]
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-DECLARE
-  v_now TIMESTAMPTZ := NOW();
-  v_result UUID[];
+-- Defined in 20260302163301, which sorts after this file on a fresh database.
+-- Every table reference in that body is schema-qualified; the rest are
+-- pg_catalog (now, extract, generate_series, count). Empty search_path is safe.
+-- No-op until the function exists.
+DO $guard$
 BEGIN
-  WITH doctor_tz AS (
-    SELECT d.id AS did,
-           COALESCE(l.timezone, 'Europe/London') AS tz
-    FROM   public.doctors d
-    LEFT JOIN public.locations l ON l.id = d.location_id
-    WHERE  d.verification_status = 'verified'
-      AND  d.is_active = TRUE
-  ),
-  matching_schedules AS (
-    SELECT dt.did,
-           dt.tz,
-           avs.start_time AS sched_start,
-           avs.end_time AS sched_end,
-           avs.slot_duration_minutes,
-           (v_now AT TIME ZONE dt.tz)::DATE AS local_today
-    FROM   doctor_tz dt
-    JOIN   public.availability_schedules avs ON avs.doctor_id = dt.did
-    WHERE  avs.is_active = TRUE
-      AND  avs.day_of_week = EXTRACT(ISODOW FROM (v_now AT TIME ZONE dt.tz))::INT
-      AND  avs.start_time < (v_now AT TIME ZONE dt.tz)::TIME + INTERVAL '1 hour'
-      AND  avs.end_time   > (v_now AT TIME ZONE dt.tz)::TIME
-      AND  NOT EXISTS (
-        SELECT 1 FROM public.availability_overrides ao
-        WHERE ao.doctor_id = dt.did
-          AND ao.override_date = (v_now AT TIME ZONE dt.tz)::DATE
-          AND ao.is_available = FALSE
-      )
-  ),
-  slots AS (
-    SELECT ms.did,
-           (ms.local_today + ms.sched_start
-            + (n * (ms.slot_duration_minutes || ' minutes')::INTERVAL))
-            AT TIME ZONE ms.tz AS slot_start,
-           (ms.local_today + ms.sched_start
-            + ((n + 1) * (ms.slot_duration_minutes || ' minutes')::INTERVAL))
-            AT TIME ZONE ms.tz AS slot_end
-    FROM   matching_schedules ms
-    CROSS JOIN LATERAL generate_series(
-      0,
-      GREATEST(
-        (EXTRACT(EPOCH FROM ms.sched_end - ms.sched_start)
-          / NULLIF(ms.slot_duration_minutes, 0) / 60)::INT - 1,
-        0
-      )
-    ) AS n
-  ),
-  available_slots AS (
-    SELECT s.did
-    FROM   slots s
-    WHERE  s.slot_start > v_now
-      AND  s.slot_start < v_now + INTERVAL '1 hour'
-      AND  NOT EXISTS (
-        SELECT 1 FROM public.bookings b
-        WHERE b.doctor_id = s.did
-          AND b.status IN ('confirmed', 'pending_approval', 'approved', 'pending_payment')
-          AND b.start_time < s.slot_end
-          AND b.end_time   > s.slot_start
-      )
-  ),
-  available_doctors AS (
-    SELECT DISTINCT asl.did
-    FROM available_slots asl
-    WHERE p_specialty_slug IS NULL
-       OR EXISTS (
-         SELECT 1
-         FROM public.doctor_specialties ds
-         JOIN public.specialties sp ON sp.id = ds.specialty_id
-         WHERE ds.doctor_id = asl.did
-           AND sp.slug = p_specialty_slug
-       )
-  )
-  SELECT COALESCE(array_agg(did), ARRAY[]::UUID[])
-  INTO v_result
-  FROM available_doctors;
+  IF to_regprocedure('public.get_available_dates_in_range(uuid, date, date, text)') IS NOT NULL THEN
+    EXECUTE 'ALTER FUNCTION public.get_available_dates_in_range(uuid, date, date, text) SET search_path = ''''';
+  END IF;
+END
+$guard$;
 
-  RETURN v_result;
-END;
-$$;
+-- 00101 leaves a 1-arg overload that prod does not have. Creating it makes
+-- get_live_available_doctor_ids() / (NULL::text) / named p_specialty_slug
+-- resolve to more than one function (42725). src callers pass three named
+-- arguments (p_specialty_slug, p_consultation_type, p_window_hours).
+DROP FUNCTION IF EXISTS public.get_live_available_doctor_ids(text);
 
+-- Latest 3-arg definition. Differs from prod only by public. prefixes and search_path.
 CREATE OR REPLACE FUNCTION public.get_live_available_doctor_ids(
   p_specialty_slug TEXT DEFAULT NULL,
   p_consultation_type TEXT DEFAULT NULL,
@@ -340,11 +267,25 @@ BEGIN
 END;
 $$;
 
--- Autocomplete runs as the caller. The tables are public-read reference data,
--- so definer rights are unnecessary. Keep anon and authenticated EXECUTE.
+-- Prod signatures are (text, integer) and are already SECURITY INVOKER.
+-- 00084 only defines (text). 20260404172754_medications_autocomplete_schema
+-- does not redefine these two. Guard so prod alters the integer overload and
+-- a fresh database alters the (text) overload. Keep anon and authenticated EXECUTE.
 -- pg_trgm similarity() lives in public or extensions.
-ALTER FUNCTION public.search_allergies(text) SECURITY INVOKER SET search_path = public, extensions;
-ALTER FUNCTION public.search_chronic_conditions(text) SECURITY INVOKER SET search_path = public, extensions;
+DO $guard$
+BEGIN
+  IF to_regprocedure('public.search_allergies(text, integer)') IS NOT NULL THEN
+    EXECUTE 'ALTER FUNCTION public.search_allergies(text, integer) SECURITY INVOKER SET search_path = public, extensions';
+  ELSIF to_regprocedure('public.search_allergies(text)') IS NOT NULL THEN
+    EXECUTE 'ALTER FUNCTION public.search_allergies(text) SECURITY INVOKER SET search_path = public, extensions';
+  END IF;
+  IF to_regprocedure('public.search_chronic_conditions(text, integer)') IS NOT NULL THEN
+    EXECUTE 'ALTER FUNCTION public.search_chronic_conditions(text, integer) SECURITY INVOKER SET search_path = public, extensions';
+  ELSIF to_regprocedure('public.search_chronic_conditions(text)') IS NOT NULL THEN
+    EXECUTE 'ALTER FUNCTION public.search_chronic_conditions(text) SECURITY INVOKER SET search_path = public, extensions';
+  END IF;
+END
+$guard$;
 
 -- Trigger functions do not consult the caller's EXECUTE privilege.
 -- Revoke anon and PUBLIC. Do not revoke rls_* or get_user_org_ids: policies
@@ -353,7 +294,14 @@ REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.update_doctor_rating() FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.update_ticket_updated_at() FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.generate_booking_number() FROM anon, PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.prevent_doctor_privileged_column_update() FROM anon, PUBLIC;
+-- Reverse drift: 00108_lock_doctor_privileged_columns.sql never ran on prod.
+DO $guard$
+BEGIN
+  IF to_regprocedure('public.prevent_doctor_privileged_column_update()') IS NOT NULL THEN
+    EXECUTE 'REVOKE EXECUTE ON FUNCTION public.prevent_doctor_privileged_column_update() FROM anon, PUBLIC';
+  END IF;
+END
+$guard$;
 
 -- Offset RPCs are service-role only. 00124 granted service_role; PUBLIC does
 -- not remove the anon grant from Supabase default privileges.
@@ -369,5 +317,12 @@ GRANT EXECUTE ON FUNCTION public.apply_reserved_offset_holds(uuid) TO service_ro
 REVOKE EXECUTE ON FUNCTION public.restore_offset_for_refund(uuid, text, int, int) FROM anon, authenticated, PUBLIC;
 GRANT EXECUTE ON FUNCTION public.restore_offset_for_refund(uuid, text, int, int) TO service_role;
 
-REVOKE EXECUTE ON FUNCTION public.increment_coupon_uses(uuid) FROM anon, authenticated, PUBLIC;
-GRANT EXECUTE ON FUNCTION public.increment_coupon_uses(uuid) TO service_role;
+-- Reverse drift: 00030_create_coupons.sql never ran on prod.
+DO $guard$
+BEGIN
+  IF to_regprocedure('public.increment_coupon_uses(uuid)') IS NOT NULL THEN
+    EXECUTE 'REVOKE EXECUTE ON FUNCTION public.increment_coupon_uses(uuid) FROM anon, authenticated, PUBLIC';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.increment_coupon_uses(uuid) TO service_role';
+  END IF;
+END
+$guard$;

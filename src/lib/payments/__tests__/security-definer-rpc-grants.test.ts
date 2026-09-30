@@ -140,7 +140,6 @@ function functionsMissingExecuteRevoke(migrations: MigrationSource[]): string[] 
       .map((item) => item.sql)
       .join("\n");
     for (const name of securityDefinerFunctions(migration.sql)) {
-      if (isDefinerGrantException(name)) continue;
       const roles = (["anon", "authenticated"] as const).filter(
         (role) => !hasExecuteRevoke(laterSql, name, role)
       );
@@ -190,7 +189,9 @@ describe("SECURITY DEFINER functions revoke EXECUTE from anon and authenticated"
     expect(defined).not.toContain("reject_payment_correction_audit_mutation");
     expect(defined).not.toContain("payment_correction_approvals_guard");
 
-    const missing = functionsMissingExecuteRevoke(migrations);
+    const missing = functionsMissingExecuteRevoke(migrations).filter(
+      (name) => !isDefinerGrantException(name)
+    );
     expect(
       missing,
       missing

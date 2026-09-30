@@ -208,10 +208,21 @@ function rolesAfter(statement: string, keyword: "from" | "to"): Set<string> {
   return roles;
 }
 
+/**
+ * Timestamp migrations are already applied on prod, so they are walked before
+ * the numbered files. 00127 then sees get_available_dates_in_range and the
+ * prod nextval_invoice_number. A fresh database runs numbered files first;
+ * to_regprocedure guards no-op when the target is not there yet.
+ */
+function migrationFilenames(): string[] {
+  const files = readdirSync(MIGRATIONS_DIR).filter((filename) => /^\d+_.*\.sql$/.test(filename));
+  const historical = files.filter((filename) => /^20\d{12}_/.test(filename)).sort();
+  const numbered = files.filter((filename) => !/^20\d{12}_/.test(filename)).sort();
+  return [...historical, ...numbered];
+}
+
 function finalDefinerState(): Map<string, FnState> {
-  const files = readdirSync(MIGRATIONS_DIR)
-    .filter((filename) => /^\d+_.*\.sql$/.test(filename))
-    .sort();
+  const files = migrationFilenames();
   const fns = new Map<string, FnState>();
 
   const applyTo = (ref: FnRef, visit: (fn: FnState) => void) => {
@@ -226,10 +237,27 @@ function finalDefinerState(): Map<string, FnState> {
     if (fn) visit(fn);
   };
 
-  for (const filename of files) {
-    const sql = readFileSync(join(MIGRATIONS_DIR, filename), "utf8");
-    for (const statement of statementsOf(sql)) {
+  const processStatement = (statement: string) => {
       const shell = shellOf(statement);
+      if (/^\s*do\b/i.test(shell)) {
+        const branchRe =
+          /(?:IF|ELSIF)\s+to_regprocedure\(\s*'((?:''|[^'])*)'\s*\)\s+IS\s+NOT\s+NULL\s+THEN([\s\S]*?)(?=ELSIF|ELSE|END\s+IF)/gi;
+        let branch: RegExpExecArray | null;
+        while ((branch = branchRe.exec(statement)) !== null) {
+          const ident = branch[1].replace(/''/g, "'");
+          const refMatch = ident.match(/^(?:public\.)?([A-Za-z_][\w$]*)\s*(\(([\s\S]*)\))?$/i);
+          if (!refMatch) continue;
+          const name = refMatch[1].toLowerCase();
+          const signature = refMatch[2] ? signatureFromArgs(refMatch[2]) : "";
+          if (!fns.has(`${name}(${signature})`)) continue;
+          const executeRe = /EXECUTE\s+'((?:''|[^'])*)'/gi;
+          let executed: RegExpExecArray | null;
+          while ((executed = executeRe.exec(branch[2])) !== null) {
+            processStatement(executed[1].replace(/''/g, "'"));
+          }
+        }
+        return;
+      }
       const create = shell.match(
         /\bcreate\s+(?:or\s+replace\s+)?function\s+((?:"[^"]+"|[A-Za-z_][\w$]*)(?:\s*\.\s*(?:"[^"]+"|[A-Za-z_][\w$]*))?)\s*(\((?:[^()]|\([^()]*\))*\))?/i
       );
@@ -238,7 +266,7 @@ function finalDefinerState(): Map<string, FnState> {
         const schema = create[1].includes(".")
           ? create[1].split(".")[0].replace(/"/g, "").toLowerCase()
           : "public";
-        if (schema !== "public") continue;
+        if (schema !== "public") return;
         const signature = signatureFromArgs(create[2]);
         const key = `${name}(${signature})`;
         const previous = fns.get(key);
@@ -252,7 +280,7 @@ function finalDefinerState(): Map<string, FnState> {
           authenticated: previous?.authenticated ?? true,
           publicGrant: previous?.publicGrant ?? true,
         });
-        continue;
+        return;
       }
 
       const drop = shell.match(
@@ -266,7 +294,7 @@ function finalDefinerState(): Map<string, FnState> {
             if (key.startsWith(`${name}(`)) fns.delete(key);
           }
         }
-        continue;
+        return;
       }
 
       const alter = shell.match(
@@ -284,12 +312,12 @@ function finalDefinerState(): Map<string, FnState> {
           if (invoker) fn.securityDefiner = false;
           if (definer) fn.securityDefiner = true;
         });
-        continue;
+        return;
       }
 
       if (/^\s*revoke\b/i.test(shell) && /\b(execute|all)\b/i.test(shell)) {
         const onFn = shell.match(/\bon\s+function\s+([\s\S]*?)\s+from\b/i);
-        if (!onFn) continue;
+        if (!onFn) return;
         const roles = rolesAfter(shell, "from");
         for (const ref of functionRefs(onFn[1])) {
           applyTo(ref, (fn) => {
@@ -298,12 +326,12 @@ function finalDefinerState(): Map<string, FnState> {
             if (roles.has("public")) fn.publicGrant = false;
           });
         }
-        continue;
+        return;
       }
 
       if (/^\s*grant\b/i.test(shell) && /\bexecute\b/i.test(shell)) {
         const onFn = shell.match(/\bon\s+function\s+([\s\S]*?)\s+to\b/i);
-        if (!onFn) continue;
+        if (!onFn) return;
         const roles = rolesAfter(shell, "to");
         for (const ref of functionRefs(onFn[1])) {
           applyTo(ref, (fn) => {
@@ -313,7 +341,11 @@ function finalDefinerState(): Map<string, FnState> {
           });
         }
       }
-    }
+  };
+
+  for (const filename of files) {
+    const sql = readFileSync(join(MIGRATIONS_DIR, filename), "utf8");
+    for (const statement of statementsOf(sql)) processStatement(statement);
   }
 
   return fns;
@@ -344,9 +376,7 @@ describe("public SECURITY DEFINER final state", () => {
     const present = fns.filter((fn) => isAvailabilityGrantException(fn.name)).map((fn) => fn.name);
     expect(present).toEqual(
       expect.arrayContaining([
-        ...DEFINER_GRANT_ALLOWLIST.availability.filter(
-          (name) => name !== "get_available_dates_in_range"
-        ),
+        ...DEFINER_GRANT_ALLOWLIST.availability,
         "get_gp_in_person_availability",
         "get_gp_video_today_slot_count",
       ])
@@ -507,15 +537,54 @@ describe("autocomplete search functions are invokers", () => {
 
   it("sets SECURITY INVOKER, pins search_path, and keeps anon EXECUTE", () => {
     for (const name of ["search_allergies", "search_chronic_conditions"] as const) {
+      expect(sql).toContain(`to_regprocedure('public.${name}(text, integer)') IS NOT NULL`);
+      expect(sql).toContain(
+        `ALTER FUNCTION public.${name}(text, integer) SECURITY INVOKER SET search_path = public, extensions`
+      );
+      expect(sql).not.toContain(`REVOKE EXECUTE ON FUNCTION public.${name}`);
+      const repoOverload = all.find((item) => item.name === name && item.signature === "text");
+      expect(repoOverload, name).toBeTruthy();
+      expect(repoOverload!.securityDefiner, name).toBe(false);
+      expect(repoOverload!.searchPath, name).toBe("public, extensions");
+      expect(anonExecutable(repoOverload!), name).toBe(true);
+      expect(repoOverload!.authenticated, name).toBe(true);
+    }
+  });
+});
+
+describe("prod-missing signatures are guarded", () => {
+  const sql = readFileSync(join(MIGRATIONS_DIR, "00127_definer_hardening.sql"), "utf8");
+  const all = [...finalDefinerState().values()];
+
+  it("drops the repo-only 1-arg live-id overload and pins the 3-arg form", () => {
+    expect(sql).toContain("DROP FUNCTION IF EXISTS public.get_live_available_doctor_ids(text)");
+    expect(sql).not.toContain("p_specialty_slug TEXT DEFAULT NULL\n)");
+    const live = all.filter((fn) => fn.name === "get_live_available_doctor_ids");
+    expect(live.map((fn) => fn.signature)).toEqual(["text,text,int"]);
+    expect(live[0].searchPath).toBe("''");
+    expect(anonExecutable(live[0])).toBe(true);
+  });
+
+  it("pins get_available_dates_in_range only when that signature already exists", () => {
+    expect(sql).toContain(
+      "to_regprocedure('public.get_available_dates_in_range(uuid, date, date, text)') IS NOT NULL"
+    );
+    const fn = all.find((item) => item.name === "get_available_dates_in_range");
+    expect(fn?.searchPath).toBe("''");
+    expect(anonExecutable(fn!)).toBe(true);
+  });
+
+  it("revokes prevent_doctor_privileged_column_update and increment_coupon_uses when present", () => {
+    expect(sql).toContain(
+      "to_regprocedure('public.prevent_doctor_privileged_column_update()') IS NOT NULL"
+    );
+    expect(sql).toContain("to_regprocedure('public.increment_coupon_uses(uuid)') IS NOT NULL");
+    for (const name of ["prevent_doctor_privileged_column_update", "increment_coupon_uses"]) {
       const fn = all.find((item) => item.name === name);
       expect(fn, name).toBeTruthy();
-      expect(fn!.securityDefiner, name).toBe(false);
-      expect(fn!.searchPath, name).toBe("public, extensions");
-      expect(anonExecutable(fn!), name).toBe(true);
-      expect(fn!.authenticated, name).toBe(true);
-      expect(sql).toContain(
-        `ALTER FUNCTION public.${name}(text) SECURITY INVOKER SET search_path = public, extensions;`
-      );
+      expect(anonExecutable(fn!), name).toBe(false);
     }
+    const coupon = all.find((item) => item.name === "increment_coupon_uses");
+    expect(coupon?.authenticated).toBe(false);
   });
 });
