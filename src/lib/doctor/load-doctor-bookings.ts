@@ -3,6 +3,7 @@ import {
   DOCTOR_BOOKINGS_SELECT,
   DOCTOR_RESCHEDULE_SELECT,
   doctorHasBookingsEntitlement,
+  presentDoctorBookingsForClient,
   type DoctorBookingsInitial,
 } from "@/lib/doctor/doctor-bookings-query";
 
@@ -60,7 +61,7 @@ export async function loadDoctorBookingsForSession(): Promise<DoctorBookingsAcce
     status: "subscribed",
     doctorId: doctor.id,
     doctorCurrency: doctor.base_currency || "EUR",
-    bookings: bookings || [],
+    bookings: presentDoctorBookingsForClient(bookings || []),
     reschedules: reschedules || [],
   };
 }

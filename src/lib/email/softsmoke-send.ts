@@ -6,6 +6,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
+import { confirmationVideoHref, consultJoinPageUrl } from "@/lib/video/guest-join-link";
 import { log } from "@/lib/utils/logger";
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
@@ -34,6 +35,7 @@ type ConfirmationParams = Parameters<typeof bookingConfirmationEmail>[0] & {
   timeZone?: string;
   manageUrl?: string;
   bookingId?: string;
+  locale?: string | null;
 };
 
 function unwrap<T>(value: T | T[] | null | undefined): T | null {
@@ -45,8 +47,19 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
   subject: string;
   html: string;
 } {
+  const videoHref = confirmationVideoHref({
+    consultationType: params.consultationType,
+    videoRoomUrl: params.videoRoomUrl,
+    bookingId: params.bookingId,
+    bookingNumber: params.bookingNumber,
+    appointmentDate: params.date,
+    startTime: params.time,
+    endTime: params.end,
+    locale: params.locale,
+  });
+  const next = { ...params, videoRoomUrl: videoHref };
   if (!isSoftsmokeTransactionalDoctor(params.doctor)) {
-    return bookingConfirmationEmail(params);
+    return bookingConfirmationEmail(next);
   }
   return softsmokePatientConfirmEmail({
     patientFirstName: firstNameOnly(params.patientName, "there"),
@@ -56,7 +69,7 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
     timeZone: params.timeZone,
     bookingRef: params.bookingNumber,
     appointmentType: params.consultationType,
-    joinUrl: params.videoRoomUrl,
+    joinUrl: videoHref,
     manageUrl: params.manageUrl || manageBookingUrl(params.bookingId),
   });
 }
@@ -64,7 +77,7 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
 export async function sendSoftsmokeChargeSkipPatientConfirmation(
   supabase: SupabaseClient,
   bookingId: string,
-  videoRoomUrl: string | null
+  _videoRoomUrl: string | null
 ): Promise<void> {
   const { data, error } = await supabase
     .from("bookings")
@@ -75,8 +88,9 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
       doctor_id,
       appointment_date,
       start_time,
+      end_time,
       consultation_type,
-      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
+      patient:profiles!bookings_patient_id_fkey(first_name, last_name, email, preferred_locale),
       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         slug,
@@ -101,10 +115,21 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     doctor_id: string;
     appointment_date: string;
     start_time: string;
+    end_time: string;
     consultation_type: string;
     patient:
-      | { first_name: string | null; last_name: string | null; email: string | null }
-      | { first_name: string | null; last_name: string | null; email: string | null }[]
+      | {
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          preferred_locale: string | null;
+        }
+      | {
+          first_name: string | null;
+          last_name: string | null;
+          email: string | null;
+          preferred_locale: string | null;
+        }[]
       | null;
     doctor:
       | {
@@ -150,7 +175,20 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     appointmentTime: row.start_time,
     bookingRef: row.booking_number,
     appointmentType: row.consultation_type,
-    joinUrl: videoRoomUrl,
+    joinUrl:
+      row.consultation_type === "video"
+        ? consultJoinPageUrl({
+            bookingId: row.id,
+            bookingNumber: row.booking_number,
+            source: "email",
+            locale: patient.preferred_locale,
+            times: {
+              appointmentDate: row.appointment_date,
+              startTime: row.start_time,
+              endTime: row.end_time,
+            },
+          })
+        : null,
     manageUrl: manageBookingUrl(row.id),
   });
 

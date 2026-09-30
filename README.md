@@ -1,6 +1,19 @@
 # my-doctor-marketplace
 Doctor marketplace
 
+## Ops scripts
+
+`scripts/repair-confirmed-video-booking.ts` imports booking finalisation, which pulls in modules marked `server-only`. Plain `npx tsx` throws on that import. Run both video scripts with the React server condition so Node loads the empty `server-only` stub:
+
+```
+NODE_OPTIONS=--conditions=react-server npx tsx scripts/repair-confirmed-video-booking.ts <id>
+NODE_OPTIONS=--conditions=react-server npx tsx scripts/lock-daily-rooms.ts --help
+DAILY_API_KEY=... NODE_OPTIONS=--conditions=react-server npx tsx scripts/lock-daily-rooms.ts --dry-run
+DAILY_API_KEY=... NODE_OPTIONS=--conditions=react-server npx tsx scripts/lock-daily-rooms.ts
+```
+
+`--help` prints usage and does not call Daily or the database. A real repair also needs `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `DAILY_API_KEY`.
+
 ---
 
 ## Development Log

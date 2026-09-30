@@ -10,7 +10,6 @@ import { getDoctorLicense } from "@/lib/license/check";
 import { OnboardingTour } from "@/components/shared/onboarding-tour";
 import { doctorDashboardSteps } from "@/components/shared/onboarding-steps";
 import { doctorBookingPatientName } from "@/lib/doctor/booking-patient";
-import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
 import { Link } from "@/i18n/navigation";
 import { DoctorPrivatePlatformFeedback } from "@/components/feedback/doctor-private-platform-feedback";
 import { isSoftLaunchSoftsmokeDoctor } from "@/lib/soft-launch/softsmoke-connect-bypass";
@@ -130,8 +129,6 @@ export default async function DoctorDashboard() {
     .eq("appointment_date", today)
     .in("status", ["confirmed", "approved"])
     .order("start_time");
-
-  const now = new Date();
 
   // Get monthly stats
   const startOfMonth = new Date(
@@ -372,17 +369,6 @@ export default async function DoctorDashboard() {
             <div className="space-y-3">
               {todayBookings.map(
                 (booking: any) => {
-                  const startDt = resolveBookingInstant(
-                    booking.appointment_date,
-                    booking.start_time
-                  );
-                  const minsBefore = Number.isFinite(startDt.getTime())
-                    ? (startDt.getTime() - now.getTime()) / 60000
-                    : Number.POSITIVE_INFINITY;
-                  const joinEnabled = booking.consultation_type === "video" &&
-                    booking.video_room_url &&
-                    minsBefore <= 10 && minsBefore >= -60;
-
                   return (
                     <div
                       key={booking.id}
@@ -399,9 +385,10 @@ export default async function DoctorDashboard() {
                       <div className="flex items-center gap-3">
                         {booking.consultation_type === "video" && booking.video_room_url && (
                           <StartAppointmentButton
-                            videoRoomUrl={booking.video_room_url}
+                            bookingId={booking.id}
                             appointmentDate={booking.appointment_date}
                             startTime={booking.start_time}
+                            endTime={booking.end_time}
                           />
                         )}
                         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">

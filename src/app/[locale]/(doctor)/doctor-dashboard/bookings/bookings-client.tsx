@@ -43,13 +43,14 @@ import {
   doctorBookingPatientName,
 } from "@/lib/doctor/booking-patient";
 import { formatCurrency } from "@/lib/utils/currency";
-import { resolveBookingInstant } from "@/lib/booking/appointment-instant";
+import { JoinConsultButton } from "@/components/booking/join-consult-button";
+import { isWithinConsultJoinWindow } from "@/lib/video/meeting-window";
 import { respondToReschedule } from "@/actions/reschedule";
 import { saveVisitSummary } from "@/actions/booking";
 import { doctorCantMakeGpAppointment } from "@/actions/gp-reassignment";
 import { toast } from "sonner";
+import { reloadDoctorBookings } from "@/actions/doctor-bookings";
 import {
-  DOCTOR_BOOKINGS_SELECT,
   DOCTOR_RESCHEDULE_SELECT,
   type DoctorBookingsInitial,
 } from "@/lib/doctor/doctor-bookings-query";
@@ -157,12 +158,7 @@ function BookingsContent({ initial }: { initial?: DoctorBookingsInitial }) {
       setDoctorId(doctor.id);
       setDoctorCurrency(doctor.base_currency);
 
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(DOCTOR_BOOKINGS_SELECT)
-        .eq("doctor_id", doctor.id)
-        .order("appointment_date", { ascending: false })
-        .order("start_time", { ascending: false });
+      const { data, error } = await reloadDoctorBookings(doctor.id);
 
       // A failed refetch must not wipe the server-rendered list.
       if (!error) setBookings((data as unknown as BookingRow[]) || []);
@@ -289,16 +285,14 @@ function BookingsContent({ initial }: { initial?: DoctorBookingsInitial }) {
   );
 
   function isVideoJoinEnabled(booking: BookingRow): boolean {
-    if (booking.consultation_type !== "video" || !booking.video_room_url) return false;
-    const now = new Date();
-    const start = resolveBookingInstant(
-      booking.appointment_date,
-      booking.start_time
-    );
-    if (!Number.isFinite(start.getTime())) return false;
-    const minsBefore = (start.getTime() - now.getTime()) / 60000;
-    // Enabled from 10 min before start to 60 min after start
-    return minsBefore <= 10 && minsBefore >= -60;
+    if (booking.consultation_type !== "video" || !booking.has_video_room) return false;
+    if (!["confirmed", "approved"].includes(booking.status)) return false;
+    return isWithinConsultJoinWindow({
+      now: new Date(),
+      appointmentDate: booking.appointment_date,
+      startTime: booking.start_time,
+      endTime: booking.end_time,
+    });
   }
 
   async function handleGpCantMakeIt(bookingId: string) {
@@ -409,16 +403,14 @@ function BookingsContent({ initial }: { initial?: DoctorBookingsInitial }) {
               </TableCell>
               {showVideoButton && (
                 <TableCell>
-                  {booking.consultation_type === "video" && booking.video_room_url ? (
-                    <Button
-                      size="sm"
-                      className="gap-1.5"
+                  {booking.consultation_type === "video" && booking.has_video_room ? (
+                    <JoinConsultButton
+                      bookingId={booking.id}
+                      source="doctor_dashboard"
+                      label="Start Appointment"
                       disabled={!isVideoJoinEnabled(booking)}
-                      onClick={() => window.open(booking.video_room_url, "_blank")}
-                    >
-                      <Video className="h-3.5 w-3.5" />
-                      Start Appointment
-                    </Button>
+                      size="sm"
+                    />
                   ) : booking.consultation_type === "video" ? (
                     <span className="text-xs text-muted-foreground">Setting up...</span>
                   ) : null}
