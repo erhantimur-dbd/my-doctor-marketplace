@@ -10,6 +10,7 @@ import { createNotification } from "@/lib/notifications";
 import { formatCurrency, getCommissionCents } from "@/lib/utils/currency";
 import { getWalletBalance, debitWallet } from "@/lib/wallet";
 import { log } from "@/lib/utils/logger";
+import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
 
 // ─── helpers ───────────────────────────────────────────────────
 
@@ -300,6 +301,8 @@ export async function createInvoiceCheckout(
       return { url: `${origin}/${locale}/dashboard/invoices?paid=${invoice.id}&wallet=true` };
     }
 
+    const submitNotice = checkoutSubmitNotice("patient", origin, locale);
+
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
       line_items: [
@@ -329,6 +332,7 @@ export async function createInvoiceCheckout(
       },
       success_url: `${origin}/${locale}/dashboard/invoices?paid=${invoice.id}`,
       cancel_url: `${origin}/${locale}/dashboard/invoices`,
+      ...(submitNotice ? { custom_text: submitNotice } : {}),
     });
 
     // Mark as viewed if first interaction

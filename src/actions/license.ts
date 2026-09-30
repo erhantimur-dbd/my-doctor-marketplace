@@ -14,6 +14,7 @@ import {
 import { getLicenseTier, getModuleConfig, EXTRA_SEAT_PRICE_PENCE, convertPrice, BASE_CURRENCY, getOrCreateExtraSeatPriceId, stripePriceSetupErrorMessage } from "@/lib/constants/license-tiers";
 import type { LicenseTier } from "@/types";
 import { log } from "@/lib/utils/logger";
+import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
 
 // ─── Helpers ────────────────────────────────────────────────
 
@@ -236,8 +237,9 @@ export async function createLicenseCheckout(
     ? quantity
     : tierConfig.includedSeats || 1;
 
-  const { getRequestOrigin } = await import("@/lib/http/origin");
-  const origin = await getRequestOrigin();
+  const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
+  const { origin, locale: checkoutLocale } = await getRequestOriginAndLocale();
+  const submitNotice = checkoutSubmitNotice("doctor", origin, checkoutLocale);
 
   const sessionOptions: Record<string, unknown> = {
     customer: customerId,
@@ -266,6 +268,7 @@ export async function createLicenseCheckout(
     },
     success_url: `${origin}/en/doctor-dashboard/organization/billing?success=true`,
     cancel_url: `${origin}/en/doctor-dashboard/organization/billing`,
+    ...(submitNotice ? { custom_text: submitNotice } : {}),
   };
 
   // Apply coupon if provided

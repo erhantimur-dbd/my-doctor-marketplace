@@ -243,6 +243,7 @@ export const adminSidebarLinks: SidebarLink[] = [
   { href: "/admin/waitlist", icon: ClipboardList, label: "Waitlist" },
   { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
   { href: "/admin/payments", icon: CreditCard, label: "Payments" },
+  { href: "/admin/payment-corrections", icon: Receipt, label: "Corrections" },
   { href: "/admin/licenses", icon: Wallet, label: "Licenses" },
   { href: "/admin/coupons", icon: Tag, label: "Coupons" },
   { href: "/admin/blog", icon: FileText, label: "Blog" },
@@ -295,6 +296,7 @@ export const adminSidebarGroups: SidebarGroup[] = [
     links: [
       { href: "/admin/revenue", icon: DollarSign, label: "Revenue" },
       { href: "/admin/payments", icon: CreditCard, label: "Payments" },
+      { href: "/admin/payment-corrections", icon: Receipt, label: "Corrections" },
       { href: "/admin/licenses", icon: Wallet, label: "Licenses" },
       { href: "/admin/coupons", icon: Tag, label: "Coupons" },
     ],

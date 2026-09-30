@@ -48,6 +48,11 @@ import { headers } from "next/headers";
 
 import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
 import { log } from "@/lib/utils/logger";
+import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
+import {
+  applicationFeeIncludingOffset,
+  releaseOffsetHoldsForBookings,
+} from "@/lib/payments/payout-offset-store";
 import {
   creditWallet,
   getAllWalletBalances,
@@ -1878,6 +1883,14 @@ export async function adminCreateBookingOnBehalf(input: {
       : "In-Person Consultation";
 
   const { origin, locale } = await getOriginAndLocale();
+  const baseFee = getCommissionCents(totalAmountCents);
+  const checkoutFee = await applicationFeeIncludingOffset({
+    doctorId: doctor.id,
+    bookingId: booking.id,
+    chargeCents: totalAmountCents,
+    applicationFeeCents: baseFee,
+  });
+  const submitNotice = checkoutSubmitNotice("patient", origin, locale);
 
   // Stripe checkout sessions max out at 24h
   const expiresAt = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
@@ -1905,7 +1918,7 @@ export async function adminCreateBookingOnBehalf(input: {
       },
     ],
     payment_intent_data: {
-      application_fee_amount: getCommissionCents(totalAmountCents),
+      application_fee_amount: checkoutFee,
       on_behalf_of: doctor.stripe_account_id,
       transfer_data: {
         destination: doctor.stripe_account_id,
@@ -1918,6 +1931,7 @@ export async function adminCreateBookingOnBehalf(input: {
     expires_at: expiresAt,
     success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/${locale}`,
+    ...(submitNotice ? { custom_text: submitNotice } : {}),
   });
 
   // Store checkout session ID on booking
@@ -1969,7 +1983,7 @@ export async function adminResendPaymentLink(bookingId: string) {
   const { data: booking } = await adminSupabase
     .from("bookings")
     .select(
-      `id, booking_number, status, created_by_admin_id,
+      `id, booking_number, status, created_by_admin_id, doctor_id,
        stripe_checkout_session_id, payment_link_expires_at,
        appointment_date, start_time, end_time, consultation_type,
        total_amount_cents, consultation_fee_cents, platform_fee_cents,
@@ -2018,7 +2032,7 @@ export async function adminResendPaymentLink(bookingId: string) {
     return { error: resendMerchant.error };
   }
 
-  // Expire old Stripe checkout session
+  // Expire old Stripe checkout session and release any reserved offset.
   if (booking.stripe_checkout_session_id) {
     try {
       await getStripe().checkout.sessions.expire(booking.stripe_checkout_session_id);
@@ -2026,6 +2040,7 @@ export async function adminResendPaymentLink(bookingId: string) {
       // Session may already be expired
     }
   }
+  await releaseOffsetHoldsForBookings([booking.id]);
 
   // Create new Stripe Checkout Session
   const patient: any = Array.isArray(booking.patient) ? booking.patient[0] : booking.patient;
@@ -2046,6 +2061,14 @@ export async function adminResendPaymentLink(bookingId: string) {
 
   const { origin, locale } = await getOriginAndLocale();
   const expiresAt = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
+  const resendBaseFee = getCommissionCents(booking.total_amount_cents);
+  const resendFee = await applicationFeeIncludingOffset({
+    doctorId: booking.doctor_id,
+    bookingId: booking.id,
+    chargeCents: booking.total_amount_cents,
+    applicationFeeCents: resendBaseFee,
+  });
+  const resendNotice = checkoutSubmitNotice("patient", origin, locale);
 
   const session = await getStripe().checkout.sessions.create({
     mode: "payment",
@@ -2070,7 +2093,7 @@ export async function adminResendPaymentLink(bookingId: string) {
       },
     ],
     payment_intent_data: {
-      application_fee_amount: getCommissionCents(booking.total_amount_cents),
+      application_fee_amount: resendFee,
       on_behalf_of: doctor.stripe_account_id,
       transfer_data: {
         destination: doctor.stripe_account_id,
@@ -2083,6 +2106,7 @@ export async function adminResendPaymentLink(bookingId: string) {
     expires_at: expiresAt,
     success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/${locale}`,
+    ...(resendNotice ? { custom_text: resendNotice } : {}),
   });
 
   // Update booking with new session + extended expiry

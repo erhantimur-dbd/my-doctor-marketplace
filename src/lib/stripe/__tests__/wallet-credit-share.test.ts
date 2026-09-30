@@ -7,6 +7,7 @@ import {
   WALLET_CREDIT_SHARE_KIND,
   WalletCreditTableMissingError,
   consultCheckoutMoney,
+  createPlatformRefund,
   payDoctorWalletCreditShare,
   proportionalCreditTransferReversalCents,
   refundConsultCardAndCreditShare,
@@ -260,6 +261,111 @@ describe("full-credit booking pays the doctor once", () => {
       alreadyPaid: true,
     });
     expect(creates).toHaveLength(1);
+  });
+
+  it("applies a partial offset after the transfer", async () => {
+    const store = memoryStore();
+    const { stripe, creates } = stripeDouble();
+    const applied: string[] = [];
+    const released: string[][] = [];
+    const paid = await payDoctorWalletCreditShare(
+      { ...credit, stripeAccountId: "acct_doc" },
+      {
+        stripe,
+        store,
+        takePayoutOffset: async () => 200,
+        applyPayoutOffset: async (bookingId) => {
+          applied.push(bookingId);
+        },
+        releasePayoutOffset: async (ids) => {
+          released.push(ids);
+        },
+      }
+    );
+    expect(paid).toEqual({ ok: true, transferId: "tr_1", alreadyPaid: false });
+    expect(creates[0]?.params).toMatchObject({ amount: 8300 });
+    expect(applied).toEqual([BOOKING_ID]);
+    expect(released).toEqual([]);
+    const row = await store.findByBookingId(BOOKING_ID);
+    expect(row).toMatchObject({
+      status: "paid",
+      amount_cents: 8500,
+      offset_cents: 200,
+      stripe_transfer_id: "tr_1",
+    });
+  });
+
+  it("settles a full offset without sending a transfer", async () => {
+    const store = memoryStore();
+    const { stripe, creates } = stripeDouble();
+    const applied: string[] = [];
+    const paid = await payDoctorWalletCreditShare(
+      { ...credit, stripeAccountId: "acct_doc" },
+      {
+        stripe,
+        store,
+        takePayoutOffset: async () => 8500,
+        applyPayoutOffset: async (bookingId) => {
+          applied.push(bookingId);
+        },
+      }
+    );
+    expect(creates).toHaveLength(0);
+    expect(paid).toEqual({ ok: true, transferId: "", alreadyPaid: false });
+    expect(applied).toEqual([BOOKING_ID]);
+    const row = await store.findByBookingId(BOOKING_ID);
+    expect(row).toMatchObject({
+      status: "settled_by_offset",
+      amount_cents: 8500,
+      offset_cents: 8500,
+      stripe_transfer_id: null,
+    });
+    const again = await payDoctorWalletCreditShare(
+      { ...credit, stripeAccountId: "acct_doc" },
+      { stripe, store, takePayoutOffset: async () => 8500 }
+    );
+    expect(again).toEqual({ ok: true, transferId: "", alreadyPaid: true });
+    expect(creates).toHaveLength(0);
+  });
+
+  it("releases the offset when the transfer fails", async () => {
+    const store = memoryStore();
+    const { stripe } = stripeDouble();
+    stripe.transfers.create = async () => {
+      throw new Error("stripe down");
+    };
+    const applied: string[] = [];
+    const released: string[][] = [];
+    const paid = await payDoctorWalletCreditShare(
+      { ...credit, stripeAccountId: "acct_doc" },
+      {
+        stripe,
+        store,
+        takePayoutOffset: async () => 200,
+        applyPayoutOffset: async (bookingId) => {
+          applied.push(bookingId);
+        },
+        releasePayoutOffset: async (ids) => {
+          released.push(ids);
+        },
+      }
+    );
+    expect(paid).toEqual({
+      ok: false,
+      error: expect.any(String),
+    });
+    expect(applied).toEqual([]);
+    expect(released).toEqual([[BOOKING_ID]]);
+    const row = await store.findByBookingId(BOOKING_ID);
+    expect(row?.status).toBe("pending");
+  });
+});
+
+describe("platform refunds need a charge or a payment intent", () => {
+  it("throws when neither id is set", async () => {
+    await expect(
+      createPlatformRefund({ amountCents: 100, idempotencyKey: "payment-correction-refund-1" })
+    ).rejects.toThrow(/charge or a payment intent/);
   });
 });
 
@@ -932,8 +1038,10 @@ describe("credit payout is wired into consult checkout, not the other products",
     expect(reserve).toBeGreaterThan(creditReturn);
     expect(session).toBeGreaterThan(reserve);
     expect(fn).toContain(
-      "application_fee_amount: checkoutMoney.applicationFeeCents"
+      "applicationFeeCents: checkoutMoney.applicationFeeCents"
     );
+    expect(fn).toContain("application_fee_amount: checkoutFee");
+    expect(fn).toContain("applicationFeeIncludingOffset");
     expect(fn).toContain("commission_cents: checkoutMoney.commissionCents");
     expect(fn).not.toContain("Math.min(applicationFeeCents, remainingCharge)");
   });

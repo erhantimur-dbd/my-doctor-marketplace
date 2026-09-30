@@ -15,7 +15,8 @@ export type WalletSourceType =
   | "admin_manual"
   | "top_up"
   | "gift_card"
-  | "loyalty";
+  | "loyalty"
+  | "payment_correction";
 
 interface CreditParams {
   patientId: string;

@@ -72,6 +72,15 @@ export default async function PaymentsPage({
 
   const { data: payments } = await query;
 
+  const { data: corrections } = await supabase
+    .from("payment_corrections")
+    .select(
+      "id, created_at, amount_cents, currency, statement_line, status, direction"
+    )
+    .eq("patient_id", user.id)
+    .eq("party", "patient")
+    .order("created_at", { ascending: false });
+
   // Compute KPI values
   const totalPayments = payments?.length ?? 0;
   const totalAmountCents = (payments || []).reduce(
@@ -204,7 +213,33 @@ export default async function PaymentsPage({
                   </TableRow>
                 );
               })}
-              {(!payments || payments.length === 0) && (
+              {(corrections || []).map((row) => (
+                <TableRow key={`correction-${row.id}`}>
+                  <TableCell className="text-sm">
+                    {new Date(row.created_at).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell className="text-sm font-medium">Correction</TableCell>
+                  <TableCell className="text-sm">{row.statement_line}</TableCell>
+                  <TableCell className="font-medium">
+                    {row.direction === "platform_favour" ? "-" : ""}
+                    {formatCurrency(row.amount_cents, row.currency)}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {(row.currency || "GBP").toUpperCase()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs capitalize">
+                      {row.status}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {(!payments || payments.length === 0) &&
+                (!corrections || corrections.length === 0) && (
                 <TableRow>
                   <TableCell
                     colSpan={6}

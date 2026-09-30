@@ -20,6 +20,12 @@ import {
   reverseConnectTransfer,
   type ConnectTransferClient,
 } from "@/lib/stripe/transfer-handoff";
+import { transferAmountWithOffset } from "@/lib/payments/payout-offset";
+import {
+  applyOffsetHoldsForBooking,
+  consumeWalletTransferOffset,
+  releaseOffsetHoldsForBookings,
+} from "@/lib/payments/payout-offset-store";
 
 export const WALLET_CREDIT_SHARE_KIND = "wallet_credit_share";
 
@@ -179,7 +185,8 @@ export type WalletCreditTransferStatus =
   | "pending"
   | "paid"
   | "reversed"
-  | "partially_reversed";
+  | "partially_reversed"
+  | "settled_by_offset";
 
 /** Thrown when doctor_wallet_credit_transfers is not in the database. */
 export class WalletCreditTableMissingError extends Error {
@@ -211,6 +218,8 @@ export interface WalletCreditTransferRecord {
   statement_line: string;
   currency: string;
   reversed_cents: number;
+  /** Cents of amount_cents kept as a payment-correction offset. */
+  offset_cents?: number;
   kind: string;
   created_at: string;
 }
@@ -227,7 +236,7 @@ export interface WalletCreditTransferStore {
     patch: Partial<
       Pick<
         WalletCreditTransferRecord,
-        "status" | "reversed_cents" | "stripe_transfer_id"
+        "status" | "reversed_cents" | "stripe_transfer_id" | "offset_cents"
       >
     >
   ): Promise<void>;
@@ -251,6 +260,16 @@ export interface WalletCreditDeps {
   store?: WalletCreditTransferStore;
   alreadyDebited?: (bookingId: string) => Promise<boolean>;
   debit?: () => Promise<void>;
+  /** Shrink this transfer by a ready doctor payout offset. Tests pass a stub. */
+  takePayoutOffset?: (input: {
+    doctorId: string;
+    bookingId: string;
+    maxCents: number;
+  }) => Promise<number>;
+  /** Mark reserved offset holds applied after the transfer, or a full offset. */
+  applyPayoutOffset?: (bookingId: string) => Promise<void>;
+  /** Release reserved offset holds when the transfer fails. */
+  releasePayoutOffset?: (bookingIds: string[]) => Promise<void>;
 }
 
 /** Prefer the stored charge. Fall back to the PaymentIntent. */
@@ -388,6 +407,26 @@ function transferAlreadySent(
   );
 }
 
+function offsetAlreadySettled(row: WalletCreditTransferRecord): boolean {
+  return row.status === "settled_by_offset";
+}
+
+function applyOffsetOf(
+  deps?: WalletCreditDeps
+): (bookingId: string) => Promise<void> {
+  if (deps?.applyPayoutOffset) return deps.applyPayoutOffset;
+  if (process.env.VITEST) return async () => {};
+  return applyOffsetHoldsForBooking;
+}
+
+function releaseOffsetOf(
+  deps?: WalletCreditDeps
+): (bookingIds: string[]) => Promise<void> {
+  if (deps?.releasePayoutOffset) return deps.releasePayoutOffset;
+  if (process.env.VITEST) return async () => {};
+  return releaseOffsetHoldsForBookings;
+}
+
 /**
  * Insert the pending ledger row, or return the row already stored for
  * this booking. Does not call Stripe. A missing table or failed insert throws.
@@ -442,6 +481,10 @@ export async function payDoctorWalletCreditShare(
     return { ok: false, error: WALLET_CREDIT_PAYOUT_FAILED_MESSAGE };
   }
 
+  if (offsetAlreadySettled(row)) {
+    return { ok: true, transferId: "", alreadyPaid: true };
+  }
+
   if (transferAlreadySent(row)) {
     return {
       ok: true,
@@ -451,9 +494,53 @@ export async function payDoctorWalletCreditShare(
   }
 
   let created: { transferId: string };
+  const takeOffset =
+    deps?.takePayoutOffset ??
+    (process.env.VITEST ? async () => 0 : consumeWalletTransferOffset);
+  const applyOffset = applyOffsetOf(deps);
+  const releaseOffset = releaseOffsetOf(deps);
+  let payCents = row.amount_cents;
+  let offsetApplied = 0;
+  try {
+    const offsetCents = await takeOffset({
+      doctorId: input.doctorId,
+      bookingId: input.bookingId,
+      maxCents: row.amount_cents,
+    });
+    const sized = transferAmountWithOffset({
+      transferCents: row.amount_cents,
+      offsetCents,
+    });
+    payCents = sized.transferCents;
+    offsetApplied = sized.offsetAppliedCents;
+  } catch (err) {
+    log.error("[wallet-credit] payout offset skipped", {
+      err,
+      bookingId: input.bookingId,
+    });
+  }
+  if (payCents <= 0) {
+    if (offsetApplied <= 0) {
+      return { ok: false, error: WALLET_CREDIT_PAYOUT_FAILED_MESSAGE };
+    }
+    try {
+      await store.update(input.bookingId, {
+        status: "settled_by_offset",
+        offset_cents: offsetApplied,
+        stripe_transfer_id: null,
+      });
+    } catch (err) {
+      log.error("[wallet-credit] full offset settled but row still pending", {
+        err,
+        bookingId: input.bookingId,
+      });
+    }
+    await applyOffset(input.bookingId);
+    return { ok: true, transferId: "", alreadyPaid: false };
+  }
   try {
     created = await createConnectTransfer({
-      amountCents: row.amount_cents,
+      amountCents: payCents,
       currency: row.currency,
       destinationAccountId: input.stripeAccountId,
       transferGroup: walletCreditTransferGroup(input.bookingId),
@@ -472,6 +559,9 @@ export async function payDoctorWalletCreditShare(
       err,
       bookingId: input.bookingId,
     });
+    if (offsetApplied > 0) {
+      await releaseOffset([input.bookingId]);
+    }
     return { ok: false, error: WALLET_CREDIT_PAYOUT_FAILED_MESSAGE };
   }
 
@@ -479,6 +569,7 @@ export async function payDoctorWalletCreditShare(
     await store.update(input.bookingId, {
       status: "paid",
       stripe_transfer_id: created.transferId,
+      ...(offsetApplied > 0 ? { offset_cents: offsetApplied } : {}),
     });
   } catch (err) {
     log.error("[wallet-credit] transfer sent but row still pending", {
@@ -488,6 +579,7 @@ export async function payDoctorWalletCreditShare(
     });
   }
 
+  await applyOffset(input.bookingId);
   return { ok: true, transferId: created.transferId, alreadyPaid: false };
 }
 
@@ -677,10 +769,15 @@ export async function reverseDoctorWalletCreditShare(
     return { reversedCents: 0 };
   }
   if (!record?.stripe_transfer_id) return { reversedCents: 0 };
+  const transferredCents = Math.max(
+    0,
+    record.amount_cents - (record.offset_cents || 0)
+  );
+  if (transferredCents <= 0) return { reversedCents: 0 };
 
   const alreadyReversedCents = record.reversed_cents || 0;
   const reversalCents = proportionalCreditTransferReversalCents({
-    transferAmountCents: record.amount_cents,
+    transferAmountCents: transferredCents,
     alreadyReversedCents,
     refundedCreditCents: input.refundedCreditCents,
     originalCreditCents: record.credit_amount_cents,
@@ -712,7 +809,7 @@ export async function reverseDoctorWalletCreditShare(
 
   const reversedCents = alreadyReversedCents + reversalCents;
   const status: WalletCreditTransferStatus =
-    reversedCents >= record.amount_cents ? "reversed" : "partially_reversed";
+    reversedCents >= transferredCents ? "reversed" : "partially_reversed";
   await store.update(input.bookingId, {
     reversed_cents: reversedCents,
     status,
@@ -787,4 +884,31 @@ export async function refundConsultCardAndCreditShare(
   );
 
   return { cardRefundId, reversedCents: reversed.reversedCents };
+}
+
+/**
+ * Refund that is not a consult card share: a payment correction with no
+ * booking, or a founding invoice overcharge. Consult card refunds stay on
+ * refundConsultCardAndCreditShare so booking counters are recorded.
+ */
+export async function createPlatformRefund(input: {
+  chargeId?: string | null;
+  paymentIntentId?: string | null;
+  amountCents: number;
+  idempotencyKey: string;
+}): Promise<{ refundId: string }> {
+  if (!input.chargeId && !input.paymentIntentId) {
+    throw new Error("A refund needs a charge or a payment intent");
+  }
+  const stripe = getStripe();
+  const refund = await stripe.refunds.create(
+    {
+      ...(input.chargeId
+        ? { charge: input.chargeId }
+        : { payment_intent: input.paymentIntentId || undefined }),
+      amount: input.amountCents,
+    },
+    { idempotencyKey: input.idempotencyKey }
+  );
+  return { refundId: refund.id };
 }

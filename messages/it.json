@@ -291,6 +291,8 @@
     "platform_fee": "Costi di Servizio",
     "total": "Totale",
     "proceed_to_payment": "Procedi al Pagamento",
+    "payment_error_notice": "If a payment or refund goes wrong, we'll contact you to put it right. See Payment errors in our Terms.",
+    "doctor_payment_error_notice": "If a payout or refund is made in error, we may correct it from future payouts, as set out in our Doctor terms.",
     "booking_confirmed": "Il tuo appuntamento è confermato!",
     "booking_number": "Numero Prenotazione",
     "cancellation_policy": "Politica di Cancellazione",

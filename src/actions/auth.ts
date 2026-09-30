@@ -22,6 +22,7 @@ import {
 import { resolvePostAuthPath } from "@/lib/auth/role-redirect";
 import type { OAuthProviderId } from "@/lib/auth/oauth-providers";
 import { OAUTH_PROVIDERS, TERMS_VERSION } from "@/lib/auth/oauth-providers";
+import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
 
 async function setAuthReturnCookie(redirectTo: string | null | undefined) {
   if (!redirectTo || !isSafeRelativePath(redirectTo)) return;
@@ -859,6 +860,8 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     lineItems.push({ price: testingPriceId, quantity: 1 });
   }
 
+  const submitNotice = checkoutSubmitNotice("doctor", origin, result.locale);
+
   const session = await stripe.checkout.sessions.create({
     customer: customer.id,
     mode: "subscription",
@@ -889,6 +892,7 @@ export async function registerDoctorWithCheckout(formData: FormData) {
     },
     success_url: `${origin}/${result.locale}/verify-email?email=${encodeURIComponent(result.email)}&checkout=success`,
     cancel_url: `${origin}/${result.locale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
+    ...(submitNotice ? { custom_text: submitNotice } : {}),
   });
 
   if (foundingOffer) {
@@ -1022,6 +1026,8 @@ export async function resumeDoctorLicenseCheckout(
     ? quantity
     : tierConfig.includedSeats || 1;
 
+  const resumeNotice = checkoutSubmitNotice("doctor", origin, resumeLocale);
+
   const session = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
@@ -1049,6 +1055,7 @@ export async function resumeDoctorLicenseCheckout(
     },
     success_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=success`,
     cancel_url: `${origin}/${resumeLocale}/doctor-dashboard/organization/billing?checkout=cancelled&tier=${tier}`,
+    ...(resumeNotice ? { custom_text: resumeNotice } : {}),
   });
 
   if (foundingOffer) {

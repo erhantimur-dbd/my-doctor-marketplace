@@ -31,6 +31,8 @@ import {
   type CardPaymentsCapabilityStatus,
 } from "@/lib/stripe/consult-merchant";
 import { log } from "@/lib/utils/logger";
+import { paymentErrorNoticesEnabled } from "@/lib/legal/payment-error-notices";
+import { PaymentErrorNotice } from "@/components/legal/payment-error-notice";
 
 export default async function PaymentsPage() {
   const supabase = await createClient();
@@ -111,6 +113,27 @@ export default async function PaymentsPage() {
     .reduce((sum, b) => sum + (b.total_amount_cents - b.platform_fee_cents), 0);
 
   const currency = doctor.base_currency || "EUR";
+  const showPaymentErrorNotice = paymentErrorNoticesEnabled();
+
+  const { data: walletCredits } = await supabase
+    .from("doctor_wallet_credit_transfers")
+    .select("id, created_at, amount_cents, commission_cents, currency, statement_line, status")
+    .eq("doctor_id", doctor.id)
+    .order("created_at", { ascending: false });
+
+  const { data: corrections } = await supabase
+    .from("payment_corrections")
+    .select(
+      "id, created_at, amount_cents, currency, statement_line, status, direction"
+    )
+    .eq("doctor_id", doctor.id)
+    .eq("party", "doctor")
+    .order("created_at", { ascending: false });
+
+  const hasStatementRows =
+    allBookings.length > 0 ||
+    (walletCredits || []).length > 0 ||
+    (corrections || []).length > 0;
 
   return (
     <div className="space-y-6">
@@ -188,6 +211,7 @@ export default async function PaymentsPage() {
                   Connect your Stripe account to start receiving payouts. You will
                   be redirected to Stripe to complete the onboarding process.
                 </p>
+                <PaymentErrorNotice kind="doctor" enabled={showPaymentErrorNotice} />
                 <form action={connectStripeAccount} className="mt-3">
                   <Button type="submit" size="sm">
                     <CreditCard className="mr-2 h-4 w-4" />
@@ -207,6 +231,7 @@ export default async function PaymentsPage() {
                   Your Stripe account setup is not yet complete. Please finish the
                   onboarding process to enable payouts.
                 </p>
+                <PaymentErrorNotice kind="doctor" enabled={showPaymentErrorNotice} />
                 <form action={connectStripeAccount} className="mt-3">
                   <Button type="submit" size="sm" variant="outline">
                     Complete Onboarding
@@ -258,6 +283,7 @@ export default async function PaymentsPage() {
                   activates card payments on your account. Finish setup so your
                   name appears on their card statement.
                 </p>
+                <PaymentErrorNotice kind="doctor" enabled={showPaymentErrorNotice} />
                 <form action={connectStripeAccount} className="mt-3">
                   <Button type="submit" size="sm" variant="outline">
                     Finish card payment setup
@@ -275,7 +301,7 @@ export default async function PaymentsPage() {
           <CardTitle>Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
-          {allBookings.length === 0 ? (
+          {!hasStatementRows ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <DollarSign className="mb-4 h-12 w-12 text-muted-foreground/50" />
               <p className="text-muted-foreground">
@@ -347,6 +373,55 @@ export default async function PaymentsPage() {
                             : "Pending"
                           : "Awaiting Payment"}
                       </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(walletCredits || []).map((row) => (
+                  <TableRow key={`wallet-${row.id}`}>
+                    <TableCell>
+                      {new Date(row.created_at).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">Credit</TableCell>
+                    <TableCell>{row.statement_line}</TableCell>
+                    <TableCell>
+                      {formatCurrency(row.amount_cents, row.currency || currency)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      -{formatCurrency(row.commission_cents, row.currency || currency)}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatCurrency(row.amount_cents, row.currency || currency)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{row.status}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(corrections || []).map((row) => (
+                  <TableRow key={`correction-${row.id}`}>
+                    <TableCell>
+                      {new Date(row.created_at).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">Correction</TableCell>
+                    <TableCell>{row.statement_line}</TableCell>
+                    <TableCell>
+                      {formatCurrency(row.amount_cents, row.currency || currency)}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">—</TableCell>
+                    <TableCell className="font-medium">
+                      {row.direction === "platform_favour" ? "-" : ""}
+                      {formatCurrency(row.amount_cents, row.currency || currency)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{row.status}</Badge>
                     </TableCell>
                   </TableRow>
                 ))}

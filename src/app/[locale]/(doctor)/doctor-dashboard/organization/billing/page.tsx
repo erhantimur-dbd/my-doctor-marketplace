@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { DoctorPaymentErrorNotice } from "@/components/legal/doctor-payment-error-notice";
 import {
   Card,
   CardContent,
@@ -306,6 +307,9 @@ export default function BillingPage() {
         <p className="text-muted-foreground">
           Manage your subscription, seats, and add-ons
         </p>
+        <div className="mt-3">
+          <DoctorPaymentErrorNotice />
+        </div>
       </div>
 
       {successMsg && (

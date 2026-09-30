@@ -4,6 +4,7 @@ import { getStripe } from "@/lib/stripe/client";
 import { authorizeCronRequest } from "@/lib/cron/authorize";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { log } from "@/lib/utils/logger";
+import { releaseOffsetHoldsForBookings } from "@/lib/payments/payout-offset-store";
 
 /**
  * Soft-expire unpaid bookings. Never hard-delete pending_payment rows —
@@ -54,6 +55,7 @@ export async function GET(request: NextRequest) {
       });
     }
     patientExpiredCount = expired?.length || 0;
+    await releaseOffsetHoldsForBookings(ids);
   }
 
   // 2. Admin-created bookings: soft-expire where payment_link_expires_at passed
@@ -89,6 +91,7 @@ export async function GET(request: NextRequest) {
       .select("id");
 
     adminExpiredCount = expired?.length || 0;
+    await releaseOffsetHoldsForBookings(ids);
   }
 
   return NextResponse.json({

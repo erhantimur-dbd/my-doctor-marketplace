@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { authorizeCronRequest } from "@/lib/cron/authorize";
+import {
+  foundingFailureIsOurError,
+  shouldSkipFoundingEnforcement,
+} from "@/lib/payments/founding-our-error";
 
 /**
  * Daily cron job for license enforcement state transitions:
@@ -28,12 +32,13 @@ export async function GET(request: NextRequest) {
   // 1. past_due > 7 days → grace_period
   const { data: pastDueLicenses } = await supabase
     .from("licenses")
-    .select("id, organization_id, current_period_end")
+    .select("id, organization_id, current_period_end, tier, stripe_subscription_id")
     .eq("status", "past_due")
     .lt("current_period_end", sevenDaysAgo.toISOString());
 
   if (pastDueLicenses && pastDueLicenses.length > 0) {
     for (const license of pastDueLicenses) {
+      if (await skipFoundingOurError(supabase, license)) continue;
       await supabase
         .from("licenses")
         .update({
@@ -49,12 +54,13 @@ export async function GET(request: NextRequest) {
   // 2. grace_period > 30 days → suspended
   const { data: graceLicenses } = await supabase
     .from("licenses")
-    .select("id, organization_id, grace_period_start")
+    .select("id, organization_id, grace_period_start, tier, stripe_subscription_id")
     .eq("status", "grace_period")
     .lt("grace_period_start", thirtyDaysAgo.toISOString());
 
   if (graceLicenses && graceLicenses.length > 0) {
     for (const license of graceLicenses) {
+      if (await skipFoundingOurError(supabase, license)) continue;
       await supabase
         .from("licenses")
         .update({
@@ -101,4 +107,30 @@ export async function GET(request: NextRequest) {
     flagged_for_cleanup: flaggedForCleanup,
     timestamp: now.toISOString(),
   });
+}
+
+async function skipFoundingOurError(
+  supabase: ReturnType<typeof createAdminClient>,
+  license: {
+    tier?: string | null;
+    organization_id?: string | null;
+    stripe_subscription_id?: string | null;
+  }
+): Promise<boolean> {
+  if (license.tier !== "founding") return false;
+  let doctorId: string | null = null;
+  if (license.organization_id) {
+    const { data: doctor } = await supabase
+      .from("doctors")
+      .select("id")
+      .eq("organization_id", license.organization_id)
+      .limit(1)
+      .maybeSingle();
+    doctorId = doctor?.id ?? null;
+  }
+  const ourError = await foundingFailureIsOurError(supabase, {
+    subscriptionId: license.stripe_subscription_id,
+    doctorId,
+  });
+  return shouldSkipFoundingEnforcement(ourError);
 }

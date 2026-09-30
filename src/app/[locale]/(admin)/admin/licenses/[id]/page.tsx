@@ -84,6 +84,13 @@ export default async function AdminLicenseDetailPage({
 
   const isPromotional = license.metadata?.is_promotional === true;
 
+  const { data: ourErrorCorrections } = await supabase
+    .from("payment_corrections")
+    .select("id, status, reason")
+    .eq("license_id", id)
+    .eq("our_error", true)
+    .neq("status", "waived");
+
   return (
     <div className="space-y-6">
       <Link
@@ -126,6 +133,19 @@ export default async function AdminLicenseDetailPage({
           )}
         </div>
       </div>
+
+      {(ourErrorCorrections || []).map((row) => (
+        <div
+          key={row.id}
+          className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+        >
+          <AlertTriangle className="h-4 w-4" />
+          Our error on this licence. The £99 place is kept.
+          <Link href={`/admin/payment-corrections/${row.id}`} className="underline">
+            View correction
+          </Link>
+        </div>
+      ))}
 
       {license.stripe_subscription_id && (
         <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">

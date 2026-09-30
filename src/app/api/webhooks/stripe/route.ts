@@ -419,6 +419,14 @@ export async function POST(request: NextRequest) {
         // Care plan pay_full / pay_per_visit — must run before the generic
         // booking_id branch (per-visit metadata also sets booking_id).
         await applyTreatmentPlanCheckoutPayment(session, supabase);
+        const holdBookingId =
+          session.metadata?.booking_id || session.metadata?.first_booking_id;
+        if (holdBookingId) {
+          const { applyOffsetHoldsForBooking } = await import(
+            "@/lib/payments/payout-offset-store"
+          );
+          await applyOffsetHoldsForBooking(holdBookingId);
+        }
       } else if (bookingId && session.mode === "payment") {
         const bookingPaymentIntentId = paymentIntentIdFromStripe(
           session.payment_intent
@@ -432,6 +440,11 @@ export async function POST(request: NextRequest) {
           })
           .eq("id", bookingId)
           .eq("status", "pending_payment");
+
+        const { applyOffsetHoldsForBooking } = await import(
+          "@/lib/payments/payout-offset-store"
+        );
+        await applyOffsetHoldsForBooking(bookingId);
 
         // Fetch full booking with patient + doctor details for email & video room
         const { data: booking } = await supabase
@@ -761,6 +774,27 @@ export async function POST(request: NextRequest) {
             break;
           default:
             licenseStatus = subscription.status;
+        }
+
+        const foundingMeta =
+          subscription.metadata?.tier === "founding" ||
+          subscription.metadata?.founding_offer === "1";
+        if (
+          foundingMeta &&
+          (licenseStatus === "past_due" || licenseStatus === "grace_period")
+        ) {
+          const {
+            foundingFailureIsOurError,
+            licenseStatusKeepingFounding,
+          } = await import("@/lib/payments/founding-our-error");
+          const ourError = await foundingFailureIsOurError(supabase, {
+            subscriptionId: subscription.id,
+            doctorId: subscription.metadata?.doctor_id || doctorId || null,
+          });
+          licenseStatus = licenseStatusKeepingFounding({
+            mapped: licenseStatus,
+            ourError,
+          });
         }
 
         const tier = subscription.metadata?.tier || "starter";
@@ -1218,24 +1252,34 @@ export async function POST(request: NextRequest) {
           );
           const doctorIdMeta = subscription.metadata?.doctor_id;
           if (wasLive) {
-            const forfeitedAt = new Date().toISOString();
-            if (doctorIdMeta) {
-              await supabase
-                .from("doctors")
-                .update({ founding_offer_forfeited_at: forfeitedAt })
-                .eq("id", doctorIdMeta);
-            } else {
-              await supabase
-                .from("doctors")
-                .update({ founding_offer_forfeited_at: forfeitedAt })
-                .eq("organization_id", orgId);
-            }
-            const { endFoundingFeatured } = await import("@/lib/founding/spots");
-            await endFoundingFeatured(supabase, {
-              doctorId: doctorIdMeta,
-              organizationId: doctorIdMeta ? null : orgId,
-              featuredUntil,
+            const {
+              foundingFailureIsOurError,
+              shouldForfeitFoundingOnDelete,
+            } = await import("@/lib/payments/founding-our-error");
+            const ourError = await foundingFailureIsOurError(supabase, {
+              subscriptionId: subscription.id,
+              doctorId: doctorIdMeta || null,
             });
+            if (shouldForfeitFoundingOnDelete({ wasLive: true, ourError })) {
+              const forfeitedAt = new Date().toISOString();
+              if (doctorIdMeta) {
+                await supabase
+                  .from("doctors")
+                  .update({ founding_offer_forfeited_at: forfeitedAt })
+                  .eq("id", doctorIdMeta);
+              } else {
+                await supabase
+                  .from("doctors")
+                  .update({ founding_offer_forfeited_at: forfeitedAt })
+                  .eq("organization_id", orgId);
+              }
+              const { endFoundingFeatured } = await import("@/lib/founding/spots");
+              await endFoundingFeatured(supabase, {
+                doctorId: doctorIdMeta,
+                organizationId: doctorIdMeta ? null : orgId,
+                featuredUntil,
+              });
+            }
           } else {
             const { releaseFoundingSpotReservation } = await import(
               "@/lib/founding/spots"
@@ -1306,6 +1350,14 @@ export async function POST(request: NextRequest) {
 
     case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
+      const expiredBookingId =
+        session.metadata?.booking_id || session.metadata?.first_booking_id;
+      if (expiredBookingId) {
+        const { releaseOffsetHoldsForBookings } = await import(
+          "@/lib/payments/payout-offset-store"
+        );
+        await releaseOffsetHoldsForBookings([expiredBookingId]);
+      }
       if (
         session.mode === "subscription" &&
         session.metadata?.type === "license"
@@ -1583,6 +1635,32 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+      break;
+    }
+
+    // Attach a failed founding invoice to an existing correction. No email.
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice;
+      const invoiceRaw = invoice as unknown as {
+        subscription?: string | { id?: string } | null;
+        parent?: {
+          subscription_details?: {
+            subscription?: string | { id?: string } | null;
+          };
+        };
+      };
+      const subRef =
+        invoiceRaw.subscription ||
+        invoiceRaw.parent?.subscription_details?.subscription;
+      const failedSubscriptionId =
+        typeof subRef === "string" ? subRef : subRef?.id || null;
+      const { noteFoundingInvoiceFailure } = await import(
+        "@/lib/payments/founding-our-error"
+      );
+      await noteFoundingInvoiceFailure(supabase, {
+        subscriptionId: failedSubscriptionId,
+        invoiceId: invoice.id,
+      });
       break;
     }
 

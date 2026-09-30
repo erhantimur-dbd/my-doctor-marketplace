@@ -30,6 +30,8 @@ import { createRoom } from "@/lib/daily/client";
 import { dailyRoomExpiresAtUnix } from "@/lib/booking/finalize-confirmed-booking";
 import { resolvePatientConfirmationEmail } from "@/lib/email/softsmoke-send";
 import { log } from "@/lib/utils/logger";
+import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
+import { applicationFeeIncludingOffset } from "@/lib/payments/payout-offset-store";
 import {
   CARE_PLANS_DISABLED_MESSAGE,
   isCarePlansEnabled,
@@ -441,6 +443,14 @@ export async function createInvitationCheckout(
         : `${invitation.service_name} with Dr. ${doctorName}`;
 
     const totalChargeCents = invitation.discounted_total_cents;
+    const baseFee = getCommissionCents(invitation.discounted_total_cents);
+    const checkoutFee = await applicationFeeIncludingOffset({
+      doctorId: doctor.id,
+      bookingId: booking.id,
+      chargeCents: totalChargeCents,
+      applicationFeeCents: baseFee,
+    });
+    const submitNotice = checkoutSubmitNotice("patient", origin, locale);
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
@@ -464,7 +474,7 @@ export async function createInvitationCheckout(
         },
       ],
       payment_intent_data: {
-        application_fee_amount: getCommissionCents(invitation.discounted_total_cents),
+        application_fee_amount: checkoutFee,
         on_behalf_of: doctor.stripe_account_id,
         transfer_data: {
           destination: doctor.stripe_account_id,
@@ -477,6 +487,7 @@ export async function createInvitationCheckout(
       },
       success_url: `${origin}/${locale}/invitation/${invitation.token}/confirmed?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/${locale}/invitation/${invitation.token}`,
+      ...(submitNotice ? { custom_text: submitNotice } : {}),
     });
 
     return { url: session.url };

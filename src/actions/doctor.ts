@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type Stripe from "stripe";
 import { log } from "@/lib/utils/logger";
+import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
 import {
   EXPRESS_CONNECT_CAPABILITIES,
   requestCardPaymentsIfNeeded,
@@ -455,8 +456,9 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
   );
   const { hasDiscount, referralId } = await checkReferralDiscount(doctor.id);
 
-  const { getRequestOrigin } = await import("@/lib/http/origin");
-  const origin = await getRequestOrigin();
+  const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
+  const { origin, locale: checkoutLocale } = await getRequestOriginAndLocale();
+  const submitNotice = checkoutSubmitNotice("doctor", origin, checkoutLocale);
   // Build checkout session options
   const sessionOptions: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
@@ -466,6 +468,7 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
     metadata: { doctor_id: doctor.id },
     success_url: `${origin}/en/doctor-dashboard/organization/billing?success=true`,
     cancel_url: `${origin}/en/doctor-dashboard/organization/billing`,
+    ...(submitNotice ? { custom_text: submitNotice } : {}),
   };
 
   // Apply manual coupon code (if provided and no referral discount)
