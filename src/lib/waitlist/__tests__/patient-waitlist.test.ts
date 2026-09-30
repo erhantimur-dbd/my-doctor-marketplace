@@ -49,7 +49,15 @@ describe("coming-soon page copy", () => {
     expect(html).toMatch(/Coming soon/);
     expect(html).toMatch(/£99 per month for the first 100 doctors/);
     expect(html).toMatch(/No minimum term, cancel anytime/);
-    expect(html).toMatch(/If you cancel, you lose this price/);
+    expect(html).toMatch(
+      /The price stays £99 per month for as long as you keep the plan/
+    );
+    expect(html).toMatch(
+      /If you cancel, you lose the £99 price and cannot rejoin at £99/
+    );
+    expect(html).toMatch(
+      /The 15% platform fee on consultations still applies and is not discounted/
+    );
     expect(html).toMatch(/£199/);
     expect(html).toMatch(/£299/);
     expect(html).toMatch(/Patient search is closed/);
@@ -57,8 +65,17 @@ describe("coming-soon page copy", () => {
     expect(html).toMatch(/in-person/i);
     expect(html).toMatch(/register-doctor\?tier=founding&founding=1/);
     expect(html).toMatch(/href="\/en\/privacy"/);
-    expect(html).toMatch(/We'll only email you about the launch and this offer/);
-    expect(html).toMatch(/Every email has an unsubscribe link/);
+    expect(html).toMatch(
+      /We'll only email you about the launch\. Every email has an unsubscribe link\./
+    );
+    expect(html).not.toMatch(/and this offer/);
+    expect(html).toMatch(
+      /We'll only use your details as set out in our <a href="\/en\/privacy">Privacy notice<\/a>/
+    );
+    expect(
+      html.match(/We'll only use your details as set out in our/g)?.length
+    ).toBe(2);
+    expect(html).not.toMatch(/never share/i);
     expect(html).toMatch(/activity statements/);
     expect(html).toMatch(/United Kingdom/);
     expect(html).not.toMatch(/15%\s*off/i);
