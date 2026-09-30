@@ -2,7 +2,10 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { PrivacyDefault } from "./privacy-default";
-import { PRIVACY_PUBLISH_DATE } from "./privacy-publish-date";
+import {
+  isUkLongFormDate,
+  PRIVACY_PUBLISH_DATE,
+} from "./privacy-publish-date";
 import { PrivacyUk } from "./privacy-uk";
 
 const JOHN_PARAGRAPH =
@@ -50,7 +53,10 @@ describe("privacy data retention", () => {
       expect(text).toContain(`Effective Date: ${PRIVACY_PUBLISH_DATE}`);
       expect(text).toContain(`Last updated: ${PRIVACY_PUBLISH_DATE}`);
     }
-    expect(PRIVACY_PUBLISH_DATE).not.toBe("");
+  });
+
+  it("blocks merge until PRIVACY_PUBLISH_DATE is a real UK long-form date", () => {
+    expect(isUkLongFormDate(PRIVACY_PUBLISH_DATE)).toBe(true);
   });
 
   it("renders Legal's retention bullets and John's paragraph", () => {
@@ -95,5 +101,21 @@ describe("privacy data retention", () => {
         expect(text).not.toContain(old);
       }
     }
+  });
+});
+
+describe("isUkLongFormDate", () => {
+  it.each(["1 October 2026", "30 September 2026"])("accepts %s", (value) => {
+    expect(isUkLongFormDate(value)).toBe(true);
+  });
+
+  it.each([
+    "PENDING_CTO_DATE",
+    "",
+    "2026-10-01",
+    "31 February 2026",
+    "October 1 2026",
+  ])("rejects %s", (value) => {
+    expect(isUkLongFormDate(value)).toBe(false);
   });
 });
