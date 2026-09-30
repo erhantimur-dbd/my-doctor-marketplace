@@ -641,7 +641,7 @@ async function createDoctorAccount(formData: FormData): Promise<
 
   // Process referral code / prior invite (link this doctor as a referred signup)
   if (newDoctor) {
-    const { processReferralSignup } = await import("@/actions/referral");
+    const { processReferralSignup } = await import("@/lib/referrals/internal");
     await processReferralSignup(
       newDoctor.id,
       email,
@@ -652,7 +652,7 @@ async function createDoctorAccount(formData: FormData): Promise<
   // Send colleague invitation if provided
   if (colleagueEmail && newDoctor) {
     const { sendReferralInvitationAtRegistration } = await import(
-      "@/actions/referral"
+      "@/lib/referrals/internal"
     );
     const referrerName = `Dr. ${firstName} ${lastName}`;
     await sendReferralInvitationAtRegistration(

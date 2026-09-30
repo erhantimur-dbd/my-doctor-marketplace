@@ -148,6 +148,31 @@ export async function saveAttachmentRecord(data: {
   storagePath: string;
   uploadedBy: string;
 }): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  if (!data.storagePath.startsWith(`${data.conversationId}/`)) {
+    return { success: false, error: "Access denied." };
+  }
+
+  const { data: conv } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("id", data.conversationId)
+    .single();
+  if (!conv) return { success: false, error: "Access denied." };
+
+  const { data: message } = await supabase
+    .from("direct_messages")
+    .select("id")
+    .eq("id", data.messageId)
+    .eq("conversation_id", data.conversationId)
+    .maybeSingle();
+  if (!message) return { success: false, error: "Access denied." };
+
   const admin = createAdminClient();
 
   const { error } = await admin.from("message_attachments").insert({
@@ -157,7 +182,7 @@ export async function saveAttachmentRecord(data: {
     file_type: data.fileType,
     file_size: data.fileSize,
     storage_path: data.storagePath,
-    uploaded_by: data.uploadedBy,
+    uploaded_by: user.id,
   });
 
   if (error) {

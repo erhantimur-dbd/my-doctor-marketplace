@@ -88,6 +88,20 @@ export async function recordCouponRedemption(
   planId: string,
   stripeCheckoutSessionId?: string
 ) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: doctor } = await supabase
+    .from("doctors")
+    .select("id")
+    .eq("profile_id", user.id)
+    .eq("id", doctorId)
+    .maybeSingle();
+  if (!doctor) return;
+
   const adminSupabase = createAdminClient();
 
   // Insert redemption record
@@ -95,7 +109,7 @@ export async function recordCouponRedemption(
     .from("coupon_redemptions")
     .insert({
       coupon_id: couponId,
-      doctor_id: doctorId,
+      doctor_id: doctor.id,
       plan_id: planId,
       stripe_checkout_session_id: stripeCheckoutSessionId || null,
     });

@@ -73,8 +73,11 @@ export async function resolveInviteToken(token: string) {
   return { error: null, invite: { ...invite, organization } };
 }
 
-/** Check if an email already has an account */
+/** Check if an email already has an account. Org owners and admins only. */
 export async function checkEmailRegistered(email: string) {
+  const { error: authError, org } = await requireOrgMember(["owner", "admin"]);
+  if (authError || !org) return { registered: false };
+
   const adminSupabase = createAdminClient();
   const { data } = await adminSupabase
     .from("profiles")

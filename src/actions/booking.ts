@@ -33,7 +33,7 @@ import {
   buildBookingCancellationComponents,
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
-import { notifyAvailabilitySubscribers } from "@/actions/availability-alerts";
+import { notifyAvailabilitySubscribers } from "@/lib/availability/notify-subscribers";
 import { sendSms } from "@/lib/sms/client";
 import { bookingCancellationSms } from "@/lib/sms/templates";
 import { creditWallet, debitWallet, getWalletBalance } from "@/lib/wallet";
