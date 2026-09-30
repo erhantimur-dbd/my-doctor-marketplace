@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { lockLegacyDailyRooms } from "@/lib/daily/lock-legacy-rooms";
 
@@ -82,5 +84,15 @@ describe("lockLegacyDailyRooms", () => {
     expect(result.matched).toEqual(["md-bk-1"]);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(lines[0]).toContain("dry-run md-bk-1");
+  });
+
+  it("documents the react-server tsx command", () => {
+    const source = readFileSync(
+      join(process.cwd(), "scripts/lock-daily-rooms.ts"),
+      "utf8"
+    );
+    expect(source).toContain(
+      "NODE_OPTIONS=--conditions=react-server npx tsx scripts/lock-daily-rooms.ts --help"
+    );
   });
 });

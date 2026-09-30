@@ -8,13 +8,19 @@
  * Safe to re-run: an existing room pair is left in place, and doctor notify
  * is skipped when a new_booking notification for that booking_id already exists.
  *
- * Production repair for Darren Been / Dr Vera Softsmoke (no rebook):
+ * Usage (plain `npx tsx` throws on the server-only import):
  *
- *   NEXT_PUBLIC_SUPABASE_URL=... \
- *   SUPABASE_SERVICE_ROLE_KEY=... \
- *   DAILY_API_KEY=... \
- *   npx tsx scripts/repair-confirmed-video-booking.ts \
- *     7696f804-21ff-40bf-be4a-4d3c2aaa244d
+ *   NODE_OPTIONS=--conditions=react-server npx tsx scripts/repair-confirmed-video-booking.ts <id>
+ *
+ * Production repair for Darren Been / Dr Vera Softsmoke (no rebook).
+ * Also set NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and DAILY_API_KEY:
+ *
+ *   NODE_OPTIONS=--conditions=react-server npx tsx scripts/repair-confirmed-video-booking.ts 7696f804-21ff-40bf-be4a-4d3c2aaa244d
+ *
+ * Plain `npx tsx` throws: this file imports finalize-confirmed-booking, which
+ * pulls in modules marked server-only. The react-server condition loads the
+ * empty server-only stub. `--help` prints usage and does not call Daily or
+ * the database.
  *
  * Run from the repo root on the commit that contains finalizeConfirmedBooking.
  * Does not send Soft CTA email and does not mint Founding Free licences.
@@ -29,13 +35,22 @@ function requireEnv(name: string) {
   }
 }
 
+const USAGE =
+  "Usage: NODE_OPTIONS=--conditions=react-server npx tsx scripts/repair-confirmed-video-booking.ts <id>";
+
 async function main() {
+  if (process.argv.includes("--help") || process.argv.includes("-h")) {
+    console.log(USAGE);
+    console.log(
+      "Production Softsmoke booking: 7696f804-21ff-40bf-be4a-4d3c2aaa244d (BK-20260925-A856)"
+    );
+    return;
+  }
+
   const bookingId = process.argv[2]?.trim();
 
   if (!bookingId) {
-    console.error(
-      "Usage: npx tsx scripts/repair-confirmed-video-booking.ts <booking-uuid>"
-    );
+    console.error(USAGE);
     console.error(
       "Production Softsmoke booking: 7696f804-21ff-40bf-be4a-4d3c2aaa244d (BK-20260925-A856)"
     );

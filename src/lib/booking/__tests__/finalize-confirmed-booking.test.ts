@@ -562,5 +562,8 @@ describe("checkout and charge-skip share finalize", () => {
     expect(repairSource).toContain("finalizeConfirmedBookingById");
     expect(repairSource).toContain(BOOKING_ID);
     expect(repairSource).toContain("BK-20260925-A856");
+    expect(repairSource).toContain(
+      "NODE_OPTIONS=--conditions=react-server npx tsx scripts/repair-confirmed-video-booking.ts <id>"
+    );
   });
 });
