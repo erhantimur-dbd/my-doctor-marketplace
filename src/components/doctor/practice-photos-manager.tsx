@@ -16,6 +16,12 @@ import {
   ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DOCTOR_PUBLIC_MEDIA_BUCKET,
+  doctorPublicMediaObjectKey,
+  doctorPublicMediaObjectPath,
+  doctorPublicMediaStoragePath,
+} from "@/lib/doctor/public-media";
 
 interface Photo {
   id: string;
@@ -69,6 +75,14 @@ export function PracticePhotosManager({
 
     setUploading(true);
     const supabase = createSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setUploading(false);
+      toast.error("Sign in to upload photos.");
+      return;
+    }
 
     for (const file of Array.from(files)) {
       if (!ACCEPTED_TYPES.includes(file.type)) {
@@ -81,18 +95,23 @@ export function PracticePhotosManager({
       }
 
       const ext = file.name.split(".").pop() || "jpg";
-      const filePath = `doctor-photos/${doctorId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const objectPath = doctorPublicMediaObjectPath(
+        user.id,
+        "doctor-photos",
+        fileName,
+      );
 
       const { error: uploadError } = await supabase.storage
-        .from("public")
-        .upload(filePath, file, { contentType: file.type });
+        .from(DOCTOR_PUBLIC_MEDIA_BUCKET)
+        .upload(objectPath, file, { contentType: file.type });
 
       if (uploadError) {
         toast.error(`Failed to upload ${file.name}.`);
         continue;
       }
 
-      const storagePath = `public/${filePath}`;
+      const storagePath = doctorPublicMediaStoragePath(objectPath);
       const { data: photoRecord, error: insertError } = await supabase
         .from("doctor_photos")
         .insert({
@@ -122,9 +141,8 @@ export function PracticePhotosManager({
     setDeletingId(photo.id);
     const supabase = createSupabase();
 
-    // Delete from storage
-    const bucketPath = photo.storage_path.replace(/^public\//, "");
-    await supabase.storage.from("public").remove([bucketPath]);
+    const objectKey = doctorPublicMediaObjectKey(photo.storage_path);
+    await supabase.storage.from(DOCTOR_PUBLIC_MEDIA_BUCKET).remove([objectKey]);
 
     // Delete DB record
     await supabase.from("doctor_photos").delete().eq("id", photo.id);

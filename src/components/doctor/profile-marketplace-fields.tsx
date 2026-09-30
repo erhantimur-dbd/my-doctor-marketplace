@@ -42,6 +42,11 @@ import {
   upsertDoctorFaq,
   deleteDoctorFaq,
 } from "@/actions/doctor-profile-extras";
+import {
+  DOCTOR_PUBLIC_MEDIA_BUCKET,
+  doctorPublicMediaObjectPath,
+  doctorPublicMediaStoragePath,
+} from "@/lib/doctor/public-media";
 
 interface FaqRow {
   id: string;
@@ -146,12 +151,25 @@ export function ProfileMarketplaceFields({
 
     setUploading(true);
     const supabase = createSupabase();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      setUploading(false);
+      toast.error("Sign in to upload a video.");
+      return;
+    }
+
     const ext = file.name.split(".").pop() || "mp4";
-    const filePath = `doctor-videos/${doctorId}/${Date.now()}.${ext}`;
+    const objectPath = doctorPublicMediaObjectPath(
+      user.id,
+      "doctor-videos",
+      `${doctorId}/${Date.now()}.${ext}`,
+    );
 
     const { error: uploadError } = await supabase.storage
-      .from("public")
-      .upload(filePath, file, { contentType: file.type, upsert: true });
+      .from(DOCTOR_PUBLIC_MEDIA_BUCKET)
+      .upload(objectPath, file, { contentType: file.type, upsert: true });
 
     if (uploadError) {
       setUploading(false);
@@ -159,7 +177,7 @@ export function ProfileMarketplaceFields({
       return;
     }
 
-    const storagePath = `public/${filePath}`;
+    const storagePath = doctorPublicMediaStoragePath(objectPath);
     const res = await submitProfileVideo(storagePath);
     setUploading(false);
 
