@@ -210,6 +210,3 @@ export function useGrokStt(
     stop,
   };
 }
-
-/** @deprecated Use useGrokStt */
-export const useWhisperStt = useGrokStt;
