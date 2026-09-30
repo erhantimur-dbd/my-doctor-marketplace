@@ -11,6 +11,11 @@ import { log } from "@/lib/utils/logger";
 import { getStripe } from "@/lib/stripe/client";
 import { z } from "zod/v4";
 import type { ClinicInvitation, ClinicInvitationRole } from "@/types";
+import {
+  ACCEPT_CLINIC_INVITE_COLUMNS,
+  isClinicInviteToken,
+  PUBLIC_CLINIC_INVITE_COLUMNS,
+} from "@/lib/clinic/invite-token";
 
 // ─── Validators ──────────────────────────────────────────────
 
@@ -42,11 +47,15 @@ export async function getClinicInvitations() {
 
 /** Resolve an invitation token — called on the public /invite/[token] page */
 export async function resolveInviteToken(token: string) {
+  if (!isClinicInviteToken(token)) {
+    return { error: "Invitation not found or has expired", invite: null };
+  }
+
   const adminSupabase = createAdminClient();
 
   const { data: invite, error } = await adminSupabase
     .from("clinic_invitations")
-    .select("*")
+    .select(PUBLIC_CLINIC_INVITE_COLUMNS)
     .eq("token", token)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
@@ -246,6 +255,10 @@ export async function revokeClinicInvitation(invitationId: string) {
 // ─── Accept Invitation (existing user) ───────────────────────
 
 export async function acceptClinicInvitation(token: string) {
+  if (!isClinicInviteToken(token)) {
+    return { error: "Invitation not found or has expired" };
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
@@ -254,7 +267,7 @@ export async function acceptClinicInvitation(token: string) {
 
   const { data: invite } = await adminSupabase
     .from("clinic_invitations")
-    .select("*")
+    .select(ACCEPT_CLINIC_INVITE_COLUMNS)
     .eq("token", token)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
@@ -330,6 +343,10 @@ export async function acceptClinicInvitation(token: string) {
 
 /** Called after user confirms they want to cancel their existing subscription */
 export async function acceptClinicInvitationWithTransfer(token: string) {
+  if (!isClinicInviteToken(token)) {
+    return { error: "Invitation not found or has expired" };
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
@@ -338,7 +355,7 @@ export async function acceptClinicInvitationWithTransfer(token: string) {
 
   const { data: invite } = await adminSupabase
     .from("clinic_invitations")
-    .select("*")
+    .select(ACCEPT_CLINIC_INVITE_COLUMNS)
     .eq("token", token)
     .eq("status", "pending")
     .gt("expires_at", new Date().toISOString())
@@ -399,7 +416,15 @@ export async function acceptClinicInvitationWithTransfer(token: string) {
 }
 
 async function _completeInviteAcceptance(
-  invite: ClinicInvitation,
+  invite: Pick<
+    ClinicInvitation,
+    | "id"
+    | "organization_id"
+    | "role"
+    | "invited_by"
+    | "created_at"
+    | "location_ids"
+  >,
   userId: string,
   adminSupabase: ReturnType<typeof createAdminClient>
 ) {
