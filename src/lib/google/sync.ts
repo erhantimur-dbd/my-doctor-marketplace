@@ -433,39 +433,3 @@ export async function setupCalendarWebhook(
     };
   }
 }
-
-/**
- * Sync all connected doctors (for cron job)
- */
-export async function syncAllConnectedDoctors(): Promise<{
-  synced: number;
-  errors: number;
-}> {
-  const supabase = createAdminClient();
-
-  const { data: connections } = await supabase
-    .from("doctor_calendar_connections")
-    .select("doctor_id")
-    .eq("provider", "google")
-    .eq("sync_enabled", true)
-    .not("calendar_id", "is", null);
-
-  if (!connections || connections.length === 0) {
-    return { synced: 0, errors: 0 };
-  }
-
-  let synced = 0;
-  let errors = 0;
-
-  for (const conn of connections) {
-    const result = await importGoogleCalendarEvents(conn.doctor_id);
-    if (result.success) {
-      synced++;
-    } else {
-      errors++;
-      log.error("Sync failed for doctor", { doctorId: conn.doctor_id, error: result.error });
-    }
-  }
-
-  return { synced, errors };
-}

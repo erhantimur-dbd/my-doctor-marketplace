@@ -1,27 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { syncAllConnectedDoctors, setupCalendarWebhook } from "@/lib/google/sync";
-import { syncAllMicrosoftDoctors, setupMicrosoftWebhook } from "@/lib/microsoft/sync";
+import { setupCalendarWebhook } from "@/lib/google/sync";
+import { setupMicrosoftWebhook } from "@/lib/microsoft/sync";
 import { syncAllCalDAVDoctors } from "@/lib/caldav/sync";
 import { authorizeCronRequest } from "@/lib/cron/authorize";
+
+/**
+ * CalDAV has no push channel, so it stays on this poll.
+ * Google and Microsoft already import from their webhooks; listing the next
+ * 30 days here burns Calendar/Graph quota and races those imports (delete
+ * upcoming overrides, then die before the reinsert).
+ *
+ * 60s is enough for a sequential CalDAV pass plus channel renewal, and long
+ * enough that a slow CalDAV delete is not cut off before the reinsert.
+ */
+export const maxDuration = 60;
 
 export async function GET(request: NextRequest) {
   const denied = authorizeCronRequest(request);
   if (denied) return denied;
 
-  // Sync all providers in parallel
-  const [google, microsoft, caldav] = await Promise.all([
-    syncAllConnectedDoctors(),
-    syncAllMicrosoftDoctors(),
-    syncAllCalDAVDoctors(),
-  ]);
+  const caldav = await syncAllCalDAVDoctors();
 
-  // Renew webhooks expiring within 1 hour
+  // Renew Google/Microsoft channels expiring within 1 hour.
   const webhooksRenewed = await renewExpiringWebhooks();
 
   return NextResponse.json({
-    google,
-    microsoft,
     caldav,
     webhooksRenewed,
   });
