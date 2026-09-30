@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { PRIVACY_PUBLISH_DATE } from "./privacy-publish-date";
 
 /**
  * Default (cross-region) Privacy Policy.
@@ -11,7 +12,6 @@ import { Card, CardContent } from "@/components/ui/card";
  * unless a global update is needed.
  */
 
-const EFFECTIVE_DATE = "17 March 2026";
 const COMPANY = "MyDoctors360";
 
 export function PrivacyDefault() {
@@ -20,7 +20,10 @@ export function PrivacyDefault() {
       <div>
         <h1 className="text-3xl font-bold">Privacy Policy</h1>
         <p className="mt-2 text-muted-foreground">
-          Effective Date: {EFFECTIVE_DATE}
+          Effective Date: {PRIVACY_PUBLISH_DATE}
+        </p>
+        <p className="text-muted-foreground">
+          Last updated: {PRIVACY_PUBLISH_DATE}
         </p>
       </div>
 
@@ -95,9 +98,11 @@ export function PrivacyDefault() {
             {`If you ask us to delete your account, we'll close it, remove your name, email, phone number and address, and delete anything we don't need to keep. Some records must be kept by law or for your care, even after your account is closed. These include consultation and prescription records (usually 8 years after your last consultation, longer for children), payment and booking records (6 years for tax and legal reasons), and doctor registration and insurance details (6 years after a doctor leaves). We keep these securely with access restricted, use them only for those reasons, and delete them when the period ends. You can still ask to see them.`}
           </p>
           <ul>
-            <li><strong>Booking records</strong> — Retained for 8 years (UK medical records retention requirement).</li>
-            <li><strong>Medical data</strong> — Retained for 8 years from last interaction, or until you request deletion.</li>
-            <li><strong>Payment records</strong> — Retained for 7 years (tax obligations).</li>
+            <li><strong>Booking and consultation-booking records:</strong> 6 years after the end of the financial year in which the booking took place, for tax and legal reasons. Your name and contact details are removed if you close your account.</li>
+            <li><strong>Payment, refund, wallet credit and statement records:</strong> 6 years after the end of the financial year in which the payment took place, as required for tax (HMRC) and legal claims.</li>
+            <li><strong>Medical and consultation records (including prescriptions, consultation notes, and health information shared with a doctor for a booking):</strong> for adults, 8 years after your last consultation; for children, until their 25th birthday (26th if they were 17 at their last consultation), or 8 years, whichever is later. These records are kept even if you close your account or ask us to delete your data, because the law and your ongoing care require it. Access is restricted, and you can still ask to see them. Health information you entered but never shared with a doctor for a booking is deleted when you ask.</li>
+            <li><strong>Prescription audit records:</strong> kept for the same period as the prescription they relate to, and cannot be altered.</li>
+            <li><strong>Security and access logs:</strong> 2 years.</li>
             <li><strong>Pending bookings</strong> — Automatically deleted after 15 minutes (patient) or 48 hours (admin-created) if payment is not completed.</li>
           </ul>
 
