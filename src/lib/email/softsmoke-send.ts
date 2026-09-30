@@ -6,6 +6,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendEmail } from "@/lib/email/client";
 import { bookingConfirmationEmail } from "@/lib/email/templates";
+import {
+  buildPatientCalendarEvent,
+  type PatientCalendarAttachment,
+} from "@/lib/booking/patient-calendar";
 import { log } from "@/lib/utils/logger";
 import {
   BOOKING_CURRENT_DOCTOR_INNER_EMBED,
@@ -41,14 +45,36 @@ function unwrap<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value;
 }
 
+function confirmationCalendar(params: ConfirmationParams) {
+  if (!params.bookingId) return null;
+  return buildPatientCalendarEvent({
+    bookingId: params.bookingId,
+    doctorName: params.doctorName,
+    consultationType: params.consultationType,
+    appointmentDate: params.date,
+    startTime: params.time,
+    endTime: params.end,
+    durationMinutes: params.durationMinutes,
+    clinicName: params.clinicName,
+    address: params.address,
+    bookingNumber: params.bookingNumber,
+    createdAt: params.createdAt,
+    updatedAt: params.updatedAt,
+    kind: "confirm",
+    method: "REQUEST",
+  });
+}
+
 export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
   subject: string;
   html: string;
+  attachments?: PatientCalendarAttachment[];
 } {
   if (!isSoftsmokeTransactionalDoctor(params.doctor)) {
     return bookingConfirmationEmail(params);
   }
-  return softsmokePatientConfirmEmail({
+  const calendar = confirmationCalendar(params);
+  const mail = softsmokePatientConfirmEmail({
     patientFirstName: firstNameOnly(params.patientName, "there"),
     doctorDisplayName: formatDoctorDisplayName(params.doctorName),
     appointmentDate: params.date,
@@ -58,7 +84,12 @@ export function resolvePatientConfirmationEmail(params: ConfirmationParams): {
     appointmentType: params.consultationType,
     joinUrl: params.videoRoomUrl,
     manageUrl: params.manageUrl || manageBookingUrl(params.bookingId),
+    calendarHtml: calendar?.linksHtml,
   });
+  return {
+    ...mail,
+    attachments: calendar ? [calendar.attachment] : undefined,
+  };
 }
 
 export async function sendSoftsmokeChargeSkipPatientConfirmation(
@@ -75,11 +106,16 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
       doctor_id,
       appointment_date,
       start_time,
+      end_time,
       consultation_type,
+      created_at,
+      updated_at,
       patient:profiles!bookings_patient_id_fkey(first_name, last_name, email),
       doctor:${BOOKING_CURRENT_DOCTOR_INNER_EMBED}(
         id,
         slug,
+        clinic_name,
+        address,
         profile:${BOOKING_DOCTOR_PROFILE_EMBED}(first_name, last_name, email)
       )
     `
@@ -101,7 +137,10 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     doctor_id: string;
     appointment_date: string;
     start_time: string;
+    end_time?: string | null;
     consultation_type: string;
+    created_at?: string | null;
+    updated_at?: string | null;
     patient:
       | { first_name: string | null; last_name: string | null; email: string | null }
       | { first_name: string | null; last_name: string | null; email: string | null }[]
@@ -110,6 +149,8 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
       | {
           id?: string | null;
           slug?: string | null;
+          clinic_name?: string | null;
+          address?: string | null;
           profile:
             | {
                 first_name: string | null;
@@ -143,6 +184,21 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
   const doctorName = [doctorProfile?.first_name, doctorProfile?.last_name]
     .filter(Boolean)
     .join(" ");
+  const calendar = buildPatientCalendarEvent({
+    bookingId: row.id,
+    doctorName,
+    consultationType: row.consultation_type,
+    appointmentDate: row.appointment_date,
+    startTime: row.start_time,
+    endTime: row.end_time,
+    clinicName: doctor?.clinic_name,
+    address: doctor?.address,
+    bookingNumber: row.booking_number,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    kind: "confirm",
+    method: "REQUEST",
+  });
   const { subject, html } = softsmokePatientConfirmEmail({
     patientFirstName: patient.first_name || "there",
     doctorDisplayName: doctorName,
@@ -152,9 +208,15 @@ export async function sendSoftsmokeChargeSkipPatientConfirmation(
     appointmentType: row.consultation_type,
     joinUrl: videoRoomUrl,
     manageUrl: manageBookingUrl(row.id),
+    calendarHtml: calendar?.linksHtml,
   });
 
-  await sendEmail({ to: patient.email, subject, html }).catch((err) =>
+  await sendEmail({
+    to: patient.email,
+    subject,
+    html,
+    attachments: calendar ? [calendar.attachment] : undefined,
+  }).catch((err) =>
     log.error("[Softsmoke mail] patient confirm failed", { err, bookingId })
   );
 }
