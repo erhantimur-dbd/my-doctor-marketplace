@@ -91,8 +91,10 @@ export function PrivacyDefault() {
           <p>We do not sell your data to third parties.</p>
 
           <h2>7. Data Retention</h2>
+          <p>
+            {`If you ask us to delete your account, we'll close it, remove your name, email, phone number and address, and delete anything we don't need to keep. Some records must be kept by law or for your care, even after your account is closed. These include consultation and prescription records (usually 8 years after your last consultation, longer for children), payment and booking records (6 years for tax and legal reasons), and doctor registration and insurance details (6 years after a doctor leaves). We keep these securely with access restricted, use them only for those reasons, and delete them when the period ends. You can still ask to see them.`}
+          </p>
           <ul>
-            <li><strong>Account data</strong> — Retained while your account is active, deleted on account deletion.</li>
             <li><strong>Booking records</strong> — Retained for 8 years (UK medical records retention requirement).</li>
             <li><strong>Medical data</strong> — Retained for 8 years from last interaction, or until you request deletion.</li>
             <li><strong>Payment records</strong> — Retained for 7 years (tax obligations).</li>
