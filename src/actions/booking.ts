@@ -63,10 +63,10 @@ import {
 } from "@/lib/stripe/wallet-credit-share";
 import {
   refundConsultSplit,
-  bookingRefundSettlementPatch,
   remainingConsultPaidParts,
   storedConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
+import { recordConsultRefundOnBooking } from "@/lib/stripe/record-consult-refund";
 import {
   confirmBookingWithoutStripeCheckout,
   finalizeConfirmedBookingById,
@@ -872,7 +872,8 @@ export async function cancelBooking(input: CancelBookingInput) {
     let cardRefundedToCardCents = 0;
     let refundRef: string | null = null;
     const refundDestination = parsed.data.refund_destination || "bank";
-    let refundSettlementPatch: Record<string, unknown> | null = null;
+    let settledRefund: Awaited<ReturnType<typeof refundConsultSplit>> | null =
+      null;
 
     if (
       refundPercent > 0 &&
@@ -896,24 +897,22 @@ export async function cancelBooking(input: CancelBookingInput) {
       walletCreditCents = settled.walletCreditCents;
       cardRefundedToCardCents = settled.cardRefundedToCardCents;
       refundRef = settled.cardRefundId;
-      refundSettlementPatch = bookingRefundSettlementPatch(booking, settled);
+      settledRefund = settled;
     }
 
-    // Update booking status
-    const { error: updateError } = await supabase
-      .from("bookings")
-      .update({
+    // The patient session cannot UPDATE bookings. Counters and cancel status
+    // are written together by the service-role refund recorder.
+    const recorded = await recordConsultRefundOnBooking({
+      bookingId: booking.id,
+      booking,
+      settled: settledRefund,
+      extra: {
         status: BOOKING_STATUSES.CANCELLED_PATIENT,
         cancelled_at: new Date().toISOString(),
         cancellation_reason: parsed.data.reason || null,
-        ...(refundSettlementPatch || {}),
-      })
-      .eq("id", booking.id);
-
-    if (updateError) {
-      log.error("Booking cancellation update error:", { err: updateError });
-      return { error: "Failed to update booking status." };
-    }
+      },
+    });
+    if ("error" in recorded) return { error: recorded.error };
 
     // Remove event from doctor's connected calendars (non-blocking)
     removeBookingFromGoogleCalendar(booking.id).catch((err) =>
@@ -1147,7 +1146,8 @@ export async function cancelAndRebook(input: {
 
     const paidParts = remainingConsultPaidParts(oldBooking);
     let walletCreditCents = 0;
-    let refundSettlementPatch: Record<string, unknown> | null = null;
+    let settledRefund: Awaited<ReturnType<typeof refundConsultSplit>> | null =
+      null;
 
     // 3. Credit always returns to the wallet. Cancel-and-rebook puts the card
     // part there too, and claws the doctor's card transfer back once.
@@ -1171,19 +1171,22 @@ export async function cancelAndRebook(input: {
         sourceType: "cancel_rebook",
       });
       walletCreditCents = settled.walletCreditCents;
-      refundSettlementPatch = bookingRefundSettlementPatch(oldBooking, settled);
+      settledRefund = settled;
     }
 
-    // 4. Cancel old booking
-    await supabase
-      .from("bookings")
-      .update({
+    // 4. Cancel old booking. Same service-role recorder as a plain cancel so
+    // the wallet credit is counted even though the patient cannot UPDATE.
+    const recorded = await recordConsultRefundOnBooking({
+      bookingId: oldBooking.id,
+      booking: oldBooking,
+      settled: settledRefund,
+      extra: {
         status: BOOKING_STATUSES.CANCELLED_PATIENT,
         cancelled_at: new Date().toISOString(),
         cancellation_reason: "Cancelled and rebooked by patient",
-        ...(refundSettlementPatch || {}),
-      })
-      .eq("id", oldBooking.id);
+      },
+    });
+    if ("error" in recorded) return { error: recorded.error };
 
     // Clean up old booking (non-blocking)
     removeBookingFromGoogleCalendar(oldBooking.id).catch(() => {});

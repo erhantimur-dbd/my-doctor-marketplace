@@ -763,12 +763,12 @@ describe("wallet destination never refunds the card", () => {
     );
     const rebook = booking.slice(booking.indexOf("export async function cancelAndRebook"));
     expect(cancel).toContain("refundConsultSplit");
-    expect(cancel).toContain("bookingRefundSettlementPatch");
+    expect(cancel).toContain("recordConsultRefundOnBooking");
     expect(cancel).not.toContain("refunds.create");
     expect(cancel).not.toContain("creditWallet(");
     expect(rebook).toContain('destination: "wallet"');
     expect(rebook).toContain("refundConsultSplit");
-    expect(rebook).toContain("bookingRefundSettlementPatch");
+    expect(rebook).toContain("recordConsultRefundOnBooking");
     expect(rebook).not.toContain("refunds.create");
     expect(rebook).not.toContain("creditWallet(");
   });

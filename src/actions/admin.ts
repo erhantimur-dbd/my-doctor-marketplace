@@ -15,12 +15,11 @@ import {
 import {
   refundAdminBookingPayment,
   refundConsultSplit,
-  bookingRefundSettlementPatch,
   remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
+import { recordConsultRefundOnBooking } from "@/lib/stripe/record-consult-refund";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
-import { bookingRowUpdateError } from "@/lib/booking/booking-row-update";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
 import { computeCancellationRefundPercent } from "@/lib/booking/cancellation-refund";
 import { BOOKING_CURRENT_DOCTOR_INNER_EMBED } from "@/lib/patient/booking-doctor-embed";
@@ -739,24 +738,15 @@ export async function adminRefundBooking(
   const refundAmount = settled.refundAmountCents;
   let refundRef = settled.cardRefundId || `refund-${bookingId}`;
 
-  // Bookings has no UPDATE policy. The logged-in admin client matches 0 rows
-  // and returns no error, so the Stripe refund must be written with the
-  // service-role client and a zero-row result treated as failure.
-  const adminSupabase = createAdminClient();
-  const { data: updatedRows, error: updateError } = await adminSupabase
-    .from("bookings")
-    .update(settled.settlementPatch)
-    .eq("id", bookingId)
-    .select("id");
-
-  const rowError = bookingRowUpdateError({
-    error: updateError,
-    rows: updatedRows,
-    stripeRefundSucceeded: true,
+  // Service-role write, zero rows are an error, and the Stripe refund id is
+  // claimed once so a retry cannot add the same cents again.
+  const recorded = await recordConsultRefundOnBooking({
     bookingId,
-    stripeRefundId: settled.cardRefundId,
+    booking,
+    settled,
+    markStatusRefunded: true,
   });
-  if (rowError) return { error: rowError.error };
+  if ("error" in recorded) return { error: recorded.error };
 
   await logAdminAction(supabase, user.id, "booking_refunded", "booking", bookingId, {
     amount_cents: refundAmount,
@@ -2207,7 +2197,7 @@ export async function adminCancelBooking(
   // Same split as a patient cancel: credit back to the wallet, card to the card.
   let refundAmountCents = 0;
   let refundRef: string | null = null;
-  let refundSettlementPatch: Record<string, unknown> | null = null;
+  let settledRefund: Awaited<ReturnType<typeof refundConsultSplit>> | null = null;
   const paidParts = remainingConsultPaidParts(booking);
   if (
     refundPercent > 0 &&
@@ -2232,35 +2222,24 @@ export async function adminCancelBooking(
       });
       refundAmountCents = settled.cardRefundedToCardCents + settled.walletCreditCents;
       refundRef = settled.cardRefundId;
-      refundSettlementPatch = bookingRefundSettlementPatch(booking, settled);
+      settledRefund = settled;
     } catch (err: any) {
       log.error("Admin cancel refund error:", { err: err });
       return { error: safeError(err) };
     }
   }
 
-  // Update booking status
-  const updateData: Record<string, unknown> = {
-    status: BOOKING_STATUSES.CANCELLED_DOCTOR,
-    cancelled_at: new Date().toISOString(),
-    cancellation_reason: reason || "Cancelled by admin",
-    ...(refundSettlementPatch || {}),
-  };
-
-  const { data: cancelledRows, error: cancelUpdateError } = await adminSupabase
-    .from("bookings")
-    .update(updateData)
-    .eq("id", bookingId)
-    .select("id");
-
-  const cancelRowError = bookingRowUpdateError({
-    error: cancelUpdateError,
-    rows: cancelledRows,
-    stripeRefundSucceeded: refundAmountCents > 0,
+  const recorded = await recordConsultRefundOnBooking({
     bookingId,
-    stripeRefundId: refundRef,
+    booking,
+    settled: settledRefund,
+    extra: {
+      status: BOOKING_STATUSES.CANCELLED_DOCTOR,
+      cancelled_at: new Date().toISOString(),
+      cancellation_reason: reason || "Cancelled by admin",
+    },
   });
-  if (cancelRowError) return { error: cancelRowError.error };
+  if ("error" in recorded) return { error: recorded.error };
 
   // Remove from calendars (non-blocking)
   removeBookingFromGoogleCalendar(bookingId).catch((err) =>

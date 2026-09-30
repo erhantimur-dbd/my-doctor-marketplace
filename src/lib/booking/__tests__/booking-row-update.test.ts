@@ -81,20 +81,22 @@ describe("admin refund and cancel booking writes", () => {
     source.indexOf("export async function adminGetCancelPreview")
   );
 
-  it("writes the refund with the service-role client and checks updated rows", () => {
-    expect(refund).toContain("createAdminClient()");
-    expect(refund).toContain('.select("id")');
-    expect(refund).toContain("bookingRowUpdateError");
-    expect(refund).toContain("stripeRefundSucceeded: true");
+  it("writes the refund through the shared recorder, not the admin session", () => {
+    expect(refund).toContain("recordConsultRefundOnBooking");
+    expect(refund).toContain("markStatusRefunded: true");
     expect(refund).not.toMatch(
       /await supabase\s*\.from\("bookings"\)\s*\.update/
     );
+    const recorder = read("src/lib/stripe/record-consult-refund.ts");
+    expect(recorder).toContain("createAdminClient()");
+    expect(recorder).toContain('.select("id")');
+    expect(recorder).toContain("bookingRowUpdateError");
+    expect(recorder).toContain("stripeRefundSucceeded: true");
   });
 
-  it("checks the admin cancel booking update for zero rows", () => {
+  it("records an admin cancel through the shared recorder", () => {
     expect(cancel).toContain("createAdminClient()");
-    expect(cancel).toContain('.select("id")');
-    expect(cancel).toContain("bookingRowUpdateError");
-    expect(cancel).toContain("stripeRefundSucceeded: refundAmountCents > 0");
+    expect(cancel).toContain("recordConsultRefundOnBooking");
+    expect(cancel).toContain("BOOKING_STATUSES.CANCELLED_DOCTOR");
   });
 });

@@ -16,9 +16,10 @@ import {
 import {
   clinicianReassignmentBlockReason,
   refundConsultSplit,
-  bookingRefundSettlementPatch,
   remainingConsultPaidParts,
+  type ConsultRefundResult,
 } from "@/lib/stripe/consult-refund";
+import { recordConsultRefundOnBooking } from "@/lib/stripe/record-consult-refund";
 import { sendEmail } from "@/lib/email/client";
 import { sendSms } from "@/lib/sms/client";
 import {
@@ -61,16 +62,16 @@ async function fullRefundBooking(booking: {
   refunded: boolean;
   amount: number;
   error?: string;
-  settlementPatch?: Record<string, unknown> | null;
+  settled?: ConsultRefundResult;
 }> {
   const parts = remainingConsultPaidParts(booking);
   const amount = parts.remainingPaidCents;
 
   if (!booking.paid_at || amount <= 0) {
-    return { refunded: false, amount: 0, settlementPatch: null };
+    return { refunded: false, amount: 0 };
   }
   if (parts.cardPaidCents > 0 && !booking.stripe_payment_intent_id) {
-    return { refunded: false, amount: 0, settlementPatch: null };
+    return { refunded: false, amount: 0 };
   }
   if (!booking.patient_id || !booking.currency) {
     return { refunded: false, amount: 0, error: "Booking is missing a patient" };
@@ -95,13 +96,30 @@ async function fullRefundBooking(booking: {
     return {
       refunded: true,
       amount: settled.cardRefundedToCardCents + settled.walletCreditCents,
-      settlementPatch: bookingRefundSettlementPatch(booking, settled),
+      settled,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Refund failed";
     log.error("[GP] fullRefundBooking failed", { err, bookingId: booking.id });
     return { refunded: false, amount: 0, error: message };
   }
+}
+
+async function persistGpCancellation(
+  booking: Parameters<typeof recordConsultRefundOnBooking>[0]["booking"] & {
+    id: string;
+  },
+  refund: { refunded: boolean; settled?: ConsultRefundResult },
+  extra: Record<string, unknown>
+): Promise<{ error?: string }> {
+  const recorded = await recordConsultRefundOnBooking({
+    bookingId: booking.id,
+    booking,
+    settled: refund.refunded ? refund.settled ?? null : null,
+    extra,
+  });
+  if ("error" in recorded) return { error: recorded.error };
+  return {};
 }
 
 async function applyDoctorHandoff(
@@ -415,17 +433,14 @@ export async function executeGpReassignmentRequest(params: {
 
   // 3) No inventory → full refund
   const refund = await fullRefundBooking(booking);
-  await supabase
-    .from("bookings")
-    .update({
-      status: "cancelled_doctor",
-      cancelled_at: new Date().toISOString(),
-      cancellation_reason:
-        params.reason || "Doctor unavailable — no GP replacement found",
-      gp_reassignment_status: "refunded",
-      ...(refund.settlementPatch || {}),
-    })
-    .eq("id", booking.id);
+  const persisted = await persistGpCancellation(booking, refund, {
+    status: "cancelled_doctor",
+    cancelled_at: new Date().toISOString(),
+    cancellation_reason:
+      params.reason || "Doctor unavailable — no GP replacement found",
+    gp_reassignment_status: "refunded",
+  });
+  if (persisted.error) return { outcome: "error", error: persisted.error };
 
   if (patient?.email) {
     const { subject, html } = gpReassignmentRefundEmail({
@@ -596,17 +611,13 @@ export async function declineAllGpOffers(
   }
 
   const refund = await fullRefundBooking(booking);
-
-  await supabase
-    .from("bookings")
-    .update({
-      status: "cancelled_doctor",
-      cancelled_at: new Date().toISOString(),
-      gp_reassignment_status: "patient_declined",
-      ...(refund.settlementPatch || {}),
-      cancellation_reason: "Patient declined alternate GP slots",
-    })
-    .eq("id", booking.id);
+  const persisted = await persistGpCancellation(booking, refund, {
+    status: "cancelled_doctor",
+    cancelled_at: new Date().toISOString(),
+    gp_reassignment_status: "patient_declined",
+    cancellation_reason: "Patient declined alternate GP slots",
+  });
+  if (persisted.error) return { error: persisted.error };
 
   await supabase
     .from("gp_slot_offers")
@@ -663,23 +674,26 @@ export async function expireGpOffersAndRefund(): Promise<{
 
     if (!booking) continue;
 
+    const refund = await fullRefundBooking(booking);
+    const persisted = await persistGpCancellation(booking, refund, {
+      status: "cancelled_doctor",
+      cancelled_at: new Date().toISOString(),
+      gp_reassignment_status: "refunded",
+      cancellation_reason: "Alternate GP offers expired without response",
+    });
+    if (persisted.error) {
+      log.error("[GP] expire refund was not recorded", {
+        bookingId,
+        err: persisted.error,
+      });
+      continue;
+    }
+
     await supabase
       .from("gp_slot_offers")
       .update({ status: "expired" })
       .eq("booking_id", bookingId)
       .eq("status", "pending");
-
-    const refund = await fullRefundBooking(booking);
-    await supabase
-      .from("bookings")
-      .update({
-        status: "cancelled_doctor",
-        cancelled_at: new Date().toISOString(),
-        gp_reassignment_status: "refunded",
-        ...(refund.settlementPatch || {}),
-        cancellation_reason: "Alternate GP offers expired without response",
-      })
-      .eq("id", bookingId);
 
     processed++;
   }
