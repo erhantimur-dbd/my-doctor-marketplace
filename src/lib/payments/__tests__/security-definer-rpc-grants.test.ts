@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { isDefinerGrantException } from "../../security/definer-grant-allowlist";
 
 const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
 const FROM_MIGRATION = 124;
@@ -139,6 +140,7 @@ function functionsMissingExecuteRevoke(migrations: MigrationSource[]): string[] 
       .map((item) => item.sql)
       .join("\n");
     for (const name of securityDefinerFunctions(migration.sql)) {
+      if (isDefinerGrantException(name)) continue;
       const roles = (["anon", "authenticated"] as const).filter(
         (role) => !hasExecuteRevoke(laterSql, name, role)
       );

@@ -1,40 +1,13 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  DEFINER_GRANT_ALLOWLIST,
+  isAvailabilityGrantException,
+  mayKeepAnonExecute,
+} from "../definer-grant-allowlist";
 
 const MIGRATIONS_DIR = join(process.cwd(), "supabase/migrations");
-
-/**
- * Availability RPCs stay executable by anon.
- * RLS helpers stay executable by anon because policies invoke them as the
- * caller (anon included). Autocomplete RPCs stay executable because the
- * user/anon client calls them.
- */
-const AVAILABILITY_ALLOWLIST = new Set([
-  "get_available_slots",
-  "get_available_dates_in_range",
-  "get_doctor_ids_available_today",
-  "get_live_available_doctor_ids",
-  "get_next_available_slots_batch",
-  "get_multi_day_available_slots_batch",
-]);
-
-/**
- * rls_* and get_user_org_ids are called from RLS policies as the invoker.
- * Revoking anon EXECUTE would break those policies. search_* stays because
- * the anon/user client calls it directly.
- */
-const FLAGGED_ANON_KEEP = new Set([
-  "rls_is_admin",
-  "rls_is_own_doctor",
-  "rls_get_doctor_id",
-  "rls_is_verified_doctor_profile",
-  "rls_is_review_patient",
-  "rls_is_booking_patient_of_doctor",
-  "get_user_org_ids",
-  "search_allergies",
-  "search_chronic_conditions",
-]);
 
 type FnState = {
   name: string;
@@ -45,14 +18,6 @@ type FnState = {
   authenticated: boolean;
   publicGrant: boolean;
 };
-
-function isAvailability(name: string): boolean {
-  return (
-    AVAILABILITY_ALLOWLIST.has(name) ||
-    name.startsWith("get_gp_") ||
-    name.endsWith("_batch")
-  );
-}
 
 function statementsOf(sql: string): string[] {
   const out: string[] = [];
@@ -305,14 +270,19 @@ function finalDefinerState(): Map<string, FnState> {
       }
 
       const alter = shell.match(
-        /\balter\s+function\s+((?:public\.)?[A-Za-z_][\w$]*)\s*(\((?:[^()]|\([^()]*\))*\))?\s+set\s+search_path\s*=\s*([^]+)$/i
+        /^\s*alter\s+function\s+((?:public\.)?[A-Za-z_][\w$]*)\s*(\((?:[^()]|\([^()]*\))*\))?([\s\S]*)$/i
       );
       if (alter) {
         const name = unqualified(alter[1]);
         const signature = alter[2] ? signatureFromArgs(alter[2]) : null;
-        const searchPath = alter[3].trim();
+        const actions = alter[3];
+        const path = actions.match(/\bset\s+search_path\s*=\s*([\s\S]+?)\s*$/i);
+        const invoker = /\bsecurity\s+invoker\b/i.test(actions);
+        const definer = /\bsecurity\s+definer\b/i.test(actions);
         applyTo({ name, signature }, (fn) => {
-          fn.searchPath = searchPath;
+          if (path) fn.searchPath = path[1].trim();
+          if (invoker) fn.securityDefiner = false;
+          if (definer) fn.securityDefiner = true;
         });
         continue;
       }
@@ -354,36 +324,35 @@ function anonExecutable(fn: FnState): boolean {
 }
 
 describe("public SECURITY DEFINER final state", () => {
-  const fns = [...finalDefinerState().values()].filter((fn) => fn.securityDefiner);
+  const all = [...finalDefinerState().values()];
+  const fns = all.filter((fn) => fn.securityDefiner);
 
   it("sets search_path on every public SECURITY DEFINER function", () => {
     const missing = fns.filter((fn) => !fn.searchPath).map((fn) => fn.name);
     expect(missing, missing.join("\n")).toEqual([]);
   });
 
-  it("keeps anon EXECUTE only for availability RPCs and flagged callers", () => {
+  it("keeps anon EXECUTE only for availability RPCs and RLS invokers", () => {
     const unexpected = fns
       .filter((fn) => anonExecutable(fn))
-      .filter((fn) => !isAvailability(fn.name) && !FLAGGED_ANON_KEEP.has(fn.name))
+      .filter((fn) => !mayKeepAnonExecute(fn.name))
       .map((fn) => fn.name);
     expect(unexpected, unexpected.join("\n")).toEqual([]);
   });
 
   it("does not revoke anon EXECUTE from availability RPCs", () => {
-    const present = fns.filter((fn) => isAvailability(fn.name)).map((fn) => fn.name);
+    const present = fns.filter((fn) => isAvailabilityGrantException(fn.name)).map((fn) => fn.name);
     expect(present).toEqual(
       expect.arrayContaining([
-        "get_available_slots",
-        "get_doctor_ids_available_today",
+        ...DEFINER_GRANT_ALLOWLIST.availability.filter(
+          (name) => name !== "get_available_dates_in_range"
+        ),
         "get_gp_in_person_availability",
         "get_gp_video_today_slot_count",
-        "get_live_available_doctor_ids",
-        "get_next_available_slots_batch",
-        "get_multi_day_available_slots_batch",
       ])
     );
     const revoked = fns
-      .filter((fn) => isAvailability(fn.name) && !anonExecutable(fn))
+      .filter((fn) => isAvailabilityGrantException(fn.name) && !anonExecutable(fn))
       .map((fn) => fn.name);
     expect(revoked, revoked.join("\n")).toEqual([]);
   });
@@ -505,24 +474,48 @@ describe("get_org_bookings rejects a non-member", () => {
     join(MIGRATIONS_DIR, "00127_definer_hardening.sql"),
     "utf8"
   );
-  const start = sql.indexOf("-- BEGIN pending match: guard_get_org_bookings");
-  const end = sql.indexOf("-- END pending match: guard_get_org_bookings");
-  const body = sql.slice(start, end);
+  const marker = "-- verbatim from prod migration 20260930161246 guard_get_org_bookings";
+  const start = sql.indexOf(marker);
+  const nextFn = sql.indexOf("CREATE OR REPLACE FUNCTION public.nextval_invoice_number", start);
+  const body = sql.slice(start, nextFn);
 
   it("raises unless the caller is service_role or an active owner or admin", () => {
     expect(body).toContain("SET search_path = ''");
-    expect(body).toContain("current_user IS DISTINCT FROM 'service_role'");
-    expect(body).toContain("auth.role()");
+    expect(body).toContain("auth.role() IS DISTINCT FROM 'service_role'");
     expect(body).toContain("FROM public.organization_members");
-    expect(body).toContain("m.user_id = auth.uid()");
-    expect(body).toContain("m.role IN ('owner', 'admin')");
-    expect(body).toContain("m.status = 'active'");
-    expect(body).toContain("RAISE EXCEPTION 'not an owner or admin of this organization'");
+    expect(body).toContain("om.user_id = auth.uid()");
+    expect(body).toContain("om.role IN ('owner', 'admin')");
+    expect(body).toContain("om.status = 'active'");
+    expect(body).toContain("RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'");
     const raiseAt = body.indexOf("RAISE EXCEPTION");
     const memberAt = body.indexOf("FROM public.organization_members");
     const bypassAt = body.indexOf("service_role");
     expect(bypassAt).toBeGreaterThan(0);
     expect(memberAt).toBeGreaterThan(bypassAt);
     expect(raiseAt).toBeGreaterThan(memberAt);
+    expect(body).toContain("GRANT EXECUTE ON FUNCTION public.get_org_bookings");
+    expect(body).toContain("TO authenticated");
+  });
+});
+
+describe("autocomplete search functions are invokers", () => {
+  const all = [...finalDefinerState().values()];
+  const sql = readFileSync(
+    join(MIGRATIONS_DIR, "00127_definer_hardening.sql"),
+    "utf8"
+  );
+
+  it("sets SECURITY INVOKER, pins search_path, and keeps anon EXECUTE", () => {
+    for (const name of ["search_allergies", "search_chronic_conditions"] as const) {
+      const fn = all.find((item) => item.name === name);
+      expect(fn, name).toBeTruthy();
+      expect(fn!.securityDefiner, name).toBe(false);
+      expect(fn!.searchPath, name).toBe("public, extensions");
+      expect(anonExecutable(fn!), name).toBe(true);
+      expect(fn!.authenticated, name).toBe(true);
+      expect(sql).toContain(
+        `ALTER FUNCTION public.${name}(text) SECURITY INVOKER SET search_path = public, extensions;`
+      );
+    }
   });
 });

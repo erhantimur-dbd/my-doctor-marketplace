@@ -1,9 +1,9 @@
 -- SECURITY DEFINER hardening.
 -- Merges after the prod drift-import PR. There is no pg_cron on this project.
 --
--- The two prod scripts below are copied byte for byte from the live
--- migrations revoke_definer_service_only_grants (20260930155956) and
--- revoke_get_org_bookings_anon.
+-- These prod scripts are copied byte for byte:
+-- revoke_definer_service_only_grants (20260930155956),
+-- revoke_get_org_bookings_anon, and guard_get_org_bookings (20260930161246).
 
 -- revoke_definer_service_only_grants: SECURITY DEFINER functions without auth.uid() checks become service_role only.
 -- nextval_invoice_number(): anon loses access (it also had a PUBLIC grant, so PUBLIC is revoked); authenticated and service_role keep it.
@@ -44,71 +44,30 @@ REVOKE EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date,
 GRANT EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) TO service_role;
 
--- BEGIN pending match: guard_get_org_bookings
--- Pending match with prod SQL recorded as guard_get_org_bookings.
--- Replace this section with that statement when it arrives. The anon revoke
--- above stays as applied on prod.
-CREATE OR REPLACE FUNCTION public.get_org_bookings(
-  p_org_id UUID,
-  p_status TEXT DEFAULT NULL,
-  p_doctor_id UUID DEFAULT NULL,
-  p_location_id UUID DEFAULT NULL,
-  p_from_date DATE DEFAULT NULL,
-  p_to_date DATE DEFAULT NULL,
-  p_limit INT DEFAULT 50,
-  p_offset INT DEFAULT 0
-)
-RETURNS TABLE(
-  booking_id UUID,
-  booking_number TEXT,
-  appointment_date DATE,
-  start_time TIMESTAMPTZ,
-  end_time TIMESTAMPTZ,
-  status TEXT,
-  consultation_type TEXT,
-  consultation_fee_cents INT,
-  total_amount_cents INT,
-  currency TEXT,
-  payment_mode TEXT,
-  reschedule_payment_status TEXT,
-  doctor_id UUID,
-  doctor_first_name TEXT,
-  doctor_last_name TEXT,
-  doctor_avatar_url TEXT,
-  patient_id UUID,
-  patient_first_name TEXT,
-  patient_last_name TEXT,
-  patient_email TEXT,
-  patient_phone TEXT,
-  clinic_location_id UUID,
-  clinic_location_name TEXT,
-  service_name TEXT,
-  created_at TIMESTAMPTZ
-)
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = ''
-AS $$
+-- verbatim from prod migration 20260930161246 guard_get_org_bookings
+-- C1 hotfix: guard public.get_org_bookings (owner/admin active members or service_role only),
+-- pin search_path = '' and convert LANGUAGE sql -> plpgsql (RETURN QUERY), same signature/columns.
+CREATE OR REPLACE FUNCTION public.get_org_bookings(p_org_id uuid, p_status text DEFAULT NULL::text, p_doctor_id uuid DEFAULT NULL::uuid, p_location_id uuid DEFAULT NULL::uuid, p_from_date date DEFAULT NULL::date, p_to_date date DEFAULT NULL::date, p_limit integer DEFAULT 50, p_offset integer DEFAULT 0)
+ RETURNS TABLE(booking_id uuid, booking_number text, appointment_date date, start_time timestamp with time zone, end_time timestamp with time zone, status text, consultation_type text, consultation_fee_cents integer, total_amount_cents integer, currency text, payment_mode text, reschedule_payment_status text, doctor_id uuid, doctor_first_name text, doctor_last_name text, doctor_avatar_url text, patient_id uuid, patient_first_name text, patient_last_name text, patient_email text, patient_phone text, clinic_location_id uuid, clinic_location_name text, service_name text, created_at timestamp with time zone)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path = ''
+AS $function$
 BEGIN
-  #variable_conflict use_column
-  IF current_user IS DISTINCT FROM 'service_role'
-     AND COALESCE(auth.role(), '') IS DISTINCT FROM 'service_role'
-     AND NOT EXISTS (
-       SELECT 1
-       FROM public.organization_members m
-       WHERE m.organization_id = p_org_id
-         AND m.user_id = auth.uid()
-         AND m.role IN ('owner', 'admin')
-         AND m.status = 'active'
-     )
-  THEN
-    RAISE EXCEPTION 'not an owner or admin of this organization';
+  IF auth.role() IS DISTINCT FROM 'service_role' AND NOT EXISTS (
+    SELECT 1
+    FROM public.organization_members om
+    WHERE om.organization_id = p_org_id
+      AND om.user_id = auth.uid()
+      AND om.role IN ('owner', 'admin')
+      AND om.status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
   END IF;
 
   RETURN QUERY
   SELECT
-    b.id                  AS booking_id,
+    b.id,
     b.booking_number,
     b.appointment_date,
     b.start_time,
@@ -120,17 +79,17 @@ BEGIN
     b.currency,
     b.payment_mode,
     b.reschedule_payment_status,
-    d.id                  AS doctor_id,
-    dp.first_name         AS doctor_first_name,
-    dp.last_name          AS doctor_last_name,
-    dp.avatar_url         AS doctor_avatar_url,
+    d.id,
+    dp.first_name,
+    dp.last_name,
+    dp.avatar_url,
     b.patient_id,
-    pp.first_name         AS patient_first_name,
-    pp.last_name          AS patient_last_name,
-    pp.email              AS patient_email,
-    pp.phone              AS patient_phone,
+    pp.first_name,
+    pp.last_name,
+    pp.email,
+    pp.phone,
     b.clinic_location_id,
-    cl.name               AS clinic_location_name,
+    cl.name,
     b.service_name,
     b.created_at
   FROM public.bookings b
@@ -148,8 +107,12 @@ BEGIN
   LIMIT p_limit
   OFFSET p_offset;
 END;
-$$;
--- END pending match: guard_get_org_bookings
+$function$;
+
+REVOKE ALL ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_org_bookings(uuid, text, uuid, uuid, date, date, integer, integer) TO service_role;
 
 CREATE OR REPLACE FUNCTION public.nextval_invoice_number()
 RETURNS BIGINT
@@ -377,57 +340,11 @@ BEGIN
 END;
 $$;
 
--- Autocomplete is called with the anon/user client. Lock the path without
--- taking EXECUTE away. pg_trgm's similarity() lives in public or extensions.
-CREATE OR REPLACE FUNCTION public.search_allergies(search_query TEXT)
-RETURNS TABLE(id INT, name TEXT, category TEXT)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-BEGIN
-  RETURN QUERY
-    SELECT a.id, a.name, a.category
-    FROM public.allergies a
-    WHERE similarity(a.name, search_query) > 0.1
-    ORDER BY similarity(a.name, search_query) DESC
-    LIMIT 10;
-
-  IF NOT FOUND THEN
-    RETURN QUERY
-      SELECT a.id, a.name, a.category
-      FROM public.allergies a
-      WHERE a.name ILIKE search_query || '%'
-      ORDER BY a.name
-      LIMIT 10;
-  END IF;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION public.search_chronic_conditions(search_query TEXT)
-RETURNS TABLE(id INT, name TEXT, category TEXT)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-BEGIN
-  RETURN QUERY
-    SELECT c.id, c.name, c.category
-    FROM public.chronic_conditions c
-    WHERE similarity(c.name, search_query) > 0.1
-    ORDER BY similarity(c.name, search_query) DESC
-    LIMIT 10;
-
-  IF NOT FOUND THEN
-    RETURN QUERY
-      SELECT c.id, c.name, c.category
-      FROM public.chronic_conditions c
-      WHERE c.name ILIKE search_query || '%'
-      ORDER BY c.name
-      LIMIT 10;
-  END IF;
-END;
-$$;
+-- Autocomplete runs as the caller. The tables are public-read reference data,
+-- so definer rights are unnecessary. Keep anon and authenticated EXECUTE.
+-- pg_trgm similarity() lives in public or extensions.
+ALTER FUNCTION public.search_allergies(text) SECURITY INVOKER SET search_path = public, extensions;
+ALTER FUNCTION public.search_chronic_conditions(text) SECURITY INVOKER SET search_path = public, extensions;
 
 -- Trigger functions do not consult the caller's EXECUTE privilege.
 -- Revoke anon and PUBLIC. Do not revoke rls_* or get_user_org_ids: policies
