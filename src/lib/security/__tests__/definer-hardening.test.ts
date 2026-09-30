@@ -387,6 +387,19 @@ describe("public SECURITY DEFINER final state", () => {
     expect(revoked, revoked.join("\n")).toEqual([]);
   });
 
+  it("drops the unused seat-count RPCs", () => {
+    const dropped = [
+      "increment_used_seats(uuid)",
+      "increment_used_seats(uuid,text)",
+      "decrement_used_seats(uuid)",
+      "decrement_used_seats(uuid,text)",
+    ];
+    const stillPresent = all
+      .filter((fn) => dropped.includes(`${fn.name}(${fn.signature})`))
+      .map((fn) => `${fn.name}(${fn.signature})`);
+    expect(stillPresent, stillPresent.join("\n")).toEqual([]);
+  });
+
   it("revokes anon and authenticated EXECUTE on the service-role hotfix RPCs", () => {
     const locked = [
       "credit_wallet_atomic",
@@ -395,8 +408,6 @@ describe("public SECURITY DEFINER final state", () => {
       "claim_founding_member",
       "reserve_founding_spot",
       "release_founding_spot_reservation",
-      "increment_used_seats",
-      "decrement_used_seats",
       "expire_clinic_invitations",
       "get_clinic_location_doctors",
     ];
