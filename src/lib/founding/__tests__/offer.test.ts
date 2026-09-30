@@ -116,7 +116,7 @@ describe("price lock versus cancel forfeit", () => {
   });
 
   it("does not rewrite licences already granted", () => {
-    const migration = read("supabase/migrations/00117_founding_offer_99.sql");
+    const migration = read("supabase/migrations/00119_founding_offer_99.sql");
     expect(migration).toContain("founding_offer_forfeited_at");
     expect(migration).toContain("founding_offer_redeemed_at");
     expect(migration).toContain("'founding'");
