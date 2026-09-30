@@ -9,11 +9,11 @@
 -- applied before prescribing is turned on.
 --
 -- public.erase_account(uuid) is the only supported database step:
---   * no prescriptions and no audit rows -> {"mode":"hard_delete"}
+--   * nothing retained -> {"mode":"hard_delete"}
 --     and the app still calls auth.admin.deleteUser
 --   * otherwise anonymise in this transaction and return
 --     {"mode":"anonymised","erased_at":...}
---     Prescriptions and audit rows stay, still linked to the same ids.
+--     Retained rows stay linked to the same ids.
 --
 -- The function bans the auth user and replaces the auth email with
 -- erased+<uuid>@users.invalid (.invalid is non-routable). The app also
@@ -43,7 +43,7 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS erased_at TIMESTAMPTZ;
 
 COMMENT ON COLUMN public.profiles.erased_at IS
-  'When this account was anonymised because prescriptions or prescription_audit_log rows had to be kept. NULL if the account has not been erased this way.';
+  'When this account was anonymised because a clinical, review, booking, or other non-cascading row had to be kept. NULL if the account has not been erased this way.';
 
 CREATE OR REPLACE FUNCTION public.erase_account(p_user_id uuid)
 RETURNS jsonb
@@ -358,7 +358,7 @@ END;
 $fn$;
 
 COMMENT ON FUNCTION public.erase_account(uuid) IS
-  'Anonymise an account that has prescriptions or audit rows. Returns hard_delete when auth.admin.deleteUser is still safe.';
+  'Anonymise an account that must keep clinical, review, booking, or other non-cascading rows. Returns hard_delete when auth.admin.deleteUser is still safe.';
 
 REVOKE ALL ON FUNCTION public.erase_account(uuid) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.erase_account(uuid) FROM PUBLIC, anon, authenticated;
