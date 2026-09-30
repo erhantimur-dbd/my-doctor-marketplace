@@ -5,14 +5,18 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sendDoctorWelcomeOnce } from "@/lib/email/doctor-welcome-once";
+import { futureFeaturedUntil } from "@/lib/founding/spot-lifecycle";
 import {
   claimFoundingSpotOnPayment,
   releaseFoundingSpotReservation,
+  unixToIso,
 } from "@/lib/founding/spots";
+import { log } from "@/lib/utils/logger";
 
 type LicenseSession = {
   id: string;
   mode?: string | null;
+  subscription?: string | { id?: string | null } | null;
   metadata?: {
     type?: string | null;
     tier?: string | null;
@@ -20,6 +24,33 @@ type LicenseSession = {
     doctor_id?: string | null;
   } | null;
 };
+
+/** Period end from the Checkout subscription. Missing or past leaves featured off. */
+export async function featuredUntilForLicenseSession(
+  session: LicenseSession
+): Promise<string | null> {
+  const subscription = session.subscription;
+  const subId =
+    typeof subscription === "string" ? subscription : subscription?.id ?? null;
+  if (!subId) return null;
+  try {
+    const stripe = (await import("@/lib/stripe/client")).getStripe();
+    const sub = await stripe.subscriptions.retrieve(subId);
+    const raw = sub as unknown as {
+      current_period_end?: number;
+      items?: { data?: Array<{ current_period_end?: number }> };
+    };
+    const unix =
+      raw.current_period_end ?? raw.items?.data?.[0]?.current_period_end;
+    return futureFeaturedUntil(unixToIso(unix));
+  } catch (err) {
+    log.error("[Founding] subscription period end lookup failed", {
+      err,
+      sessionId: session.id,
+    });
+    return null;
+  }
+}
 
 export function isFoundingLicenseMetadata(
   metadata: LicenseSession["metadata"]
@@ -39,7 +70,7 @@ export async function onLicenseCheckoutCompleted(
   if (isFoundingLicenseMetadata(session.metadata)) {
     const claim = await claimFoundingSpotOnPayment(supabase, {
       doctorId,
-      featuredUntil: null,
+      featuredUntil: await featuredUntilForLicenseSession(session),
     });
     if (!claim.claimed) return;
   }

@@ -195,7 +195,9 @@ BEGIN
   WHERE id = p_doctor_id;
 
   IF FOUND AND v_existing IS NOT NULL THEN
-    IF p_featured_until IS NOT NULL THEN
+    -- A missing or past period end must not turn featured on. Null until
+    -- is read as featured with no expiry by search, so leave the row alone.
+    IF p_featured_until IS NOT NULL AND p_featured_until > now() THEN
       UPDATE public.doctors
       SET
         is_featured = TRUE,
@@ -254,8 +256,13 @@ BEGIN
   SET
     is_founding_member = TRUE,
     founding_member_number = v_number,
-    is_featured = TRUE,
-    featured_until = p_featured_until
+    -- New claim: featured only with a future period end. A null end stays off.
+    is_featured = (p_featured_until IS NOT NULL AND p_featured_until > now()),
+    featured_until = CASE
+      WHEN p_featured_until IS NOT NULL AND p_featured_until > now()
+      THEN p_featured_until
+      ELSE NULL
+    END
   WHERE id = p_doctor_id
     AND is_founding_member = FALSE;
 

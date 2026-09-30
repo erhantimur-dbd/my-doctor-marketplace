@@ -755,12 +755,13 @@ export async function searchDoctors(rawFilters: SearchFilters) {
       if (allIds.length > SOONEST_CANDIDATE_CAP) {
         const { data: rankSeed } = await supabase
           .from("doctors")
-          .select("id, is_featured, featured_until, avg_rating")
+          .select("id, is_featured, featured_until, is_founding_member, avg_rating")
           .in("id", allIds);
         const seed = (rankSeed || []) as {
           id: string;
           is_featured: boolean | null;
           featured_until: string | null;
+          is_founding_member: boolean | null;
           avg_rating: number | null;
         }[];
         seed.sort((a, b) => {
@@ -860,7 +861,7 @@ export async function searchDoctors(rawFilters: SearchFilters) {
           // Paid Featured boost pins above organic; within each group sort soonest.
           const { data: flagRows } = await supabase
             .from("doctors")
-            .select("id, is_featured, featured_until, avg_rating")
+            .select("id, is_featured, featured_until, is_founding_member, avg_rating")
             .in("id", allIds);
           const flagById = new Map(
             (flagRows || []).map(
@@ -868,6 +869,7 @@ export async function searchDoctors(rawFilters: SearchFilters) {
                 id: string;
                 is_featured: boolean | null;
                 featured_until: string | null;
+                is_founding_member: boolean | null;
                 avg_rating: number | null;
               }) => [r.id, r]
             )
@@ -879,6 +881,7 @@ export async function searchDoctors(rawFilters: SearchFilters) {
                 id,
                 is_featured: f?.is_featured ?? false,
                 featured_until: f?.featured_until ?? null,
+                is_founding_member: f?.is_founding_member ?? false,
                 avg_rating: f?.avg_rating ?? 0,
               };
             }),
@@ -1254,7 +1257,7 @@ export async function searchDoctors(rawFilters: SearchFilters) {
       };
       const { data: flagRows } = await supabase
         .from("doctors")
-        .select("id, is_featured, featured_until, avg_rating")
+        .select("id, is_featured, featured_until, is_founding_member, avg_rating")
         .in("id", ids);
       const flagById = new Map(
         (flagRows || []).map(
@@ -1262,6 +1265,7 @@ export async function searchDoctors(rawFilters: SearchFilters) {
             id: string;
             is_featured: boolean | null;
             featured_until: string | null;
+            is_founding_member: boolean | null;
             avg_rating: number | null;
           }) => [r.id, r]
         )
@@ -1273,6 +1277,7 @@ export async function searchDoctors(rawFilters: SearchFilters) {
             id,
             is_featured: f?.is_featured ?? false,
             featured_until: f?.featured_until ?? null,
+            is_founding_member: f?.is_founding_member ?? false,
             avg_rating: f?.avg_rating ?? 0,
           };
         }),

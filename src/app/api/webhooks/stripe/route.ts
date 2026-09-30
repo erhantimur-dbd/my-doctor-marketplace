@@ -776,8 +776,11 @@ export async function POST(request: NextRequest) {
         if (effectiveTier === "founding") {
           const { mayGrantFoundingLicence, foundingOfferLicenseMetadata } =
             await import("@/lib/founding/offer");
-          const { claimFoundingSpotOnPayment } = await import(
+          const { claimFoundingSpotOnPayment, unixToIso } = await import(
             "@/lib/founding/spots"
+          );
+          const { futureFeaturedUntil } = await import(
+            "@/lib/founding/spot-lifecycle"
           );
           const { sendDoctorWelcomeOnce } = await import(
             "@/lib/email/doctor-welcome-once"
@@ -793,9 +796,12 @@ export async function POST(request: NextRequest) {
               .maybeSingle();
             doctorIdForClaim = orgDoctor?.id ?? null;
           }
-          const periodEndIso = periodEnd
-            ? new Date(periodEnd * 1000).toISOString()
-            : null;
+          const itemPeriodEnd = (
+            subscription.items?.data?.[0] as { current_period_end?: number } | undefined
+          )?.current_period_end;
+          const periodEndUnix =
+            typeof periodEnd === "number" ? periodEnd : itemPeriodEnd;
+          const periodEndIso = futureFeaturedUntil(unixToIso(periodEndUnix));
           let allowed = false;
           if (doctorIdForClaim) {
             const { data: foundingDoc } = await supabase

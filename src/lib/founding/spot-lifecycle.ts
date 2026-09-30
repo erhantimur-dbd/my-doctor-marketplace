@@ -115,9 +115,25 @@ export function openFoundingCheckout(
 }
 
 /**
+ * A founding claim is featured only when the subscription period end is in
+ * the future. A null or past end leaves featured off. Search treats a null
+ * featured_until as no expiry for a paid boost, so a founding row must not
+ * use that shape.
+ */
+export function futureFeaturedUntil(
+  featuredUntil: string | null | undefined,
+  now: Date = new Date()
+): string | null {
+  if (!featuredUntil) return null;
+  const at = new Date(featuredUntil).getTime();
+  if (!Number.isFinite(at) || at <= now.getTime()) return null;
+  return featuredUntil;
+}
+
+/**
  * Payment success claims one spot. A second call returns the same number
- * and does not increment the count. featuredUntil is the subscription date
- * passed in (null leaves an existing date alone).
+ * and does not increment the count. A null period end does not feature the
+ * doctor. A later call with a period end sets featured until that date.
  */
 export function claimFoundingOnPayment(
   state: FoundingProgrammeState,
@@ -144,7 +160,9 @@ export function claimFoundingOnPayment(
   });
 
   if (doctor.isFoundingMember && doctor.foundingNumber != null) {
-    const featuredUntilNext = featuredUntil ?? doctor.featuredUntil;
+    const featuredUntilNext =
+      futureFeaturedUntil(featuredUntil) ??
+      futureFeaturedUntil(doctor.featuredUntil);
     return {
       claimed: true,
       foundingNumber: doctor.foundingNumber,
@@ -155,7 +173,7 @@ export function claimFoundingOnPayment(
           ...state.doctors,
           [doctorId]: {
             ...doctor,
-            isFeatured: true,
+            isFeatured: featuredUntilNext != null,
             featuredUntil: featuredUntilNext,
           },
         },
@@ -175,12 +193,13 @@ export function claimFoundingOnPayment(
   }
 
   const foundingNumber = claimed + 1;
+  const featuredUntilNext = futureFeaturedUntil(featuredUntil);
   const nextDoctor: FoundingDoctorState = {
     ...doctor,
     isFoundingMember: true,
     foundingNumber,
-    isFeatured: true,
-    featuredUntil,
+    isFeatured: featuredUntilNext != null,
+    featuredUntil: featuredUntilNext,
   };
   const next: FoundingProgrammeState = convert({
     ...state,

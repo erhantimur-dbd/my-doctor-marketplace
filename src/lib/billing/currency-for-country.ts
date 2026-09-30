@@ -7,9 +7,9 @@
  *
  * currencyForCountry returns null when the country is missing, not in the
  * map, or mapped to a currency that is not enabled. Callers must then omit
- * base_currency so the existing database default still applies
- * (organizations.base_currency defaults to EUR). That is the behaviour
- * before this helper: sign-up did not set the organisation currency.
+ * base_currency so the column default applies. Migration 00121 sets that
+ * default to GBP. Before 00121 the default was EUR, and sign-up did not
+ * set the organisation currency.
  */
 
 export const ENABLED_CURRENCIES = ["GBP"] as const;

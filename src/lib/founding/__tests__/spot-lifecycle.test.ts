@@ -56,6 +56,49 @@ describe("founding spot claim on payment", () => {
     expect(replay.state.doctors["doc-1"].featuredUntil).not.toContain("2099");
   });
 
+  it("a claim with a null period end does not make the doctor featured", () => {
+    const opened = openFoundingCheckout(
+      emptyFoundingProgramme(),
+      "doc-1",
+      "cs_test_1"
+    );
+    const claim = claimFoundingOnPayment(opened.state, "doc-1", null);
+    expect(claim.newlyClaimed).toBe(true);
+    expect(claim.foundingNumber).toBe(1);
+    expect(claim.state.doctors["doc-1"].isFeatured).toBe(false);
+    expect(claim.state.doctors["doc-1"].featuredUntil).toBeNull();
+
+    const replay = claimFoundingOnPayment(claim.state, "doc-1", null);
+    expect(replay.newlyClaimed).toBe(false);
+    expect(replay.state.doctors["doc-1"].isFeatured).toBe(false);
+    expect(replay.state.doctors["doc-1"].featuredUntil).toBeNull();
+  });
+
+  it("a claim with a period end sets featured until that date", () => {
+    const opened = openFoundingCheckout(
+      emptyFoundingProgramme(),
+      "doc-1",
+      "cs_test_1"
+    );
+    const claim = claimFoundingOnPayment(opened.state, "doc-1", PERIOD_END);
+    expect(claim.state.doctors["doc-1"].isFeatured).toBe(true);
+    expect(claim.state.doctors["doc-1"].featuredUntil).toBe(PERIOD_END);
+
+    const withoutDate = claimFoundingOnPayment(
+      emptyFoundingProgramme(),
+      "doc-2",
+      null
+    );
+    const withDate = claimFoundingOnPayment(
+      withoutDate.state,
+      "doc-2",
+      PERIOD_END
+    );
+    expect(withDate.newlyClaimed).toBe(false);
+    expect(withDate.state.doctors["doc-2"].isFeatured).toBe(true);
+    expect(withDate.state.doctors["doc-2"].featuredUntil).toBe(PERIOD_END);
+  });
+
   it("an expired session releases the reservation and does not claim", () => {
     const opened = openFoundingCheckout(
       emptyFoundingProgramme(1),
@@ -99,6 +142,19 @@ describe("founding payment wiring", () => {
     expect(sql).toContain(FOUNDING_PRICING_NOTE);
     expect(sql).not.toMatch(/for life/i);
     expect(sql).not.toContain("2099");
+    expect(sql).toContain(
+      "is_featured = (p_featured_until IS NOT NULL AND p_featured_until > now())"
+    );
+    expect(sql).not.toContain("is_featured = TRUE,\n    featured_until = p_featured_until");
+    expect(read("src/lib/founding/checkout-events.ts")).toContain(
+      "current_period_end"
+    );
+    expect(read("src/lib/founding/checkout-events.ts")).not.toContain(
+      "featuredUntil: null"
+    );
+    expect(read("src/lib/search/rank.ts")).toContain(
+      "is_founding_member !== true"
+    );
     expect(read("src/lib/founding/members.ts")).toContain("FOUNDING_PRICING_NOTE");
     expect(read("src/lib/founding/pricing-note.ts")).not.toMatch(/for life/i);
   });

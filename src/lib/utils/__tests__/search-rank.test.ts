@@ -20,6 +20,29 @@ describe("isActivelyFeatured", () => {
     ).toBe(true);
   });
 
+  it("does not treat a founding member with a null featured_until as featured forever", () => {
+    expect(
+      isActivelyFeatured(
+        {
+          is_featured: true,
+          featured_until: null,
+          is_founding_member: true,
+        },
+        now
+      )
+    ).toBe(false);
+    expect(
+      isActivelyFeatured(
+        {
+          is_featured: true,
+          featured_until: "2026-08-28T00:00:00.000Z",
+          is_founding_member: true,
+        },
+        now
+      )
+    ).toBe(true);
+  });
+
   it("returns true when featured_until is in the future", () => {
     expect(
       isActivelyFeatured(
