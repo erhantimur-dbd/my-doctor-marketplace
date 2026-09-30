@@ -46,6 +46,8 @@ import {
 import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 import { createNotification } from "@/lib/notifications";
 import { log } from "@/lib/utils/logger";
+import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
+import { applicationFeeIncludingOffset } from "@/lib/payments/payout-offset-store";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   isSoftsmokeConnectChargeSkipped,
@@ -730,6 +732,13 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
 
     // Create Stripe Checkout Session for the remaining amount
     const { origin, locale } = await getOriginAndLocale();
+    const submitNotice = checkoutSubmitNotice("patient", origin, locale);
+    const checkoutFee = await applicationFeeIncludingOffset({
+      doctorId: doctor.id,
+      bookingId: booking.id,
+      chargeCents: remainingCharge,
+      applicationFeeCents: checkoutMoney.applicationFeeCents,
+    });
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
@@ -763,7 +772,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
         },
       ],
       payment_intent_data: {
-        application_fee_amount: checkoutMoney.applicationFeeCents,
+        application_fee_amount: checkoutFee,
         on_behalf_of: doctor.stripe_account_id,
         transfer_data: {
           destination: doctor.stripe_account_id,
@@ -780,6 +789,7 @@ export async function createBookingAndCheckout(input: CreateBookingInput) {
       success_url: `${origin}/${locale}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
       // Soft Launch gates /doctors — cancel must land on an allowlisted surface.
       cancel_url: `${origin}/${locale}/doctors/${doctor.slug}/book`,
+      ...(submitNotice ? { custom_text: submitNotice } : {}),
     });
 
     // Webhook still confirms via metadata.booking_id. Store the session id

@@ -291,6 +291,8 @@
     "platform_fee": "サービス手数料",
     "total": "合計",
     "proceed_to_payment": "お支払いへ進む",
+    "payment_error_notice": "If a payment or refund goes wrong, we'll contact you to put it right. See Payment errors in our Terms.",
+    "doctor_payment_error_notice": "If a payout or refund is made in error, we may correct it from future payouts, as set out in our Doctor terms.",
     "booking_confirmed": "予約が確定しました！",
     "booking_number": "予約番号",
     "cancellation_policy": "キャンセルポリシー",

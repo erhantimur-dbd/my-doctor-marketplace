@@ -605,6 +605,8 @@
     "platform_fee": "Buchungsgebühr",
     "total": "Gesamt",
     "proceed_to_payment": "Zur Zahlung",
+    "payment_error_notice": "If a payment or refund goes wrong, we'll contact you to put it right. See Payment errors in our Terms.",
+    "doctor_payment_error_notice": "If a payout or refund is made in error, we may correct it from future payouts, as set out in our Doctor terms.",
     "booking_confirmed": "Ihr Termin ist bestatigt!",
     "booking_number": "Buchungsnummer",
     "cancellation_policy": "Stornierungsbedingungen",

@@ -13,6 +13,7 @@ import { resolveBookPageAccess } from "@/lib/booking/book-page-access";
 import { readJoinedProfileEmail } from "@/lib/soft-launch/softsmoke-connect-bypass";
 import { SOFT_LAUNCH_HIDE_PATIENT_MARKETPLACE_CHROME } from "@/lib/constants/company";
 import type { LicenseLike } from "@/lib/license/tier-lifecycle";
+import { paymentErrorNoticesEnabled } from "@/lib/legal/payment-error-notices";
 
 interface BookPageProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -260,6 +261,7 @@ export default async function BookAppointmentPage({ params }: BookPageProps) {
         dependents={dependents}
         isGuest={!user}
         locale={locale}
+        paymentErrorNoticeEnabled={paymentErrorNoticesEnabled()}
       />
     </div>
   );

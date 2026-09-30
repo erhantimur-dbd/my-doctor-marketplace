@@ -18,6 +18,8 @@ import { createRoom } from "@/lib/daily/client";
 import { dailyRoomExpiresAtUnix } from "@/lib/booking/finalize-confirmed-booking";
 import { resolvePatientConfirmationEmail } from "@/lib/email/softsmoke-send";
 import { log } from "@/lib/utils/logger";
+import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
+import { applicationFeeIncludingOffset } from "@/lib/payments/payout-offset-store";
 import {
   CARE_PLANS_DISABLED_MESSAGE,
   isCarePlansEnabled,
@@ -445,6 +447,14 @@ export async function acceptTreatmentPlanFull(
     const doctorName = `${profile.first_name} ${profile.last_name}`;
 
     const totalChargeCents = plan.discounted_total_cents;
+    const baseFee = getCommissionCents(plan.discounted_total_cents);
+    const checkoutFee = await applicationFeeIncludingOffset({
+      doctorId: doctor.id,
+      bookingId: booking.id,
+      chargeCents: totalChargeCents,
+      applicationFeeCents: baseFee,
+    });
+    const submitNotice = checkoutSubmitNotice("patient", origin, locale);
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
@@ -462,7 +472,7 @@ export async function acceptTreatmentPlanFull(
         },
       ],
       payment_intent_data: {
-        application_fee_amount: getCommissionCents(plan.discounted_total_cents),
+        application_fee_amount: checkoutFee,
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
@@ -474,6 +484,7 @@ export async function acceptTreatmentPlanFull(
       },
       success_url: `${origin}/${locale}/treatment-plan/${plan.token}/confirmed?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/${locale}/treatment-plan/${plan.token}`,
+      ...(submitNotice ? { custom_text: submitNotice } : {}),
     });
 
     return { url: session.url };
@@ -794,6 +805,14 @@ export async function bookTreatmentPlanSession(
     const doctorName = `${profile.first_name} ${profile.last_name}`;
 
     const sessionNumber = plan.sessions_completed + 1;
+    const perVisitFee = getCommissionCents(perSessionAmountCents);
+    const perVisitCheckoutFee = await applicationFeeIncludingOffset({
+      doctorId: doctor.id,
+      bookingId: booking.id,
+      chargeCents: totalForSession,
+      applicationFeeCents: perVisitFee,
+    });
+    const perVisitNotice = checkoutSubmitNotice("patient", origin, locale);
 
     const session = await getStripe().checkout.sessions.create({
       mode: "payment",
@@ -811,7 +830,7 @@ export async function bookTreatmentPlanSession(
         },
       ],
       payment_intent_data: {
-        application_fee_amount: getCommissionCents(perSessionAmountCents),
+        application_fee_amount: perVisitCheckoutFee,
         transfer_data: {
           destination: doctor.stripe_account_id,
         },
@@ -824,6 +843,7 @@ export async function bookTreatmentPlanSession(
       },
       success_url: `${origin}/${locale}/treatment-plan/${plan.token}/confirmed?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/${locale}/treatment-plan/${plan.token}`,
+      ...(perVisitNotice ? { custom_text: perVisitNotice } : {}),
     });
 
     return { url: session.url };

@@ -22,6 +22,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { createBookingAndCheckout } from "@/actions/booking";
+import { PaymentErrorNotice } from "@/components/legal/payment-error-notice";
 import { formatCurrency, calculateDepositCents } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
 import { formatSlotTime } from "@/lib/utils/availability";
@@ -97,6 +98,8 @@ interface BookingWizardProps {
   /** Unauthenticated progressive checkout */
   isGuest?: boolean;
   locale?: string;
+  /** Server-read PAYMENT_ERROR_NOTICES. Off until Legal publishes the terms. */
+  paymentErrorNoticeEnabled?: boolean;
 }
 
 type ConsultationType = "in_person" | "video";
@@ -115,6 +118,7 @@ export function BookingWizard({
   services = [],
   dependents = [],
   isGuest = false,
+  paymentErrorNoticeEnabled = false,
 }: BookingWizardProps) {
   const t = useTranslations("booking");
   const locale = useLocale();
@@ -1158,7 +1162,8 @@ export function BookingWizard({
               </div>
             </div>
           </CardContent>
-          <CardFooter className="justify-between">
+          <CardFooter className="flex-col items-stretch gap-3">
+            <div className="flex w-full items-center justify-between">
             <Button variant="outline" onClick={handleBack} disabled={isPending}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               {t("back")}
@@ -1180,6 +1185,11 @@ export function BookingWizard({
                 </>
               )}
             </Button>
+            </div>
+            <PaymentErrorNotice
+              kind="patient"
+              enabled={paymentErrorNoticeEnabled}
+            />
           </CardFooter>
         </Card>
       )}

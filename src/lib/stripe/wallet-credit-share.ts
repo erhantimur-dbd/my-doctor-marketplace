@@ -20,6 +20,8 @@ import {
   reverseConnectTransfer,
   type ConnectTransferClient,
 } from "@/lib/stripe/transfer-handoff";
+import { transferAmountWithOffset } from "@/lib/payments/payout-offset";
+import { consumeWalletTransferOffset } from "@/lib/payments/payout-offset-store";
 
 export const WALLET_CREDIT_SHARE_KIND = "wallet_credit_share";
 
@@ -251,6 +253,12 @@ export interface WalletCreditDeps {
   store?: WalletCreditTransferStore;
   alreadyDebited?: (bookingId: string) => Promise<boolean>;
   debit?: () => Promise<void>;
+  /** Shrink this transfer by a ready doctor payout offset. Tests pass a stub. */
+  takePayoutOffset?: (input: {
+    doctorId: string;
+    bookingId: string;
+    maxCents: number;
+  }) => Promise<number>;
 }
 
 /** Prefer the stored charge. Fall back to the PaymentIntent. */
@@ -451,9 +459,32 @@ export async function payDoctorWalletCreditShare(
   }
 
   let created: { transferId: string };
+  const takeOffset =
+    deps?.takePayoutOffset ??
+    (process.env.VITEST ? async () => 0 : consumeWalletTransferOffset);
+  let payCents = row.amount_cents;
+  try {
+    const offsetCents = await takeOffset({
+      doctorId: input.doctorId,
+      bookingId: input.bookingId,
+      maxCents: row.amount_cents,
+    });
+    payCents = transferAmountWithOffset({
+      transferCents: row.amount_cents,
+      offsetCents,
+    }).transferCents;
+  } catch (err) {
+    log.error("[wallet-credit] payout offset skipped", {
+      err,
+      bookingId: input.bookingId,
+    });
+  }
+  if (payCents <= 0) {
+    return { ok: false, error: WALLET_CREDIT_PAYOUT_FAILED_MESSAGE };
+  }
   try {
     created = await createConnectTransfer({
-      amountCents: row.amount_cents,
+      amountCents: payCents,
       currency: row.currency,
       destinationAccountId: input.stripeAccountId,
       transferGroup: walletCreditTransferGroup(input.bookingId),

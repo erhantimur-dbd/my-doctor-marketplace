@@ -366,6 +366,8 @@
     "platform_fee": "Rezervasyon Ücreti",
     "total": "Toplam",
     "proceed_to_payment": "Odemeye Gec",
+    "payment_error_notice": "If a payment or refund goes wrong, we'll contact you to put it right. See Payment errors in our Terms.",
+    "doctor_payment_error_notice": "If a payout or refund is made in error, we may correct it from future payouts, as set out in our Doctor terms.",
     "booking_confirmed": "Randevunuz onaylandi!",
     "booking_number": "Randevu Numarasi",
     "cancellation_policy": "Iptal Politikasi",

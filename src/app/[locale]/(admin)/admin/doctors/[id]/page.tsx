@@ -78,6 +78,13 @@ export default async function AdminDoctorDetailPage({
 
   const currentPlan = licenseInfo?.tier || "free";
 
+  const { data: ourErrorCorrections } = await supabase
+    .from("payment_corrections")
+    .select("id, reason, status")
+    .eq("doctor_id", id)
+    .eq("our_error", true)
+    .neq("status", "waived");
+
   // Fetch approval checklist for this doctor. UK columns (added by
   // migration 00088) are only meaningful when the doctor is
   // UK-practising, but always selected so the checklist component can
@@ -130,6 +137,19 @@ export default async function AdminDoctorDetailPage({
           {doctor.verification_status}
         </Badge>
       </div>
+
+      {(ourErrorCorrections || []).length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Our error is flagged on a payment correction. A founding £99 place is not forfeited for that failure.
+          {(ourErrorCorrections || []).map((row) => (
+            <div key={row.id}>
+              <Link href={`/admin/payment-corrections/${row.id}`} className="underline">
+                {row.reason}
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

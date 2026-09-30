@@ -297,6 +297,8 @@
     "platform_fee": "服务费",
     "total": "合计",
     "proceed_to_payment": "前往支付",
+    "payment_error_notice": "If a payment or refund goes wrong, we'll contact you to put it right. See Payment errors in our Terms.",
+    "doctor_payment_error_notice": "If a payout or refund is made in error, we may correct it from future payouts, as set out in our Doctor terms.",
     "booking_confirmed": "您的就诊已确认！",
     "booking_number": "预约编号",
     "cancellation_policy": "取消政策",

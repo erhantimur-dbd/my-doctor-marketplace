@@ -12,6 +12,7 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { FoundingSoftCtaHeading } from "@/components/marketing/founding-soft-cta-heading";
+import { DoctorPaymentErrorNotice } from "@/components/legal/doctor-payment-error-notice";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordStrength } from "@/components/ui/password-strength";
@@ -1692,6 +1693,11 @@ export default function RegisterDoctorPage() {
             </Button>
           )}
         </CardFooter>
+        {step === 5 ? (
+          <div className="px-6 pb-6">
+            <DoctorPaymentErrorNotice />
+          </div>
+        ) : null}
       </Card>
 
       <p className="mt-4 text-center text-sm text-muted-foreground">

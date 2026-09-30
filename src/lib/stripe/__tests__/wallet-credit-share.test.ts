@@ -932,8 +932,10 @@ describe("credit payout is wired into consult checkout, not the other products",
     expect(reserve).toBeGreaterThan(creditReturn);
     expect(session).toBeGreaterThan(reserve);
     expect(fn).toContain(
-      "application_fee_amount: checkoutMoney.applicationFeeCents"
+      "applicationFeeCents: checkoutMoney.applicationFeeCents"
     );
+    expect(fn).toContain("application_fee_amount: checkoutFee");
+    expect(fn).toContain("applicationFeeIncludingOffset");
     expect(fn).toContain("commission_cents: checkoutMoney.commissionCents");
     expect(fn).not.toContain("Math.min(applicationFeeCents, remainingCharge)");
   });
