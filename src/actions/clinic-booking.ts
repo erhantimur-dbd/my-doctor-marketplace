@@ -18,6 +18,7 @@ import {
   remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import { sendEmail } from "@/lib/email/client";
+import { buildPatientCalendarEvent } from "@/lib/booking/patient-calendar";
 import {
   bookingNumberRoot,
   rescheduleSuccessorBookingNumber,
@@ -104,6 +105,8 @@ export async function adminCancelBooking(formData: FormData) {
         cancellation_policy,
         cancellation_hours,
         stripe_account_id,
+        clinic_name,
+        address,
         profile:profiles!doctors_profile_id_fkey(first_name, last_name)
       )
     `)
@@ -129,12 +132,14 @@ export async function adminCancelBooking(formData: FormData) {
     return { error: "Failed to process refund. Please try again or contact support." };
   }
 
+  const cancelledAt = new Date().toISOString();
+
   // Update booking status
   await adminSupabase
     .from("bookings")
     .update({
       status: "cancelled_doctor",
-      cancelled_at: new Date().toISOString(),
+      cancelled_at: cancelledAt,
       cancellation_reason: parsed.data.reason || "Cancelled by clinic administrator",
       rescheduled_by: membership.user_id,
       ...(refundSettlementPatch || {}),
@@ -147,10 +152,28 @@ export async function adminCancelBooking(formData: FormData) {
   const doctorProfile: any = Array.isArray(doctor?.profile) ? doctor.profile[0] : doctor?.profile;
 
   if (patient?.email) {
+    const doctorName = [doctorProfile?.first_name, doctorProfile?.last_name]
+      .filter(Boolean)
+      .join(" ");
+    const cancelCalendar = buildPatientCalendarEvent({
+      bookingId: booking.id,
+      doctorName: doctorName || "your doctor",
+      consultationType: booking.consultation_type,
+      appointmentDate: booking.appointment_date,
+      startTime: booking.start_time,
+      endTime: booking.end_time,
+      clinicName: doctor?.clinic_name,
+      address: doctor?.address,
+      bookingNumber: booking.booking_number,
+      createdAt: booking.created_at,
+      updatedAt: cancelledAt,
+      method: "CANCEL",
+    });
     sendEmail({
       to: patient.email,
       subject: `Appointment Cancelled — ${booking.booking_number}`,
       html: `<p>Hi ${patient.first_name}, your appointment with Dr. ${doctorProfile?.last_name} on ${booking.appointment_date} has been cancelled by the clinic. ${refundAmountCents > 0 ? "A full refund has been issued. Any amount paid by card goes back to the card, and any MyDoctors360 credit goes back to your wallet." : ""}</p>`,
+      attachments: cancelCalendar ? [cancelCalendar.attachment] : undefined,
     }).catch((err) => log.error("Cancel notification email failed:", { err }));
   }
 
@@ -209,7 +232,7 @@ export async function adminRescheduleBooking(formData: FormData) {
   const { data: newDoctor } = await adminSupabase
     .from("doctors")
     .select(`
-      id, consultation_fee_cents, stripe_account_id,
+      id, consultation_fee_cents, stripe_account_id, clinic_name, address,
       profile:profiles(first_name, last_name)
     `)
     .eq("id", parsed.data.new_doctor_id)
@@ -273,6 +296,8 @@ export async function adminRescheduleBooking(formData: FormData) {
       }
     }
 
+    const rescheduledAt = new Date().toISOString();
+
     await adminSupabase
       .from("bookings")
       .update({
@@ -287,7 +312,7 @@ export async function adminRescheduleBooking(formData: FormData) {
         reschedule_price_diff_cents: priceDiffCents,
         reschedule_payment_status: "not_required",
         rescheduled_by: membership.user_id,
-        rescheduled_at: new Date().toISOString(),
+        rescheduled_at: rescheduledAt,
         cancellation_reason: parsed.data.reason || null,
         ...(refundSettlementPatch || {}),
       })
@@ -295,10 +320,33 @@ export async function adminRescheduleBooking(formData: FormData) {
 
     // Notify patient
     if (patient?.email) {
+      const doctorName = [newDoctorProfile?.first_name, newDoctorProfile?.last_name]
+        .filter(Boolean)
+        .join(" ");
+      const rescheduleCalendar = buildPatientCalendarEvent({
+        bookingId: booking.id,
+        doctorName: doctorName || "your doctor",
+        consultationType: booking.consultation_type,
+        appointmentDate: parsed.data.new_appointment_date,
+        startTime: parsed.data.new_start_time,
+        endTime: parsed.data.new_end_time,
+        clinicName: newDoctor.clinic_name,
+        address: newDoctor.address,
+        bookingNumber: booking.booking_number,
+        createdAt: booking.created_at,
+        updatedAt: rescheduledAt,
+        kind: "reschedule",
+        method: "REQUEST",
+      });
+      const refundNote =
+        priceDiffCents < 0
+          ? ` A partial refund of ${(refundCents / 100).toFixed(2)} has been issued.`
+          : ".";
       sendEmail({
         to: patient.email,
         subject: `Appointment Rescheduled — ${booking.booking_number}`,
-        html: `<p>Hi ${patient.first_name}, your appointment has been rescheduled to ${parsed.data.new_appointment_date} at ${parsed.data.new_start_time}${priceDiffCents < 0 ? ` A partial refund of ${(refundCents / 100).toFixed(2)} has been issued.` : "."}</p>`,
+        html: `<p>Hi ${patient.first_name}, your appointment has been rescheduled to ${parsed.data.new_appointment_date} at ${parsed.data.new_start_time}${refundNote}</p>${rescheduleCalendar?.linksHtml ?? ""}`,
+        attachments: rescheduleCalendar ? [rescheduleCalendar.attachment] : undefined,
       }).catch((err) => log.error("Reschedule email error:", { err }));
     }
 
