@@ -35,8 +35,45 @@
 --    than RLS because the service-role bypasses RLS but should NOT be
 --    permitted to rewrite history — if an incident is investigated later
 --    (GMC, ICO, civil claim) the audit trail must be trustworthy.
+--
+-- Prod's imported migrations do not add these columns or this table.
+-- Guards below make a second apply, or a partial earlier attempt, safe.
+-- The deny function is SECURITY INVOKER (it only raises). It is not a
+-- definer, so it is not granted to service_role only.
 
 -- ===================== prescriptions: attestation columns =====================
+DO $cols$
+BEGIN
+  IF to_regclass('public.prescriptions') IS NULL THEN
+    RAISE EXCEPTION 'public.prescriptions does not exist';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'prescriptions'
+      AND column_name = 'contains_controlled_drug' AND udt_name <> 'bool'
+  ) THEN
+    RAISE EXCEPTION 'prescriptions.contains_controlled_drug exists but is not boolean';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'prescriptions'
+      AND column_name = 'controlled_drug_justification' AND udt_name <> 'text'
+  ) THEN
+    RAISE EXCEPTION 'prescriptions.controlled_drug_justification exists but is not text';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'prescriptions'
+      AND column_name = 'attested_at' AND udt_name <> 'timestamptz'
+  ) THEN
+    RAISE EXCEPTION 'prescriptions.attested_at exists but is not timestamptz';
+  END IF;
+END
+$cols$;
+
 ALTER TABLE public.prescriptions
   ADD COLUMN IF NOT EXISTS contains_controlled_drug BOOLEAN NOT NULL DEFAULT FALSE;
 
@@ -46,10 +83,21 @@ ALTER TABLE public.prescriptions
 ALTER TABLE public.prescriptions
   ADD COLUMN IF NOT EXISTS attested_at TIMESTAMPTZ;
 
+-- ADD COLUMN IF NOT EXISTS does not change a pre-existing nullable column.
+UPDATE public.prescriptions
+SET contains_controlled_drug = FALSE
+WHERE contains_controlled_drug IS NULL;
+
+ALTER TABLE public.prescriptions
+  ALTER COLUMN contains_controlled_drug SET DEFAULT FALSE;
+
+ALTER TABLE public.prescriptions
+  ALTER COLUMN contains_controlled_drug SET NOT NULL;
+
 -- Justification required whenever the CD flag is set. 20-char minimum
 -- is a sanity floor — not "yes" or "ok", but a real clinical rationale.
--- A longer minimum would be imposed by the server action; this one is the
--- last-ditch DB safeguard.
+-- The server action requires a longer minimum; this one is the last-ditch
+-- DB safeguard.
 ALTER TABLE public.prescriptions
   DROP CONSTRAINT IF EXISTS prescriptions_controlled_drug_justification_required;
 
@@ -88,9 +136,13 @@ CREATE INDEX IF NOT EXISTS idx_prescription_audit_log_actor
 -- service role. The only way to alter the audit log is to drop and
 -- recreate the table, which leaves a trail in pg_stat_statements and
 -- requires an explicit migration review.
+-- INVOKER on purpose: the body only raises, and trigger execution does
+-- not need a definer. Do not mark this SECURITY DEFINER.
 CREATE OR REPLACE FUNCTION public.prescription_audit_log_deny_mutation()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = ''
 AS $$
 BEGIN
   RAISE EXCEPTION
@@ -113,10 +165,15 @@ CREATE TRIGGER prescription_audit_log_block_delete
   EXECUTE FUNCTION public.prescription_audit_log_deny_mutation();
 
 -- RLS: authenticated doctors can read audit rows for prescriptions they
--- wrote. Patients cannot (the audit log is a doctor-facing governance
--- artefact; patient-facing history is the prescriptions row itself).
+-- wrote, and can insert a row only as themselves. Patients cannot (the
+-- audit log is a doctor-facing governance artefact; patient-facing history
+-- is the prescriptions row itself). No UPDATE or DELETE policy.
+-- service_role policies cover a role that does not bypass RLS. The
+-- append-only trigger still rejects UPDATE and DELETE for that role.
 ALTER TABLE public.prescription_audit_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS prescription_audit_log_doctor_select
+  ON public.prescription_audit_log;
 CREATE POLICY prescription_audit_log_doctor_select
   ON public.prescription_audit_log
   FOR SELECT TO authenticated
@@ -125,13 +182,27 @@ CREATE POLICY prescription_audit_log_doctor_select
       SELECT p.id
       FROM public.prescriptions p
       JOIN public.doctors d ON d.id = p.doctor_id
-      WHERE d.profile_id = auth.uid()
+      WHERE d.profile_id = (SELECT auth.uid())
     )
   );
 
--- Inserts only allowed for the acting doctor (actor_profile_id must match
--- auth.uid()). Service-role bypasses RLS and handles cron-driven events.
+DROP POLICY IF EXISTS prescription_audit_log_doctor_insert
+  ON public.prescription_audit_log;
 CREATE POLICY prescription_audit_log_doctor_insert
   ON public.prescription_audit_log
   FOR INSERT TO authenticated
-  WITH CHECK (actor_profile_id = auth.uid());
+  WITH CHECK (actor_profile_id = (SELECT auth.uid()));
+
+DROP POLICY IF EXISTS prescription_audit_log_service_select
+  ON public.prescription_audit_log;
+CREATE POLICY prescription_audit_log_service_select
+  ON public.prescription_audit_log
+  FOR SELECT TO service_role
+  USING (true);
+
+DROP POLICY IF EXISTS prescription_audit_log_service_insert
+  ON public.prescription_audit_log;
+CREATE POLICY prescription_audit_log_service_insert
+  ON public.prescription_audit_log
+  FOR INSERT TO service_role
+  WITH CHECK (true);
