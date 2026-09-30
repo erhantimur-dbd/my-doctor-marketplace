@@ -11,6 +11,8 @@ import {
 } from "@/lib/validators/reschedule";
 import { createNotification } from "@/lib/notifications";
 import { rescheduleRequestEmail, rescheduleResponseEmail } from "@/lib/email/templates";
+import { buildPatientCalendarEvent } from "@/lib/booking/patient-calendar";
+import { BOOKING_CURRENT_DOCTOR_EMBED } from "@/lib/patient/booking-doctor-embed";
 import {
   isSoftsmokeTransactionalDoctor,
   manageBookingUrl,
@@ -171,7 +173,8 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
     .from("reschedule_requests")
     .select(
       `*, booking:bookings!inner(
-        id, booking_number, patient_id, doctor_id, appointment_date, start_time, end_time, consultation_type
+        id, booking_number, patient_id, doctor_id, appointment_date, start_time, end_time, consultation_type, created_at,
+        doctor:${BOOKING_CURRENT_DOCTOR_EMBED}(clinic_name, address)
       )`
     )
     .eq("id", parsed.data.reschedule_id)
@@ -232,16 +235,37 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
       return { error: "Failed to update booking." };
     }
 
+    const respondedAt = new Date().toISOString();
+
     // Mark request as approved
     await admin
       .from("reschedule_requests")
-      .update({ status: "approved", responded_at: new Date().toISOString() })
+      .update({ status: "approved", responded_at: respondedAt })
       .eq("id", request.id);
 
     const softsmokeDoctor = isSoftsmokeTransactionalDoctor({
       id: doctorRecord.id,
       slug: doctorRecord.slug,
       email: doctorProfile?.email || user.email,
+    });
+
+    const bookingDoctor: any = Array.isArray(bookingData.doctor)
+      ? bookingData.doctor[0]
+      : bookingData.doctor;
+    const rescheduleCalendar = buildPatientCalendarEvent({
+      bookingId: bookingData.id,
+      doctorName,
+      consultationType: bookingData.consultation_type,
+      appointmentDate: request.new_date,
+      startTime: request.new_start_time,
+      endTime: request.new_end_time,
+      clinicName: bookingDoctor?.clinic_name,
+      address: bookingDoctor?.address,
+      bookingNumber: bookingData.booking_number,
+      createdAt: bookingData.created_at,
+      updatedAt: respondedAt,
+      kind: "reschedule",
+      method: "REQUEST",
     });
 
     // Build approval email. Tester path uses the dedicated reschedule body.
@@ -256,6 +280,7 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
           newTime: request.new_start_time,
           appointmentType: bookingData.consultation_type,
           manageUrl: manageBookingUrl(bookingData.id),
+          calendarHtml: rescheduleCalendar?.linksHtml,
         })
       : rescheduleResponseEmail({
           patientName: patientProfile?.first_name || "there",
@@ -266,6 +291,7 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
           originalDate: request.original_date,
           originalTime: request.original_start_time,
           dashboardUrl: `${appUrl}/en/dashboard/bookings`,
+          calendarHtml: rescheduleCalendar?.linksHtml,
         });
 
     if (softsmokeDoctor) {
@@ -302,7 +328,14 @@ export async function respondToReschedule(input: RespondRescheduleInput) {
           newStartTime: request.new_start_time,
         },
         email: patientProfile?.email
-          ? { to: patientProfile.email, subject: emailSubject, html: emailHtml }
+          ? {
+              to: patientProfile.email,
+              subject: emailSubject,
+              html: emailHtml,
+              attachments: rescheduleCalendar
+                ? [rescheduleCalendar.attachment]
+                : undefined,
+            }
           : undefined,
       });
     } catch (err) {

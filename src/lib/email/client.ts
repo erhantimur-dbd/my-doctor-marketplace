@@ -15,17 +15,26 @@ function getResend(): Resend | null {
   return _resend;
 }
 
+export interface EmailAttachment {
+  filename: string;
+  /** Base64-encoded file body. */
+  content: string;
+  contentType?: string;
+}
+
 export async function sendEmail({
   to,
   subject,
   html,
   from,
+  attachments,
 }: {
   to: string;
   subject: string;
   html: string;
   /** Optional From override (e.g. Account Security notices). */
   from?: string;
+  attachments?: EmailAttachment[];
 }) {
   const resend = getResend();
   const fromAddress =
@@ -55,11 +64,13 @@ export async function sendEmail({
   }
 
   try {
+    const files = attachments?.filter((file) => file.content && file.filename);
     await resend.emails.send({
       from: fromAddress,
       to,
       subject,
       html,
+      ...(files && files.length > 0 ? { attachments: files } : {}),
     });
     return { success: true };
   } catch (error) {

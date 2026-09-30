@@ -246,6 +246,8 @@ export interface SoftsmokeBookingFields {
   joinUrl?: string | null;
   manageUrl?: string | null;
   diaryUrl?: string | null;
+  /** Prebuilt Add to calendar buttons. Omitted keeps existing bodies unchanged. */
+  calendarHtml?: string | null;
 }
 
 function bookingDetails(fields: SoftsmokeBookingFields, who: "doctor" | "patient") {
@@ -288,6 +290,7 @@ export function softsmokePatientConfirmEmail(
     <p style="margin:0 0 16px; font-size:14px; color:#1a1a1a; line-height:1.55; letter-spacing:normal;">
       For video appointments, use the join link below when it is time. You can also manage your booking anytime.
     </p>
+    ${fields.calendarHtml ?? ""}
     ${join ? primaryButton("Join Video Call", join) : ""}
     ${secondaryButton("View Booking Details", manage)}
   `);
@@ -344,6 +347,7 @@ export function softsmokePatientRescheduleEmail(fields: {
   timeZone?: string;
   appointmentType?: string | null;
   manageUrl?: string | null;
+  calendarHtml?: string | null;
 }): { subject: string; html: string } {
   const oldWhen = whenFields({
     date: fields.oldDate,
@@ -378,6 +382,7 @@ export function softsmokePatientRescheduleEmail(fields: {
     <p style="margin:0 0 16px; font-size:14px; color:#5c5c5c; line-height:1.55; letter-spacing:normal;">
       If this change does not work for you, use Manage booking to pick another slot or cancel.
     </p>
+    ${fields.calendarHtml ?? ""}
     ${primaryButton("Manage booking", manage)}
   `);
   return { subject: `Booking updated — ${fields.bookingRef}`, html };

@@ -2,6 +2,10 @@
 // No external React Email dependency needed - uses inline CSS for compatibility
 
 import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
+import {
+  buildPatientCalendarEvent,
+  type PatientCalendarAttachment,
+} from "@/lib/booking/patient-calendar";
 import { safeConsultEmailHref } from "@/lib/video/email-link";
 
 function consultWindow(
@@ -157,6 +161,9 @@ interface BookingConfirmationParams {
   depositValue?: number; // the percentage or flat value used
   end?: string | null;
   durationMinutes?: number | null;
+  bookingId?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export function bookingConfirmationEmail({
@@ -178,7 +185,14 @@ export function bookingConfirmationEmail({
   depositValue,
   end,
   durationMinutes,
-}: BookingConfirmationParams): { subject: string; html: string } {
+  bookingId,
+  createdAt,
+  updatedAt,
+}: BookingConfirmationParams): {
+  subject: string;
+  html: string;
+  attachments?: PatientCalendarAttachment[];
+} {
   const subject = `Booking Confirmed - ${bookingNumber}`;
   const when = consultWindow(date, time, end, durationMinutes);
 
@@ -236,6 +250,25 @@ export function bookingConfirmationEmail({
     ? `${currency} ${depositAmount.toFixed(2)}`
     : `${currency} ${amount.toFixed(2)}`;
 
+  const calendar = bookingId
+    ? buildPatientCalendarEvent({
+        bookingId,
+        doctorName,
+        consultationType,
+        appointmentDate: date,
+        startTime: time,
+        endTime: end,
+        durationMinutes,
+        clinicName,
+        address,
+        bookingNumber,
+        createdAt,
+        updatedAt,
+        kind: "confirm",
+        method: "REQUEST",
+      })
+    : null;
+
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Booking Confirmed</h2>
     <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
@@ -260,11 +293,16 @@ export function bookingConfirmationEmail({
 
     ${depositBlock}
     ${videoBlock}
+    ${calendar?.linksHtml ?? ""}
 
     ${button("View Booking Details")}
   `);
 
-  return { subject, html };
+  return {
+    subject,
+    html,
+    attachments: calendar ? [calendar.attachment] : undefined,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -2244,6 +2282,7 @@ interface RescheduleResponseParams {
   originalTime: string;
   rejectionReason?: string;
   dashboardUrl: string;
+  calendarHtml?: string;
 }
 
 export function rescheduleResponseEmail({
@@ -2256,6 +2295,7 @@ export function rescheduleResponseEmail({
   originalTime,
   rejectionReason,
   dashboardUrl,
+  calendarHtml,
 }: RescheduleResponseParams): { subject: string; html: string } {
   const subject = approved
     ? "Reschedule Approved — Your New Appointment"
@@ -2295,6 +2335,8 @@ export function rescheduleResponseEmail({
       </p>
     </div>
     ` : ""}
+
+    ${calendarHtml ?? ""}
 
     ${button("View My Bookings", dashboardUrl)}
   `);

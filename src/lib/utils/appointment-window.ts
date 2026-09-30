@@ -90,6 +90,13 @@ function londonWallClock(date: string, time: string): Date {
   return new Date(utc);
 }
 
+export function resolveUkAppointmentInstant(
+  value: string | Date,
+  appointmentDate?: string | null
+): Date | null {
+  return resolveInstant(value, appointmentDate);
+}
+
 function resolveInstant(
   value: string | Date,
   appointmentDate?: string | null

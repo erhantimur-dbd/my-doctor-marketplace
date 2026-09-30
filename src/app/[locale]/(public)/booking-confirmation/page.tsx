@@ -41,6 +41,8 @@ import {
   patientBookingDoctorName,
 } from "@/lib/patient/booking-doctor-embed";
 import { getTranslations } from "next-intl/server";
+import { AddToCalendar } from "@/components/booking/add-to-calendar";
+import { calendarDownloadPath } from "@/lib/booking/calendar-download";
 import {
   confirmationIncludeGuestSignature,
   consultJoinPagePath,
@@ -404,6 +406,18 @@ export default async function BookingConfirmationPage({
             </CardContent>
 
             <CardFooter className="flex flex-col gap-3">
+              <AddToCalendar
+                bookingId={booking.id}
+                doctorName={fullName}
+                consultationType={booking.consultation_type}
+                appointmentDate={booking.appointment_date}
+                startTime={booking.start_time}
+                endTime={booking.end_time}
+                clinicName={doctor?.clinic_name}
+                address={doctor?.address}
+                bookingNumber={booking.booking_number}
+                downloadHref={calendarDownloadPath(booking.id, sp)}
+              />
               {booking.consultation_type === "video" &&
               (booking.status === "confirmed" || booking.status === "approved") ? (
                 <Button className="w-full" asChild>

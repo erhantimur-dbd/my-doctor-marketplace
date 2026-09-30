@@ -18,6 +18,7 @@ import { removeBookingFromMicrosoftCalendar } from "@/lib/microsoft/sync";
 import { removeBookingFromCalDAV } from "@/lib/caldav/sync";
 import { deleteRoom } from "@/lib/daily/client";
 import { sendEmail } from "@/lib/email/client";
+import { buildPatientCalendarEvent } from "@/lib/booking/patient-calendar";
 import { bookingCancellationEmail } from "@/lib/email/templates";
 import {
   isSoftsmokeTransactionalDoctor,
@@ -832,6 +833,8 @@ export async function cancelBooking(input: CancelBookingInput) {
           cancellation_policy,
           cancellation_hours,
           stripe_account_id,
+          clinic_name,
+          address,
           profile:profiles!doctors_profile_id_fkey(first_name, last_name, email)
         )
       `
@@ -900,6 +903,7 @@ export async function cancelBooking(input: CancelBookingInput) {
       settledRefund = settled;
     }
 
+    const cancelledAt = new Date().toISOString();
     // The patient session cannot UPDATE bookings. Counters and cancel status
     // are written together by the service-role refund recorder.
     const recorded = await recordConsultRefundOnBooking({
@@ -908,7 +912,7 @@ export async function cancelBooking(input: CancelBookingInput) {
       settled: settledRefund,
       extra: {
         status: BOOKING_STATUSES.CANCELLED_PATIENT,
-        cancelled_at: new Date().toISOString(),
+        cancelled_at: cancelledAt,
         cancellation_reason: parsed.data.reason || null,
       },
     });
@@ -971,7 +975,27 @@ export async function cancelBooking(input: CancelBookingInput) {
               currency: booking.currency.toUpperCase(),
             });
 
-      sendEmail({ to: patient.email, subject, html }).catch((err) =>
+      const cancelCalendar = buildPatientCalendarEvent({
+        bookingId: booking.id,
+        doctorName: `${doctorProfile.first_name} ${doctorProfile.last_name}`,
+        consultationType: booking.consultation_type,
+        appointmentDate: booking.appointment_date,
+        startTime: booking.start_time,
+        endTime: booking.end_time,
+        clinicName: doctor?.clinic_name,
+        address: doctor?.address,
+        bookingNumber: booking.booking_number,
+        createdAt: booking.created_at,
+        updatedAt: cancelledAt,
+        method: "CANCEL",
+      });
+
+      sendEmail({
+        to: patient.email,
+        subject,
+        html,
+        attachments: cancelCalendar ? [cancelCalendar.attachment] : undefined,
+      }).catch((err) =>
         log.error("Cancellation email error:", { err: err })
       );
 
