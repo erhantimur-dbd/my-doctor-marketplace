@@ -50,6 +50,10 @@ import {
   annualTotalPence,
   type BillingPeriod,
 } from "@/lib/constants/billing-period";
+import {
+  signupBillingPeriod,
+  signupBillingPeriodFromSearch,
+} from "@/lib/founding/signup-billing";
 import { cn, formatSpecialtyName } from "@/lib/utils";
 import { AddressAutocomplete } from "@/components/shared/address-autocomplete";
 import type { ParsedAddress } from "@/components/shared/address-autocomplete";
@@ -126,17 +130,29 @@ export default function RegisterDoctorPage() {
 
     const founding = searchParams.get("founding");
     const tier = searchParams.get("tier");
-    if (founding === "1" || tier === "founding" || tier === "free") {
+    const billing = searchParams.get("billing");
+    const billingChoice = signupBillingPeriodFromSearch({
+      tier,
+      founding,
+      billing,
+    });
+    if (
+      founding === "1" ||
+      tier === "founding" ||
+      tier === "free" ||
+      billingChoice.tierLockedMonthly
+    ) {
       // Legacy tier=free links use the £99 founding plan. They do not grant a free licence.
+      // Annual in the URL must not turn this plan into 10 months for 12.
       setSelectedTier("founding");
       setBillingPeriod("monthly");
     } else if (tier && LICENSE_TIERS.some((t) => t.id === tier && !t.legacyGrantOnly)) {
       setSelectedTier(tier as LicenseTier);
-    }
-
-    const billing = searchParams.get("billing");
-    if (billing === "annual" || billing === "monthly") {
-      setBillingPeriod(billing);
+      if (billing === "annual" || billing === "monthly") {
+        setBillingPeriod(billingChoice.period);
+      }
+    } else if (billing === "annual" || billing === "monthly") {
+      setBillingPeriod(billingChoice.period);
     }
 
     // Clinic starter: store owner_role in sessionStorage for use during org creation
@@ -352,6 +368,12 @@ export default function RegisterDoctorPage() {
   function getSelectedTierConfig(): LicenseTierConfig | undefined {
     return getLicenseTier(selectedTier);
   }
+
+  const selectedMonthlyOnly = getSelectedTierConfig()?.monthlyOnly === true;
+  const effectiveBillingPeriod = signupBillingPeriod({
+    monthlyOnly: selectedMonthlyOnly,
+    requested: billingPeriod,
+  });
 
   function calculateMonthlyTotal(): number {
     const tier = getSelectedTierConfig();
@@ -672,13 +694,24 @@ export default function RegisterDoctorPage() {
                     Checking code...
                   </p>
                 )}
-                {referrerName && (
+                {referrerName && selectedTier === "founding" && (
+                  <p className="flex items-center gap-1 text-xs text-emerald-600">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Referred by {referrerName}. The founding plan stays £99 a month. A referral does not make the first month free.
+                  </p>
+                )}
+                {referrerName && selectedTier !== "founding" && (
                   <p className="flex items-center gap-1 text-xs text-emerald-600">
                     <CheckCircle2 className="h-3 w-3" />
                     Referred by {referrerName} — you both get 1 month free!
                   </p>
                 )}
-                {!referrerName && referralCode.length >= 4 && !validatingCode && (
+                {!referrerName && referralCode.length >= 4 && !validatingCode && selectedTier === "founding" && (
+                  <p className="text-xs text-muted-foreground">
+                    A referral code does not change the £99 founding price.
+                  </p>
+                )}
+                {!referrerName && referralCode.length >= 4 && !validatingCode && selectedTier !== "founding" && (
                   <p className="text-xs text-muted-foreground">
                     Have a referral code from a colleague? Enter it above for 1 month free.
                   </p>
@@ -1270,7 +1303,7 @@ export default function RegisterDoctorPage() {
                         </span>
                         <Badge variant="secondary" className="text-xs">
                           +
-                          {billingPeriod === "annual"
+                          {effectiveBillingPeriod === "annual"
                             ? `${formatPriceForLocale(
                                 annualTotalPence(
                                   testingAddon.priceMonthlyPence
@@ -1340,7 +1373,7 @@ export default function RegisterDoctorPage() {
                     onClick={() => setBillingPeriod("monthly")}
                     className={cn(
                       "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-                      billingPeriod === "monthly"
+                      effectiveBillingPeriod === "monthly"
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                     )}
@@ -1349,12 +1382,17 @@ export default function RegisterDoctorPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setBillingPeriod("annual")}
+                    onClick={() => {
+                      if (selectedMonthlyOnly) return;
+                      setBillingPeriod("annual");
+                    }}
+                    aria-disabled={selectedMonthlyOnly}
                     className={cn(
                       "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
-                      billingPeriod === "annual"
+                      effectiveBillingPeriod === "annual"
                         ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                      selectedMonthlyOnly && "cursor-not-allowed opacity-50"
                     )}
                   >
                     Annual
@@ -1366,11 +1404,15 @@ export default function RegisterDoctorPage() {
                     </Badge>
                   </button>
                 </div>
-                {billingPeriod === "annual" && (
+                {selectedMonthlyOnly ? (
+                  <p className="text-center text-xs text-muted-foreground">
+                    The founding plan is monthly only. Annual billing does not apply.
+                  </p>
+                ) : effectiveBillingPeriod === "annual" ? (
                   <p className="text-center text-xs text-muted-foreground">
                     Pay for 10 months, get 12 — billed once a year
                   </p>
-                )}
+                ) : null}
               </div>
 
               {/* Plan Selection Cards */}
@@ -1587,10 +1629,16 @@ export default function RegisterDoctorPage() {
                     <span className="text-sm font-medium">
                       Invite a Colleague
                     </span>
-                    <Badge variant="secondary" className="text-xs">
-                      <Gift className="mr-1 h-3 w-3" />
-                      Both get 1 month free
-                    </Badge>
+                    {selectedTier === "founding" ? (
+                      <Badge variant="secondary" className="text-xs">
+                        Founding plan stays £99
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        <Gift className="mr-1 h-3 w-3" />
+                        Both get 1 month free
+                      </Badge>
+                    )}
                   </div>
                   {showInvite ? (
                     <ChevronUp className="h-4 w-4 text-muted-foreground" />

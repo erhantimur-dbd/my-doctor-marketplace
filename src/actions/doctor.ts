@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import type Stripe from "stripe";
 import { log } from "@/lib/utils/logger";
 import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
+import { referralMonthFreeAppliesToCheckout } from "@/lib/referrals/reward-policy";
 import {
   EXPRESS_CONNECT_CAPABILITIES,
   requestCardPaymentsIfNeeded,
@@ -493,8 +494,13 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
     }
   }
 
-  // Apply referral coupon if eligible (and no manual coupon applied)
-  if (hasDiscount && !appliedCouponId) {
+  // Apply referral coupon if eligible (and no manual coupon applied).
+  // The founding £99 price is not discounted.
+  const referralFreeMonth = referralMonthFreeAppliesToCheckout({
+    priceId,
+    foundingPriceId: process.env.STRIPE_PRICE_FOUNDING,
+  });
+  if (hasDiscount && !appliedCouponId && referralFreeMonth) {
     try {
       // Ensure coupon exists in Stripe
       const stripeClient = (await import("@/lib/stripe/client")).getStripe();
