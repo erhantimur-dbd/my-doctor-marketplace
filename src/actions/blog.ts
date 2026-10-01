@@ -3,6 +3,7 @@ import { safeError } from "@/lib/utils/safe-error";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { adminEmailGateError } from "@/lib/admin/admin-email-allowlist";
 import { z } from "zod/v4";
 
 const blogPostSchema = z.object({
@@ -19,6 +20,26 @@ const blogPostSchema = z.object({
 });
 
 export type BlogPostInput = z.infer<typeof blogPostSchema>;
+
+async function requirePlatformAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated" as const, user: null };
+  if (adminEmailGateError(user.email)) {
+    return { error: "Unauthorized" as const, user: null };
+  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "admin") {
+    return { error: "Unauthorized" as const, user: null };
+  }
+  return { error: null, user };
+}
 
 /**
  * Get published blog posts (public).
@@ -70,18 +91,8 @@ export async function getPostBySlug(slug: string) {
  * Get all blog posts (admin).
  */
 export async function getAdminPosts(page = 1, perPage = 20) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { posts: [], total: 0, page, perPage };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") return { posts: [], total: 0, page, perPage };
+  const auth = await requirePlatformAdmin();
+  if (auth.error || !auth.user) return { posts: [], total: 0, page, perPage };
 
   const adminDb = createAdminClient();
   const from = (page - 1) * perPage;
@@ -102,18 +113,9 @@ export async function createBlogPost(input: BlogPostInput) {
   const parsed = blogPostSchema.safeParse(input);
   if (!parsed.success) return { error: "Invalid input" };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") return { error: "Unauthorized" };
+  const auth = await requirePlatformAdmin();
+  if (auth.error || !auth.user) return { error: auth.error || "Unauthorized" };
+  const user = auth.user;
 
   const adminDb = createAdminClient();
   const { data, error } = await adminDb
@@ -134,28 +136,21 @@ export async function createBlogPost(input: BlogPostInput) {
  * Update a blog post (admin only).
  */
 export async function updateBlogPost(postId: string, input: Partial<BlogPostInput>) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
+  const parsed = blogPostSchema.safeParse(input);
+  if (!parsed.success) return { error: "Invalid input" };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") return { error: "Unauthorized" };
+  const auth = await requirePlatformAdmin();
+  if (auth.error || !auth.user) return { error: auth.error || "Unauthorized" };
 
   const adminDb = createAdminClient();
 
-  // If publishing for the first time, set published_at
+  // Schema parse drops keys that are not blog columns (author_id, view_count).
   const updateData: Record<string, unknown> = {
-    ...input,
+    ...parsed.data,
     updated_at: new Date().toISOString(),
   };
 
-  if (input.status === "published") {
+  if (parsed.data.status === "published") {
     const { data: existing } = await adminDb
       .from("blog_posts")
       .select("published_at")
@@ -179,18 +174,8 @@ export async function updateBlogPost(postId: string, input: Partial<BlogPostInpu
  * Delete a blog post (admin only).
  */
 export async function deleteBlogPost(postId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "admin") return { error: "Unauthorized" };
+  const auth = await requirePlatformAdmin();
+  if (auth.error || !auth.user) return { error: auth.error || "Unauthorized" };
 
   const adminDb = createAdminClient();
   const { error } = await adminDb

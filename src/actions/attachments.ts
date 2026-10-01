@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { log } from "@/lib/utils/logger";
+import { safeAttachmentObjectName } from "@/lib/messages/attachment-name";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = [
@@ -67,10 +68,9 @@ export async function uploadMessageAttachment(
     return { success: false, error: "Conversation not found." };
   }
 
-  // Generate unique path
-  const ext = file.name.split(".").pop() || "bin";
+  // One path segment after the conversation id. Client file names are not trusted.
   const timestamp = Date.now();
-  const storagePath = `${conversationId}/${timestamp}_${file.name}`;
+  const storagePath = `${conversationId}/${timestamp}_${safeAttachmentObjectName(file.name)}`;
 
   // Upload to storage
   const arrayBuffer = await file.arrayBuffer();

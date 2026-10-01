@@ -151,16 +151,27 @@ describe("#17 security bits remain", () => {
   });
 
   it("keeps ADMIN_EMAILS fail-closed in production", () => {
-    const admin = readFileSync(
-      join(process.cwd(), "src/actions/admin.ts"),
+    const gate = readFileSync(
+      join(process.cwd(), "src/lib/admin/admin-email-allowlist.ts"),
       "utf8"
     );
-    const page = readFileSync(
-      join(process.cwd(), "src/lib/admin/require-admin-page.ts"),
-      "utf8"
-    );
-    expect(admin).toContain("ADMIN_EMAILS.length === 0");
-    expect(page).toContain("ADMIN_EMAILS.length === 0");
+    expect(gate).toContain("allowlist.length === 0");
+    expect(gate).toContain('return "Not authorized"');
+    for (const rel of [
+      "src/actions/admin.ts",
+      "src/lib/admin/require-admin-page.ts",
+      "middleware.ts",
+      "src/actions/waitlist.ts",
+      "src/actions/support.ts",
+      "src/actions/payment-corrections.ts",
+      "src/actions/blog.ts",
+      "src/actions/test-emails.ts",
+      "src/actions/doctor-profile-extras.ts",
+      "src/actions/availability-alerts.ts",
+    ]) {
+      const src = readFileSync(join(process.cwd(), rel), "utf8");
+      expect(src, rel).toContain("adminEmailGateError");
+    }
   });
 
   it("every cron route still requires CRON_SECRET via authorizeCronRequest", () => {

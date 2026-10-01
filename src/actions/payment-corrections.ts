@@ -24,11 +24,7 @@ import {
   executeWalletAdjustment,
 } from "@/lib/payments/correction-execute";
 import { recreateFoundingSubscription } from "@/lib/payments/founding-recreate";
-
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",")
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
+import { adminEmailGateError } from "@/lib/admin/admin-email-allowlist";
 
 type CorrectionRow = {
   id: string;
@@ -69,16 +65,7 @@ async function requireAdminUser() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" as const, user: null };
-  const isProduction =
-    process.env.VERCEL_ENV === "production" ||
-    process.env.NODE_ENV === "production";
-  if (isProduction && ADMIN_EMAILS.length === 0) {
-    return { error: "Not authorized" as const, user: null };
-  }
-  if (
-    ADMIN_EMAILS.length > 0 &&
-    !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
-  ) {
+  if (adminEmailGateError(user.email)) {
     return { error: "Not authorized" as const, user: null };
   }
   const { data: profile } = await supabase

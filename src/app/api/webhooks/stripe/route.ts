@@ -47,6 +47,11 @@ import {
   stripeWebhookSecretCandidates,
   verifyStripeWebhookSignature,
 } from "@/lib/stripe/webhook-signature";
+import {
+  checkoutSessionShouldFulfill,
+  giftCardPaymentMatches,
+  walletTopUpCredit,
+} from "@/lib/stripe/checkout-fulfillment";
 import Stripe from "stripe";
 
 
@@ -122,8 +127,19 @@ export async function POST(request: NextRequest) {
   // the Stripe refund id first. Copying the charge's refund total here would
   // add those cents a second time.
   switch (event.type) {
-    case "checkout.session.completed": {
+    case "checkout.session.completed":
+    case "checkout.session.async_payment_succeeded": {
       const session = event.data.object as Stripe.Checkout.Session;
+
+      // Delayed methods complete the session before the payment settles.
+      // Leave the claim in place. async_payment_succeeded is a new event id
+      // and fulfills once payment_status is paid.
+      if (!checkoutSessionShouldFulfill(session)) {
+        console.info(
+          `[Stripe] Not fulfilling ${event.type} ${session.id}: payment_status=${session.payment_status ?? "missing"}`
+        );
+        break;
+      }
 
       if (
         session.mode === "subscription" &&
@@ -139,21 +155,13 @@ export async function POST(request: NextRequest) {
       // Prefer Stripe-charged amount over client-set metadata (money integrity).
       if (session.metadata?.type === "wallet_top_up") {
         const patientId = session.metadata.patient_id;
-        const amountCents =
-          typeof session.amount_total === "number" && session.amount_total > 0
-            ? session.amount_total
-            : parseInt(session.metadata.amount_cents || "0", 10);
-        const cur = (
-          session.currency ||
-          session.metadata.currency ||
-          "GBP"
-        ).toUpperCase();
+        const credit = walletTopUpCredit(session);
 
-        if (patientId && amountCents > 0) {
+        if (patientId && credit) {
           await creditWallet({
             patientId,
-            currency: cur,
-            amountCents,
+            currency: credit.currency,
+            amountCents: credit.amountCents,
             sourceType: "top_up",
             description: "Wallet top-up via Stripe",
           });
@@ -166,6 +174,33 @@ export async function POST(request: NextRequest) {
       if (session.metadata?.type === "gift_card_purchase") {
         const giftCardId = session.metadata.gift_card_id;
         if (giftCardId) {
+          const { data: pendingCard, error: pendingError } = await supabase
+            .from("gift_cards")
+            .select("id, amount_cents, currency")
+            .eq("id", giftCardId)
+            .eq("status", "pending")
+            .maybeSingle();
+
+          if (pendingError) {
+            throw pendingError;
+          }
+
+          if (
+            !pendingCard ||
+            !giftCardPaymentMatches(
+              {
+                amount_cents: pendingCard.amount_cents,
+                currency: pendingCard.currency,
+              },
+              session
+            )
+          ) {
+            console.error(
+              "[Stripe] Gift card payment does not match the pending card"
+            );
+            break;
+          }
+
           const { data: gc } = await supabase
             .from("gift_cards")
             .update({
@@ -173,7 +208,7 @@ export async function POST(request: NextRequest) {
               stripe_payment_intent_id: session.payment_intent as string,
             })
             .eq("id", giftCardId)
-            .in("status", ["pending", "active"])
+            .eq("status", "pending")
             .select("*")
             .maybeSingle();
 

@@ -215,32 +215,6 @@ export async function checkReferralDiscount(doctorId: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Mark referred doctor's reward as applied
-// ---------------------------------------------------------------------------
-
-export async function markReferredRewarded(referralId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const { data: doctor } = await supabase
-    .from("doctors")
-    .select("id")
-    .eq("profile_id", user.id)
-    .maybeSingle();
-  if (!doctor) return;
-
-  const adminSupabase = createAdminClient();
-  await adminSupabase
-    .from("doctor_referrals")
-    .update({ referred_rewarded: true })
-    .eq("id", referralId)
-    .eq("referred_doctor_id", doctor.id);
-}
-
-// ---------------------------------------------------------------------------
 // Patient Referral: Send email invitation
 // ---------------------------------------------------------------------------
 

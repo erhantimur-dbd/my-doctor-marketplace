@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { sendEmail } from "@/lib/email/client";
 import {
   doctorReferralInvitationEmail,
@@ -281,5 +282,31 @@ export async function processReferralReward(referredDoctorId: string) {
       channels: ["in_app"],
     });
   }
+}
+
+/**
+ * Marks the signed-in doctor's own referral discount as applied.
+ * Not a server action. A browser call must not flip this with the service role.
+ */
+export async function markReferredRewarded(referralId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  const { data: doctor } = await supabase
+    .from("doctors")
+    .select("id")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  if (!doctor) return;
+
+  const adminSupabase = createAdminClient();
+  await adminSupabase
+    .from("doctor_referrals")
+    .update({ referred_rewarded: true })
+    .eq("id", referralId)
+    .eq("referred_doctor_id", doctor.id);
 }
 

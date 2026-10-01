@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { filterValidInsurers } from "@/lib/constants/insurers";
 import { isValidGender, type DoctorGender } from "@/lib/constants/gender";
 import { log } from "@/lib/utils/logger";
+import { adminEmailGateError } from "@/lib/admin/admin-email-allowlist";
 
 async function getOwnDoctor() {
   const supabase = await createClient();
@@ -208,6 +209,7 @@ export async function adminListPendingVideos() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated", videos: [] };
+  if (adminEmailGateError(user.email)) return { error: "Forbidden", videos: [] };
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -243,6 +245,7 @@ export async function adminModerateProfileVideo(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
+  if (adminEmailGateError(user.email)) return { error: "Forbidden" };
 
   const { data: profile } = await supabase
     .from("profiles")

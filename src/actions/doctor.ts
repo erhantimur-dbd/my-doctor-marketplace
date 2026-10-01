@@ -451,9 +451,8 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
   }
 
   // Check for referral discount
-  const { checkReferralDiscount, markReferredRewarded } = await import(
-    "@/actions/referral"
-  );
+  const { checkReferralDiscount } = await import("@/actions/referral");
+  const { markReferredRewarded } = await import("@/lib/referrals/internal");
   const { hasDiscount, referralId } = await checkReferralDiscount(doctor.id);
 
   const { getRequestOriginAndLocale } = await import("@/lib/http/origin");
@@ -520,7 +519,9 @@ export async function createSubscriptionCheckout(priceId: string, couponCode?: s
 
   // Record coupon redemption if applied
   if (appliedCouponId) {
-    const { recordCouponRedemption } = await import("@/actions/coupon");
+    const { recordCouponRedemption } = await import(
+      "@/lib/coupons/record-redemption"
+    );
     const planId = priceId === process.env.STRIPE_PRICE_PROFESSIONAL
       ? "professional"
       : priceId === process.env.STRIPE_PRICE_STARTER
