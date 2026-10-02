@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { saveApprovalChecklist, updateDoctorVerification } from "@/actions/admin";
@@ -73,6 +74,13 @@ export function ApprovalChecklist({
     indemnityInDate: initialData?.indemnity_in_date ?? false,
     dbsCheckVerified: initialData?.dbs_check_verified ?? false,
   });
+  const [dbsCertificateNumber, setDbsCertificateNumber] = useState(
+    ukRegulatory.dbsCertificateNumber ?? ""
+  );
+  const [dbsLevel, setDbsLevel] = useState(ukRegulatory.dbsLevel ?? "");
+  const [dbsIssueDate, setDbsIssueDate] = useState(
+    ukRegulatory.dbsIssueDate ?? ""
+  );
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
@@ -96,6 +104,9 @@ export function ApprovalChecklist({
       indemnity_document_verified: nextUk.indemnityDocumentVerified,
       indemnity_in_date: nextUk.indemnityInDate,
       dbs_check_verified: nextUk.dbsCheckVerified,
+      dbs_certificate_number: dbsCertificateNumber,
+      dbs_level: dbsLevel,
+      dbs_issue_date: dbsIssueDate,
     };
   };
 
@@ -230,6 +241,9 @@ export function ApprovalChecklist({
         indemnity_document_verified: ukVal.indemnityDocumentVerified,
         indemnity_in_date: ukVal.indemnityInDate,
         dbs_check_verified: ukVal.dbsCheckVerified,
+        dbs_certificate_number: dbsCertificateNumber,
+        dbs_level: dbsLevel,
+        dbs_issue_date: dbsIssueDate,
       });
 
       if (result?.error) {
@@ -256,7 +270,7 @@ export function ApprovalChecklist({
       }
       setSaving(false);
     },
-    [doctorId, onChecklistChange, isUkDoctor]
+    [doctorId, onChecklistChange, isUkDoctor, dbsCertificateNumber, dbsLevel, dbsIssueDate]
   );
 
   function handleGmcChange(checked: boolean) {
@@ -604,13 +618,76 @@ export function ApprovalChecklist({
                   DBS Check Verified (or N/A)
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  DBS issue date:{" "}
+                  Registration issue date:{" "}
                   <span className="font-medium">
                     {ukRegulatory.dbsCheckDate ?? "not supplied"}
                   </span>
                   . Tick if verified or if patient population does not require
-                  DBS.
+                  DBS. The recorded time is set when this box first becomes
+                  ticked
+                  {ukRegulatory.dbsVerifiedAt
+                    ? ` (${ukRegulatory.dbsVerifiedAt.slice(0, 10)})`
+                    : ""}
+                  .
                 </p>
+                <div className="grid gap-2 pt-2 sm:grid-cols-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="dbs-certificate-number" className="text-xs">
+                      Certificate number
+                    </Label>
+                    <Input
+                      id="dbs-certificate-number"
+                      value={dbsCertificateNumber}
+                      onChange={(event) =>
+                        setDbsCertificateNumber(event.target.value)
+                      }
+                      disabled={saving}
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="dbs-level" className="text-xs">
+                      Level
+                    </Label>
+                    <select
+                      id="dbs-level"
+                      value={dbsLevel}
+                      onChange={(event) => setDbsLevel(event.target.value)}
+                      disabled={saving}
+                      className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm"
+                    >
+                      <option value="">Not recorded</option>
+                      <option value="basic">Basic</option>
+                      <option value="standard">Standard</option>
+                      <option value="enhanced">Enhanced</option>
+                      <option value="enhanced_barred">Enhanced with barred list</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="dbs-issue-date" className="text-xs">
+                      Certificate issue date
+                    </Label>
+                    <Input
+                      id="dbs-issue-date"
+                      type="date"
+                      value={dbsIssueDate.slice(0, 10)}
+                      onChange={(event) => setDbsIssueDate(event.target.value)}
+                      disabled={saving}
+                    />
+                  </div>
+                </div>
+                <div className="flex justify-end pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    disabled={saving}
+                    onClick={() => save(gmcVerified, websiteVerified, notes, uk)}
+                  >
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save DBS record
+                  </Button>
+                </div>
               </div>
             </div>
           </div>

@@ -16,6 +16,10 @@ export interface UkRegulatorySnapshot {
   indemnityCoverGbp: number | null;
   indemnityExpiry: string | null;
   dbsCheckDate: string | null;
+  dbsCertificateNumber: string | null;
+  dbsLevel: string | null;
+  dbsIssueDate: string | null;
+  dbsVerifiedAt: string | null;
 }
 
 export interface ChecklistSnapshot {
