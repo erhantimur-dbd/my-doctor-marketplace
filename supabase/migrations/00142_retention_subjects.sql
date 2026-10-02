@@ -7,16 +7,25 @@
 --
 -- public.retention_subjects stores subject_type, subject_id, and
 -- date_of_birth only. No names, emails, or other personal data.
--- subject_type is 'patient' for public.profiles and 'dependent' for
--- public.dependents. Row level security is enabled and there are no
--- policies. PUBLIC, anon, and authenticated have no privileges.
+-- subject_type is 'dependent' for public.dependents. Patient rows are
+-- not inserted: profiles.date_of_birth does not exist in production, and
+-- 00146 adds profiles.adult_confirmed_at instead. Row level security is
+-- enabled and there are no policies. PUBLIC, anon, and authenticated
+-- have no privileges.
 --
 -- public.erase_account keeps the 00141 signature, return type, SECURITY
--- DEFINER, and search_path. The body below is the 00141 body with one
--- addition, marked retention_subjects_capture_begin/end: before the
--- hard-delete return (and therefore before either date of birth is
--- nulled), non-null dates of birth are upserted. ON CONFLICT keeps a
--- captured value, so a re-run cannot replace it with null.
+-- DEFINER, search_path, and EXECUTE grants. The body is the 00141 body
+-- plus the blocks marked 00142_delta_begin/end:
+--   * an open dispute forces the restricted path (fallback_reason
+--     open_dispute in the returned jsonb; this function writes no
+--     separate erasure audit)
+--   * hard deletion deletes retention_subjects rows for the user and
+--     their dependents and does not capture a date of birth
+--   * the restricted path copies non-null dependent dates of birth
+--     before it nulls them
+-- ON CONFLICT keeps a captured value, so a re-run cannot replace it
+-- with null. The sole-owner active-licence erasure_blocked raises are
+-- unchanged.
 
 CREATE TABLE public.retention_subjects (
   subject_type text NOT NULL CHECK (subject_type IN ('patient', 'dependent')),
@@ -57,6 +66,9 @@ DECLARE
   v_orgs uuid[] := ARRAY[]::uuid[];
   v_others bigint;
   v_org_col text;
+  -- 00142_delta_begin declare_fallback
+  v_fallback_reason text := NULL;
+  -- 00142_delta_end declare_fallback
 BEGIN
   IF coalesce((SELECT auth.role()), ''::text) IS DISTINCT FROM 'service_role'
      AND (SELECT auth.uid()) IS NOT NULL THEN
@@ -954,36 +966,284 @@ BEGIN
     END;
   END IF;
 
-  -- retention_subjects_capture_begin
-  -- 00142. Copy date of birth before the hard-delete return, which is also
-  -- before the restricted path nulls profiles.date_of_birth and
-  -- dependents.date_of_birth. Blocked erasures raise above and write
-  -- nothing. A null date of birth is skipped. ON CONFLICT keeps a value
-  -- already captured, including when a later pass would write null.
-  IF pg_catalog.to_regclass('public.profiles') IS NOT NULL
-     AND EXISTS (
-       SELECT 1
-       FROM pg_catalog.pg_attribute AS a
-       JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
-       JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
-       WHERE n.nspname = 'public'
-         AND c.relname = 'profiles'
-         AND a.attname = 'date_of_birth'
-         AND a.attnum > 0
-         AND NOT a.attisdropped
-     ) THEN
-    EXECUTE $dob_patient$
-      INSERT INTO public.retention_subjects (subject_type, subject_id, date_of_birth)
-      SELECT 'patient', p.id, p.date_of_birth
-      FROM public.profiles AS p
-      WHERE p.id = $1
-        AND p.date_of_birth IS NOT NULL
-      ON CONFLICT (subject_type, subject_id) DO UPDATE
-      SET date_of_birth = coalesce(retention_subjects.date_of_birth, excluded.date_of_birth)
-    $dob_patient$
-      USING p_user_id;
+  -- 00142_delta_begin open_dispute
+  -- Open dispute blocks hard deletion. This function writes no erasure
+  -- audit table; fallback_reason in the returned jsonb is the record.
+  --
+  -- public.bookings.stripe_dispute_status (00123, text, no check) is open
+  -- when it is not null and not a closed Stripe status: won, lost,
+  -- warning_closed, charge_refunded. The booking counts for this user as
+  -- patient_id, or as doctor_id of one of this user's doctor rows.
+  -- public.payment_corrections.disputed_at and dispute_resolved_at (00124)
+  -- are an open payment-correction dispute when disputed_at is set and
+  -- dispute_resolved_at is null, matched on patient_id, on doctor_id when
+  -- that column exists, or on booking_id of one of this user's bookings.
+  -- Blocked erasures (including a sole owner with an active licence) have
+  -- already raised and write nothing. The check runs even when another
+  -- row already forces retention, so the returned jsonb still records
+  -- fallback_reason.
+    BEGIN
+      v_hit := false;
+      IF pg_catalog.to_regclass('public.bookings') IS NOT NULL THEN
+        SELECT EXISTS (
+          SELECT 1
+          FROM pg_catalog.pg_attribute AS a
+          JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+          JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public'
+            AND c.relname = 'bookings'
+            AND a.attname = 'stripe_dispute_status'
+            AND a.attnum > 0
+            AND NOT a.attisdropped
+        ) AND EXISTS (
+          SELECT 1
+          FROM pg_catalog.pg_attribute AS a
+          JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+          JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public'
+            AND c.relname = 'bookings'
+            AND a.attname = 'patient_id'
+            AND a.attnum > 0
+            AND NOT a.attisdropped
+        ) INTO v_ok;
+        IF v_ok THEN
+          EXECUTE $dispute_booking_patient$
+            SELECT EXISTS (
+              SELECT 1
+              FROM public.bookings AS b
+              WHERE b.patient_id = $1
+                AND b.stripe_dispute_status IS NOT NULL
+                AND b.stripe_dispute_status NOT IN (
+                  'won', 'lost', 'warning_closed', 'charge_refunded'
+                )
+            )
+          $dispute_booking_patient$
+            INTO v_hit
+            USING p_user_id;
+        END IF;
+        IF NOT coalesce(v_hit, false)
+           AND pg_catalog.to_regclass('public.doctors') IS NOT NULL THEN
+          SELECT EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_attribute AS a
+            JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'bookings'
+              AND a.attname = 'stripe_dispute_status'
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+          ) AND EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_attribute AS a
+            JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'bookings'
+              AND a.attname = 'doctor_id'
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+          ) INTO v_ok;
+          IF v_ok THEN
+            EXECUTE $dispute_booking_doctor$
+              SELECT EXISTS (
+                SELECT 1
+                FROM public.bookings AS b
+                WHERE b.doctor_id IN (
+                  SELECT d.id FROM public.doctors AS d WHERE d.profile_id = $1
+                )
+                  AND b.stripe_dispute_status IS NOT NULL
+                  AND b.stripe_dispute_status NOT IN (
+                    'won', 'lost', 'warning_closed', 'charge_refunded'
+                  )
+              )
+            $dispute_booking_doctor$
+              INTO v_hit
+              USING p_user_id;
+          END IF;
+        END IF;
+      END IF;
+
+      IF NOT coalesce(v_hit, false)
+         AND pg_catalog.to_regclass('public.payment_corrections') IS NOT NULL THEN
+        SELECT (
+          SELECT count(*)
+          FROM pg_catalog.pg_attribute AS a
+          JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+          JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public'
+            AND c.relname = 'payment_corrections'
+            AND a.attname IN ('patient_id', 'disputed_at', 'dispute_resolved_at')
+            AND a.attnum > 0
+            AND NOT a.attisdropped
+        ) = 3 INTO v_ok;
+        IF v_ok THEN
+          EXECUTE $dispute_correction_patient$
+            SELECT EXISTS (
+              SELECT 1
+              FROM public.payment_corrections AS pc
+              WHERE pc.patient_id = $1
+                AND pc.disputed_at IS NOT NULL
+                AND pc.dispute_resolved_at IS NULL
+            )
+          $dispute_correction_patient$
+            INTO v_hit
+            USING p_user_id;
+        END IF;
+        IF NOT coalesce(v_hit, false)
+           AND pg_catalog.to_regclass('public.doctors') IS NOT NULL THEN
+          SELECT EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_attribute AS a
+            JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'payment_corrections'
+              AND a.attname = 'doctor_id'
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+          ) AND EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_attribute AS a
+            JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'payment_corrections'
+              AND a.attname = 'disputed_at'
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+          ) AND EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_attribute AS a
+            JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'payment_corrections'
+              AND a.attname = 'dispute_resolved_at'
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+          ) INTO v_ok;
+          IF v_ok THEN
+            EXECUTE $dispute_correction_doctor$
+              SELECT EXISTS (
+                SELECT 1
+                FROM public.payment_corrections AS pc
+                WHERE pc.doctor_id IN (
+                  SELECT d.id FROM public.doctors AS d WHERE d.profile_id = $1
+                )
+                  AND pc.disputed_at IS NOT NULL
+                  AND pc.dispute_resolved_at IS NULL
+              )
+            $dispute_correction_doctor$
+              INTO v_hit
+              USING p_user_id;
+          END IF;
+        END IF;
+        IF NOT coalesce(v_hit, false)
+           AND pg_catalog.to_regclass('public.bookings') IS NOT NULL THEN
+          SELECT (
+            SELECT count(*)
+            FROM pg_catalog.pg_attribute AS a
+            JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'payment_corrections'
+              AND a.attname IN ('booking_id', 'disputed_at', 'dispute_resolved_at')
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+          ) = 3 AND EXISTS (
+            SELECT 1
+            FROM pg_catalog.pg_attribute AS a
+            JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+            JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public'
+              AND c.relname = 'bookings'
+              AND a.attname = 'patient_id'
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+          ) INTO v_ok;
+          IF v_ok THEN
+            EXECUTE $dispute_correction_booking$
+              SELECT EXISTS (
+                SELECT 1
+                FROM public.payment_corrections AS pc
+                JOIN public.bookings AS b ON b.id = pc.booking_id
+                WHERE pc.disputed_at IS NOT NULL
+                  AND pc.dispute_resolved_at IS NULL
+                  AND b.patient_id = $1
+              )
+            $dispute_correction_booking$
+              INTO v_hit
+              USING p_user_id;
+          END IF;
+          IF NOT coalesce(v_hit, false)
+             AND pg_catalog.to_regclass('public.doctors') IS NOT NULL THEN
+            SELECT EXISTS (
+              SELECT 1
+              FROM pg_catalog.pg_attribute AS a
+              JOIN pg_catalog.pg_class AS c ON c.oid = a.attrelid
+              JOIN pg_catalog.pg_namespace AS n ON n.oid = c.relnamespace
+              WHERE n.nspname = 'public'
+                AND c.relname = 'bookings'
+                AND a.attname = 'doctor_id'
+                AND a.attnum > 0
+                AND NOT a.attisdropped
+            ) INTO v_ok;
+            IF v_ok THEN
+              EXECUTE $dispute_correction_booking_doctor$
+                SELECT EXISTS (
+                  SELECT 1
+                  FROM public.payment_corrections AS pc
+                  JOIN public.bookings AS b ON b.id = pc.booking_id
+                  WHERE pc.disputed_at IS NOT NULL
+                    AND pc.dispute_resolved_at IS NULL
+                    AND b.doctor_id IN (
+                      SELECT d.id FROM public.doctors AS d WHERE d.profile_id = $1
+                    )
+                )
+              $dispute_correction_booking_doctor$
+                INTO v_hit
+                USING p_user_id;
+            END IF;
+          END IF;
+        END IF;
+      END IF;
+
+      IF coalesce(v_hit, false) THEN
+        v_retain := true;
+        v_fallback_reason := 'open_dispute';
+      END IF;
+    EXCEPTION
+      WHEN undefined_table OR undefined_column THEN
+        NULL;
+    END;
+  -- 00142_delta_end open_dispute
+  IF NOT v_retain THEN
+    -- 00142_delta_begin purge_retention
+    -- Hard path only, before the hard_delete return and therefore before
+    -- auth.admin.deleteUser. Removes a date of birth captured on an
+    -- earlier restricted pass, including a patient row this migration
+    -- no longer inserts.
+    DELETE FROM public.retention_subjects AS s
+    WHERE s.subject_type = 'patient'
+      AND s.subject_id = p_user_id;
+    IF pg_catalog.to_regclass('public.dependents') IS NOT NULL THEN
+      DELETE FROM public.retention_subjects AS s
+      WHERE s.subject_type = 'dependent'
+        AND s.subject_id IN (
+          SELECT d.id
+          FROM public.dependents AS d
+          WHERE d.parent_id = p_user_id
+        );
+    END IF;
+    -- 00142_delta_end purge_retention
+    RETURN pg_catalog.jsonb_build_object('mode', 'hard_delete');
   END IF;
 
+  -- 00142_delta_begin capture_dob
+  -- Restricted path only. profiles.date_of_birth is not captured.
+  -- A null dependent date of birth is skipped. ON CONFLICT keeps a
+  -- value already captured, including when a later pass would write null.
   IF pg_catalog.to_regclass('public.dependents') IS NOT NULL
      AND EXISTS (
        SELECT 1
@@ -1018,12 +1278,7 @@ BEGIN
     $dob_dependent$
       USING p_user_id;
   END IF;
-
-  -- retention_subjects_capture_end
-  IF NOT v_retain THEN
-    RETURN pg_catalog.jsonb_build_object('mode', 'hard_delete');
-  END IF;
-
+  -- 00142_delta_end capture_dob
   v_email := 'erased+' || p_user_id::text || '@users.invalid';
 
   SELECT COALESCE(pg_catalog.array_agg(a.attname), ARRAY[]::text[])
@@ -1663,12 +1918,15 @@ BEGIN
     'mode', 'restricted',
     'restricted_at', v_restricted_at,
     'email', v_email
-  );
+  ) || CASE
+    WHEN v_fallback_reason IS NULL THEN pg_catalog.jsonb_build_object()
+    ELSE pg_catalog.jsonb_build_object('fallback_reason', v_fallback_reason)
+  END;
 END;
 $fn$;
 
 COMMENT ON FUNCTION public.erase_account(uuid) IS
-  'Restrict an account that must keep clinical, review, booking, invoice, payment, message, membership, wallet, or other non-cascading rows. Raises erasure_blocked when a stored subscription is active or trialing, a licence is active, or the user owns an organisation that still has other members or an active licence. Returns hard_delete when auth.admin.deleteUser is still safe. Linked rows remain personal data.';
+  'Restrict an account that must keep clinical, review, booking, invoice, payment, message, membership, wallet, or other non-cascading rows. The restricted path copies dependent dates of birth to retention_subjects before nulling them. An open dispute (bookings.stripe_dispute_status other than won, lost, warning_closed, or charge_refunded, or payment_corrections.disputed_at set with dispute_resolved_at null) falls back to restricted and returns fallback_reason open_dispute. Hard deletion removes retention_subjects rows for the user and their dependents and does not capture a date of birth. Raises erasure_blocked when a stored subscription is active or trialing, a licence is active, or the user owns an organisation that still has other members or an active licence. Returns hard_delete when auth.admin.deleteUser is still safe. Linked rows remain personal data.';
 
 REVOKE ALL ON FUNCTION public.erase_account(uuid) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.erase_account(uuid) FROM PUBLIC, anon, authenticated;

@@ -573,7 +573,6 @@ describe("erase_account keeps audited prescriptions", () => {
     );
     expect(captured.rows).toEqual([
       { subject_type: "dependent", date_of_birth: "2018-06-01" },
-      { subject_type: "patient", date_of_birth: "1990-04-05" },
     ]);
 
     const medical = await db.query<{
@@ -1051,6 +1050,15 @@ const DEP_BLOCKED = "e3e3e3e3-e3e3-43e3-83e3-e3e3e3e3e3e3";
 const DEP_RERUN = "e4e4e4e4-e4e4-44e4-84e4-e4e4e4e4e4e4";
 const DEP_NULL = "e5e5e5e5-e5e5-45e5-85e5-e5e5e5e5e5e5";
 const DEP_KEPT = "e6e6e6e6-e6e6-46e6-86e6-e6e6e6e6e6e6";
+const DISPUTE_STRIPE = "d6d6d6d6-d6d6-46d6-86d6-d6d6d6d6d6d6";
+const DISPUTE_PAY = "d7d7d7d7-d7d7-47d7-87d7-d7d7d7d7d7d7";
+const CLOSED_DISPUTE = "d8d8d8d8-d8d8-48d8-88d8-d8d8d8d8d8d8";
+const SOLE_OWNER = "d9d9d9d9-d9d9-49d9-89d9-d9d9d9d9d9d9";
+const DEP_DISPUTE_STRIPE = "e7e7e7e7-e7e7-47e7-87e7-e7e7e7e7e7e7";
+const DEP_DISPUTE_PAY = "e8e8e8e8-e8e8-48e8-88e8-e8e8e8e8e8e8";
+const DEP_CLOSED = "e9e9e9e9-e9e9-49e9-89e9-e9e9e9e9e9e9";
+const DEP_OWNER = "eaeaeaea-eaea-4aea-8aea-eaeaeaeaeaea";
+const OWNER_ORG = "f4f4f4f4-f4f4-44f4-84f4-f4f4f4f4f4f4";
 
 function eraseAccountSource(filename: string): string {
   const sql = readFileSync(join(process.cwd(), "supabase/migrations", filename), "utf8");
@@ -1058,13 +1066,32 @@ function eraseAccountSource(filename: string): string {
   return sql.slice(start);
 }
 
-function withoutRetentionCapture(sql: string): string {
-  const begin = sql.indexOf("  -- retention_subjects_capture_begin\n");
-  if (begin === -1) return sql;
-  const endMarker = "  -- retention_subjects_capture_end\n";
-  const end = sql.indexOf(endMarker, begin);
-  return sql.slice(0, begin) + sql.slice(end + endMarker.length);
+function functionBody(sql: string): string {
+  const end = sql.indexOf("\n$fn$;");
+  return sql.slice(0, end + "\n$fn$;".length);
 }
+
+function strip142Deltas(sql: string): string {
+  return sql.replace(
+    /[ \t]*-- 00142_delta_begin [^\n]*\n[\s\S]*?[ \t]*-- 00142_delta_end [^\n]*\n/g,
+    ""
+  );
+}
+
+const RESTRICTED_RETURN_142 = `  RETURN pg_catalog.jsonb_build_object(
+    'mode', 'restricted',
+    'restricted_at', v_restricted_at,
+    'email', v_email
+  ) || CASE
+    WHEN v_fallback_reason IS NULL THEN pg_catalog.jsonb_build_object()
+    ELSE pg_catalog.jsonb_build_object('fallback_reason', v_fallback_reason)
+  END;`;
+
+const RESTRICTED_RETURN_141 = `  RETURN pg_catalog.jsonb_build_object(
+    'mode', 'restricted',
+    'restricted_at', v_restricted_at,
+    'email', v_email
+  );`;
 
 describe("retention_subjects date of birth capture", () => {
   let db: PGlite;
@@ -1190,11 +1217,15 @@ describe("retention_subjects date of birth capture", () => {
     expect(profile.rows[0]?.date_of_birth).toBeNull();
     expect((await captured(RESTRICTED_DOB)).rows).toEqual([
       { subject_type: "dependent", subject_id: DEP_RESTRICTED, date_of_birth: "2018-06-01" },
-      { subject_type: "patient", subject_id: RESTRICTED_DOB, date_of_birth: "1990-04-05" },
     ]);
   });
 
-  it("copies the dependent date of birth on the hard-delete path", async () => {
+  it("leaves no retention_subjects row on hard erasure, including one captured earlier", async () => {
+    await db.query(
+      `INSERT INTO public.retention_subjects (subject_type, subject_id, date_of_birth)
+       VALUES ('patient', $1, '1988-08-08'), ('dependent', $2, '2016-02-02')`,
+      [HARD_DOB, DEP_HARD]
+    );
     const result = await db.query<{ mode: string }>(
       "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
       [HARD_DOB]
@@ -1205,10 +1236,7 @@ describe("retention_subjects date of birth capture", () => {
       [DEP_HARD]
     );
     expect(live.rows[0]?.date_of_birth).toBe("2016-02-02");
-    expect((await captured(HARD_DOB)).rows).toEqual([
-      { subject_type: "dependent", subject_id: DEP_HARD, date_of_birth: "2016-02-02" },
-      { subject_type: "patient", subject_id: HARD_DOB, date_of_birth: "1988-08-08" },
-    ]);
+    expect((await captured(HARD_DOB)).rows).toEqual([]);
   });
 
   it("copies nothing when erasure is blocked", async () => {
@@ -1223,6 +1251,142 @@ describe("retention_subjects date of birth capture", () => {
     expect((await captured(BLOCKED_DOB)).rows).toEqual([]);
   });
 
+  it("falls back to restricted with fallback_reason when a dispute is open", async () => {
+    await db.exec(`
+      ALTER TABLE public.bookings DROP CONSTRAINT bookings_patient_fkey;
+      ALTER TABLE public.bookings
+        ADD CONSTRAINT bookings_patient_fkey
+        FOREIGN KEY (patient_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+    `);
+    for (const [id, name, dob] of [
+      [DISPUTE_STRIPE, "dob-stripe", "1985-05-05"],
+      [DISPUTE_PAY, "dob-pay", "1986-06-06"],
+      [CLOSED_DISPUTE, "dob-closed", "1987-07-07"],
+    ] as const) {
+      await db.query(
+        `INSERT INTO auth.users (id, email, raw_user_meta_data)
+         VALUES ($1, $2, '{"role":"patient"}')`,
+        [id, `${name}@example.com`]
+      );
+      await db.query(
+        `INSERT INTO public.profiles (id, role, first_name, last_name, email, date_of_birth)
+         VALUES ($1, 'patient', $2, 'Dispute', $3, $4)`,
+        [id, name, `${name}@example.com`, dob]
+      );
+    }
+    await db.query(
+      `INSERT INTO public.dependents (id, parent_id, first_name, last_name, date_of_birth)
+       VALUES
+         ($1, $2, 'Gus', 'Stripe', '2015-05-05'),
+         ($3, $4, 'Hal', 'Payment', '2013-03-03'),
+         ($5, $6, 'Ivy', 'Closed', '2011-11-11')`,
+      [DEP_DISPUTE_STRIPE, DISPUTE_STRIPE, DEP_DISPUTE_PAY, DISPUTE_PAY, DEP_CLOSED, CLOSED_DISPUTE]
+    );
+    await db.query(
+      `INSERT INTO public.bookings (patient_id, doctor_id, status, stripe_dispute_status)
+       VALUES ($1, $2, 'completed', 'needs_response'),
+              ($3, $2, 'completed', 'won')`,
+      [DISPUTE_STRIPE, DOCTOR_ROW, CLOSED_DISPUTE]
+    );
+    await db.query(
+      `INSERT INTO public.payment_corrections (patient_id, disputed_at, dispute_resolved_at, status)
+       VALUES ($1, now(), NULL, 'disputed')`,
+      [DISPUTE_PAY]
+    );
+    await db.query(
+      `INSERT INTO public.retention_subjects (subject_type, subject_id, date_of_birth)
+       VALUES ('dependent', $1, '2011-11-11'), ('patient', $2, '1987-07-07')`,
+      [DEP_CLOSED, CLOSED_DISPUTE]
+    );
+
+    const stripe = await db.query<{ mode: string; fallback_reason: string | null }>(
+      `SELECT result->>'mode' AS mode, result->>'fallback_reason' AS fallback_reason
+       FROM (SELECT public.erase_account($1::uuid) AS result) AS erased`,
+      [DISPUTE_STRIPE]
+    );
+    expect(stripe.rows[0]).toEqual({ mode: "restricted", fallback_reason: "open_dispute" });
+    const stripeLive = await db.query<{ date_of_birth: string | null }>(
+      "SELECT date_of_birth::text AS date_of_birth FROM public.dependents WHERE id = $1",
+      [DEP_DISPUTE_STRIPE]
+    );
+    expect(stripeLive.rows[0]?.date_of_birth).toBeNull();
+    expect((await captured(DISPUTE_STRIPE)).rows).toEqual([
+      { subject_type: "dependent", subject_id: DEP_DISPUTE_STRIPE, date_of_birth: "2015-05-05" },
+    ]);
+
+    const payment = await db.query<{ mode: string; fallback_reason: string | null }>(
+      `SELECT result->>'mode' AS mode, result->>'fallback_reason' AS fallback_reason
+       FROM (SELECT public.erase_account($1::uuid) AS result) AS erased`,
+      [DISPUTE_PAY]
+    );
+    expect(payment.rows[0]).toEqual({ mode: "restricted", fallback_reason: "open_dispute" });
+    expect((await captured(DISPUTE_PAY)).rows).toEqual([
+      { subject_type: "dependent", subject_id: DEP_DISPUTE_PAY, date_of_birth: "2013-03-03" },
+    ]);
+
+    const closed = await db.query<{ mode: string; fallback_reason: string | null }>(
+      `SELECT result->>'mode' AS mode, result->>'fallback_reason' AS fallback_reason
+       FROM (SELECT public.erase_account($1::uuid) AS result) AS erased`,
+      [CLOSED_DISPUTE]
+    );
+    expect(closed.rows[0]).toEqual({ mode: "hard_delete", fallback_reason: null });
+    expect((await captured(CLOSED_DISPUTE)).rows).toEqual([]);
+  });
+
+  it("blocks a sole owner with an active licence and writes nothing", async () => {
+    await db.exec(`
+      CREATE TABLE public.organization_members (
+        organization_id uuid,
+        user_id uuid,
+        role text,
+        status text
+      );
+      CREATE TABLE public.licenses (
+        organization_id uuid,
+        status text
+      );
+    `);
+    await db.query(
+      `INSERT INTO auth.users (id, email, raw_user_meta_data)
+       VALUES ($1, 'dob-owner@example.com', '{"role":"doctor"}')`,
+      [SOLE_OWNER]
+    );
+    await db.query(
+      `INSERT INTO public.profiles (id, role, first_name, last_name, email, date_of_birth)
+       VALUES ($1, 'doctor', 'Owen', 'Owner', 'dob-owner@example.com', '1975-01-02')`,
+      [SOLE_OWNER]
+    );
+    await db.query(
+      `INSERT INTO public.dependents (id, parent_id, first_name, last_name, date_of_birth)
+       VALUES ($1, $2, 'Joy', 'Owner', '2017-07-07')`,
+      [DEP_OWNER, SOLE_OWNER]
+    );
+    await db.query(
+      `INSERT INTO public.organization_members (organization_id, user_id, role, status)
+       VALUES ($1, $2, 'owner', 'active')`,
+      [OWNER_ORG, SOLE_OWNER]
+    );
+    await db.query(
+      `INSERT INTO public.licenses (organization_id, status) VALUES ($1, 'active')`,
+      [OWNER_ORG]
+    );
+
+    await expect(db.query("SELECT public.erase_account($1::uuid)", [SOLE_OWNER])).rejects.toThrow(
+      /erasure_blocked/
+    );
+    const profile = await db.query<{ first_name: string; date_of_birth: string | null }>(
+      "SELECT first_name, date_of_birth::text AS date_of_birth FROM public.profiles WHERE id = $1",
+      [SOLE_OWNER]
+    );
+    expect(profile.rows[0]).toEqual({ first_name: "Owen", date_of_birth: "1975-01-02" });
+    const dependent = await db.query<{ date_of_birth: string | null }>(
+      "SELECT date_of_birth::text AS date_of_birth FROM public.dependents WHERE id = $1",
+      [DEP_OWNER]
+    );
+    expect(dependent.rows[0]?.date_of_birth).toBe("2017-07-07");
+    expect((await captured(SOLE_OWNER)).rows).toEqual([]);
+  });
+
   it("keeps the captured date of birth when erasure runs again", async () => {
     const first = await db.query<{ mode: string }>(
       "SELECT (public.erase_account($1::uuid)->>'mode') AS mode",
@@ -1231,7 +1395,6 @@ describe("retention_subjects date of birth capture", () => {
     expect(first.rows[0]?.mode).toBe("restricted");
     expect((await captured(RERUN_DOB)).rows).toEqual([
       { subject_type: "dependent", subject_id: DEP_RERUN, date_of_birth: "2012-12-12" },
-      { subject_type: "patient", subject_id: RERUN_DOB, date_of_birth: "1991-01-09" },
     ]);
 
     const second = await db.query<{ mode: string }>(
@@ -1241,7 +1404,6 @@ describe("retention_subjects date of birth capture", () => {
     expect(second.rows[0]?.mode).toBe("restricted");
     expect((await captured(RERUN_DOB)).rows).toEqual([
       { subject_type: "dependent", subject_id: DEP_RERUN, date_of_birth: "2012-12-12" },
-      { subject_type: "patient", subject_id: RERUN_DOB, date_of_birth: "1991-01-09" },
     ]);
 
     const kept = await db.query<{ mode: string }>(
@@ -1251,8 +1413,17 @@ describe("retention_subjects date of birth capture", () => {
     expect(kept.rows[0]?.mode).toBe("restricted");
     expect((await captured(KEPT_DOB)).rows).toEqual([
       { subject_type: "dependent", subject_id: DEP_KEPT, date_of_birth: "2001-01-01" },
-      { subject_type: "patient", subject_id: KEPT_DOB, date_of_birth: "1980-01-01" },
     ]);
+  });
+
+  it("does not capture a patient date of birth", async () => {
+    const sql = eraseAccountSource("00142_retention_subjects.sql");
+    expect(sql).not.toContain("$dob_patient$");
+    expect(sql).not.toContain("SELECT 'patient'");
+    const rows = await db.query<{ subject_type: string }>(
+      `SELECT subject_type FROM public.retention_subjects WHERE subject_type = 'patient'`
+    );
+    expect(rows.rows).toEqual([]);
   });
 
   it("creates no retention row when the date of birth is null", async () => {
@@ -1273,7 +1444,11 @@ describe("retention_subjects date of birth capture", () => {
     expect(current.slice(current.lastIndexOf(grantFrom)).trim()).toBe(
       previous.slice(previous.lastIndexOf(grantFrom)).trim()
     );
-    expect(withoutRetentionCapture(current)).toBe(previous);
+    expect(current).toContain(RESTRICTED_RETURN_142);
+    const restored = strip142Deltas(functionBody(current).split(RESTRICTED_RETURN_142).join(RESTRICTED_RETURN_141));
+    expect(restored).toBe(functionBody(previous));
+    expect(current).toContain("copies dependent dates of birth to retention_subjects before nulling them");
+    expect(current).toContain("fallback_reason open_dispute");
 
     const signature = await db.query<{
       args: string;
