@@ -397,6 +397,10 @@ export default async function AdminDoctorDetailPage({
           indemnityCoverGbp: doctor.indemnity_cover_gbp ?? null,
           indemnityExpiry: doctor.indemnity_expiry ?? null,
           dbsCheckDate: doctor.dbs_check_date ?? null,
+          dbsCertificateNumber: doctor.dbs_certificate_number ?? null,
+          dbsLevel: doctor.dbs_level ?? null,
+          dbsIssueDate: doctor.dbs_issue_date ?? null,
+          dbsVerifiedAt: doctor.dbs_verified_at ?? null,
         }}
       />
 

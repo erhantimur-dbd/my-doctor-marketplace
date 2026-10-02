@@ -137,10 +137,32 @@ export async function saveApprovalChecklist(
     indemnity_document_verified?: boolean;
     indemnity_in_date?: boolean;
     dbs_check_verified?: boolean;
+    dbs_certificate_number?: string | null;
+    dbs_level?: string | null;
+    dbs_issue_date?: string | null;
   }
 ) {
   const { error: authError, supabase, user } = await requireAdmin();
   if (authError || !supabase || !user) return { error: authError };
+
+  const capturesDbsRecord =
+    "dbs_certificate_number" in values ||
+    "dbs_level" in values ||
+    "dbs_issue_date" in values;
+  const dbsCertificateNumber = values.dbs_certificate_number?.trim() || null;
+  const dbsLevel = values.dbs_level?.trim() || null;
+  const dbsIssueDate = values.dbs_issue_date?.trim() || null;
+  if (
+    dbsLevel &&
+    !["basic", "standard", "enhanced", "enhanced_barred"].includes(dbsLevel)
+  ) {
+    return {
+      error: "DBS level must be basic, standard, enhanced, or enhanced_barred.",
+    };
+  }
+  if (dbsIssueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dbsIssueDate)) {
+    return { error: "DBS issue date must be a calendar date." };
+  }
 
   // Load the doctor's practising country so we know whether UK gates apply
   // for the completed_at flag.
@@ -165,6 +187,18 @@ export async function saveApprovalChecklist(
 
   const allComplete =
     values.gmc_verified && values.website_verified && ukComplete;
+
+  if (capturesDbsRecord) {
+    const { error: dbsError } = await supabase
+      .from("doctors")
+      .update({
+        dbs_certificate_number: dbsCertificateNumber,
+        dbs_level: dbsLevel,
+        dbs_issue_date: dbsIssueDate,
+      })
+      .eq("id", doctorId);
+    if (dbsError) return { error: safeError(dbsError) };
+  }
 
   const { error } = await supabase
     .from("doctor_approval_checklist")

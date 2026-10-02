@@ -236,6 +236,24 @@ export default async function DoctorDashboard() {
         </Card>
       )}
 
+      {doctor.dbs_reupload_required === true && (
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
+          <CardContent className="flex items-center gap-3 p-5">
+            <div className="rounded-full bg-amber-100 p-2.5 dark:bg-amber-900/50">
+              <ShieldAlert className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="font-semibold text-amber-900 dark:text-amber-100">
+                DBS certificate needed
+              </p>
+              <p className="text-sm text-amber-800/80 dark:text-amber-200/70">
+                The copy of your DBS certificate was removed. Please supply a new certificate to the verification team.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {isFreeTier && doctor.verification_status === "verified" && (
         <Card className="border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20">
           <CardContent className="flex items-center justify-between p-5">
