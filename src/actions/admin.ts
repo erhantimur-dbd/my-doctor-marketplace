@@ -18,6 +18,9 @@ import {
   remainingConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import { recordConsultRefundOnBooking } from "@/lib/stripe/record-consult-refund";
+import { customerRefundCodeForBooking } from "@/lib/payments/customer-refund-code";
+import { deliverPasswordResetEmail } from "@/lib/auth/send-password-reset-core";
+import { patientFacingEmailOrigin } from "@/lib/http/email-origin";
 import { getCommissionCents } from "@/lib/utils/currency";
 import { formatAppointmentWindow } from "@/lib/utils/appointment-window";
 import { BOOKING_STATUSES } from "@/lib/constants/booking-status";
@@ -522,14 +525,12 @@ export async function adminResetPatientPassword(patientId: string) {
 
   if (!patient?.email) return { error: "Patient not found or has no email" };
 
-  // Send password reset email via Supabase Auth
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+  const origin = patientFacingEmailOrigin();
+  const sent = await deliverPasswordResetEmail(
     patient.email,
-    { redirectTo: `${appUrl}/en/reset-password` }
+    `${origin}/en/callback?next=${encodeURIComponent("/en/reset-password")}`
   );
-
-  if (resetError) return { error: safeError(resetError) };
+  if (!sent.ok) return { error: sent.error };
 
   await logAdminAction(
     supabase,
@@ -726,7 +727,6 @@ export async function adminRefundBooking(
   if ("error" in settled) return { error: settled.error };
 
   const refundAmount = settled.refundAmountCents;
-  let refundRef = settled.cardRefundId || `refund-${bookingId}`;
 
   // Service-role write, zero rows are an error, and the Stripe refund id is
   // claimed once so a retry cannot add the same cents again.
@@ -807,7 +807,9 @@ export async function adminRefundBooking(
     const notice = softsmokeRefundNotice({
       patientFirstName: refundPatient.first_name || "there",
       bookingRef: detail.booking_number,
-      refundRef,
+      refundRef:
+        recorded.customerRefundCode ||
+        customerRefundCodeForBooking(detail.booking_number, 1),
       refundAmount: refundAmount / 100,
       currency: (detail.currency || "gbp").toUpperCase(),
       originalPaidAt: detail.paid_at,
@@ -2206,7 +2208,6 @@ export async function adminCancelBooking(
 
   // Same split as a patient cancel: credit back to the wallet, card to the card.
   let refundAmountCents = 0;
-  let refundRef: string | null = null;
   let settledRefund: Awaited<ReturnType<typeof refundConsultSplit>> | null = null;
   const paidParts = remainingConsultPaidParts(booking);
   if (
@@ -2231,7 +2232,6 @@ export async function adminCancelBooking(
         sourceType: "refund",
       });
       refundAmountCents = settled.cardRefundedToCardCents + settled.walletCreditCents;
-      refundRef = settled.cardRefundId;
       settledRefund = settled;
     } catch (err: any) {
       log.error("Admin cancel refund error:", { err: err });
@@ -2290,7 +2290,9 @@ export async function adminCancelBooking(
         ? softsmokeRefundNotice({
             patientFirstName: patient.first_name || "there",
             bookingRef: booking.booking_number,
-            refundRef: refundRef || `refund-${booking.booking_number}`,
+            refundRef:
+              recorded.customerRefundCode ||
+              customerRefundCodeForBooking(booking.booking_number, 1),
             refundAmount,
             currency: booking.currency.toUpperCase(),
             originalPaidAt: booking.paid_at,

@@ -70,6 +70,7 @@ import {
   storedConsultPaidParts,
 } from "@/lib/stripe/consult-refund";
 import { recordConsultRefundOnBooking } from "@/lib/stripe/record-consult-refund";
+import { customerRefundCodeForBooking } from "@/lib/payments/customer-refund-code";
 import {
   confirmBookingWithoutStripeCheckout,
   finalizeConfirmedBookingById,
@@ -883,7 +884,6 @@ export async function cancelBooking(input: CancelBookingInput) {
 
     let walletCreditCents = 0;
     let cardRefundedToCardCents = 0;
-    let refundRef: string | null = null;
     const refundDestination = parsed.data.refund_destination || "bank";
     let settledRefund: Awaited<ReturnType<typeof refundConsultSplit>> | null =
       null;
@@ -909,7 +909,6 @@ export async function cancelBooking(input: CancelBookingInput) {
       });
       walletCreditCents = settled.walletCreditCents;
       cardRefundedToCardCents = settled.cardRefundedToCardCents;
-      refundRef = settled.cardRefundId;
       settledRefund = settled;
     }
 
@@ -969,7 +968,9 @@ export async function cancelBooking(input: CancelBookingInput) {
           ? softsmokeRefundNotice({
               patientFirstName: patient.first_name || "there",
               bookingRef: booking.booking_number,
-              refundRef: refundRef || `refund-${booking.booking_number}`,
+              refundRef:
+                recorded.customerRefundCode ||
+                customerRefundCodeForBooking(booking.booking_number, 1),
               refundAmount,
               currency: booking.currency.toUpperCase(),
               originalPaidAt: booking.paid_at,

@@ -25,6 +25,10 @@ import {
   type ConsultRefundResult,
 } from "@/lib/stripe/consult-refund";
 import { restoreAppliedOffsetForRefund } from "@/lib/payments/payout-offset-store";
+import {
+  assignCustomerRefundCode,
+  customerRefundCodeOnReplay,
+} from "@/lib/payments/customer-refund-code";
 
 export const CONSULT_REFUND_LEDGER_EVENT_TYPE = "consult_refund_recorded";
 
@@ -159,6 +163,8 @@ export async function recordConsultRefundOnBooking(
     bookingId: string;
     booking: Parameters<typeof bookingRefundSettlementPatch>[0] & {
       refund_amount_cents?: number | null;
+      booking_number?: string | null;
+      customer_refund_codes?: unknown;
     };
     /** Null when this cancel moves no money and only the extra columns change. */
     settled?: RecordedConsultRefund | null;
@@ -181,7 +187,11 @@ export async function recordConsultRefundOnBooking(
   }
 ): Promise<
   | { error: string }
-  | { alreadyRecorded: boolean; patch: Record<string, unknown> | null }
+  | {
+      alreadyRecorded: boolean;
+      patch: Record<string, unknown> | null;
+      customerRefundCode: string | null;
+    }
 > {
   const writer = deps?.writer ?? defaultConsultRefundBookingWriter();
   const settled = input.settled ?? null;
@@ -203,7 +213,7 @@ export async function recordConsultRefundOnBooking(
 
   if (!moved) {
     if (Object.keys(patch).length === 0) {
-      return { alreadyRecorded: false, patch: null };
+      return { alreadyRecorded: false, patch: null, customerRefundCode: null };
     }
     const updated = await writer.updateBooking(input.bookingId, patch);
     const rowError = bookingRowUpdateError({
@@ -213,7 +223,7 @@ export async function recordConsultRefundOnBooking(
       bookingId: input.bookingId,
     });
     if (rowError) return rowError;
-    return { alreadyRecorded: false, patch };
+    return { alreadyRecorded: false, patch, customerRefundCode: null };
   }
 
   const keys = consultRefundLedgerKeys({
@@ -231,7 +241,15 @@ export async function recordConsultRefundOnBooking(
       const claim = await writer.claim(key);
       if (claim === "duplicate") {
         await releaseAll(writer, claimed);
-        return { alreadyRecorded: true, patch: null };
+        return {
+          alreadyRecorded: true,
+          patch: null,
+          customerRefundCode: customerRefundCodeOnReplay({
+            bookingNumber: input.booking.booking_number,
+            existing: input.booking.customer_refund_codes,
+            stripeRefundId: settled?.cardRefundId,
+          }),
+        };
       }
       claimed.push(key);
     }
@@ -251,8 +269,19 @@ export async function recordConsultRefundOnBooking(
     })!;
   }
 
+  const assigned = assignCustomerRefundCode({
+    bookingNumber: input.booking.booking_number || "",
+    existing: input.booking.customer_refund_codes,
+    stripeRefundId: settled?.cardRefundId,
+    amountCents: refundCentsOf(settled!),
+  });
+  const customerRefundCode = assigned?.code ?? null;
+  if (assigned) {
+    patch.customer_refund_codes = assigned.codes;
+  }
+
   if (Object.keys(patch).length === 0) {
-    return { alreadyRecorded: true, patch: null };
+    return { alreadyRecorded: true, patch: null, customerRefundCode };
   }
 
   let updated: Awaited<ReturnType<ConsultRefundBookingWriter["updateBooking"]>>;
@@ -304,5 +333,11 @@ export async function recordConsultRefundOnBooking(
     });
   }
 
-  return { alreadyRecorded: false, patch };
+  log.info("Consult refund recorded", {
+    bookingId: input.bookingId,
+    stripeRefundId: settled?.cardRefundId ?? null,
+    customerRefundCode,
+  });
+
+  return { alreadyRecorded: false, patch, customerRefundCode };
 }

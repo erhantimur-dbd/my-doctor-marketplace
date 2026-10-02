@@ -8,6 +8,8 @@ import { revalidatePath } from "next/cache";
 import { cookies, headers } from "next/headers";
 import { rateLimit } from "@/lib/rate-limit";
 import { sendEmail } from "@/lib/email/client";
+import { deliverPasswordResetEmail } from "@/lib/auth/send-password-reset-core";
+import { patientFacingEmailOrigin } from "@/lib/http/email-origin";
 import { doctorWelcomeEmail, welcomeEmail } from "@/lib/email/templates";
 import { currencyForCountry } from "@/lib/billing/currency-for-country";
 import { passwordSchema } from "@/lib/validators/password";
@@ -1362,8 +1364,6 @@ export async function forgotPassword(formData: FormData) {
     return { error: "Too many password reset requests. Please try again later." };
   }
 
-  const supabase = await createClient();
-
   const email = (formData.get("email") as string)?.trim() || "";
   const locale = sanitizeAuthLocale(formData.get("locale") as string | null);
 
@@ -1371,15 +1371,12 @@ export async function forgotPassword(formData: FormData) {
     return { error: "Please enter your email address." };
   }
 
-  const origin = await getOrigin();
-
-  // Locale-aware recovery URL (was hardcoded to /en/)
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${origin}/${locale}/callback?next=${encodeURIComponent(`/${locale}/reset-password`)}`,
-  });
-
-  if (error) {
-    return { error: safeError(error) };
+  const requestOrigin = await getOrigin();
+  const origin = patientFacingEmailOrigin(requestOrigin);
+  const redirectTo = `${origin}/${locale}/callback?next=${encodeURIComponent(`/${locale}/reset-password`)}`;
+  const sent = await deliverPasswordResetEmail(email, redirectTo);
+  if (!sent.ok && !sent.missingUser) {
+    return { error: "Could not send the password reset email. Please try again." };
   }
 
   // Always success-shaped to avoid email enumeration

@@ -577,3 +577,44 @@ describe("every consult refund path records through the helper", () => {
     expect(hits).toEqual(["src/lib/stripe/wallet-credit-share.ts"]);
   });
 });
+
+describe("customer refund code persistence", () => {
+  it("stores RF-TT9EJN with the full Stripe refund id", async () => {
+    const stripeId = "re_3UM5aiPhJvj3ftQe09C2DMhs";
+    const booking = paidBooking({ booking_number: "MD-TT9EJN" });
+    const mem = memoryWriter(booking);
+    const recorded = await recordConsultRefundOnBooking(
+      {
+        bookingId: BOOKING_ID,
+        booking,
+        settled: cardRefund(4000, stripeId),
+      },
+      { writer: mem.writer }
+    );
+    expect(recorded).toMatchObject({
+      alreadyRecorded: false,
+      customerRefundCode: "RF-TT9EJN",
+    });
+    const stored = mem.row().customer_refund_codes as Array<{
+      code: string;
+      stripe_refund_id: string;
+    }>;
+    expect(stored).toEqual([
+      expect.objectContaining({ code: "RF-TT9EJN", stripe_refund_id: stripeId }),
+    ]);
+
+    const again = await recordConsultRefundOnBooking(
+      {
+        bookingId: BOOKING_ID,
+        booking: { ...booking, ...mem.row() },
+        settled: cardRefund(4000, stripeId),
+      },
+      { writer: mem.writer }
+    );
+    expect(again).toMatchObject({
+      alreadyRecorded: true,
+      customerRefundCode: "RF-TT9EJN",
+    });
+    expect(mem.row().customer_refund_codes).toHaveLength(1);
+  });
+});

@@ -7,6 +7,8 @@ import {
   type PatientCalendarAttachment,
 } from "@/lib/booking/patient-calendar";
 import { safeConsultEmailHref } from "@/lib/video/email-link";
+import { patientFacingEmailOrigin } from "@/lib/http/email-origin";
+import { brandEmailDocument, brandPrimaryButton } from "@/lib/email/brand-shell";
 
 function consultWindow(
   date: string,
@@ -269,6 +271,10 @@ export function bookingConfirmationEmail({
       })
     : null;
 
+  const detailsUrl = bookingId
+    ? `${patientFacingEmailOrigin()}/en/dashboard/bookings/${bookingId}`
+    : `${patientFacingEmailOrigin()}/en/dashboard/bookings`;
+
   const html = baseLayout(`
     <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Booking Confirmed</h2>
     <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
@@ -295,7 +301,7 @@ export function bookingConfirmationEmail({
     ${videoBlock}
     ${calendar?.linksHtml ?? ""}
 
-    ${button("View Booking Details")}
+    ${button("View Booking Details", detailsUrl)}
   `);
 
   return {
@@ -2143,23 +2149,23 @@ export function guestAccountClaimEmail({
     magicSession && setPasswordUrl
       ? `<p style="margin: 16px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
       Prefer a password for next time?
-      <a href="${setPasswordUrl}" style="color: ${BRAND_COLOR}; text-decoration: underline;">Set a password</a>
+      <a href="${setPasswordUrl}" style="color: #0B6BCB; text-decoration: underline;">Set a password</a>
     </p>`
       : "";
 
-  const html = baseLayout(`
-    <h2 style="margin: 0 0 8px; font-size: 20px; color: #111827;">Your booking is ready</h2>
-    <p style="margin: 0 0 16px; font-size: 15px; color: #374151; line-height: 1.6;">
+  const html = brandEmailDocument(`
+    <h2 style="margin-top:0; margin-right:0; margin-bottom:8px; margin-left:0; font-size:20px; line-height:28px; font-weight:700; color:#1a1a1a; letter-spacing:normal;">Your booking is ready</h2>
+    <p style="margin-top:0; margin-right:0; margin-bottom:16px; margin-left:0; font-size:15px; line-height:24px; color:#5c5c5c;">
       Hi ${patientName}, thanks for booking with MyDoctors360
       ${bookingNumber ? ` (ref <strong>${bookingNumber}</strong>)` : ""}.
       We created a secure account so you can manage appointments, join video visits, and message your doctor.
     </p>
-    <p style="margin: 0 0 24px; font-size: 15px; color: #374151; line-height: 1.6;">
+    <p style="margin-top:0; margin-right:0; margin-bottom:0; margin-left:0; font-size:15px; line-height:24px; color:#5c5c5c;">
       ${intro}
     </p>
-    ${button(primaryCta, claimUrl)}
+    ${brandPrimaryButton(primaryCta, claimUrl)}
     ${secondary}
-    <p style="margin: 24px 0 0; font-size: 13px; color: #6b7280; line-height: 1.6;">
+    <p style="margin-top:8px; margin-right:0; margin-bottom:0; margin-left:0; font-size:13px; line-height:20px; color:#5c5c5c;">
       If you did not book an appointment, you can ignore this email.
     </p>
   `);

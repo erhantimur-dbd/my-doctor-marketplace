@@ -16,6 +16,7 @@ import {
   formatAppointmentType,
   formatDoctorDisplayName,
 } from "@/lib/email/softsmoke-templates";
+import { patientFacingEmailOrigin } from "@/lib/http/email-origin";
 import {
   formatAppointmentWindow,
   resolveUkAppointmentInstant,
@@ -114,10 +115,8 @@ export function patientCalendarSequence(input: {
 }
 
 function appOrigin(explicit?: string): string {
-  const raw = (explicit || process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com")
-    .trim()
-    .replace(/\/$/, "");
-  return raw || "https://mydoctors360.com";
+  if (explicit?.trim()) return explicit.trim().replace(/\/$/, "");
+  return patientFacingEmailOrigin();
 }
 
 export function patientBookingUrl(bookingId: string, appUrl?: string): string {
@@ -203,30 +202,38 @@ function calendarLinks(input: {
   };
 }
 
+const CALENDAR_FONT =
+  "Arial, Helvetica, sans-serif";
+
 export function patientCalendarLinksHtml(links: PatientCalendarLinks): string {
   const buttons: Array<[string, string]> = [
-    ["Google Calendar", links.google],
-    ["Outlook.com", links.outlook],
+    ["Google", links.google],
+    ["Outlook", links.outlook],
     ["Office 365", links.office365],
-    ["Yahoo Calendar", links.yahoo],
+    ["Yahoo", links.yahoo],
   ];
   const cells = buttons
-    .map(
-      ([label, href]) => `
-        <td style="padding: 0 8px 8px 0;">
-          <a href="${escapeHtml(href)}" target="_blank" style="display: inline-block; padding: 8px 12px; border: 1px solid #0284c7; border-radius: 6px; color: #0284c7; font-size: 13px; font-weight: 600; text-decoration: none;">
-            ${escapeHtml(label)}
-          </a>
-        </td>`
-    )
+    .map(([label, href], index) => {
+      const gap = index === buttons.length - 1 ? "0" : "6px";
+      return `
+        <td width="25%" align="center" style="width:25%; padding-top:0; padding-right:${gap}; padding-bottom:0; padding-left:0; vertical-align:middle;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td align="center" bgcolor="#ffffff" style="background-color:#ffffff; border:1px solid #0B6BCB; border-radius:6px;">
+                <a href="${escapeHtml(href)}" target="_blank" style="display:block; padding-top:10px; padding-right:0; padding-bottom:10px; padding-left:0; color:#0B6BCB; font-size:12px; line-height:16px; font-weight:600; text-align:center; text-decoration:none; white-space:nowrap; font-family:${CALENDAR_FONT};">${escapeHtml(label)}</a>
+              </td>
+            </tr>
+          </table>
+        </td>`;
+    })
     .join("");
 
   return `
-    <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #111827;">Add to calendar</p>
-    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
+    <p style="margin:0 0 8px; font-size:14px; line-height:20px; font-weight:600; color:#111827; font-family:${CALENDAR_FONT};">Add to calendar</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; table-layout:fixed; margin:0 0 8px;">
       <tr>${cells}</tr>
     </table>
-    <p style="margin: 0 0 16px; font-size: 12px; color: #6b7280; line-height: 1.5;">
+    <p style="margin:0 0 16px; font-size:12px; line-height:18px; color:#6b7280; font-family:${CALENDAR_FONT};">
       A calendar file is attached for Apple Calendar and Outlook. The buttons open Google Calendar, Outlook.com, Office 365, and Yahoo Calendar.
     </p>`;
 }

@@ -4,6 +4,7 @@ import crypto from "crypto";
 
 import { consultMeetingBounds } from "@/lib/video/meeting-window";
 import { safeConsultEmailHref } from "@/lib/video/email-link";
+import { patientFacingEmailOrigin } from "@/lib/http/email-origin";
 
 export type ConsultEmailJoinSource = "email" | "confirm" | "guest";
 
@@ -132,11 +133,7 @@ export function consultJoinPageUrl(input: {
   origin?: string;
   includeSignature?: boolean;
 }): string {
-  const origin = (
-    input.origin ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "https://mydoctors360.com"
-  ).replace(/\/$/, "");
+  const origin = (input.origin || patientFacingEmailOrigin()).replace(/\/$/, "");
   const locale = input.locale || "en";
   return `${origin}/${locale}${consultJoinPagePath(input)}`;
 }

@@ -15,8 +15,12 @@ import {
   formatAppointmentWhen,
   formatEmailDateTime,
 } from "@/lib/email/format-appointment";
+import { patientFacingEmailOrigin } from "@/lib/http/email-origin";
+import { displayRefundReference } from "@/lib/payments/customer-refund-code";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+function appUrl(): string {
+  return patientFacingEmailOrigin();
+}
 
 export const SOFTSMOKE_BANNER_LINE =
   "Softsmoke transactional — tester path only. Soft CTA founding email HOLD.";
@@ -166,20 +170,20 @@ function softsmokeLayout(bodyHtml: string): string {
 }
 
 function detailRow(label: string, value: string, last = false): string {
-  const border = last ? "" : "border-bottom:1px solid #e5e7eb;";
+  const border = last ? "border-bottom:0;" : "border-bottom:1px solid #e5e7eb;";
   return `
     <tr>
-      <td style="padding:10px 0; ${border} font-size:13px; color:#5c5c5c; width:38%; vertical-align:top; letter-spacing:normal;">${escapeHtml(label)}</td>
-      <td style="padding:10px 0; ${border} font-size:14px; color:#1a1a1a; font-weight:600; text-align:right; vertical-align:top; letter-spacing:normal;">${value}</td>
+      <td width="148" style="width:148px; padding:10px 12px 10px 0; ${border} font-size:13px; line-height:18px; color:#5c5c5c; white-space:nowrap; vertical-align:middle; letter-spacing:normal;">${escapeHtml(label)}</td>
+      <td style="padding:10px 0; ${border} font-size:14px; line-height:18px; color:#1a1a1a; font-weight:600; text-align:right; white-space:nowrap; vertical-align:middle; letter-spacing:normal;">${value}</td>
     </tr>`;
 }
 
 function detailsCard(rows: string): string {
   return `
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f3f4f6; border-radius:8px; margin:0 0 24px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; background-color:#f3f4f6; border-radius:8px; margin:0 0 24px;">
       <tr>
-        <td style="padding:8px 20px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+        <td style="padding:4px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;">
             ${rows}
           </table>
         </td>
@@ -222,16 +226,16 @@ function textValue(value: string): string {
 }
 
 export function manageBookingUrl(bookingId?: string | null): string {
-  if (bookingId) return `${APP_URL}/en/dashboard/bookings/${bookingId}`;
-  return `${APP_URL}/en/dashboard/bookings`;
+  if (bookingId) return `${appUrl()}/en/dashboard/bookings/${bookingId}`;
+  return `${appUrl()}/en/dashboard/bookings`;
 }
 
 export function doctorDiaryUrl(): string {
-  return `${APP_URL}/en/doctor-dashboard/bookings`;
+  return `${appUrl()}/en/doctor-dashboard/bookings`;
 }
 
 export function payoutsDashboardUrl(): string {
-  return `${APP_URL}/en/doctor-dashboard/payments`;
+  return `${appUrl()}/en/doctor-dashboard/payments`;
 }
 
 export interface SoftsmokeBookingFields {
@@ -408,7 +412,10 @@ export function softsmokePatientRefundEmail(fields: {
     ${detailsCard(
       [
         detailRow("Booking ref", textValue(fields.bookingRef)),
-        detailRow("Refund ref", textValue(fields.refundRef)),
+        detailRow(
+          "Refund ref",
+          textValue(displayRefundReference(fields.refundRef, fields.bookingRef))
+        ),
         detailRow(
           "Refund amount",
           textValue(`${currency} ${formatMoney(fields.refundAmount)}`)

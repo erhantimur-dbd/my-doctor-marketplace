@@ -242,6 +242,12 @@ describe("patient calendar invites", () => {
     expect(mail.html).toContain("Outlook.com");
     expect(mail.html).toContain("Office 365");
     expect(mail.html).toContain("Yahoo Calendar");
+    expect(mail.html).toContain('width="25%"');
+    expect(mail.html).toContain(">Google</a>");
+    expect(mail.html).toContain(">Outlook</a>");
+    expect(mail.html).toContain(">Office 365</a>");
+    expect(mail.html).toContain(">Yahoo</a>");
+    expect(mail.html).toContain("table-layout:fixed");
     const ics = Buffer.from(mail.attachments![0].content, "base64").toString("utf8");
     expect(ics).toContain("METHOD:REQUEST");
     expect(ics).not.toContain("METHOD:CANCEL");

@@ -8,8 +8,10 @@ import * as softsmoke from "@/lib/email/softsmoke-templates";
 import * as security from "@/lib/email/security-templates";
 import { TEMPLATE_LIST, type TemplateKey } from "@/lib/email/template-list";
 import { BOOKING_NUMBER_EXAMPLE } from "@/lib/booking/booking-number";
+import { customerRefundCodeForBooking } from "@/lib/payments/customer-refund-code";
+import { patientFacingEmailOrigin } from "@/lib/http/email-origin";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://mydoctors360.com";
+const APP_URL = patientFacingEmailOrigin();
 
 function fromForTemplate(templateKey: TemplateKey): string | undefined {
   if (templateKey === "passkeyAdded") return security.SECURITY_EMAIL_FROM;
@@ -293,7 +295,7 @@ const SAMPLE_DATA = {
     softsmoke.softsmokePatientRefundEmail({
       patientFirstName: "Darren",
       bookingRef: BOOKING_NUMBER_EXAMPLE,
-      refundRef: "re_preview",
+      refundRef: customerRefundCodeForBooking(BOOKING_NUMBER_EXAMPLE, 1),
       refundAmount: 49,
       currency: "GBP",
       originalPaidAt: "2026-09-20T09:00:00+00:00",
