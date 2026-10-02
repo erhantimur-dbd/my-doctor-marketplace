@@ -212,7 +212,9 @@ describe("terms and privacy copy", () => {
     expect(privacyUk).not.toContain("not directed to individuals under");
     expect(privacyDefault).not.toContain("under 16");
     expect(privacyUk).not.toContain("under 16");
-    expect(privacyUk).toContain("If you believe a child has registered, please contact");
+    expect(privacyUk).toContain(
+      "If you think someone under 18 has opened an account, please contact"
+    );
     expect(privacyDefault).not.toContain("PRIVACY_PUBLISH_DATE");
     expect(privacyUk).not.toContain("PRIVACY_PUBLISH_DATE");
 
