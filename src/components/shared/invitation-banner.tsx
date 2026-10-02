@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { createBrowserClient } from "@supabase/ssr";
 import { useAuth } from "@/providers/auth-provider";
 import { Building2, Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { acceptInvitation, declineInvitation } from "@/actions/organization";
+import { getMyPendingOrganizationInvitation } from "@/actions/pending-organization-invite";
 import { toast } from "sonner";
 
 interface PendingInvite {
@@ -14,13 +14,6 @@ interface PendingInvite {
   role: string;
   inviterName: string | null;
   invitedAt: string;
-}
-
-function createSupabase() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 }
 
 export function InvitationBanner() {
@@ -36,41 +29,9 @@ export function InvitationBanner() {
 
     async function checkInvitations() {
       try {
-        const supabase = createSupabase();
-
-        // Check for pending invitations
-        const { data: membership } = await supabase
-          .from("organization_members")
-          .select(
-            `organization_id, role, invited_at,
-             inviter:profiles!organization_members_invited_by_fkey(first_name, last_name)`
-          )
-          .eq("user_id", userId)
-          .eq("status", "invited")
-          .limit(1)
-          .maybeSingle();
-
-        if (!membership) return;
-
-        const { data: orgRow } = await supabase
-          .from("public_organizations")
-          .select("name")
-          .eq("id", membership.organization_id)
-          .maybeSingle();
-        const org = orgRow;
-        const inviter: any = Array.isArray(membership.inviter)
-          ? membership.inviter[0]
-          : membership.inviter;
-
-        setInvite({
-          organizationId: membership.organization_id,
-          organizationName: org?.name || "an organization",
-          role: membership.role,
-          inviterName: inviter
-            ? `${inviter.first_name} ${inviter.last_name}`
-            : null,
-          invitedAt: membership.invited_at || "",
-        });
+        const pending = await getMyPendingOrganizationInvitation();
+        if (!pending) return;
+        setInvite(pending);
       } catch {
         // Silently fail
       }

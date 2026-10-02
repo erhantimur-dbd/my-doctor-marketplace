@@ -16,6 +16,11 @@ import {
   isClinicInviteToken,
   PUBLIC_CLINIC_INVITE_COLUMNS,
 } from "@/lib/clinic/invite-token";
+import {
+  CLINIC_INVITE_ORGANIZATION_COLUMNS,
+  publicOrganizationSelectList,
+  type ClinicInviteOrganization,
+} from "@/lib/organizations/public-columns";
 
 // ─── Validators ──────────────────────────────────────────────
 
@@ -61,16 +66,23 @@ export async function resolveInviteToken(token: string) {
     .gt("expires_at", new Date().toISOString())
     .single();
 
-  if (error || !invite) return { error: "Invitation not found or has expired", invite: null };
+  if (error || !invite || !invite.organization_id) {
+    return { error: "Invitation not found or has expired", invite: null };
+  }
 
-  const supabase = await createClient();
-  const { data: organization } = await supabase
-    .from("public_organizations")
-    .select("id, name, slug, logo_url")
+  const { data: organization } = await adminSupabase
+    .from("organizations")
+    .select(publicOrganizationSelectList(CLINIC_INVITE_ORGANIZATION_COLUMNS))
     .eq("id", invite.organization_id)
     .maybeSingle();
 
-  return { error: null, invite: { ...invite, organization } };
+  return {
+    error: null,
+    invite: {
+      ...invite,
+      organization: (organization ?? null) as ClinicInviteOrganization | null,
+    },
+  };
 }
 
 /** Check if an email already has an account. Org owners and admins only. */

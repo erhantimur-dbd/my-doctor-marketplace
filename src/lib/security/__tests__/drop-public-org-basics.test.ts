@@ -19,16 +19,18 @@ const migration = read(migrationPath);
 /**
  * Files that still name the organizations table. Each one is a member,
  * platform-admin, or service-role path. A new hit outside this list fails
- * the scan below: public and non-member reads belong on public_organizations
- * or on the service-role client.
+ * the scan below. Public clinic and invite reads use the service-role
+ * client with an explicit column list (see public-organization-reads).
  */
 const organizationsTableReaders = [
   "src/actions/admin.ts",
   "src/actions/auth.ts",
+  "src/actions/clinic-invitations.ts",
   "src/actions/doctor.ts",
   "src/actions/license.ts",
   "src/actions/organization.ts",
   "src/actions/payment-corrections.ts",
+  "src/actions/pending-organization-invite.ts",
   "src/app/[locale]/(admin)/admin/licenses/[id]/page.tsx",
   "src/app/[locale]/(admin)/admin/licenses/page.tsx",
   "src/app/[locale]/(admin)/admin/organizations/[id]/page.tsx",
@@ -39,6 +41,7 @@ const organizationsTableReaders = [
   "src/app/[locale]/(doctor)/doctor-dashboard/page.tsx",
   "src/hooks/use-user.ts",
   "src/lib/auth/bootstrap-doctor.ts",
+  "src/lib/organizations/load-public-clinic.ts",
 ] as const;
 
 const ORG_READ =
@@ -103,7 +106,6 @@ describe("organizations reads outside PR #91", () => {
       "src/app/sitemap.ts",
       "src/actions/search.ts",
       "src/actions/booking.ts",
-      "src/actions/clinic-invitations.ts",
       "src/components/shared/invitation-banner.tsx",
       "src/lib/invitations/load-public-invitation.ts",
     ];
@@ -118,21 +120,33 @@ describe("organizations reads outside PR #91", () => {
     expect(apiHits).toEqual([]);
   });
 
-  it("reads the public clinic, invite name, and banner from public_organizations", () => {
+  it("reads the public clinic, invite name, and banner through the service role", () => {
     const clinic = read("src/app/[locale]/(public)/clinics/[slug]/page.tsx");
-    expect(clinic).toContain('.from("public_organizations")');
-    expect(clinic.match(/\.from\("public_organizations"\)/g)).toHaveLength(2);
+    expect(clinic).toContain("loadPublicClinicMetadata");
+    expect(clinic).toContain("loadPublicClinicPage");
+    expect(clinic).not.toContain("public_organizations");
+    expect(clinic).not.toMatch(ORG_READ);
 
     const banner = read("src/components/shared/invitation-banner.tsx");
-    expect(banner).toContain('.from("public_organizations")');
+    expect(banner).toContain("getMyPendingOrganizationInvitation");
+    expect(banner).not.toContain("public_organizations");
+    expect(banner).not.toContain("createAdminClient");
+    expect(banner).not.toMatch(ORG_READ);
 
     const invites = read("src/actions/clinic-invitations.ts");
     const resolver = invites.slice(
       invites.indexOf("export async function resolveInviteToken"),
       invites.indexOf("export async function checkEmailRegistered")
     );
-    expect(resolver).toContain('.from("public_organizations")');
-    expect(resolver).not.toMatch(ORG_READ);
+    expect(resolver).toContain('.from("organizations")');
+    expect(resolver).toContain("CLINIC_INVITE_ORGANIZATION_COLUMNS");
+    expect(resolver).not.toContain("public_organizations");
+    expect(resolver.indexOf("isClinicInviteToken(token)")).toBeLessThan(
+      resolver.indexOf("createAdminClient()")
+    );
+    expect(resolver.indexOf('.from("clinic_invitations")')).toBeLessThan(
+      resolver.indexOf('.from("organizations")')
+    );
   });
 
   it("loads the doctor profile and booking doctor row with the service role and no org embed", () => {

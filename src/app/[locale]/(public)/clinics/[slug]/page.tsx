@@ -3,6 +3,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicClinicLocations } from "@/actions/clinic-locations";
 import {
+  loadPublicClinicMetadata,
+  loadPublicClinicPage,
+} from "@/lib/organizations/load-public-clinic";
+import {
   Building2,
   MapPin,
   Phone,
@@ -25,13 +29,7 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug, locale } = await params;
-  const supabase = await createClient();
-
-  const { data: org } = await supabase
-    .from("public_organizations")
-    .select("name, description, seo_title, seo_description, logo_url, slug, cover_image_url")
-    .eq("slug", slug)
-    .single();
+  const org = await loadPublicClinicMetadata(slug);
 
   if (!org) return { title: "Clinic Not Found" };
 
@@ -61,17 +59,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ClinicPublicPage({ params }: Props) {
   const { locale, slug } = await params;
   const supabase = await createClient();
-
-  const { data: org } = await supabase
-    .from("public_organizations")
-    .select(`
-      id, name, slug, logo_url, cover_image_url,
-      description, website, specialties,
-      seo_title, seo_description,
-      brand_display_name, brand_favicon_url
-    `)
-    .eq("slug", slug)
-    .single();
+  const org = await loadPublicClinicPage(slug);
 
   if (!org) notFound();
 
