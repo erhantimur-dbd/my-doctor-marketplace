@@ -518,6 +518,15 @@ async function scrubOrganization(admin: EraseAdmin, orgId: string): Promise<void
     email: null,
     phone: null,
     slug: `erased-${orgId}`,
+    address_line1: null,
+    address_line2: null,
+    city: null,
+    state: null,
+    postal_code: null,
+    country: null,
+    website: null,
+    logo_url: null,
+    description: null,
     brand_display_name: "",
     brand_support_email: null,
     brand_support_phone: null,
@@ -529,6 +538,15 @@ async function scrubOrganization(admin: EraseAdmin, orgId: string): Promise<void
       email: null,
       phone: null,
       slug: `erased-${orgId}`,
+      address_line1: null,
+      address_line2: null,
+      city: null,
+      state: null,
+      postal_code: null,
+      country: null,
+      website: null,
+      logo_url: null,
+      description: null,
     };
     error = await updateRows(admin, "organizations", withoutBrand, { id: orgId });
   }
@@ -564,9 +582,11 @@ export async function releaseOrgOwnership(admin: EraseAdmin, userId: string): Pr
       const others =
         members === "missing"
           ? []
-          : members.filter(
-              (row) => textField(row, "user_id") !== userId && textField(row, "status") !== "removed"
-            );
+          : members.filter((row) => {
+              if (textField(row, "user_id") === userId) return false;
+              const status = textField(row, "status");
+              return status === "active" || status === "invited" || status === "suspended";
+            });
       if (others.length > 0) continue;
       await scrubOrganization(admin, orgId);
       const error = await updateRows(

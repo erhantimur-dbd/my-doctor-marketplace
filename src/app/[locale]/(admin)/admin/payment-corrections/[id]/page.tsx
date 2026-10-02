@@ -29,7 +29,7 @@ export default async function PaymentCorrectionDetailPage({
   if (!row) notFound();
 
   const { data: events } = await supabase
-    .from("payment_correction_events")
+    .from("payment_correction_events_read")
     .select("id, event_type, created_at, payload")
     .eq("correction_id", id)
     .order("created_at", { ascending: true });
