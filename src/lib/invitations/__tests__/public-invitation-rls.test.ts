@@ -178,7 +178,15 @@ describe("organization readers", () => {
     },
     {
       file: "src/actions/clinic-invitations.ts",
-      publicSurface: true,
+      publicSurface: false,
+    },
+    {
+      file: "src/actions/pending-organization-invite.ts",
+      publicSurface: false,
+    },
+    {
+      file: "src/lib/organizations/load-public-clinic.ts",
+      publicSurface: false,
     },
     { file: "src/actions/license.ts", publicSurface: false },
     { file: "src/actions/admin.ts", publicSurface: false },
@@ -222,27 +230,32 @@ describe("organization readers", () => {
     },
   ];
 
-  it("sends anon and public pages to public_organizations", () => {
+  it("keeps anon pages off the organizations table and the security-definer view", () => {
     for (const reader of readers.filter((row) => row.publicSurface)) {
       const source = read(reader.file);
-      expect(source, reader.file).toContain("public_organizations");
+      expect(source, reader.file).not.toContain("public_organizations");
       expect(source, reader.file).not.toMatch(/from\(["']organizations["']\)/);
       expect(source, reader.file).not.toMatch(/organization:organizations\(/);
+      expect(source, reader.file).not.toContain("createAdminClient");
     }
 
     const clinic = read("src/app/[locale]/(public)/clinics/[slug]/page.tsx");
+    expect(clinic).toContain("loadPublicClinicMetadata");
+    expect(clinic).toContain("loadPublicClinicPage");
     expect(clinic).toContain("logo_url");
     expect(clinic).toContain("cover_image_url");
     expect(clinic).not.toMatch(/org\.(email|phone|stripe_customer_id)/);
-    expect(clinic).not.toMatch(/from\(["']organizations["']\)/);
+
+    const banner = read("src/components/shared/invitation-banner.tsx");
+    expect(banner).toContain("getMyPendingOrganizationInvitation");
 
     const invite = read("src/actions/clinic-invitations.ts");
     const resolver = invite.slice(
       invite.indexOf("export async function resolveInviteToken"),
       invite.indexOf("export async function checkEmailRegistered")
     );
-    expect(resolver).toContain("public_organizations");
-    expect(resolver).toContain('.select("id, name, slug, logo_url")');
+    expect(resolver).toContain("CLINIC_INVITE_ORGANIZATION_COLUMNS");
+    expect(resolver).toContain('.eq("id", invite.organization_id)');
     expect(resolver).not.toMatch(/description/);
   });
 
