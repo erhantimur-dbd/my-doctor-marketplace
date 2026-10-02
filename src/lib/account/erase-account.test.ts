@@ -6,6 +6,7 @@ import {
   ERASE_FAILED_ERROR,
   eraseAccount,
   erasedAuthAdminAttributes,
+  hasSharedMedicalProfile,
   type EraseAdmin,
   type EraseFilter,
 } from "./erase-account";
@@ -19,6 +20,7 @@ function createAdmin(options: {
   rpc?: { data: unknown; error: { message: string; code?: string } | null };
   rpcSequence?: { data: unknown; error: { message: string; code?: string } | null }[];
   deleteError?: { message: string; code?: string } | null;
+  missingColumns?: Record<string, string[]>;
 }) {
   const tables: Record<string, Row[]> = {
     bookings: [],
@@ -37,8 +39,21 @@ function createAdmin(options: {
     const filters: Record<string, unknown> = {};
     let action: "select" | "update" | "delete" = "select";
     let values: Row = {};
+    let selectedColumns: string[] = [];
 
-    const run = () => {
+    const run = (): { data: Row[] | null; error: { code: string; message: string } | null } => {
+      const missing = (options.missingColumns?.[table] ?? []).filter((column) =>
+        selectedColumns.includes(column)
+      );
+      if (action === "select" && missing.length > 0) {
+        return {
+          data: null,
+          error: {
+            code: "42703",
+            message: `column ${table}.${missing[0]} does not exist`,
+          },
+        };
+      }
       const source = tables[table] ?? [];
       const matched = source.filter((row) =>
         Object.entries(filters).every(([column, expected]) => {
@@ -54,12 +69,26 @@ function createAdmin(options: {
         tables[table] = source.filter((row) => !matched.includes(row));
         deletes.push({ table, filters: { ...filters } });
       }
-      return { data: matched.map((row) => ({ ...row })), error: null };
+      const data = matched.map((row) => {
+        if (action !== "select" || selectedColumns.length === 0) return { ...row };
+        const projected: Row = {};
+        for (const column of selectedColumns) {
+          if (Object.prototype.hasOwnProperty.call(row, column)) {
+            projected[column] = row[column];
+          }
+        }
+        return projected;
+      });
+      return { data, error: null };
     };
 
     const api = {
-      select() {
+      select(columns?: string) {
         action = "select";
+        selectedColumns = (columns ?? "")
+          .split(",")
+          .map((column) => column.trim())
+          .filter(Boolean);
         return api;
       },
       update(next: Row) {
@@ -84,10 +113,10 @@ function createAdmin(options: {
       },
       maybeSingle() {
         const result = run();
-        return Promise.resolve({ data: result.data[0] ?? null, error: null });
+        return Promise.resolve({ data: result.data?.[0] ?? null, error: result.error });
       },
       then(
-        resolve: (value: { data: Row[]; error: null }) => unknown,
+        resolve: (value: { data: Row[] | null; error: { code: string; message: string } | null }) => unknown,
         reject?: (reason: unknown) => unknown
       ) {
         return Promise.resolve(run()).then(resolve, reject);
@@ -254,6 +283,62 @@ describe("eraseAccount routing", () => {
 
     expect(result).toEqual({ error: ERASE_FAILED_ERROR });
     expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("counts sharing_consent true with a completed booking as shared", async () => {
+    const { admin } = createAdmin({
+      tables: {
+        medical_profiles: [{ id: "med-1", patient_id: USER_ID, sharing_consent: true }],
+        bookings: [{ id: "bk-shared", patient_id: USER_ID, status: "completed" }],
+      },
+    });
+
+    await expect(hasSharedMedicalProfile(admin, USER_ID)).resolves.toBe(true);
+  });
+
+  it("does not count sharing_consent false as shared", async () => {
+    const { admin } = createAdmin({
+      tables: {
+        medical_profiles: [{ id: "med-1", patient_id: USER_ID, sharing_consent: false }],
+        bookings: [{ id: "bk-done", patient_id: USER_ID, status: "completed" }],
+      },
+    });
+
+    await expect(hasSharedMedicalProfile(admin, USER_ID)).resolves.toBe(false);
+  });
+
+  it("does not count sharing_consent true without a completed booking as shared", async () => {
+    const { admin } = createAdmin({
+      tables: {
+        medical_profiles: [{ id: "med-1", patient_id: USER_ID, sharing_consent: true }],
+        bookings: [{ id: "bk-open", patient_id: USER_ID, status: "cancelled_patient" }],
+      },
+    });
+
+    await expect(hasSharedMedicalProfile(admin, USER_ID)).resolves.toBe(false);
+  });
+
+  it("counts any booking as shared when sharing_consent is absent", async () => {
+    const { admin } = createAdmin({
+      missingColumns: { medical_profiles: ["sharing_consent"] },
+      tables: {
+        medical_profiles: [{ id: "med-1", patient_id: USER_ID }],
+        bookings: [{ id: "bk-any", patient_id: USER_ID, status: "cancelled_patient" }],
+      },
+    });
+
+    await expect(hasSharedMedicalProfile(admin, USER_ID)).resolves.toBe(true);
+  });
+
+  it("does not count a medical profile alone when sharing_consent is absent", async () => {
+    const { admin } = createAdmin({
+      missingColumns: { medical_profiles: ["sharing_consent"] },
+      tables: {
+        medical_profiles: [{ id: "med-1", patient_id: USER_ID }],
+      },
+    });
+
+    await expect(hasSharedMedicalProfile(admin, USER_ID)).resolves.toBe(false);
   });
 
   it("still hard-deletes when the SQL helper is missing and nothing is retained", async () => {

@@ -191,24 +191,63 @@ async function hasMatchingRow(
   return Boolean(result.data && result.data.length > 0);
 }
 
-async function hasSharedMedicalProfile(admin: EraseAdmin, userId: string): Promise<boolean> {
-  const profile = await admin
-    .from("medical_profiles")
-    .select("id")
-    .eq("patient_id", userId)
-    .limit(1);
-  if (profile.error) throw new Error(profile.error.message);
-  const row = profile.data?.[0] as { sharing_consent?: boolean } | undefined;
-  if (!row || row.sharing_consent !== true) return false;
+function isMissingColumn(
+  error: { message?: string; code?: string },
+  column: string
+): boolean {
+  const code = error.code ?? "";
+  const message = (error.message ?? "").toLowerCase();
+  return (
+    code === "42703" ||
+    code === "PGRST204" ||
+    (message.includes(column) &&
+      (message.includes("does not exist") || message.includes("could not find")))
+  );
+}
 
-  const booking = await admin
-    .from("bookings")
-    .select("id")
-    .eq("patient_id", userId)
-    .eq("status", "completed")
-    .limit(1);
+async function hasPatientBooking(
+  admin: EraseAdmin,
+  userId: string,
+  status?: string
+): Promise<boolean> {
+  let query = admin.from("bookings").select("id").eq("patient_id", userId);
+  if (status) query = query.eq("status", status);
+  const booking = await query.limit(1);
   if (booking.error) throw new Error(booking.error.message);
   return Boolean(booking.data && booking.data.length > 0);
+}
+
+/**
+ * Fallback share signal when erase_account is not installed.
+ * Matches 00135: sharing_consent plus a completed booking. If the
+ * column is absent, any booking for that patient counts.
+ */
+export async function hasSharedMedicalProfile(
+  admin: EraseAdmin,
+  userId: string
+): Promise<boolean> {
+  const profile = await admin
+    .from("medical_profiles")
+    .select("id, sharing_consent")
+    .eq("patient_id", userId)
+    .limit(1);
+  if (profile.error) {
+    if (!isMissingColumn(profile.error, "sharing_consent")) {
+      throw new Error(profile.error.message);
+    }
+    const exists = await admin
+      .from("medical_profiles")
+      .select("id")
+      .eq("patient_id", userId)
+      .limit(1);
+    if (exists.error) throw new Error(exists.error.message);
+    if (!exists.data?.length) return false;
+    return hasPatientBooking(admin, userId);
+  }
+
+  const row = profile.data?.[0] as { sharing_consent?: boolean | null } | undefined;
+  if (!row || row.sharing_consent !== true) return false;
+  return hasPatientBooking(admin, userId, "completed");
 }
 
 async function hasRetainedRecords(admin: EraseAdmin, userId: string): Promise<boolean> {
