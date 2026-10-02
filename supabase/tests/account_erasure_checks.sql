@@ -209,28 +209,28 @@ BEGIN
     v_ins_cols := ARRAY[]::text[];
     v_ins_vals := ARRAY[]::text[];
     IF pg_temp.col_exists('public', 'profiles', 'phone') THEN
-      v_ins_cols := v_ins_cols || 'phone = pg_temp.fixture_phone(id)';
+      v_ins_cols := array_append(v_ins_cols, ('phone = pg_temp.fixture_phone(id)')::text);
     END IF;
     IF pg_temp.col_exists('public', 'profiles', 'avatar_url') THEN
-      v_ins_cols := v_ins_cols || format('avatar_url = %L', 'https://example.com/secret-avatar.jpg');
+      v_ins_cols := array_append(v_ins_cols, (format('avatar_url = %L', 'https://example.com/secret-avatar.jpg'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'profiles', 'address_line1') THEN
-      v_ins_cols := v_ins_cols || format('address_line1 = %L', '1 Secret Street');
+      v_ins_cols := array_append(v_ins_cols, (format('address_line1 = %L', '1 Secret Street'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'profiles', 'address_line2') THEN
-      v_ins_cols := v_ins_cols || format('address_line2 = %L', 'Flat 2');
+      v_ins_cols := array_append(v_ins_cols, (format('address_line2 = %L', 'Flat 2'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'profiles', 'city') THEN
-      v_ins_cols := v_ins_cols || format('city = %L', 'London');
+      v_ins_cols := array_append(v_ins_cols, (format('city = %L', 'London'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'profiles', 'state') THEN
-      v_ins_cols := v_ins_cols || format('state = %L', 'London');
+      v_ins_cols := array_append(v_ins_cols, (format('state = %L', 'London'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'profiles', 'postal_code') THEN
-      v_ins_cols := v_ins_cols || format('postal_code = %L', 'SW1A 1AA');
+      v_ins_cols := array_append(v_ins_cols, (format('postal_code = %L', 'SW1A 1AA'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'profiles', 'country') THEN
-      v_ins_cols := v_ins_cols || format('country = %L', 'GB');
+      v_ins_cols := array_append(v_ins_cols, (format('country = %L', 'GB'))::text);
     END IF;
     IF cardinality(v_ins_cols) > 0 THEN
       EXECUTE format(
@@ -251,92 +251,92 @@ BEGIN
     v_ins_cols := ARRAY[]::text[];
     v_ins_vals := ARRAY[]::text[];
     IF pg_temp.col_exists('public', 'doctors', 'id') THEN
-      v_ins_cols := v_ins_cols || 'id';
-      v_ins_vals := v_ins_vals || quote_literal(v_doctor_row);
+      v_ins_cols := array_append(v_ins_cols, ('id')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal(v_doctor_row))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'profile_id') THEN
-      v_ins_cols := v_ins_cols || 'profile_id';
-      v_ins_vals := v_ins_vals || quote_literal(v_doctor_user);
+      v_ins_cols := array_append(v_ins_cols, ('profile_id')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal(v_doctor_user))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'slug') THEN
-      v_ins_cols := v_ins_cols || 'slug';
-      v_ins_vals := v_ins_vals || quote_literal('pip-doctor-' || v_doctor_row::text);
+      v_ins_cols := array_append(v_ins_cols, ('slug')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('pip-doctor-' || v_doctor_row::text))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'bio') THEN
-      v_ins_cols := v_ins_cols || 'bio';
-      v_ins_vals := v_ins_vals || quote_literal('Secret biography');
+      v_ins_cols := array_append(v_ins_cols, ('bio')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('Secret biography'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'address') THEN
-      v_ins_cols := v_ins_cols || 'address';
-      v_ins_vals := v_ins_vals || quote_literal('2 Clinic Road');
+      v_ins_cols := array_append(v_ins_cols, ('address')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('2 Clinic Road'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'clinic_name') THEN
-      v_ins_cols := v_ins_cols || 'clinic_name';
-      v_ins_vals := v_ins_vals || quote_literal('Secret Clinic');
+      v_ins_cols := array_append(v_ins_cols, ('clinic_name')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('Secret Clinic'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'city') THEN
-      v_ins_cols := v_ins_cols || 'city';
-      v_ins_vals := v_ins_vals || quote_literal('Manchester');
+      v_ins_cols := array_append(v_ins_cols, ('city')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('Manchester'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'postal_code') THEN
-      v_ins_cols := v_ins_cols || 'postal_code';
-      v_ins_vals := v_ins_vals || quote_literal('M1 1AE');
+      v_ins_cols := array_append(v_ins_cols, ('postal_code')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('M1 1AE'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'is_active') THEN
-      v_ins_cols := v_ins_cols || 'is_active';
-      v_ins_vals := v_ins_vals || 'true';
+      v_ins_cols := array_append(v_ins_cols, ('is_active')::text);
+      v_ins_vals := array_append(v_ins_vals, ('true')::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'verification_status') THEN
-      v_ins_cols := v_ins_cols || 'verification_status';
-      v_ins_vals := v_ins_vals || quote_literal('verified');
+      v_ins_cols := array_append(v_ins_cols, ('verification_status')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('verified'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'education') THEN
-      v_ins_cols := v_ins_cols || 'education';
-      v_ins_vals := v_ins_vals || quote_literal('[{"institution":"Secret College"}]') || '::jsonb';
+      v_ins_cols := array_append(v_ins_cols, ('education')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('[{"institution":"Secret College"}]') || '::jsonb')::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'certifications') THEN
-      v_ins_cols := v_ins_cols || 'certifications';
-      v_ins_vals := v_ins_vals || quote_literal('[{"name":"Secret Cert"}]') || '::jsonb';
+      v_ins_cols := array_append(v_ins_cols, ('certifications')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('[{"name":"Secret Cert"}]') || '::jsonb')::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'meta_title') THEN
-      v_ins_cols := v_ins_cols || 'meta_title';
-      v_ins_vals := v_ins_vals || quote_literal('Dr Pip');
+      v_ins_cols := array_append(v_ins_cols, ('meta_title')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('Dr Pip'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'meta_description') THEN
-      v_ins_cols := v_ins_cols || 'meta_description';
-      v_ins_vals := v_ins_vals || quote_literal('A secret description');
+      v_ins_cols := array_append(v_ins_cols, ('meta_description')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('A secret description'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'gender') THEN
-      v_ins_cols := v_ins_cols || 'gender';
-      v_ins_vals := v_ins_vals || quote_literal('female');
+      v_ins_cols := array_append(v_ins_cols, ('gender')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('female'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'profile_video_path') THEN
-      v_ins_cols := v_ins_cols || 'profile_video_path';
-      v_ins_vals := v_ins_vals || quote_literal('videos/secret.mp4');
+      v_ins_cols := array_append(v_ins_cols, ('profile_video_path')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('videos/secret.mp4'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'profile_video_status') THEN
-      v_ins_cols := v_ins_cols || 'profile_video_status';
-      v_ins_vals := v_ins_vals || quote_literal('pending');
+      v_ins_cols := array_append(v_ins_cols, ('profile_video_status')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('pending'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'profile_video_rejection_reason') THEN
-      v_ins_cols := v_ins_cols || 'profile_video_rejection_reason';
-      v_ins_vals := v_ins_vals || quote_literal('too blurry');
+      v_ins_cols := array_append(v_ins_cols, ('profile_video_rejection_reason')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('too blurry'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'ics_feed_token') THEN
-      v_ins_cols := v_ins_cols || 'ics_feed_token';
-      v_ins_vals := v_ins_vals || quote_literal('ics-' || v_doctor_row::text);
+      v_ins_cols := array_append(v_ins_cols, ('ics_feed_token')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('ics-' || v_doctor_row::text))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'gmc_number') THEN
-      v_ins_cols := v_ins_cols || 'gmc_number';
-      v_ins_vals := v_ins_vals || quote_literal('7654321');
+      v_ins_cols := array_append(v_ins_cols, ('gmc_number')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('7654321'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'stripe_account_id') THEN
-      v_ins_cols := v_ins_cols || 'stripe_account_id';
-      v_ins_vals := v_ins_vals || quote_literal('acct_secret');
+      v_ins_cols := array_append(v_ins_cols, ('stripe_account_id')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('acct_secret'))::text);
     END IF;
     IF pg_temp.col_exists('public', 'doctors', 'referral_code') THEN
-      v_ins_cols := v_ins_cols || 'referral_code';
-      v_ins_vals := v_ins_vals || quote_literal('pip' || substr(replace(v_doctor_row::text, '-', ''), 1, 12));
+      v_ins_cols := array_append(v_ins_cols, ('referral_code')::text);
+      v_ins_vals := array_append(v_ins_vals, (quote_literal('pip' || substr(replace(v_doctor_row::text, '-', ''), 1, 12)))::text);
     END IF;
     EXECUTE format(
       'INSERT INTO public.doctors (%s) VALUES (%s)',
