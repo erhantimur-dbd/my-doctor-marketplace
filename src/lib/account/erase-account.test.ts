@@ -4,14 +4,21 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ACTIVE_BOOKINGS_ERROR,
   ERASE_FAILED_ERROR,
+  ERASURE_BLOCKED_ERROR,
   eraseAccount,
   erasedAuthAdminAttributes,
+  findErasureBlock,
   hasSharedMedicalProfile,
+  releaseOrgOwnership,
   type EraseAdmin,
   type EraseFilter,
 } from "./erase-account";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
+const DOCTOR_ID = "22222222-2222-4222-8222-222222222222";
+const ORG_ID = "33333333-3333-4333-8333-333333333333";
+const OTHER_ID = "44444444-4444-4444-8444-444444444444";
+const CONV_ID = "55555555-5555-4555-8555-555555555555";
 
 type Row = Record<string, unknown>;
 
@@ -21,6 +28,8 @@ function createAdmin(options: {
   rpcSequence?: { data: unknown; error: { message: string; code?: string } | null }[];
   deleteError?: { message: string; code?: string } | null;
   missingColumns?: Record<string, string[]>;
+  errorTables?: Record<string, { code: string; message: string }>;
+  storage?: Record<string, { name: string; id: string | null }[]>;
 }) {
   const tables: Record<string, Row[]> = {
     bookings: [],
@@ -42,10 +51,12 @@ function createAdmin(options: {
     let selectedColumns: string[] = [];
 
     const run = (): { data: Row[] | null; error: { code: string; message: string } | null } => {
+      const tableError = options.errorTables?.[table];
+      if (tableError) return { data: null, error: tableError };
       const missing = (options.missingColumns?.[table] ?? []).filter((column) =>
-        selectedColumns.includes(column)
+        action === "select" ? selectedColumns.includes(column) : column in values
       );
-      if (action === "select" && missing.length > 0) {
+      if (missing.length > 0) {
         return {
           data: null,
           error: {
@@ -129,6 +140,20 @@ function createAdmin(options: {
     };
   }
 
+  const removed: { bucket: string; paths: string[] }[] = [];
+  const storage = {
+    from(bucket: string) {
+      return {
+        async list(prefix: string) {
+          return { data: options.storage?.[`${bucket}:${prefix}`] ?? [], error: null };
+        },
+        async remove(paths: string[]) {
+          removed.push({ bucket, paths: [...paths] });
+          return { error: null };
+        },
+      };
+    },
+  };
   const deleteUser = vi.fn(async () => ({ error: options.deleteError ?? null }));
   const updateUserById = vi.fn(async () => ({ error: null }));
   const sequence = [...(options.rpcSequence ?? [])];
@@ -141,9 +166,10 @@ function createAdmin(options: {
     from,
     rpc,
     auth: { admin: { deleteUser, updateUserById } },
+    storage,
   } as unknown as EraseAdmin;
 
-  return { admin, deleteUser, updateUserById, rpc, updates, deletes, tables };
+  return { admin, deleteUser, updateUserById, rpc, updates, deletes, tables, removed };
 }
 
 function sourceFiles(dir: string): string[] {
@@ -367,6 +393,332 @@ describe("eraseAccount routing", () => {
     expect(result).toEqual({ error: ACTIVE_BOOKINGS_ERROR });
     expect(rpc).not.toHaveBeenCalled();
     expect(deleteUser).not.toHaveBeenCalled();
+  });
+});
+
+describe("restricted path when financial or clinic rows exist", () => {
+  const cases: { name: string; tables: Record<string, Row[]> }[] = [
+    {
+      name: "a cancelled doctor subscription",
+      tables: {
+        doctors: [{ id: DOCTOR_ID, profile_id: USER_ID }],
+        doctor_subscriptions: [{ id: "sub-1", doctor_id: DOCTOR_ID, status: "cancelled" }],
+      },
+    },
+    {
+      name: "an invoice",
+      tables: { invoices: [{ id: "inv-1", patient_id: USER_ID }] },
+    },
+    {
+      name: "a platform fee",
+      tables: {
+        doctors: [{ id: DOCTOR_ID, profile_id: USER_ID }],
+        platform_fees: [{ id: "fee-1", doctor_id: DOCTOR_ID }],
+      },
+    },
+    {
+      name: "a treatment plan",
+      tables: { treatment_plans: [{ id: "tp-1", patient_id: USER_ID }] },
+    },
+    {
+      name: "a conversation",
+      tables: { conversations: [{ id: CONV_ID, patient_id: USER_ID }] },
+    },
+    {
+      name: "a direct message",
+      tables: { direct_messages: [{ id: "msg-1", sender_id: USER_ID }] },
+    },
+    {
+      name: "an organisation membership",
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "staff", status: "active" },
+        ],
+      },
+    },
+    {
+      name: "a patient wallet",
+      tables: { patient_wallet: [{ id: "wal-1", patient_id: USER_ID }] },
+    },
+  ];
+
+  for (const testCase of cases) {
+    it(`restricts instead of deleteUser when the user has ${testCase.name}`, async () => {
+      const { admin, deleteUser, updateUserById } = createAdmin({
+        tables: testCase.tables,
+        rpc: { data: { mode: "hard_delete" }, error: null },
+      });
+
+      const result = await eraseAccount(USER_ID, admin);
+
+      expect(result).toEqual({ success: true, mode: "restricted" });
+      expect(deleteUser).not.toHaveBeenCalled();
+      expect(updateUserById).toHaveBeenCalledWith(USER_ID, erasedAuthAdminAttributes(USER_ID));
+    });
+  }
+
+  it("does not deleteUser when an invoice exists and the SQL helper is missing", async () => {
+    const { admin, deleteUser } = createAdmin({
+      tables: { invoices: [{ id: "inv-1", patient_id: USER_ID }] },
+      rpc: {
+        data: null,
+        error: { code: "PGRST202", message: "Could not find the function public.erase_account" },
+      },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ error: ERASE_FAILED_ERROR });
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("still hard-deletes when a payments table is absent", async () => {
+    const { admin, deleteUser } = createAdmin({
+      errorTables: {
+        payments: { code: "42P01", message: 'relation "public.payments" does not exist' },
+      },
+      rpc: { data: { mode: "hard_delete" }, error: null },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ success: true, mode: "hard_deleted" });
+    expect(deleteUser).toHaveBeenCalledWith(USER_ID);
+  });
+});
+
+describe("erasure blocks", () => {
+  it("blocks an active stored Stripe subscription and changes nothing", async () => {
+    const { admin, deleteUser, rpc, updates, removed } = createAdmin({
+      tables: {
+        doctors: [{ id: DOCTOR_ID, profile_id: USER_ID }],
+        doctor_subscriptions: [{ id: "sub-1", doctor_id: DOCTOR_ID, status: "active" }],
+      },
+    });
+
+    await expect(findErasureBlock(admin, USER_ID)).resolves.toBe("stripe_subscription");
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ error: ERASURE_BLOCKED_ERROR });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(updates).toEqual([]);
+    expect(removed).toEqual([]);
+  });
+
+  it("blocks a trialing stored Stripe subscription", async () => {
+    const { admin, rpc } = createAdmin({
+      tables: {
+        doctors: [{ id: DOCTOR_ID, profile_id: USER_ID }],
+        doctor_subscriptions: [{ id: "sub-1", doctor_id: DOCTOR_ID, status: "trialing" }],
+      },
+    });
+
+    await expect(findErasureBlock(admin, USER_ID)).resolves.toBe("stripe_subscription");
+    await expect(eraseAccount(USER_ID, admin)).resolves.toEqual({ error: ERASURE_BLOCKED_ERROR });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("blocks a trialing licence as a stored subscription", async () => {
+    const { admin, rpc } = createAdmin({
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "doctor", status: "active" },
+        ],
+        licenses: [{ id: "lic-1", organization_id: ORG_ID, status: "trialing" }],
+      },
+    });
+
+    await expect(findErasureBlock(admin, USER_ID)).resolves.toBe("stripe_subscription");
+    await expect(eraseAccount(USER_ID, admin)).resolves.toEqual({ error: ERASURE_BLOCKED_ERROR });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("blocks an active licence", async () => {
+    const { admin, deleteUser, rpc, updates } = createAdmin({
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "doctor", status: "active" },
+        ],
+        licenses: [{ id: "lic-1", organization_id: ORG_ID, status: "active" }],
+      },
+    });
+
+    await expect(findErasureBlock(admin, USER_ID)).resolves.toBe("active_licence");
+    await expect(eraseAccount(USER_ID, admin)).resolves.toEqual({ error: ERASURE_BLOCKED_ERROR });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(updates).toEqual([]);
+  });
+
+  it("blocks an owner whose organisation still has another member", async () => {
+    const { admin, rpc, updates } = createAdmin({
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "owner", status: "active" },
+          { id: "mem-2", organization_id: ORG_ID, user_id: OTHER_ID, role: "doctor", status: "invited" },
+        ],
+      },
+    });
+
+    await expect(findErasureBlock(admin, USER_ID)).resolves.toBe("org_owner");
+    await expect(eraseAccount(USER_ID, admin)).resolves.toEqual({ error: ERASURE_BLOCKED_ERROR });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(updates).toEqual([]);
+  });
+
+  it("maps a SQL erasure_blocked error to the cancel-or-support message", async () => {
+    const { admin, deleteUser } = createAdmin({
+      rpc: {
+        data: null,
+        error: { code: "P0001", message: "erasure_blocked" },
+      },
+    });
+
+    await expect(eraseAccount(USER_ID, admin)).resolves.toEqual({ error: ERASURE_BLOCKED_ERROR });
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+});
+
+describe("restricted organisation owner", () => {
+  it("suspends a sole owner and scrubs the organisation", async () => {
+    const { admin, deleteUser, updates } = createAdmin({
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "owner", status: "active" },
+        ],
+        organizations: [
+          {
+            id: ORG_ID,
+            name: "Secret Clinic",
+            email: "clinic@example.com",
+            slug: "secret-clinic",
+          },
+        ],
+      },
+      rpc: { data: { mode: "restricted" }, error: null },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ success: true, mode: "restricted" });
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(updates).toContainEqual({
+      table: "organizations",
+      values: {
+        name: "",
+        email: null,
+        phone: null,
+        slug: `erased-${ORG_ID}`,
+        brand_display_name: "",
+        brand_support_email: null,
+        brand_support_phone: null,
+      },
+      filters: { id: ORG_ID },
+    });
+    expect(updates).toContainEqual({
+      table: "organization_members",
+      values: { status: "suspended" },
+      filters: {
+        organization_id: ORG_ID,
+        user_id: USER_ID,
+        role: "owner",
+        status: "active",
+      },
+    });
+  });
+
+  it("retries the organisation scrub without brand columns when they are absent", async () => {
+    const { admin, updates } = createAdmin({
+      missingColumns: { organizations: ["brand_support_email"] },
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "owner", status: "active" },
+        ],
+      },
+      rpc: { data: { mode: "restricted" }, error: null },
+    });
+
+    await eraseAccount(USER_ID, admin);
+
+    const orgUpdates = updates.filter((update) => update.table === "organizations");
+    expect(orgUpdates).toEqual([
+      {
+        table: "organizations",
+        values: {
+          name: "",
+          email: null,
+          phone: null,
+          slug: `erased-${ORG_ID}`,
+        },
+        filters: { id: ORG_ID },
+      },
+    ]);
+  });
+
+  it("does not scrub an organisation that still has another member", async () => {
+    const { admin, updates } = createAdmin({
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "owner", status: "active" },
+          { id: "mem-2", organization_id: ORG_ID, user_id: OTHER_ID, role: "doctor", status: "active" },
+        ],
+      },
+    });
+
+    await releaseOrgOwnership(admin, USER_ID);
+
+    expect(updates.some((update) => update.table === "organizations")).toBe(false);
+    expect(updates.some((update) => update.table === "organization_members")).toBe(false);
+  });
+});
+
+describe("account storage deletion", () => {
+  const storage = {
+    [`avatars:${USER_ID}`]: [{ name: "avatar.jpg", id: "file-1" }],
+    [`public-read:${USER_ID}`]: [
+      { name: "doctor-photos", id: null },
+      { name: "doctor-videos", id: null },
+    ],
+    [`public-read:${USER_ID}/doctor-photos`]: [{ name: "a.jpg", id: "file-2" }],
+    [`public-read:${USER_ID}/doctor-videos`]: [{ name: "v.mp4", id: "file-3" }],
+    [`message-attachments:${CONV_ID}`]: [{ name: "1_note.pdf", id: "file-4" }],
+  };
+
+  it("deletes avatar, public media, and conversation attachments on the restricted path", async () => {
+    const { admin, removed, deleteUser } = createAdmin({
+      tables: { conversations: [{ id: CONV_ID, patient_id: USER_ID }] },
+      storage,
+      rpc: { data: { mode: "restricted" }, error: null },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ success: true, mode: "restricted" });
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(removed).toEqual([
+      { bucket: "avatars", paths: [`${USER_ID}/avatar.jpg`] },
+      {
+        bucket: "public-read",
+        paths: [`${USER_ID}/doctor-photos/a.jpg`, `${USER_ID}/doctor-videos/v.mp4`],
+      },
+      { bucket: "message-attachments", paths: [`${CONV_ID}/1_note.pdf`] },
+    ]);
+  });
+
+  it("deletes the same objects before a hard delete", async () => {
+    const { admin, removed, deleteUser } = createAdmin({
+      storage: {
+        [`avatars:${USER_ID}`]: [{ name: "avatar.png", id: "file-1" }],
+      },
+      rpc: { data: { mode: "hard_delete" }, error: null },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ success: true, mode: "hard_deleted" });
+    expect(removed).toEqual([{ bucket: "avatars", paths: [`${USER_ID}/avatar.png`] }]);
+    expect(deleteUser).toHaveBeenCalledWith(USER_ID);
   });
 });
 
