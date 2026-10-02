@@ -20,6 +20,14 @@
 --   no date of birth: never purged, held_missing_dob
 -- Age is the year part of age(consultation_date, date_of_birth).
 --
+-- An open Stripe dispute is a status still in the open set:
+-- needs_response, under_review, warning_needs_response, or
+-- warning_under_review. Once that status leaves the set, the booking
+-- follows its normal clock. stripe_dispute_closed_at starts the
+-- 12-month narrative clock; a null closed_at is not itself a hold.
+-- An open payment-correction dispute is disputed_at set and
+-- dispute_resolved_at null. flagged, notified, approved, and recovering
+-- are workflow statuses and are not a hold.
 -- Dispute free text is removed 12 months after stripe_dispute_closed_at.
 -- Append-only payment_correction_events and payment_correction_approvals
 -- are not updated or deleted for that redaction. The purge appends one
@@ -2502,23 +2510,18 @@ BEGIN
               'needs_response', 'under_review', 'warning_needs_response', 'warning_under_review'
             ),
             false
-          )
-          OR (
-            rec_b.stripe_dispute_status IS NOT NULL
-            AND rec_b.stripe_dispute_closed_at IS NULL
           );
         IF NOT v_open
            AND pg_catalog.to_regclass('public.payment_corrections') IS NOT NULL
-           AND public.retention_column_exists('payment_corrections', 'status') THEN
+           AND public.retention_column_exists('payment_corrections', 'disputed_at')
+           AND public.retention_column_exists('payment_corrections', 'dispute_resolved_at') THEN
           EXECUTE $q$
             SELECT EXISTS (
               SELECT 1
               FROM public.payment_corrections AS c
               WHERE c.booking_id = $1
-                AND (
-                  (c.disputed_at IS NOT NULL AND c.dispute_resolved_at IS NULL)
-                  OR c.status IN ('disputed', 'flagged', 'notified', 'approved', 'recovering')
-                )
+                AND c.disputed_at IS NOT NULL
+                AND c.dispute_resolved_at IS NULL
             )
           $q$ INTO v_block USING rec_b.id;
           v_open := v_open OR coalesce(v_block, false);
@@ -2622,8 +2625,7 @@ BEGIN
           AND NOT coalesce(
             b.stripe_dispute_status IN (
               'needs_response', 'under_review', 'warning_needs_response', 'warning_under_review'
-            )
-            OR (b.stripe_dispute_status IS NOT NULL AND b.stripe_dispute_closed_at IS NULL),
+            ),
             false
           )
         ORDER BY p.id
@@ -3048,8 +3050,7 @@ BEGIN
             AND NOT coalesce(
               b.stripe_dispute_status IN (
                 'needs_response', 'under_review', 'warning_needs_response', 'warning_under_review'
-              )
-              OR (b.stripe_dispute_status IS NOT NULL AND b.stripe_dispute_closed_at IS NULL),
+              ),
               false
             )
             AND NOT public.retention_has_legal_hold('payment_correction', c.id)

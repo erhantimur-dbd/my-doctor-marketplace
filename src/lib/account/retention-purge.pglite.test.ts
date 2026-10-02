@@ -795,6 +795,106 @@ describe("retention purge", () => {
     });
   });
 
+  it("holds an open dispute and follows the financial clock once it closes", async () => {
+    await inTxn(async () => {
+      await db.exec(people());
+      await db.exec(`
+        UPDATE public.profiles SET restricted_at = '2024-01-01T00:00:00Z' WHERE id = '${P}';
+        INSERT INTO public.bookings (
+          id, patient_id, doctor_id, status, paid_at, stripe_dispute_status, stripe_dispute_closed_at
+        ) VALUES (
+          '${B}', '${P}', '${D}', 'confirmed', '2018-01-15T12:00:00Z', 'needs_response', NULL
+        );
+      `);
+      await configure("2026-04-02T12:00:00Z");
+      const open = await purge(false);
+      expect(open.held_open_dispute).toBe(1);
+      expect(open.bookings_deleted).toBe(0);
+      expect(open.accounts_clear).toBe(0);
+      expect((await db.query(`SELECT id FROM public.bookings`)).rows).toHaveLength(1);
+
+      await db.exec(`
+        UPDATE public.bookings
+        SET stripe_dispute_status = 'lost', stripe_dispute_closed_at = '2020-06-01T12:00:00Z'
+        WHERE id = '${B}';
+      `);
+      const closed = await purge(false);
+      expect(closed.held_open_dispute).toBe(0);
+      expect(closed.bookings_deleted).toBe(1);
+      expect(closed.accounts_clear).toBe(1);
+      expect((await db.query(`SELECT id FROM public.bookings`)).rows).toHaveLength(0);
+    });
+  });
+
+  it("does not hold a Stripe dispute after the status leaves the open set", async () => {
+    await inTxn(async () => {
+      await db.exec(people());
+      await db.exec(`
+        INSERT INTO public.bookings (
+          id, patient_id, doctor_id, status, paid_at, stripe_dispute_status, stripe_dispute_closed_at
+        ) VALUES (
+          '${B}', '${P}', '${D}', 'confirmed', '2018-01-15T12:00:00Z', 'won', NULL
+        );
+      `);
+      await configure("2026-04-02T12:00:00Z");
+      const result = await purge(false);
+      expect(result.held_open_dispute).toBe(0);
+      expect(result.bookings_deleted).toBe(1);
+      expect((await db.query(`SELECT id FROM public.bookings`)).rows).toHaveLength(0);
+    });
+  });
+
+  it("holds a payment-correction dispute until dispute_resolved_at is set", async () => {
+    await inTxn(async () => {
+      await db.exec(people());
+      await db.exec(`
+        INSERT INTO public.bookings (id, patient_id, doctor_id, status, paid_at)
+        VALUES ('${B}', '${P}', '${D}', 'confirmed', '2018-01-15T12:00:00Z');
+        INSERT INTO public.payment_corrections (
+          id, booking_id, patient_id, status, reason, statement_line, amount_cents,
+          created_by, created_at, disputed_at
+        ) VALUES (
+          '${RX}', '${B}', '${P}', 'approved', 'owed', 'line', 100,
+          '${DU}', '2018-02-01T12:00:00Z', '2024-02-01T12:00:00Z'
+        );
+      `);
+      await configure("2026-04-02T12:00:00Z");
+      const open = await purge(false);
+      expect(open.held_open_dispute).toBe(1);
+      expect(open.bookings_deleted).toBe(0);
+      await db.exec(`
+        UPDATE public.payment_corrections
+        SET dispute_resolved_at = '2024-03-01T12:00:00Z', status = 'disputed'
+        WHERE id = '${RX}';
+      `);
+      const closed = await purge(false);
+      expect(closed.held_open_dispute).toBe(0);
+      expect(closed.bookings_deleted).toBe(1);
+      expect((await db.query(`SELECT id FROM public.bookings`)).rows).toHaveLength(0);
+    });
+  });
+
+  it("does not hold a correction that was never a dispute", async () => {
+    await inTxn(async () => {
+      await db.exec(people());
+      await db.exec(`
+        INSERT INTO public.bookings (id, patient_id, doctor_id, status, paid_at)
+        VALUES ('${B}', '${P}', '${D}', 'confirmed', '2018-01-15T12:00:00Z');
+        INSERT INTO public.payment_corrections (
+          id, booking_id, patient_id, status, reason, statement_line, amount_cents,
+          created_by, created_at
+        ) VALUES (
+          '${RX}', '${B}', '${P}', 'flagged', 'review', 'line', 100,
+          '${DU}', '2018-02-01T12:00:00Z'
+        );
+      `);
+      await configure("2026-04-02T12:00:00Z");
+      const result = await purge(false);
+      expect(result.held_open_dispute).toBe(0);
+      expect(result.bookings_deleted).toBe(1);
+    });
+  });
+
   it("deletes generic audit rows after 2 years and keeps the payment and prescription exceptions", async () => {
     await inTxn(async () => {
       await db.exec(people("1990-01-01"));
