@@ -41,6 +41,7 @@ import { createNotification } from "@/lib/notifications";
 import { earnPoints } from "@/lib/points";
 import {
   handleChargeDisputeCreated,
+  handleChargeDisputeUpdated,
   handleTransferReversed,
 } from "@/lib/stripe/connect-event-handlers";
 import {
@@ -1749,6 +1750,12 @@ export async function POST(request: NextRequest) {
     // charge (with or without on_behalf_of). No refund and no reversal.
     case "charge.dispute.created": {
       await handleChargeDisputeCreated(supabase, event);
+      break;
+    }
+
+    case "charge.dispute.updated":
+    case "charge.dispute.closed": {
+      await handleChargeDisputeUpdated(supabase, event);
       break;
     }
 

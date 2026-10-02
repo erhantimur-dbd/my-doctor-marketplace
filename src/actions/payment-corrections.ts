@@ -107,7 +107,7 @@ async function loadBundle(id: string): Promise<{
         .eq("correction_id", id),
       admin.from("payment_correction_approvers").select("profile_id, director"),
       admin
-        .from("payment_correction_events")
+        .from("payment_correction_events_read")
         .select("event_type, payload, actor_id, created_at")
         .eq("correction_id", id),
     ]);

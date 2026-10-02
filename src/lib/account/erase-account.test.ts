@@ -642,6 +642,15 @@ describe("restricted organisation owner", () => {
         email: null,
         phone: null,
         slug: `erased-${ORG_ID}`,
+        address_line1: null,
+        address_line2: null,
+        city: null,
+        state: null,
+        postal_code: null,
+        country: null,
+        website: null,
+        logo_url: null,
+        description: null,
         brand_display_name: "",
         brand_support_email: null,
         brand_support_phone: null,
@@ -682,6 +691,15 @@ describe("restricted organisation owner", () => {
           email: null,
           phone: null,
           slug: `erased-${ORG_ID}`,
+          address_line1: null,
+          address_line2: null,
+          city: null,
+          state: null,
+          postal_code: null,
+          country: null,
+          website: null,
+          logo_url: null,
+          description: null,
         },
         filters: { id: ORG_ID },
       },
@@ -702,6 +720,39 @@ describe("restricted organisation owner", () => {
 
     expect(updates.some((update) => update.table === "organizations")).toBe(false);
     expect(updates.some((update) => update.table === "organization_members")).toBe(false);
+  });
+
+  it("scrubs when the only other memberships are removed or left", async () => {
+    const { admin, updates } = createAdmin({
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "owner", status: "active" },
+          { id: "mem-2", organization_id: ORG_ID, user_id: OTHER_ID, role: "doctor", status: "removed" },
+          { id: "mem-3", organization_id: ORG_ID, user_id: "other-2", role: "doctor", status: "left" },
+        ],
+      },
+      rpc: { data: { mode: "restricted" }, error: null },
+    });
+
+    await releaseOrgOwnership(admin, USER_ID);
+
+    expect(updates.some((update) => update.table === "organizations")).toBe(true);
+  });
+
+  it("does not scrub when another member is invited or suspended", async () => {
+    const { admin, updates } = createAdmin({
+      tables: {
+        organization_members: [
+          { id: "mem-1", organization_id: ORG_ID, user_id: USER_ID, role: "owner", status: "active" },
+          { id: "mem-2", organization_id: ORG_ID, user_id: OTHER_ID, role: "doctor", status: "invited" },
+          { id: "mem-3", organization_id: ORG_ID, user_id: "other-2", role: "doctor", status: "suspended" },
+        ],
+      },
+    });
+
+    await releaseOrgOwnership(admin, USER_ID);
+
+    expect(updates.some((update) => update.table === "organizations")).toBe(false);
   });
 });
 

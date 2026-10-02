@@ -272,6 +272,23 @@ export async function handleTransferReversed(
   return { matched };
 }
 
+const OPEN_STRIPE_DISPUTE_STATUSES = new Set([
+  "needs_response",
+  "under_review",
+  "warning_needs_response",
+  "warning_under_review",
+]);
+
+/** Closed-at is set once, when the status leaves the open set, and is not moved. */
+export function stripeDisputeClosedAt(
+  status: string,
+  existing: string | null | undefined,
+  nowIso: string
+): string | undefined {
+  if (OPEN_STRIPE_DISPUTE_STATUSES.has(status)) return undefined;
+  return existing ?? nowIso;
+}
+
 function disputeChargeId(dispute: Stripe.Dispute): string | null {
   const charge = dispute.charge;
   if (!charge) return null;
@@ -347,13 +364,28 @@ export async function handleChargeDisputeCreated(
   supabase: SupabaseClient,
   event: Stripe.Event
 ): Promise<{ matched: boolean }> {
+  return syncBookingDispute(supabase, event, true);
+}
+
+export async function handleChargeDisputeUpdated(
+  supabase: SupabaseClient,
+  event: Stripe.Event
+): Promise<{ matched: boolean }> {
+  return syncBookingDispute(supabase, event, false);
+}
+
+async function syncBookingDispute(
+  supabase: SupabaseClient,
+  event: Stripe.Event,
+  notify: boolean
+): Promise<{ matched: boolean }> {
   const dispute = event.data.object as Stripe.Dispute;
   const chargeId = disputeChargeId(dispute);
   if (!chargeId) return { matched: false };
 
   const { data: booking, error } = await supabase
     .from("bookings")
-    .select("id, doctor_id, booking_number, stripe_charge_id")
+    .select("id, doctor_id, booking_number, stripe_charge_id, stripe_dispute_closed_at")
     .eq("stripe_charge_id", chargeId)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -377,6 +409,11 @@ export async function handleChargeDisputeCreated(
   }
 
   const createdAt = new Date(dispute.created * 1000).toISOString();
+  const closedAt = stripeDisputeClosedAt(
+    dispute.status,
+    booking.stripe_dispute_closed_at,
+    new Date().toISOString()
+  );
   const { error: updateError } = await supabase
     .from("bookings")
     .update({
@@ -386,9 +423,12 @@ export async function handleChargeDisputeCreated(
       stripe_dispute_reason: dispute.reason,
       stripe_dispute_created_at: createdAt,
       stripe_dispute_account_id: event.account ?? null,
+      ...(closedAt ? { stripe_dispute_closed_at: closedAt } : {}),
     })
     .eq("id", booking.id);
   if (updateError) throw new Error(updateError.message);
+
+  if (!notify) return { matched: true };
 
   await notifyAdminsOfDispute({
     supabase,

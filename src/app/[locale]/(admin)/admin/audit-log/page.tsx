@@ -57,11 +57,8 @@ export default async function AdminAuditLogPage({
   if (profile?.role !== "admin") redirect("/en");
 
   let query = supabase
-    .from("audit_log")
-    .select(
-      `id, action, target_type, target_id, metadata, created_at,
-       actor:profiles!audit_log_actor_id_fkey(first_name, last_name, email)`
-    )
+    .from("audit_log_read")
+    .select("id, action, target_type, target_id, metadata, created_at, actor_id")
     .order("created_at", { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1);
 
@@ -76,6 +73,13 @@ export default async function AdminAuditLogPage({
   }
 
   const { data: logs } = await query;
+  const actorIds = [
+    ...new Set((logs ?? []).map((log) => log.actor_id).filter((id): id is string => Boolean(id))),
+  ];
+  const { data: actors } = actorIds.length
+    ? await supabase.from("profiles").select("id, first_name, last_name, email").in("id", actorIds)
+    : { data: [] };
+  const actorById = new Map((actors ?? []).map((actor) => [actor.id, actor]));
 
   return (
     <div className="space-y-6">
@@ -105,7 +109,9 @@ export default async function AdminAuditLogPage({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logs?.map((log: any) => (
+              {logs?.map((log: any) => {
+                const actor = actorById.get(log.actor_id);
+                return (
                 <TableRow key={log.id}>
                   <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                     {new Date(log.created_at).toLocaleString("en-GB", {
@@ -117,8 +123,8 @@ export default async function AdminAuditLogPage({
                     })}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {log.actor
-                      ? `${log.actor.first_name} ${log.actor.last_name}`
+                    {actor
+                      ? `${actor.first_name} ${actor.last_name}`
                       : "System"}
                   </TableCell>
                   <TableCell>
@@ -140,7 +146,8 @@ export default async function AdminAuditLogPage({
                     <AuditMetadataCell metadata={log.metadata} />
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
               {(!logs || logs.length === 0) && (
                 <TableRow>
                   <TableCell
