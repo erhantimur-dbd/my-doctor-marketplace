@@ -1,8 +1,10 @@
 /**
  * Date shown on both privacy policies as the effective date and the last-updated date.
- * UK long form: day, full month name, four-digit year.
+ *
+ * TODO: The CTO will give the exact date at merge. Replace this placeholder
+ * with that date before merging.
  */
-export const PRIVACY_PUBLISH_DATE = "30 September 2026";
+export const PRIVACY_PUBLISH_DATE = "PENDING_CTO_DATE";
 
 const UK_MONTHS = [
   "January",
