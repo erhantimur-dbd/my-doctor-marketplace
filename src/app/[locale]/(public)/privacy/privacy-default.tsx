@@ -186,7 +186,7 @@ export function PrivacyDefault() {
 
           <h2>13. Children</h2>
           <p>
-            Our services are not directed to individuals under 18. We do not knowingly collect data from children.
+            Children under 18 can't hold an account. A parent or guardian can add a child as a dependent on their own account. We use the child's details only to book and manage their appointments, and the parent or guardian is responsible for them.
           </p>
 
           <h2>14. Changes to This Policy</h2>

@@ -203,15 +203,16 @@ describe("terms and privacy copy", () => {
     );
   });
 
-  it("changes the account-age 16 to 18 and leaves retention numbers alone", () => {
-    expect(privacyDefault).toContain(
-      "Our services are not directed to individuals under 18. We do not knowingly collect data from children."
-    );
-    expect(privacyUk).toContain(
-      "The platform is not directed to individuals under 18. We do not knowingly collect"
-    );
+  it("uses the approved children sentence and leaves retention numbers alone", () => {
+    const children =
+      "Children under 18 can't hold an account. A parent or guardian can add a child as a dependent on their own account. We use the child's details only to book and manage their appointments, and the parent or guardian is responsible for them.";
+    expect(privacyDefault).toContain(children);
+    expect(privacyUk).toContain(children);
+    expect(privacyDefault).not.toContain("not directed to individuals under");
+    expect(privacyUk).not.toContain("not directed to individuals under");
     expect(privacyDefault).not.toContain("under 16");
     expect(privacyUk).not.toContain("under 16");
+    expect(privacyUk).toContain("If you believe a child has registered, please contact");
     expect(privacyDefault).not.toContain("PRIVACY_PUBLISH_DATE");
     expect(privacyUk).not.toContain("PRIVACY_PUBLISH_DATE");
 
