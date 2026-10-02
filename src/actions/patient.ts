@@ -182,6 +182,9 @@ export async function requestAccountDeletion() {
 
   const result = await eraseAccount(user.id);
   if ("error" in result) return { error: result.error };
+  if (result.fallbackReason === "open_dispute") {
+    return { success: true, fallbackReason: "open_dispute" as const };
+  }
   return { success: true };
 }
 

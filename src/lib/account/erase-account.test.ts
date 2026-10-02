@@ -232,6 +232,28 @@ describe("eraseAccount routing", () => {
     expect(erasedAuthAdminAttributes(USER_ID).ban_duration).toBe("876000h");
   });
 
+  it("reports open_dispute when erase_account could not hard-delete", async () => {
+    const { admin, deleteUser } = createAdmin({
+      rpc: {
+        data: {
+          mode: "restricted",
+          fallback_reason: "open_dispute",
+          email: `erased+${USER_ID}@users.invalid`,
+        },
+        error: null,
+      },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({
+      success: true,
+      mode: "restricted",
+      fallbackReason: "open_dispute",
+    });
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
   it("restricts a doctor who authored audit rows when deleteUser hits 23503", async () => {
     const { admin, deleteUser, updateUserById } = createAdmin({
       rpcSequence: [
@@ -861,5 +883,10 @@ describe("account delete call sites", () => {
     expect(patient).not.toContain("deleteUser");
     expect(ui).toContain("requestAccountDeletion");
     expect(doctorSettings).toContain("AccountErasureSection");
+    const openDisputeMessage =
+      "We can't fully delete your account while a dispute is open. We've closed it so it can't be used, and we'll delete what we can once the dispute is resolved.";
+    expect(ui).toContain(openDisputeMessage);
+    expect(ui).toContain('result.fallbackReason === "open_dispute"');
+    expect(patient).toContain('fallbackReason: "open_dispute"');
   });
 });
