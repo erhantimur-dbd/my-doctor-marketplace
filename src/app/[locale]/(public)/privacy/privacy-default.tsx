@@ -186,7 +186,7 @@ export function PrivacyDefault() {
 
           <h2>13. Children</h2>
           <p>
-            Our services are not directed to individuals under 16. We do not knowingly collect data from children.
+            Our services are not directed to individuals under 18. We do not knowingly collect data from children.
           </p>
 
           <h2>14. Changes to This Policy</h2>

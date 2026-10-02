@@ -9,6 +9,7 @@ describe("guest checkout validators", () => {
       email: "ada@example.com",
       phone: "+441234",
       terms_accepted: true,
+      adult_confirmed: true,
     });
     expect(r.success).toBe(true);
   });
@@ -19,6 +20,18 @@ describe("guest checkout validators", () => {
       last_name: "Lovelace",
       email: "ada@example.com",
       terms_accepted: false,
+      adult_confirmed: true,
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects guest checkout without the 18+ confirmation", () => {
+    const r = guestContactSchema.safeParse({
+      first_name: "Ada",
+      last_name: "Lovelace",
+      email: "ada@example.com",
+      terms_accepted: true,
+      adult_confirmed: false,
     });
     expect(r.success).toBe(false);
   });
@@ -35,6 +48,7 @@ describe("guest checkout validators", () => {
         last_name: "Lovelace",
         email: "ada@example.com",
         terms_accepted: true,
+        adult_confirmed: true,
       },
     });
     expect(r.success).toBe(true);

@@ -362,7 +362,7 @@ export function PrivacyUk() {
 
           <h2>14. Children</h2>
           <p>
-            The platform is not directed to individuals under 16. We do not knowingly collect
+            The platform is not directed to individuals under 18. We do not knowingly collect
             data from children. If you believe a child has registered, please contact{" "}
             {DPO_EMAIL}.
           </p>

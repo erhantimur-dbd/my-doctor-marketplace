@@ -22,6 +22,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { SlotPicker } from "@/components/booking/slot-picker";
 import { createBookingAndCheckout } from "@/actions/booking";
+import { AdultConfirmationCheckbox } from "@/components/auth/adult-confirmation-checkbox";
+import { ADULT_CONFIRMATION_REQUIRED_ERROR } from "@/lib/auth/adult-confirmation";
 import { PaymentErrorNotice } from "@/components/legal/payment-error-notice";
 import { formatCurrency, calculateDepositCents } from "@/lib/utils/currency";
 import { formatSpecialtyName } from "@/lib/utils";
@@ -174,6 +176,7 @@ export function BookingWizard({
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [guestTerms, setGuestTerms] = useState(false);
+  const [guestAdultConfirmed, setGuestAdultConfirmed] = useState(false);
 
   const totalSteps = steps.length;
   const fullName = `${doctor.title || "Dr."} ${doctor.profile.first_name} ${doctor.profile.last_name}`.trim();
@@ -326,7 +329,8 @@ export function BookingWizard({
         guestFirstName.trim().length > 0 &&
         guestLastName.trim().length > 0 &&
         guestEmail.includes("@") &&
-        guestTerms
+        guestTerms &&
+        guestAdultConfirmed
       );
     }
     return false;
@@ -406,8 +410,13 @@ export function BookingWizard({
 
   function handleProceedToPayment() {
     if (!consultationType || !slotSelection) return;
-    if (isGuest && !canProceed() && currentStep === "payment") {
-      // Ensure guest details filled on review before payment step
+    if (isGuest && (!guestTerms || !guestAdultConfirmed)) {
+      toast.error(
+        guestAdultConfirmed
+          ? "You must accept the terms to continue"
+          : ADULT_CONFIRMATION_REQUIRED_ERROR
+      );
+      return;
     }
 
     startTransition(async () => {
@@ -431,6 +440,7 @@ export function BookingWizard({
               email: guestEmail.trim(),
               phone: guestPhone.trim(),
               terms_accepted: guestTerms,
+              adult_confirmed: guestAdultConfirmed,
             }
           : undefined,
       });
@@ -865,6 +875,11 @@ export function BookingWizard({
                     autoComplete="tel"
                   />
                 </div>
+                <AdultConfirmationCheckbox
+                  id="guest-adult-confirmed"
+                  checked={guestAdultConfirmed}
+                  onCheckedChange={setGuestAdultConfirmed}
+                />
                 <div className="flex items-start gap-2">
                   <Checkbox
                     id="guest-terms"
@@ -1171,7 +1186,9 @@ export function BookingWizard({
             <Button
               size="lg"
               onClick={handleProceedToPayment}
-              disabled={isPending}
+              disabled={
+                isPending || (isGuest && (!guestTerms || !guestAdultConfirmed))
+              }
             >
               {isPending ? (
                 <>

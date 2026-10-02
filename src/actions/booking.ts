@@ -29,6 +29,10 @@ import {
 } from "@/lib/email/softsmoke-send";
 import { sendWhatsAppTemplate } from "@/lib/whatsapp/client";
 import {
+  ADULT_CONFIRMATION_REQUIRED_ERROR,
+  patientSignupProfileStamp,
+} from "@/lib/auth/adult-confirmation";
+import {
   TEMPLATE_BOOKING_CANCELLATION,
   buildBookingCancellationComponents,
   mapLocaleToWhatsApp,
@@ -116,6 +120,10 @@ async function resolvePatientForBooking(
     };
   }
 
+  if (guest.adult_confirmed !== true) {
+    return { error: ADULT_CONFIRMATION_REQUIRED_ERROR };
+  }
+
   const email = guest.email.trim().toLowerCase();
   const admin = createAdminClient();
 
@@ -182,6 +190,7 @@ async function resolvePatientForBooking(
     await new Promise((r) => setTimeout(r, 300));
   }
 
+  const acceptance = patientSignupProfileStamp();
   if (!profileReady) {
     await admin.from("profiles").upsert({
       id: patientId,
@@ -190,6 +199,7 @@ async function resolvePatientForBooking(
       last_name: guest.last_name.trim(),
       role: "patient",
       phone: guest.phone || null,
+      ...acceptance,
     });
   } else {
     await admin
@@ -198,8 +208,7 @@ async function resolvePatientForBooking(
         first_name: guest.first_name.trim(),
         last_name: guest.last_name.trim(),
         phone: guest.phone || null,
-        terms_accepted_at: new Date().toISOString(),
-        privacy_accepted_at: new Date().toISOString(),
+        ...acceptance,
       })
       .eq("id", patientId);
   }

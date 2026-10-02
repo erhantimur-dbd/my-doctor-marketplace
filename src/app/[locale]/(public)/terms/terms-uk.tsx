@@ -74,7 +74,7 @@ export function TermsUk() {
 
           <h2>3. Eligibility</h2>
           <ul>
-            <li>You must be at least 16 years old to create an account.</li>
+            <li>You must be 18 or over to create a patient account. A parent or guardian can book for a child under 18 by adding them as a dependent on their own account.</li>
             <li>
               Doctors must hold valid GMC registration, a current licence to practise, appropriate
               indemnity insurance, and — where applicable — must have evidenced their CQC status

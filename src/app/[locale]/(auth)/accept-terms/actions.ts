@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sendEmail } from "@/lib/email/client";
@@ -12,6 +13,11 @@ import {
   isSafeRelativePath,
   sanitizeAuthLocale,
 } from "@/lib/auth/return-cookie";
+import {
+  adultConfirmationError,
+  isPatientAccountRole,
+  patientSignupProfileStamp,
+} from "@/lib/auth/adult-confirmation";
 
 function safeNext(raw: string | null | undefined, locale: string): string {
   if (raw && isSafeRelativePath(raw)) return raw;
@@ -40,7 +46,7 @@ export async function acceptTerms(formData: FormData) {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("first_name, terms_accepted_at")
+    .select("first_name, terms_accepted_at, role")
     .eq("id", user.id)
     .single();
 
@@ -54,11 +60,23 @@ export async function acceptTerms(formData: FormData) {
     redirect(next);
   }
 
-  const { error: updateError } = await supabase
+  const patientAccount = isPatientAccountRole(profile?.role);
+  if (patientAccount) {
+    const adultError = adultConfirmationError(formData.get("adult_confirmed"));
+    if (adultError) return { error: adultError };
+  }
+
+  // Service role writes adult_confirmed_at. A user JWT cannot.
+  const writer = patientAccount ? createAdminClient() : supabase;
+  const { error: updateError } = await writer
     .from("profiles")
     .update({
-      terms_accepted_at: now,
-      privacy_accepted_at: now,
+      ...(patientAccount
+        ? patientSignupProfileStamp(new Date(now))
+        : {
+            terms_accepted_at: now,
+            privacy_accepted_at: now,
+          }),
       terms_version: TERMS_VERSION,
     })
     .eq("id", user.id);

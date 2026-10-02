@@ -15,29 +15,43 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { acceptTerms } from "./actions";
+import { AdultConfirmationCheckbox } from "@/components/auth/adult-confirmation-checkbox";
+import { ADULT_CONFIRMATION_REQUIRED_ERROR } from "@/lib/auth/adult-confirmation";
 
 interface AcceptTermsFormProps {
   locale: string;
   next: string;
   firstName?: string;
+  /** Patient OAuth completion. Doctor accounts skip the 18+ confirmation. */
+  requireAdultConfirmation?: boolean;
 }
 
 export function AcceptTermsForm({
   locale,
   next,
   firstName,
+  requireAdultConfirmation = true,
 }: AcceptTermsFormProps) {
   const t = useTranslations("auth");
   const [accepted, setAccepted] = useState(false);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setError("");
+    if (requireAdultConfirmation && !adultConfirmed) {
+      setError(ADULT_CONFIRMATION_REQUIRED_ERROR);
+      setLoading(false);
+      return;
+    }
     formData.set("locale", locale);
     formData.set("next", next);
     formData.set("accepted", accepted ? "true" : "false");
+    if (requireAdultConfirmation) {
+      formData.set("adult_confirmed", adultConfirmed ? "true" : "false");
+    }
     const result = await acceptTerms(formData);
     if (result?.error) {
       setError(result.error);
@@ -69,6 +83,13 @@ export function AcceptTermsForm({
         </p>
 
         <form action={handleSubmit} className="space-y-6">
+          {requireAdultConfirmation && (
+            <AdultConfirmationCheckbox
+              id="oauth-adult-confirmed"
+              checked={adultConfirmed}
+              onCheckedChange={setAdultConfirmed}
+            />
+          )}
           <div className="flex items-start gap-3 rounded-lg border p-4">
             <Checkbox
               id="accept-terms"
@@ -106,7 +127,11 @@ export function AcceptTermsForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={!accepted || loading}
+            disabled={
+              !accepted ||
+              loading ||
+              (requireAdultConfirmation && !adultConfirmed)
+            }
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t("accept_terms_continue")}
