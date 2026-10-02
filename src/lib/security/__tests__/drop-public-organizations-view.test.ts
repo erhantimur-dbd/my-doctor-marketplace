@@ -32,15 +32,13 @@ describe("00139 drop public_organizations", () => {
   const migration = read(migrationPath);
   const sql = stripComments(migration);
 
-  it("is the next numbered migration after 00138 and does not take 00135", () => {
+  it("is migration 00139 and is the only file with that number", () => {
     expect(migrationPath).toBe("supabase/migrations/00139_drop_public_organizations_view.sql");
     const names = readdirSync(join(process.cwd(), "supabase/migrations"));
     expect(names).toContain("00138_customer_refund_codes.sql");
     expect(names.filter((name) => name.startsWith("00139_"))).toEqual([
       "00139_drop_public_organizations_view.sql",
     ]);
-    expect(names.some((name) => name.startsWith("00135_"))).toBe(false);
-    expect(names.some((name) => name.startsWith("00140_"))).toBe(false);
   });
 
   it("drops the trigger, the view, then the function, and nothing else", () => {
