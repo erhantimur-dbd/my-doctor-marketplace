@@ -32,8 +32,9 @@ export type ErasureBlockReason = "stripe_subscription" | "active_licence" | "org
 export const ACCOUNT_STORAGE_PREFIXES = {
   avatars: "{userId}/",
   "public-read": "{userId}/",
-  "message-attachments": "{conversationId}/",
 } as const;
+
+const STORAGE_PAGE_SIZE = 1000;
 
 export const ERASED_BAN_DURATION = "876000h";
 
@@ -111,7 +112,7 @@ export interface EraseAdmin {
     from: (bucket: string) => {
       list: (
         prefix: string,
-        options?: { limit?: number }
+        options?: { limit?: number; offset?: number }
       ) => Promise<{ data: StorageListEntry[] | null; error: QueryError }>;
       remove: (paths: string[]) => Promise<{ error: QueryError }>;
     };
@@ -557,22 +558,27 @@ async function listObjectPaths(
   bucket: ReturnType<EraseAdmin["storage"]["from"]>,
   prefix: string
 ): Promise<string[]> {
-  const listed = await bucket.list(prefix, { limit: 1000 });
-  if (listed.error || !listed.data) {
-    if (listed.error) {
-      log.error("Failed to list account storage", { prefix, err: listed.error.message });
-    }
-    return [];
-  }
   const paths: string[] = [];
-  for (const entry of listed.data) {
-    if (!entry.name) continue;
-    const path = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if (entry.id == null) {
-      paths.push(...(await listObjectPaths(bucket, path)));
-    } else {
-      paths.push(path);
+  let offset = 0;
+  for (;;) {
+    const listed = await bucket.list(prefix, { limit: STORAGE_PAGE_SIZE, offset });
+    if (listed.error || !listed.data) {
+      if (listed.error) {
+        log.error("Failed to list account storage", { prefix, offset, err: listed.error.message });
+      }
+      break;
     }
+    for (const entry of listed.data) {
+      if (!entry.name) continue;
+      const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.id == null) {
+        paths.push(...(await listObjectPaths(bucket, path)));
+      } else {
+        paths.push(path);
+      }
+    }
+    if (listed.data.length < STORAGE_PAGE_SIZE) break;
+    offset += STORAGE_PAGE_SIZE;
   }
   return paths;
 }
@@ -580,53 +586,29 @@ async function listObjectPaths(
 async function removeBucketPrefix(admin: EraseAdmin, bucketName: string, prefix: string): Promise<void> {
   const bucket = admin.storage.from(bucketName);
   const paths = await listObjectPaths(bucket, prefix);
-  if (paths.length === 0) return;
-  const removed = await bucket.remove(paths);
-  if (removed.error) {
-    log.error("Failed to delete account storage", {
-      bucket: bucketName,
-      prefix,
-      err: removed.error.message,
-    });
-  }
-}
-
-async function conversationIdsForUser(admin: EraseAdmin, userId: string): Promise<string[]> {
-  const ids = new Set<string>();
-  const asPatient = await rowsWhere(admin, "conversations", "patient_id", userId, "id");
-  if (asPatient !== "missing") {
-    for (const row of asPatient) {
-      if (row.id) ids.add(row.id);
+  for (let start = 0; start < paths.length; start += STORAGE_PAGE_SIZE) {
+    const batch = paths.slice(start, start + STORAGE_PAGE_SIZE);
+    const removed = await bucket.remove(batch);
+    if (removed.error) {
+      log.error("Failed to delete account storage", {
+        bucket: bucketName,
+        prefix,
+        err: removed.error.message,
+      });
     }
   }
-  const doctor = await admin.from("doctors").select("id").eq("profile_id", userId).maybeSingle();
-  if (!doctor.error && doctor.data?.id) {
-    const asDoctor = await rowsWhere(admin, "conversations", "doctor_id", doctor.data.id, "id");
-    if (asDoctor !== "missing") {
-      for (const row of asDoctor) {
-        if (row.id) ids.add(row.id);
-      }
-    }
-  } else if (doctor.error && !isMissingRelation(doctor.error)) {
-    throw new Error(doctor.error.message);
-  }
-  return [...ids];
 }
 
 /**
- * Delete the user's objects in the buckets the app writes.
- * avatars and public-read are keyed by user id. message-attachments are
- * keyed by conversation id for conversations this user is in.
+ * Delete the user's avatar and public doctor media. Message attachments
+ * stay: the restricted path keeps the conversation, and those files are
+ * part of the doctor's clinical record.
  * A storage failure is logged and does not undo the account close.
  */
 export async function deleteAccountStorage(admin: EraseAdmin, userId: string): Promise<void> {
   try {
     await removeBucketPrefix(admin, "avatars", userId);
     await removeBucketPrefix(admin, "public-read", userId);
-    const conversations = await conversationIdsForUser(admin, userId);
-    for (const conversationId of conversations) {
-      await removeBucketPrefix(admin, "message-attachments", conversationId);
-    }
   } catch (err) {
     log.error("Failed to delete account storage", { userId, err });
   }

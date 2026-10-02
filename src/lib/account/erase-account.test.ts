@@ -141,11 +141,21 @@ function createAdmin(options: {
   }
 
   const removed: { bucket: string; paths: string[] }[] = [];
+  const listed: { bucket: string; prefix: string; limit?: number; offset?: number }[] = [];
   const storage = {
     from(bucket: string) {
       return {
-        async list(prefix: string) {
-          return { data: options.storage?.[`${bucket}:${prefix}`] ?? [], error: null };
+        async list(prefix: string, listOptions?: { limit?: number; offset?: number }) {
+          listed.push({
+            bucket,
+            prefix,
+            limit: listOptions?.limit,
+            offset: listOptions?.offset,
+          });
+          const all = options.storage?.[`${bucket}:${prefix}`] ?? [];
+          const offset = listOptions?.offset ?? 0;
+          const limit = listOptions?.limit ?? all.length;
+          return { data: all.slice(offset, offset + limit), error: null };
         },
         async remove(paths: string[]) {
           removed.push({ bucket, paths: [...paths] });
@@ -169,7 +179,7 @@ function createAdmin(options: {
     storage,
   } as unknown as EraseAdmin;
 
-  return { admin, deleteUser, updateUserById, rpc, updates, deletes, tables, removed };
+  return { admin, deleteUser, updateUserById, rpc, updates, deletes, tables, removed, listed };
 }
 
 function sourceFiles(dir: string): string[] {
@@ -685,8 +695,8 @@ describe("account storage deletion", () => {
     [`message-attachments:${CONV_ID}`]: [{ name: "1_note.pdf", id: "file-4" }],
   };
 
-  it("deletes avatar, public media, and conversation attachments on the restricted path", async () => {
-    const { admin, removed, deleteUser } = createAdmin({
+  it("deletes avatars and public media and never touches message attachments", async () => {
+    const { admin, removed, listed, deleteUser } = createAdmin({
       tables: { conversations: [{ id: CONV_ID, patient_id: USER_ID }] },
       storage,
       rpc: { data: { mode: "restricted" }, error: null },
@@ -702,8 +712,43 @@ describe("account storage deletion", () => {
         bucket: "public-read",
         paths: [`${USER_ID}/doctor-photos/a.jpg`, `${USER_ID}/doctor-videos/v.mp4`],
       },
-      { bucket: "message-attachments", paths: [`${CONV_ID}/1_note.pdf`] },
     ]);
+    expect(listed.some((call) => call.bucket === "message-attachments")).toBe(false);
+    expect(removed.some((call) => call.bucket === "message-attachments")).toBe(false);
+  });
+
+  it("pages past 1000 objects and deletes every file", async () => {
+    const page = (count: number, label: string) =>
+      Array.from({ length: count }, (_, index) => ({
+        name: `${label}-${index}.jpg`,
+        id: `${label}-${index}`,
+      }));
+    const avatarFiles = page(2001, "avatar");
+    const photoFiles = page(1001, "photo");
+    const { admin, removed, listed } = createAdmin({
+      storage: {
+        [`avatars:${USER_ID}`]: avatarFiles,
+        [`public-read:${USER_ID}`]: [{ name: "doctor-photos", id: null }],
+        [`public-read:${USER_ID}/doctor-photos`]: photoFiles,
+        [`message-attachments:${CONV_ID}`]: [{ name: "kept.pdf", id: "kept" }],
+      },
+      rpc: { data: { mode: "hard_delete" }, error: null },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ success: true, mode: "hard_deleted" });
+    const avatarLists = listed.filter((call) => call.bucket === "avatars");
+    expect(avatarLists.map((call) => call.offset)).toEqual([0, 1000, 2000]);
+    expect(avatarLists.every((call) => call.limit === 1000)).toBe(true);
+    const deleted = removed.flatMap((call) => call.paths);
+    expect(deleted).toEqual([
+      ...avatarFiles.map((file) => `${USER_ID}/${file.name}`),
+      ...photoFiles.map((file) => `${USER_ID}/doctor-photos/${file.name}`),
+    ]);
+    expect(removed.map((call) => call.paths.length)).toEqual([1000, 1000, 1, 1000, 1]);
+    expect(listed.some((call) => call.bucket === "message-attachments")).toBe(false);
+    expect(removed.some((call) => call.bucket === "message-attachments")).toBe(false);
   });
 
   it("deletes the same objects before a hard delete", async () => {
