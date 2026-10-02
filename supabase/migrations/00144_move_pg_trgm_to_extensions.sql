@@ -1,3 +1,4 @@
+-- 00144_move_pg_trgm_to_extensions.
 -- Move pg_trgm out of public (advisor 0014 extension_in_public).
 --
 -- Must run after 00140. That migration pins public.search_medications to
@@ -31,7 +32,7 @@
 -- single transaction, so the schema move and the function rewrite commit
 -- or roll back together.
 
-DO $guard_00142$
+DO $guard_00144$
 DECLARE
   v_proc oid := pg_catalog.to_regprocedure('public.search_medications(text, integer)');
 BEGIN
@@ -44,12 +45,12 @@ BEGIN
     WHERE p.oid = v_proc
       AND cfg = 'search_path=""'
   ) THEN
-    RAISE EXCEPTION '00142 requires 00140 (search_medications search_path pin) to be applied first';
+    RAISE EXCEPTION '00144 requires 00140 (search_medications search_path pin) to be applied first';
   END IF;
 END
-$guard_00142$;
+$guard_00144$;
 
-DO $move_00142$
+DO $move_00144$
 DECLARE
   v_schema name;
 BEGIN
@@ -71,10 +72,10 @@ BEGIN
     RAISE EXCEPTION 'pg_trgm is in unexpected schema %', v_schema;
   END IF;
 END
-$move_00142$;
+$move_00144$;
 
 -- Compared again after the rewrite. CREATE OR REPLACE must not change them.
-CREATE TEMP TABLE _00142_search_medications_before ON COMMIT DROP AS
+CREATE TEMP TABLE _00144_search_medications_before ON COMMIT DROP AS
 SELECT p.proacl, p.prosecdef, p.proowner, p.proconfig
 FROM pg_catalog.pg_proc AS p
 WHERE p.oid = pg_catalog.to_regprocedure('public.search_medications(text, integer)');
@@ -122,7 +123,7 @@ BEGIN
 END;
 $$;
 
-DO $assert_00142$
+DO $assert_00144$
 DECLARE
   v_bad text;
   v_calls int;
@@ -152,7 +153,7 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM pg_catalog.pg_proc AS p
-    JOIN _00142_search_medications_before AS before ON true
+    JOIN _00144_search_medications_before AS before ON true
     WHERE p.oid = pg_catalog.to_regprocedure('public.search_medications(text, integer)')
       AND (
         p.proacl IS DISTINCT FROM before.proacl
@@ -221,4 +222,4 @@ BEGIN
     RAISE EXCEPTION 'trgm indexes still use a non-extensions opclass: %', v_bad;
   END IF;
 END
-$assert_00142$;
+$assert_00144$;
