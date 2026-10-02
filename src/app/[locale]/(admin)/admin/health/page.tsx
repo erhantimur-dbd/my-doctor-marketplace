@@ -52,6 +52,11 @@ const CRON_JOBS = [
     description: "Nightly GMC / credential re-checks",
   },
   {
+    path: "/api/cron/retention-purge",
+    schedule: "30 4 * * *",
+    description: "Retention purge (dry-run until the setting is apply)",
+  },
+  {
     path: "/api/cron/expire-featured",
     schedule: "0 5 * * *",
     description: "Expire featured doctor placements",
