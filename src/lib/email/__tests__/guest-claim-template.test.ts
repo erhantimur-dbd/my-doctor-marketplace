@@ -17,6 +17,9 @@ describe("guestAccountClaimEmail", () => {
     expect(html).toContain("Set a password");
     expect(html).toContain("BK-100");
     expect(html).toContain("Alex");
+    expect(html).toContain("rgba(255,255,255,0.40)");
+    expect(html).toContain("#0B6BCB");
+    expect(html).not.toMatch(/🩺|❤|🧠|👁|👶|💊|🛡/);
   });
 
   it("prints legacy BK- and short MD- booking numbers, including -R", () => {

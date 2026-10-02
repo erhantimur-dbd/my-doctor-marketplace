@@ -223,7 +223,9 @@ describe("Softsmoke transactional bodies", () => {
     });
     expectHumanChrome(mail.html);
     expect(mail.html).toContain("GBP 49.00");
-    expect(mail.html).toContain("re_123");
+    expect(mail.html).toContain("RF-BK-1");
+    expect(mail.html).not.toContain("re_123");
+    expect(mail.html).toContain("white-space:nowrap");
     expect(mail.html).toContain("marketplace receipt");
     expect(mail.html).toContain("Saturday 26 September 2026, 9:00am BST");
     expect(mail.html).not.toContain(ISO);
