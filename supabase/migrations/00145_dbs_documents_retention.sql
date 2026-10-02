@@ -35,10 +35,19 @@
 -- profile blocks that delete and the certificate-file delete.
 --
 -- A patient wallet with no transactions and a zero balance is deleted
--- when the profile is restricted, unless a legal hold is open or an
--- active unredeemed gift_cards row purchased by that patient is still
--- outstanding (held_pending_credit). The wallet ledger has no pending
--- status. Doctor payout transfers are not patient-wallet credits.
+-- when the profile is restricted, unless a legal hold is open or a
+-- credit has not yet been posted (held_pending_credit).
+-- wallet_transactions has no status: a row is already posted, and a
+-- wallet with any row uses the six-year activity clock instead.
+-- Unposted credits that do exist:
+--   gift_cards purchased by the patient, status active, redeemed_at
+--   null. status pending is an unpaid card, not a credit.
+--   payment_corrections for that patient that are not settled or
+--   waived, and that credit the wallet: error_type
+--   patient_credit_in_error, or a patient customer-favour correction
+--   whose recovery_method is wallet_adjustment.
+-- doctor_wallet_credit_transfers.status pending is a doctor Connect
+-- payout of credit the patient already spent, not an unposted credit.
 -- A non-zero balance is held_wallet_balance. A wallet that has
 -- transactions keeps the six-year clock from the latest transaction.
 --
@@ -506,23 +515,18 @@ BEGIN
               'needs_response', 'under_review', 'warning_needs_response', 'warning_under_review'
             ),
             false
-          )
-          OR (
-            rec_b.stripe_dispute_status IS NOT NULL
-            AND rec_b.stripe_dispute_closed_at IS NULL
           );
         IF NOT v_open
            AND pg_catalog.to_regclass('public.payment_corrections') IS NOT NULL
-           AND public.retention_column_exists('payment_corrections', 'status') THEN
+           AND public.retention_column_exists('payment_corrections', 'disputed_at')
+           AND public.retention_column_exists('payment_corrections', 'dispute_resolved_at') THEN
           EXECUTE $q$
             SELECT EXISTS (
               SELECT 1
               FROM public.payment_corrections AS c
               WHERE c.booking_id = $1
-                AND (
-                  (c.disputed_at IS NOT NULL AND c.dispute_resolved_at IS NULL)
-                  OR c.status IN ('disputed', 'flagged', 'notified', 'approved', 'recovering')
-                )
+                AND c.disputed_at IS NOT NULL
+                AND c.dispute_resolved_at IS NULL
             )
           $q$ INTO v_block USING rec_b.id;
           v_open := v_open OR coalesce(v_block, false);
@@ -626,8 +630,7 @@ BEGIN
           AND NOT coalesce(
             b.stripe_dispute_status IN (
               'needs_response', 'under_review', 'warning_needs_response', 'warning_under_review'
-            )
-            OR (b.stripe_dispute_status IS NOT NULL AND b.stripe_dispute_closed_at IS NULL),
+            ),
             false
           )
         ORDER BY p.id
@@ -728,6 +731,46 @@ BEGIN
                   AND g.redeemed_at IS NULL
               )
             $q$ INTO v_block USING rec_w.patient_id;
+          END IF;
+          IF NOT coalesce(v_block, false)
+             AND pg_catalog.to_regclass('public.payment_corrections') IS NOT NULL
+             AND public.retention_column_exists('payment_corrections', 'patient_id')
+             AND public.retention_column_exists('payment_corrections', 'status')
+             AND public.retention_column_exists('payment_corrections', 'error_type') THEN
+            v_due := false;
+            IF public.retention_column_exists('payment_corrections', 'settled_at')
+               AND public.retention_column_exists('payment_corrections', 'party')
+               AND public.retention_column_exists('payment_corrections', 'direction')
+               AND public.retention_column_exists('payment_corrections', 'recovery_method') THEN
+              EXECUTE $q$
+                SELECT EXISTS (
+                  SELECT 1
+                  FROM public.payment_corrections AS c
+                  WHERE c.patient_id = $1
+                    AND c.status NOT IN ('settled', 'waived')
+                    AND c.settled_at IS NULL
+                    AND (
+                      c.error_type = 'patient_credit_in_error'
+                      OR (
+                        c.party = 'patient'
+                        AND c.direction = 'customer_favour'
+                        AND c.recovery_method = 'wallet_adjustment'
+                      )
+                    )
+                )
+              $q$ INTO v_due USING rec_w.patient_id;
+            ELSE
+              EXECUTE $q$
+                SELECT EXISTS (
+                  SELECT 1
+                  FROM public.payment_corrections AS c
+                  WHERE c.patient_id = $1
+                    AND c.status NOT IN ('settled', 'waived')
+                    AND c.error_type = 'patient_credit_in_error'
+                )
+              $q$ INTO v_due USING rec_w.patient_id;
+            END IF;
+            v_block := coalesce(v_due, false);
           END IF;
           IF coalesce(v_block, false) THEN
             v_held_pending := v_held_pending + 1;
@@ -1196,8 +1239,7 @@ BEGIN
             AND NOT coalesce(
               b.stripe_dispute_status IN (
                 'needs_response', 'under_review', 'warning_needs_response', 'warning_under_review'
-              )
-              OR (b.stripe_dispute_status IS NOT NULL AND b.stripe_dispute_closed_at IS NULL),
+              ),
               false
             )
             AND NOT public.retention_has_legal_hold('payment_correction', c.id)

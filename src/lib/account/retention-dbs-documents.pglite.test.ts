@@ -11,6 +11,8 @@ const DIP = "55555555-5555-4555-8555-555555555555";
 const IND = "77777777-7777-4777-8777-777777777777";
 const W = "88888888-8888-4888-8888-888888888888";
 const GC = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const CORR = "99999999-9999-4999-8999-999999999999";
+const B = "55555555-5555-4555-8555-555555555556";
 
 const SCHEMA = `
 
@@ -903,6 +905,142 @@ describe("DBS record, document files, and empty restricted wallets", () => {
       expect(result.wallets_deleted_restricted).toBe(0);
       expect(result.wallet_transactions_deleted).toBe(1);
       expect((await db.query(`SELECT id FROM public.patient_wallet`)).rows).toHaveLength(0);
+    });
+  });
+
+  it("holds an unpaid-to-the-wallet correction and deletes the wallet once it is settled", async () => {
+    await inTxn(async () => {
+      await db.exec(people());
+      await db.exec(`
+        ALTER TABLE public.payment_corrections
+          ADD COLUMN error_type text,
+          ADD COLUMN party text,
+          ADD COLUMN direction text,
+          ADD COLUMN recovery_method text,
+          ADD COLUMN settled_at timestamptz;
+        INSERT INTO public.payment_corrections (
+          id, patient_id, status, reason, statement_line, amount_cents, created_by,
+          error_type, party, direction
+        ) VALUES (
+          '${CORR}', '${P}', 'approved', 'refund to credit', 'line', 500, '${DU}',
+          'patient_credit_in_error', 'patient', 'customer_favour'
+        );
+        UPDATE public.profiles SET restricted_at = '2024-01-01T00:00:00Z' WHERE id = '${P}';
+        INSERT INTO public.patient_wallet (id, patient_id, currency, balance_cents)
+        VALUES ('${W}', '${P}', 'gbp', 0);
+      `);
+      await configure("2026-01-02T12:00:00Z", "apply", null);
+      const held = await purge(false);
+      expect(held.held_pending_credit).toBe(1);
+      expect(held.wallets_deleted_restricted).toBe(0);
+      expect((await db.query(`SELECT id FROM public.patient_wallet`)).rows).toHaveLength(1);
+      await db.exec(`
+        UPDATE public.payment_corrections
+        SET status = 'settled', settled_at = '2025-06-01T00:00:00Z'
+        WHERE id = '${CORR}';
+      `);
+      const settled = await purge(false);
+      expect(settled.held_pending_credit).toBe(0);
+      expect(settled.wallets_deleted_restricted).toBe(1);
+      expect((await db.query(`SELECT id FROM public.patient_wallet`)).rows).toHaveLength(0);
+    });
+  });
+
+  it("holds a customer-favour wallet_adjustment that has not settled", async () => {
+    await inTxn(async () => {
+      await db.exec(people());
+      await db.exec(`
+        ALTER TABLE public.payment_corrections
+          ADD COLUMN error_type text,
+          ADD COLUMN party text,
+          ADD COLUMN direction text,
+          ADD COLUMN recovery_method text,
+          ADD COLUMN settled_at timestamptz;
+        INSERT INTO public.payment_corrections (
+          id, patient_id, status, reason, statement_line, amount_cents, created_by,
+          error_type, party, direction, recovery_method
+        ) VALUES (
+          '${CORR}', '${P}', 'recovering', 'wallet credit', 'line', 500, '${DU}',
+          'other', 'patient', 'customer_favour', 'wallet_adjustment'
+        );
+        UPDATE public.profiles SET restricted_at = '2024-01-01T00:00:00Z' WHERE id = '${P}';
+        INSERT INTO public.patient_wallet (id, patient_id, currency, balance_cents)
+        VALUES ('${W}', '${P}', 'gbp', 0);
+      `);
+      await configure("2026-01-02T12:00:00Z", "apply", null);
+      const result = await purge(false);
+      expect(result.held_pending_credit).toBe(1);
+      expect((await db.query(`SELECT id FROM public.patient_wallet`)).rows).toHaveLength(1);
+    });
+  });
+
+  it("does not treat a card refund, an unpaid gift card, or a doctor payout as a pending wallet credit", async () => {
+    await inTxn(async () => {
+      await db.exec(people());
+      await db.exec(`
+        ALTER TABLE public.payment_corrections
+          ADD COLUMN error_type text,
+          ADD COLUMN party text,
+          ADD COLUMN direction text,
+          ADD COLUMN recovery_method text,
+          ADD COLUMN settled_at timestamptz;
+        INSERT INTO public.payment_corrections (
+          id, patient_id, status, reason, statement_line, amount_cents, created_by,
+          error_type, party, direction, recovery_method
+        ) VALUES (
+          '${CORR}', '${P}', 'approved', 'card refund', 'line', 500, '${DU}',
+          'patient_overcharge', 'patient', 'customer_favour', 'patient_refund'
+        );
+        CREATE TABLE public.gift_cards (
+          id uuid PRIMARY KEY,
+          purchased_by uuid,
+          status text NOT NULL,
+          redeemed_at timestamptz
+        );
+        INSERT INTO public.gift_cards (id, purchased_by, status, redeemed_at)
+        VALUES ('${GC}', '${P}', 'pending', NULL);
+        CREATE TABLE public.doctor_wallet_credit_transfers (
+          id uuid PRIMARY KEY,
+          doctor_id uuid,
+          status text NOT NULL
+        );
+        INSERT INTO public.doctor_wallet_credit_transfers (id, doctor_id, status)
+        VALUES ('${DOC}', '${D}', 'pending');
+        UPDATE public.profiles SET restricted_at = '2024-01-01T00:00:00Z' WHERE id = '${P}';
+        INSERT INTO public.patient_wallet (id, patient_id, currency, balance_cents)
+        VALUES ('${W}', '${P}', 'gbp', 0);
+      `);
+      await configure("2026-01-02T12:00:00Z", "apply", null);
+      const result = await purge(false);
+      expect(result.held_pending_credit).toBe(0);
+      expect(result.wallets_deleted_restricted).toBe(1);
+      expect((await db.query(`SELECT id FROM public.patient_wallet`)).rows).toHaveLength(0);
+    });
+  });
+
+  it("keeps the dispute release after this migration replaces the purge", async () => {
+    await inTxn(async () => {
+      await db.exec(people());
+      await db.exec(`
+        UPDATE public.profiles SET restricted_at = '2024-01-01T00:00:00Z' WHERE id = '${P}';
+        INSERT INTO public.bookings (
+          id, patient_id, doctor_id, status, paid_at, stripe_dispute_status
+        ) VALUES (
+          '${B}', '${P}', '${D}', 'confirmed', '2018-01-15T12:00:00Z', 'under_review'
+        );
+      `);
+      await configure("2026-04-02T12:00:00Z");
+      const open = await purge(false);
+      expect(open.held_open_dispute).toBe(1);
+      expect(open.bookings_deleted).toBe(0);
+      await db.exec(`
+        UPDATE public.bookings
+        SET stripe_dispute_status = 'won', stripe_dispute_closed_at = NULL
+        WHERE id = '${B}';
+      `);
+      const closed = await purge(false);
+      expect(closed.held_open_dispute).toBe(0);
+      expect(closed.bookings_deleted).toBe(1);
     });
   });
 
