@@ -19,6 +19,9 @@ import { AlertTriangle, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { requestAccountDeletion } from "@/actions/patient";
 
+const OPEN_DISPUTE_ERASURE_MESSAGE =
+  "We can't fully delete your account while a dispute is open. We've closed it so it can't be used, and we'll delete what we can once the dispute is resolved.";
+
 export function AccountErasureSection() {
   const [isDeleting, startDeleteTransition] = useTransition();
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
@@ -34,7 +37,7 @@ export function AccountErasureSection() {
     startDeleteTransition(async () => {
       const result = await requestAccountDeletion();
 
-      if (result.error) {
+      if ("error" in result && result.error) {
         toast.error(result.error);
         return;
       }
@@ -49,7 +52,11 @@ export function AccountErasureSection() {
         // The auth user is banned or deleted either way.
       }
 
-      toast.success("Your account is closed. You will be redirected shortly.");
+      toast.success(
+        "fallbackReason" in result && result.fallbackReason === "open_dispute"
+          ? OPEN_DISPUTE_ERASURE_MESSAGE
+          : "Your account is closed. You will be redirected shortly."
+      );
       setDeleteDialogOpen(false);
 
       setTimeout(() => {

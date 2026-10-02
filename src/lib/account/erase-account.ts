@@ -131,7 +131,11 @@ export interface EraseAdmin {
 }
 
 export type EraseAccountResult =
-  | { success: true; mode: "restricted" | "hard_deleted" }
+  | {
+      success: true;
+      mode: "restricted" | "hard_deleted";
+      fallbackReason?: "open_dispute";
+    }
   | { error: string };
 
 function isForeignKeyViolation(error: { message?: string; code?: string }): boolean {
@@ -183,6 +187,21 @@ export function readEraseMode(data: unknown): "restricted" | "hard_delete" | nul
   const mode = (value as { mode: unknown }).mode;
   if (mode === "restricted" || mode === "hard_delete") return mode;
   return null;
+}
+
+export function readEraseFallbackReason(data: unknown): "open_dispute" | null {
+  let value = data;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== "object" || !("fallback_reason" in value)) return null;
+  return (value as { fallback_reason: unknown }).fallback_reason === "open_dispute"
+    ? "open_dispute"
+    : null;
 }
 
 async function hasActiveBookings(admin: EraseAdmin, userId: string): Promise<boolean> {
@@ -645,7 +664,8 @@ export async function deleteAccountStorage(admin: EraseAdmin, userId: string): P
 
 async function finishRestricted(
   admin: EraseAdmin,
-  userId: string
+  userId: string,
+  fallbackReason: "open_dispute" | null = null
 ): Promise<EraseAccountResult> {
   await releaseOrgOwnership(admin, userId);
   await deleteAccountStorage(admin, userId);
@@ -656,6 +676,9 @@ async function finishRestricted(
       err: banned.error.message,
     });
     return { error: ERASE_FAILED_ERROR };
+  }
+  if (fallbackReason === "open_dispute") {
+    return { success: true, mode: "restricted", fallbackReason };
   }
   return { success: true, mode: "restricted" };
 }
@@ -669,7 +692,7 @@ async function hardDelete(admin: EraseAdmin, userId: string): Promise<EraseAccou
   if (isForeignKeyViolation(error)) {
     const retry = await admin.rpc("erase_account", { p_user_id: userId });
     if (!retry.error && readEraseMode(retry.data) === "restricted") {
-      return finishRestricted(admin, userId);
+      return finishRestricted(admin, userId, readEraseFallbackReason(retry.data));
     }
   }
 
@@ -719,7 +742,9 @@ export async function eraseAccount(
   }
 
   const mode = readEraseMode(rpc.data);
-  if (mode === "restricted") return finishRestricted(admin, userId);
+  if (mode === "restricted") {
+    return finishRestricted(admin, userId, readEraseFallbackReason(rpc.data));
+  }
   if (mode === "hard_delete") {
     try {
       if (await hasRetainedRecords(admin, userId)) return finishRestricted(admin, userId);
