@@ -36,6 +36,17 @@ export const ACCOUNT_STORAGE_PREFIXES = {
 
 const STORAGE_PAGE_SIZE = 1000;
 
+/** RFC 4122 UUID. Empty and neighbouring strings must not reach storage. */
+const ERASURE_USER_ID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function accountStoragePrefix(userId: string): string {
+  if (!ERASURE_USER_ID.test(userId)) {
+    throw new Error("Account erasure requires a UUID user id");
+  }
+  return `${userId.toLowerCase()}/`;
+}
+
 export const ERASED_BAN_DURATION = "876000h";
 
 const ACTIVE_BOOKING_STATUSES = [
@@ -554,10 +565,20 @@ export async function releaseOrgOwnership(admin: EraseAdmin, userId: string): Pr
   }
 }
 
+function storageChildPath(prefix: string, name: string): string {
+  if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
+    throw new Error("Refusing to delete storage outside the user prefix");
+  }
+  const base = prefix.endsWith("/") ? prefix.slice(0, -1) : prefix;
+  return `${base}/${name}`;
+}
+
 async function listObjectPaths(
   bucket: ReturnType<EraseAdmin["storage"]["from"]>,
-  prefix: string
+  prefix: string,
+  requiredPrefix: string
 ): Promise<string[]> {
+  if (!prefix.startsWith(requiredPrefix)) return [];
   const paths: string[] = [];
   let offset = 0;
   for (;;) {
@@ -570,9 +591,12 @@ async function listObjectPaths(
     }
     for (const entry of listed.data) {
       if (!entry.name) continue;
-      const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const path = storageChildPath(prefix, entry.name);
+      if (!path.startsWith(requiredPrefix)) {
+        throw new Error("Refusing to delete storage outside the user prefix");
+      }
       if (entry.id == null) {
-        paths.push(...(await listObjectPaths(bucket, path)));
+        paths.push(...(await listObjectPaths(bucket, `${path}/`, requiredPrefix)));
       } else {
         paths.push(path);
       }
@@ -585,9 +609,13 @@ async function listObjectPaths(
 
 async function removeBucketPrefix(admin: EraseAdmin, bucketName: string, prefix: string): Promise<void> {
   const bucket = admin.storage.from(bucketName);
-  const paths = await listObjectPaths(bucket, prefix);
+  const paths = await listObjectPaths(bucket, prefix, prefix);
+  if (paths.some((path) => !path.startsWith(prefix))) {
+    throw new Error("Refusing to delete storage outside the user prefix");
+  }
   for (let start = 0; start < paths.length; start += STORAGE_PAGE_SIZE) {
-    const batch = paths.slice(start, start + STORAGE_PAGE_SIZE);
+    const batch = paths.slice(start, start + STORAGE_PAGE_SIZE).filter((path) => path.startsWith(prefix));
+    if (batch.length === 0) continue;
     const removed = await bucket.remove(batch);
     if (removed.error) {
       log.error("Failed to delete account storage", {
@@ -606,9 +634,10 @@ async function removeBucketPrefix(admin: EraseAdmin, bucketName: string, prefix:
  * A storage failure is logged and does not undo the account close.
  */
 export async function deleteAccountStorage(admin: EraseAdmin, userId: string): Promise<void> {
+  const prefix = accountStoragePrefix(userId);
   try {
-    await removeBucketPrefix(admin, "avatars", userId);
-    await removeBucketPrefix(admin, "public-read", userId);
+    await removeBucketPrefix(admin, "avatars", prefix);
+    await removeBucketPrefix(admin, "public-read", prefix);
   } catch (err) {
     log.error("Failed to delete account storage", { userId, err });
   }
@@ -652,6 +681,7 @@ export async function eraseAccount(
   userId: string,
   admin: EraseAdmin = createAdminClient() as unknown as EraseAdmin
 ): Promise<EraseAccountResult> {
+  accountStoragePrefix(userId);
   try {
     if (await hasActiveBookings(admin, userId)) {
       return { error: ACTIVE_BOOKINGS_ERROR };

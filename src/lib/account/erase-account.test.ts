@@ -685,13 +685,13 @@ describe("restricted organisation owner", () => {
 
 describe("account storage deletion", () => {
   const storage = {
-    [`avatars:${USER_ID}`]: [{ name: "avatar.jpg", id: "file-1" }],
-    [`public-read:${USER_ID}`]: [
+    [`avatars:${USER_ID}/`]: [{ name: "avatar.jpg", id: "file-1" }],
+    [`public-read:${USER_ID}/`]: [
       { name: "doctor-photos", id: null },
       { name: "doctor-videos", id: null },
     ],
-    [`public-read:${USER_ID}/doctor-photos`]: [{ name: "a.jpg", id: "file-2" }],
-    [`public-read:${USER_ID}/doctor-videos`]: [{ name: "v.mp4", id: "file-3" }],
+    [`public-read:${USER_ID}/doctor-photos/`]: [{ name: "a.jpg", id: "file-2" }],
+    [`public-read:${USER_ID}/doctor-videos/`]: [{ name: "v.mp4", id: "file-3" }],
     [`message-attachments:${CONV_ID}`]: [{ name: "1_note.pdf", id: "file-4" }],
   };
 
@@ -727,9 +727,9 @@ describe("account storage deletion", () => {
     const photoFiles = page(1001, "photo");
     const { admin, removed, listed } = createAdmin({
       storage: {
-        [`avatars:${USER_ID}`]: avatarFiles,
-        [`public-read:${USER_ID}`]: [{ name: "doctor-photos", id: null }],
-        [`public-read:${USER_ID}/doctor-photos`]: photoFiles,
+        [`avatars:${USER_ID}/`]: avatarFiles,
+        [`public-read:${USER_ID}/`]: [{ name: "doctor-photos", id: null }],
+        [`public-read:${USER_ID}/doctor-photos/`]: photoFiles,
         [`message-attachments:${CONV_ID}`]: [{ name: "kept.pdf", id: "kept" }],
       },
       rpc: { data: { mode: "hard_delete" }, error: null },
@@ -754,7 +754,7 @@ describe("account storage deletion", () => {
   it("deletes the same objects before a hard delete", async () => {
     const { admin, removed, deleteUser } = createAdmin({
       storage: {
-        [`avatars:${USER_ID}`]: [{ name: "avatar.png", id: "file-1" }],
+        [`avatars:${USER_ID}/`]: [{ name: "avatar.png", id: "file-1" }],
       },
       rpc: { data: { mode: "hard_delete" }, error: null },
     });
@@ -764,6 +764,63 @@ describe("account storage deletion", () => {
     expect(result).toEqual({ success: true, mode: "hard_deleted" });
     expect(removed).toEqual([{ bucket: "avatars", paths: [`${USER_ID}/avatar.png`] }]);
     expect(deleteUser).toHaveBeenCalledWith(USER_ID);
+  });
+
+  it("throws for an empty id before listing or removing storage", async () => {
+    const { admin, listed, removed, rpc, deleteUser } = createAdmin({
+      storage: {
+        "avatars:": [{ name: "everyone.jpg", id: "root" }],
+      },
+    });
+
+    await expect(eraseAccount("", admin)).rejects.toThrow(/UUID/);
+    expect(listed).toEqual([]);
+    expect(removed).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("throws for a non-UUID id before listing or removing storage", async () => {
+    const { admin, listed, removed, rpc, deleteUser } = createAdmin({
+      storage: {
+        "avatars:": [{ name: "everyone.jpg", id: "root" }],
+        "avatars:not-a-uuid/": [{ name: "nope.jpg", id: "nope" }],
+      },
+    });
+
+    await expect(eraseAccount("not-a-uuid", admin)).rejects.toThrow(/UUID/);
+    expect(listed).toEqual([]);
+    expect(removed).toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it("deletes only files under the user prefix and leaves neighbours", async () => {
+    const neighbour = `${USER_ID}x`;
+    const { admin, removed, listed } = createAdmin({
+      storage: {
+        "avatars:": [{ name: "everyone.jpg", id: "root" }],
+        [`avatars:${USER_ID}`]: [{ name: "x/shared-prefix.jpg", id: "noslash" }],
+        [`avatars:${USER_ID}/`]: [{ name: "avatar.jpg", id: "own" }],
+        [`avatars:${neighbour}/`]: [{ name: "secret.jpg", id: "neighbour" }],
+        [`avatars:${OTHER_ID}/`]: [{ name: "other.jpg", id: "other" }],
+        [`public-read:${USER_ID}/`]: [{ name: "doctor-photos", id: null }],
+        [`public-read:${USER_ID}/doctor-photos/`]: [{ name: "a.jpg", id: "photo" }],
+        [`public-read:${neighbour}/`]: [{ name: "nope.jpg", id: "nope" }],
+      },
+      rpc: { data: { mode: "hard_delete" }, error: null },
+    });
+
+    const result = await eraseAccount(USER_ID, admin);
+
+    expect(result).toEqual({ success: true, mode: "hard_deleted" });
+    const deleted = removed.flatMap((call) => call.paths);
+    expect(deleted).toEqual([`${USER_ID}/avatar.jpg`, `${USER_ID}/doctor-photos/a.jpg`]);
+    expect(deleted.every((path) => path.startsWith(`${USER_ID}/`))).toBe(true);
+    expect(listed.every((call) => call.prefix.startsWith(`${USER_ID}/`))).toBe(true);
+    expect(listed.some((call) => call.prefix === "" || call.prefix === USER_ID)).toBe(false);
+    expect(listed.some((call) => call.prefix.startsWith(neighbour))).toBe(false);
+    expect(listed.some((call) => call.prefix.startsWith(OTHER_ID))).toBe(false);
   });
 });
 
