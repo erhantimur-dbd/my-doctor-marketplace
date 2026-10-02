@@ -8,6 +8,7 @@ import {
 } from "@/lib/email/templates";
 import { createNotification } from "@/lib/notifications";
 import { getStripe } from "@/lib/stripe/client";
+import { referralMonthFreeAppliesToTier } from "@/lib/referrals/reward-policy";
 import { log } from "@/lib/utils/logger";
 
 /**
@@ -173,23 +174,12 @@ export async function processReferralReward(referredDoctorId: string) {
     })
     .eq("id", referral.id);
 
-  // Try to apply reward to the referring doctor's Stripe subscription
+  // Try to apply reward to the referring doctor's Stripe subscription.
+  // A founding licence stays at £99, so the 100% coupon is not applied.
+  let rewardApplied = false;
   try {
     const stripe = getStripe();
 
-    // Ensure the coupon exists (create if not)
-    try {
-      await stripe.coupons.retrieve(REFERRAL_COUPON_ID);
-    } catch {
-      await stripe.coupons.create({
-        id: REFERRAL_COUPON_ID,
-        percent_off: 100,
-        duration: "once",
-        name: "Referral Program - 1 Month Free",
-      });
-    }
-
-    // Apply coupon to referring doctor's license subscription
     const { data: referrerDoctor } = await adminSupabase
       .from("doctors")
       .select("organization_id")
@@ -199,13 +189,27 @@ export async function processReferralReward(referredDoctorId: string) {
     const { data: referrerLicense } = referrerDoctor?.organization_id
       ? await adminSupabase
           .from("licenses")
-          .select("stripe_subscription_id, status")
+          .select("stripe_subscription_id, status, tier")
           .eq("organization_id", referrerDoctor.organization_id)
           .in("status", ["active", "trialing"])
           .maybeSingle()
       : { data: null };
 
-    if (referrerLicense?.stripe_subscription_id) {
+    if (
+      referrerLicense?.stripe_subscription_id &&
+      referralMonthFreeAppliesToTier(referrerLicense.tier)
+    ) {
+      try {
+        await stripe.coupons.retrieve(REFERRAL_COUPON_ID);
+      } catch {
+        await stripe.coupons.create({
+          id: REFERRAL_COUPON_ID,
+          percent_off: 100,
+          duration: "once",
+          name: "Referral Program - 1 Month Free",
+        });
+      }
+
       await stripe.subscriptions.update(referrerLicense.stripe_subscription_id, {
         discounts: [{ coupon: REFERRAL_COUPON_ID }],
       });
@@ -218,6 +222,7 @@ export async function processReferralReward(referredDoctorId: string) {
           rewarded_at: new Date().toISOString(),
         })
         .eq("id", referral.id);
+      rewardApplied = true;
     }
   } catch (err) {
     log.error("[Referral] Failed to apply Stripe coupon:", { err: err });
@@ -247,7 +252,7 @@ export async function processReferralReward(referredDoctorId: string) {
     ? referral.referrer[0]
     : referral.referrer;
 
-  if (referrer) {
+  if (rewardApplied && referrer) {
     const referrerProfile: any = Array.isArray(referrer.profile)
       ? referrer.profile[0]
       : referrer.profile;
