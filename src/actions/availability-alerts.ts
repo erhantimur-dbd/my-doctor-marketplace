@@ -10,6 +10,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { headers } from "next/headers";
 import { z } from "zod/v4";
 import { specialtySlugToLabel } from "@/lib/constants/related-specialties";
+import { adminEmailGateError } from "@/lib/admin/admin-email-allowlist";
 
 const guestSubscribeSchema = z.object({
   doctorId: z.string().uuid(),
@@ -644,6 +645,9 @@ export async function getSpecialtyDemandForAdmin(): Promise<{
   } = await supabase.auth.getUser();
   if (!user) {
     return { error: "Not authenticated", rows: [], summary: [], totalActive: 0 };
+  }
+  if (adminEmailGateError(user.email)) {
+    return { error: "Not authorized", rows: [], summary: [], totalActive: 0 };
   }
 
   const { data: profile } = await supabase

@@ -45,6 +45,7 @@ import {
   mapLocaleToWhatsApp,
 } from "@/lib/whatsapp/templates";
 import { headers } from "next/headers";
+import { adminEmailGateError } from "@/lib/admin/admin-email-allowlist";
 
 import { notifyAvailabilitySubscribers } from "@/lib/availability/notify-subscribers";
 import { log } from "@/lib/utils/logger";
@@ -59,12 +60,6 @@ import {
   getWalletTransactions,
 } from "@/lib/wallet";
 
-// Admin email allowlist — mirrors middleware check for defense-in-depth
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
-
 async function requireAdmin() {
   const supabase = await createClient();
   const {
@@ -74,18 +69,7 @@ async function requireAdmin() {
 
   // Soft-launch fail-closed: in production an empty ADMIN_EMAILS deny-alls
   // so a missing env cannot authorize any role=admin account.
-  const isProduction =
-    process.env.VERCEL_ENV === "production" ||
-    process.env.NODE_ENV === "production";
-  if (isProduction && ADMIN_EMAILS.length === 0) {
-    return { error: "Not authorized", supabase: null, user: null };
-  }
-
-  // Check email allowlist (if configured; local/dev may use role-only)
-  if (
-    ADMIN_EMAILS.length > 0 &&
-    !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
-  ) {
+  if (adminEmailGateError(user.email)) {
     return { error: "Not authorized", supabase: null, user: null };
   }
 

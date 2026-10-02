@@ -22,22 +22,35 @@ describe("server action auth sweep", () => {
   });
 
   it("records a coupon redemption only for the signed-in doctor", () => {
-    const fn = sliceFunction(read("src/actions/coupon.ts"), "recordCouponRedemption");
+    const action = read("src/actions/coupon.ts");
+    expect(action).not.toContain("function recordCouponRedemption");
+    const fn = sliceFunction(
+      read("src/lib/coupons/record-redemption.ts"),
+      "recordCouponRedemption"
+    );
     expect(fn).toContain("auth.getUser()");
     expect(fn).toContain('.eq("id", doctorId)');
     expect(fn).toContain("doctor_id: doctor.id");
     expect(fn).not.toContain("doctor_id: doctorId");
+    expect(read("src/actions/doctor.ts")).toContain(
+      "@/lib/coupons/record-redemption"
+    );
   });
 
   it("checks and marks referral discounts for the signed-in doctor", () => {
     const referral = read("src/actions/referral.ts");
     const check = sliceFunction(referral, "checkReferralDiscount");
-    const mark = sliceFunction(referral, "markReferredRewarded");
+    expect(referral).not.toContain("function markReferredRewarded");
+    const mark = sliceFunction(
+      read("src/lib/referrals/internal.ts"),
+      "markReferredRewarded"
+    );
     expect(check).toContain("auth.getUser()");
     expect(check).toContain('.eq("id", doctorId)');
     expect(check).toContain('.eq("referred_doctor_id", doctor.id)');
     expect(mark).toContain("auth.getUser()");
     expect(mark).toContain('.eq("referred_doctor_id", doctor.id)');
+    expect(read("src/actions/doctor.ts")).toContain("@/lib/referrals/internal");
   });
 
   it("returns push subscription secrets only to their owner", () => {
@@ -59,6 +72,27 @@ describe("server action auth sweep", () => {
     expect(fn).toContain('.eq("conversation_id", data.conversationId)');
     expect(fn).toContain("uploaded_by: user.id");
     expect(fn).not.toContain("uploaded_by: data.uploadedBy");
+  });
+
+  it("validates blog updates before the service-role write", () => {
+    const fn = sliceFunction(read("src/actions/blog.ts"), "updateBlogPost");
+    expect(fn.indexOf("blogPostSchema.safeParse")).toBeGreaterThan(-1);
+    expect(fn.indexOf("blogPostSchema.safeParse")).toBeLessThan(
+      fn.indexOf("...parsed.data")
+    );
+    expect(fn).not.toContain("...input");
+    expect(fn.indexOf("requirePlatformAdmin")).toBeLessThan(
+      fn.indexOf("createAdminClient")
+    );
+  });
+
+  it("does not export coupon or referral service-role writes as actions", () => {
+    expect(read("src/actions/coupon.ts")).not.toContain(
+      "export async function recordCouponRedemption"
+    );
+    expect(read("src/actions/referral.ts")).not.toContain(
+      "export async function markReferredRewarded"
+    );
   });
 
   it("does not let an anonymous caller probe whether an email is registered", () => {

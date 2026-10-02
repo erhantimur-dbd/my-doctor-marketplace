@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { sendEmail } from "@/lib/email/client";
 import { log } from "@/lib/utils/logger";
+import { adminEmailGateError } from "@/lib/admin/admin-email-allowlist";
 
 // ============================================================
 // Helpers
@@ -202,7 +203,8 @@ export async function getTicketDetail(ticketId: string) {
     .eq("id", user.id)
     .single();
 
-  const isAdmin = profile?.role === "admin";
+  const isAdmin =
+    profile?.role === "admin" && adminEmailGateError(user.email) === null;
 
   // Fetch ticket
   const { data: ticket, error: ticketError } = await supabase
@@ -324,7 +326,8 @@ export async function replyToTicket(formData: FormData) {
 
   if (!profile) return { error: "Profile not found." };
 
-  const isAdmin = profile.role === "admin";
+  const isAdmin =
+    profile.role === "admin" && adminEmailGateError(user.email) === null;
 
   // Verify ticket access
   const { data: ticket } = await supabase
@@ -448,15 +451,7 @@ async function requireAdmin() {
 
   if (!user) return { error: "Unauthorized" };
 
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (
-    ADMIN_EMAILS.length > 0 &&
-    !ADMIN_EMAILS.includes(user.email?.toLowerCase() || "")
-  ) {
+  if (adminEmailGateError(user.email)) {
     return { error: "Access denied" };
   }
 
