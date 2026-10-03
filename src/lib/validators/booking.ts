@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ADULT_CONFIRMATION_REQUIRED_ERROR } from "@/lib/auth/adult-confirmation";
 
 // Use format-only UUID regex (no version/variant bit check) so seed-data
 // UUIDs like e0000000-... pass validation.  The database enforces real UUID
@@ -12,6 +13,9 @@ export const guestContactSchema = z.object({
   phone: z.string().min(6).max(40).optional().or(z.literal("")),
   terms_accepted: z.boolean().refine((v) => v === true, {
     message: "You must accept the terms to continue",
+  }),
+  adult_confirmed: z.boolean().refine((v) => v === true, {
+    message: ADULT_CONFIRMATION_REQUIRED_ERROR,
   }),
 });
 

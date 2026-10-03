@@ -25,6 +25,11 @@ import { resolvePostAuthPath } from "@/lib/auth/role-redirect";
 import type { OAuthProviderId } from "@/lib/auth/oauth-providers";
 import { OAUTH_PROVIDERS, TERMS_VERSION } from "@/lib/auth/oauth-providers";
 import { checkoutSubmitNotice } from "@/lib/legal/payment-error-notices";
+import {
+  ADULT_CONFIRMATION_REQUIRED_ERROR,
+  isAdultConfirmed,
+  patientSignupProfileStamp,
+} from "@/lib/auth/adult-confirmation";
 
 async function setAuthReturnCookie(redirectTo: string | null | undefined) {
   if (!redirectTo || !isSafeRelativePath(redirectTo)) return;
@@ -132,9 +137,6 @@ export async function register(formData: FormData) {
     return { error: "Too many registration attempts. Please try again later." };
   }
 
-  const supabase = await createClient();
-  const origin = await getOrigin();
-
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const firstName = formData.get("first_name") as string;
@@ -150,11 +152,18 @@ export async function register(formData: FormData) {
     };
   }
 
+  if (!isAdultConfirmed(formData.get("adult_confirmed"))) {
+    return { error: ADULT_CONFIRMATION_REQUIRED_ERROR };
+  }
+
   // Server-side password strength validation
   const pwResult = passwordSchema.safeParse(password);
   if (!pwResult.success) {
     return { error: pwResult.error.issues[0]?.message || "Password too weak." };
   }
+
+  const supabase = await createClient();
+  const origin = await getOrigin();
 
   // Keep emailRedirectTo on the allowlisted base callback only. Long
   // ?next= book URLs can make Supabase reject the confirm-email send
@@ -190,19 +199,37 @@ export async function register(formData: FormData) {
     };
   }
 
-  // Record terms/privacy acceptance (non-blocking)
+  // Record terms/privacy acceptance and the 18+ confirmation. The service
+  // role writes adult_confirmed_at; the user JWT cannot. Retry until the
+  // signup trigger has inserted the profile.
   if (data.user) {
     const adminSupabase = createAdminClient();
-    Promise.resolve(
-      adminSupabase
+    const stamp = {
+      ...patientSignupProfileStamp(),
+      terms_version: TERMS_VERSION,
+    };
+    let stamped = false;
+    let stampError: { message?: string } | null = null;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const result = await adminSupabase
         .from("profiles")
-        .update({
-          terms_accepted_at: new Date().toISOString(),
-          privacy_accepted_at: new Date().toISOString(),
-          terms_version: TERMS_VERSION,
-        })
+        .update(stamp)
         .eq("id", data.user.id)
-    ).catch((err) => log.error("[Auth] Terms acceptance recording error:", { err: err }));
+        .select("id");
+      stampError = result.error;
+      if (!result.error && result.data && result.data.length > 0) {
+        stamped = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    if (!stamped) {
+      log.error("[Auth] Terms acceptance recording error:", { err: stampError });
+      return {
+        error:
+          "Account created but we could not record your confirmation. Please sign in, or contact support if that fails.",
+      };
+    }
   }
 
   // Send welcome email (non-blocking)
@@ -1420,6 +1447,9 @@ type OAuthSignInOptions = {
    * Doctor signup is email/password register-doctor only. Ignored if passed.
    */
   doctorIntent?: boolean;
+  /** Patient sign-up tab. Rejected unless adultConfirmed is true. */
+  patientSignup?: boolean;
+  adultConfirmed?: boolean;
 };
 
 const PROVIDER_LABELS: Record<OAuthProviderId, string> = {
@@ -1454,6 +1484,13 @@ export async function signInWithOAuthProvider(
   }
 
   await setDoctorOAuthIntentCookie(options?.doctorIntent);
+
+  // New patient OAuth must confirm 18+ before the provider redirect.
+  // Existing sign-in omits patientSignup. The accept-terms action stamps
+  // adult_confirmed_at after the IdP creates the user.
+  if (options?.patientSignup && options.adultConfirmed !== true) {
+    return { error: ADULT_CONFIRMATION_REQUIRED_ERROR };
+  }
 
   locale = sanitizeAuthLocale(locale);
   const supabase = await createClient();

@@ -5,6 +5,7 @@ import {
   isSafeRelativePath,
   sanitizeAuthLocale,
 } from "@/lib/auth/return-cookie";
+import { isPatientAccountRole } from "@/lib/auth/adult-confirmation";
 
 export default async function AcceptTermsPage({
   params,
@@ -47,6 +48,7 @@ export default async function AcceptTermsPage({
       locale={locale}
       next={next}
       firstName={profile?.first_name || undefined}
+      requireAdultConfirmation={isPatientAccountRole(profile?.role)}
     />
   );
 }

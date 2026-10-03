@@ -30,6 +30,11 @@ import {
 import type { BookingAuthContext } from "@/lib/auth/booking-context";
 
 import { login, register } from "@/actions/auth";
+import { AdultConfirmationCheckbox } from "@/components/auth/adult-confirmation-checkbox";
+import {
+  ADULT_CONFIRMATION_REQUIRED_ERROR,
+  canSubmitPatientSignup,
+} from "@/lib/auth/adult-confirmation";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { PasskeySignInButton } from "@/components/auth/passkey-sign-in-button";
 import { isSafeRelativePath } from "@/lib/auth/return-cookie";
@@ -63,6 +68,7 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
   const [loginEmail, setLoginEmail] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [needsVerificationEmail, setNeedsVerificationEmail] = useState<
     string | null
   >(null);
@@ -132,6 +138,11 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
       setRegisterLoading(false);
       return;
     }
+    if (!adultConfirmed) {
+      setError(ADULT_CONFIRMATION_REQUIRED_ERROR);
+      setRegisterLoading(false);
+      return;
+    }
     if (!registerPasswordOk) {
       setError(
         t("password_requirements") ||
@@ -144,6 +155,7 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
     formData.append("redirect", redirectTo);
     formData.append("locale", locale);
     formData.set("accepted", "true");
+    formData.set("adult_confirmed", "true");
     if (registerEmail) formData.set("email", registerEmail);
 
     const result = await register(formData);
@@ -253,10 +265,21 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
           )}
 
           {/* ── Social login (enabled providers only) ── */}
+          {activeTab === "sign-up" && (
+            <div className="mb-4">
+              <AdultConfirmationCheckbox
+                id="signup-adult-confirmed"
+                checked={adultConfirmed}
+                onCheckedChange={setAdultConfirmed}
+              />
+            </div>
+          )}
           <OAuthButtons
             locale={locale}
             redirectTo={redirectTo || undefined}
             onError={setError}
+            patientSignup={activeTab === "sign-up"}
+            adultConfirmed={adultConfirmed}
           />
 
           {/* ── Sign Up form ── */}
@@ -347,9 +370,13 @@ export function AuthPage({ defaultTab, bookingContext = null }: AuthPageProps) {
                 type="submit"
                 className="w-full"
                 disabled={
-                  registerLoading ||
-                  !acceptedTerms ||
-                  (passwordValue.length > 0 && !registerPasswordOk)
+                  !canSubmitPatientSignup({
+                    acceptedTerms,
+                    adultConfirmed,
+                    passwordEnteredOk:
+                      passwordValue.length === 0 || registerPasswordOk,
+                    loading: registerLoading,
+                  })
                 }
               >
                 {registerLoading && (

@@ -352,8 +352,7 @@ export function PrivacyUk() {
 
           <h2>14. Children</h2>
           <p>
-            The platform is not directed to individuals under 16. We do not knowingly collect
-            data from children. If you believe a child has registered, please contact{" "}
+            Children under 18 can't hold an account. A parent or guardian can add a child as a dependent on their own account. We use the child's details only to book and manage their appointments, and the parent or guardian is responsible for them. If you think someone under 18 has opened an account, please contact{" "}
             {DPO_EMAIL}.
           </p>
 

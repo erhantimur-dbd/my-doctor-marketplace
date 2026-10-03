@@ -42,7 +42,7 @@ export function TermsDefault() {
 
           <h2>3. Eligibility</h2>
           <ul>
-            <li>You must be at least 16 years old to create an account.</li>
+            <li>You must be 18 or over to create a patient account. A parent or guardian can book for a child under 18 by adding them as a dependent on their own account.</li>
             <li>Doctors must hold a valid GMC registration (or equivalent) to list on our platform.</li>
             <li>You must provide accurate and complete information during registration.</li>
           </ul>

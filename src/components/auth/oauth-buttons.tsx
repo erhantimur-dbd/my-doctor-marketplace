@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { signInWithOAuthProvider } from "@/actions/auth";
+import { ADULT_CONFIRMATION_REQUIRED_ERROR } from "@/lib/auth/adult-confirmation";
 import {
   getEnabledOAuthProviders,
   type OAuthProviderId,
@@ -82,6 +83,9 @@ interface OAuthButtonsProps {
   onError?: (message: string) => void;
   /** Show the "or continue with" separator below the buttons (default true) */
   showSeparator?: boolean;
+  /** Patient sign-up tab. Buttons stay disabled until the 18+ box is checked. */
+  patientSignup?: boolean;
+  adultConfirmed?: boolean;
 }
 
 /**
@@ -93,6 +97,8 @@ export function OAuthButtons({
   redirectTo,
   onError,
   showSeparator = true,
+  patientSignup = false,
+  adultConfirmed = false,
 }: OAuthButtonsProps) {
   const t = useTranslations("auth");
   const providers = getEnabledOAuthProviders();
@@ -109,11 +115,18 @@ export function OAuthButtons({
             <form
               key={provider.id}
               action={async () => {
+                if (patientSignup && !adultConfirmed) {
+                  onError?.(ADULT_CONFIRMATION_REQUIRED_ERROR);
+                  return;
+                }
                 setPendingId(provider.id);
                 const result = await signInWithOAuthProvider(
                   provider.id,
                   locale,
-                  redirectTo || undefined
+                  redirectTo || undefined,
+                  patientSignup
+                    ? { patientSignup: true, adultConfirmed: true }
+                    : undefined
                 );
                 if (result?.error) {
                   onError?.(result.error);
@@ -125,7 +138,9 @@ export function OAuthButtons({
                 variant="outline"
                 className="h-11 w-full"
                 type="submit"
-                disabled={pendingId !== null}
+                disabled={
+                  pendingId !== null || (patientSignup && !adultConfirmed)
+                }
               >
                 <Icon />
                 {t(provider.labelKey)}
