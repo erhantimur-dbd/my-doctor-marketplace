@@ -64,6 +64,7 @@ import {
   type ReminderPreference,
 } from "@/actions/doctor";
 import { AccountSecuritySections } from "@/components/settings/account-security-sections";
+import { AccountErasureSection } from "@/components/settings/account-erasure-section";
 
 const REMINDER_TIME_PRESETS = [
   { value: 15, label: "15 minutes before" },
@@ -1402,6 +1403,9 @@ export default function SettingsPage() {
                 }}
               />
             </div>
+          </div>
+          <div className="mt-6">
+            <AccountErasureSection />
           </div>
         </CardContent>
       </Card>

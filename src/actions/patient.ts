@@ -1,8 +1,8 @@
 "use server";
 import { safeError } from "@/lib/utils/safe-error";
 
+import { eraseAccount } from "@/lib/account/erase-account";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe/client";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
@@ -170,6 +170,9 @@ export async function exportPatientData() {
 // ---------------------------------------------------------------------------
 // Account Deletion (Article 17 — Right to Erasure)
 // ---------------------------------------------------------------------------
+// Patients and doctors both call this. eraseAccount restricts the
+// account when prescriptions or other retained rows must be kept, and
+// hard-deletes otherwise.
 export async function requestAccountDeletion() {
   const supabase = await createClient();
   const {
@@ -177,56 +180,8 @@ export async function requestAccountDeletion() {
   } = await supabase.auth.getUser();
   if (!user) return { error: "Not authenticated" };
 
-  // Check for active bookings that would block deletion
-  const { data: activeBookings } = await supabase
-    .from("bookings")
-    .select("id")
-    .eq("patient_id", user.id)
-    .in("status", ["confirmed", "approved", "pending_payment", "pending_approval"])
-    .limit(1);
-
-  if (activeBookings && activeBookings.length > 0) {
-    return {
-      error:
-        "You have active bookings. Please cancel them before deleting your account.",
-    };
-  }
-
-  const adminClient = createAdminClient();
-
-  // Clean up related data before auth user deletion
-  // (Some tables have ON DELETE CASCADE, but we handle non-cascading ones explicitly)
-  await Promise.allSettled([
-    // Anonymize reviews (keep content for doctor, remove patient identity)
-    adminClient
-      .from("reviews")
-      .update({ patient_id: null })
-      .eq("patient_id", user.id),
-    // Remove push subscriptions
-    adminClient
-      .from("push_subscriptions")
-      .delete()
-      .eq("user_id", user.id),
-    // Remove cookie consent
-    adminClient
-      .from("cookie_consents")
-      .delete()
-      .eq("user_id", user.id),
-    // Soft-delete bookings (keep for doctor records, anonymize patient)
-    adminClient
-      .from("bookings")
-      .update({ patient_notes: null })
-      .eq("patient_id", user.id)
-      .in("status", ["completed", "cancelled_patient", "cancelled_doctor", "no_show"]),
-  ]);
-
-  // Delete auth user — this cascades to profiles, which cascades to
-  // favorites, medical_profiles, notifications, conversations, etc.
-  const { error } = await adminClient.auth.admin.deleteUser(user.id);
-
-  if (error)
-    return { error: "Failed to delete account. Please contact support." };
-
+  const result = await eraseAccount(user.id);
+  if ("error" in result) return { error: result.error };
   return { success: true };
 }
 
